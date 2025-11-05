@@ -1,6 +1,7 @@
 "use client";
 
 // Chef usine dashboard - production management
+// Force Vercel rebuild - Updated: 2025-11-05
 import React, { useEffect, useState } from "react";
 import {
   Card,
