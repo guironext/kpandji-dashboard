@@ -5,7 +5,6 @@ import {
   DrumIcon,
   Home,
   Package,
-  BarChart3,
   RotateCcw,
   Warehouse,
   ClipboardCheck,
