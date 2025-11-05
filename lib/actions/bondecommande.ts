@@ -168,7 +168,7 @@ export async function getAllBonDeCommandeWithProformasByUser() {
             createdAt: bdc.createdAt,
             updatedAt: bdc.updatedAt,
           },
-          proforma: bdc.facture
+          proforma: bdc.facture as unknown as ProformaData
         });
       }
     });
