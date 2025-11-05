@@ -93,13 +93,20 @@ export async function getAllCommandes() {
     const commandes = await prisma.commande.findMany({
       include: {
         client: true,
+        clientEntreprise: true,
         voitureModel: true,
         fournisseurs: true,
       },
       orderBy: { createdAt: 'desc' }
     });
     
-    return { success: true, data: commandes };
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes:", error);
     return { success: false, error: "Failed to fetch commandes" };
