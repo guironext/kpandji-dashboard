@@ -41,25 +41,38 @@ type ProformaData = {
   };
   proforma: {
     id: string;
-    date_facture: Date;
-    date_echeance: Date;
-    status_facture: string;
+    date_facture: Date | null;
+    date_echeance: Date | null;
+    status_facture: string | null;
     total_ttc: number;
-    client: {
-      nom: string;
+    prix_unitaire: number;
+    montant_ht: number;
+    total_ht: number;
+    remise: number;
+    montant_remise: number;
+    montant_net_ht: number;
+    tva: number;
+    montant_tva: number;
+    avance_payee: number;
+    reste_payer: number;
+    client?: {
+      nom?: string;
       telephone?: string;
     } | null;
-    clientEntreprise: {
-      nom_entreprise: string;
+    clientEntreprise?: {
+      nom_entreprise?: string;
       telephone?: string;
     } | null;
+    voiture?: unknown;
+    lignes?: unknown[];
+    accessoires?: unknown[];
+    userId: string;
   };
   user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | null;
 };
 
 const getStatusBadge = (status: string) => {
@@ -116,7 +129,7 @@ export default function Page() {
       setLoading(true);
       const result = await getAllBonDeCommandeWithProformasByUser();
       if (result.success && result.data) {
-        setData(result.data);
+        setData(result.data as Record<string, ProformaData[]>);
       }
       setLoading(false);
     };
@@ -156,9 +169,9 @@ export default function Page() {
           item.bonDeCommande.numero.toLowerCase().includes(query) ||
           item.proforma.client?.nom?.toLowerCase().includes(query) ||
           item.proforma.clientEntreprise?.nom_entreprise?.toLowerCase().includes(query) ||
-          item.user.firstName.toLowerCase().includes(query) ||
-          item.user.lastName.toLowerCase().includes(query) ||
-          item.proforma.status_facture.toLowerCase().includes(query)
+          item.user?.firstName?.toLowerCase().includes(query) ||
+          item.user?.lastName?.toLowerCase().includes(query) ||
+          item.proforma.status_facture?.toLowerCase().includes(query)
       );
 
       if (matches.length > 0) {
@@ -310,7 +323,7 @@ export default function Page() {
         const userData = filteredData[userId];
         const firstItem = userData[0];
         const userName = firstItem
-          ? `${firstItem.user.firstName} ${firstItem.user.lastName}`
+          ? `${firstItem.user?.firstName || ''} ${firstItem.user?.lastName || ''}`
           : "Utilisateur inconnu";
         const userTotal = userData.reduce((sum, item) => sum + item.proforma.total_ttc, 0);
 
@@ -399,13 +412,13 @@ export default function Page() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Calendar className="w-3 h-3 text-gray-400" />
-                            {format(new Date(item.proforma.date_facture), "dd/MM/yyyy")}
+                            {item.proforma.date_facture ? format(new Date(item.proforma.date_facture), "dd/MM/yyyy") : "N/A"}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Calendar className="w-3 h-3 text-gray-400" />
-                            {format(new Date(item.proforma.date_echeance), "dd/MM/yyyy")}
+                            {item.proforma.date_echeance ? format(new Date(item.proforma.date_echeance), "dd/MM/yyyy") : "N/A"}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -429,7 +442,7 @@ export default function Page() {
                             {formatNumberWithSpaces(item.proforma.total_ttc)} FCFA
                           </span>
                         </TableCell>
-                        <TableCell>{getStatusBadge(item.proforma.status_facture)}</TableCell>
+                        <TableCell>{getStatusBadge(item.proforma.status_facture || "N/A")}</TableCell>
                         <TableCell className="text-center">
                           <Button
                             onClick={() => router.push(`/comptable/proforma/${item.proforma.id}`)}
