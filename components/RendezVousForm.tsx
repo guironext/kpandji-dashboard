@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -31,8 +30,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { createRendezVous, getClientsByUser, getClientEntreprisesByUser } from '@/lib/actions/rendezvous';
 import { toast } from 'sonner';
 import { Loader2, Calendar, User, Building2, Plus } from 'lucide-react';
@@ -128,15 +125,6 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
     }
   };
 
-  const getClientName = (clientId: string, type: string) => {
-    if (type === 'CLIENT') {
-      const client = clients.find(c => c.id === clientId);
-      return client ? `${client.nom} (${client.telephone})` : '';
-    } else {
-      const clientEntreprise = clientEntreprises.find(c => c.id === clientId);
-      return clientEntreprise ? `${clientEntreprise.nom_entreprise} (${clientEntreprise.telephone})` : '';
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
