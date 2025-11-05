@@ -66,7 +66,7 @@ export function ValidationDialog({
       } else {
         toast.error(result.error || "Erreur lors de la validation");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Erreur lors de la validation");
     } finally {
       setIsLoading(false);

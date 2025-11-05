@@ -80,7 +80,7 @@ export function UpdateSparePartForm({ sparePart, voitures }: UpdateSparePartForm
       } else {
         toast.error(result.error || "Erreur lors de la modification de la pièce");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Erreur lors de la modification de la pièce");
     } finally {
       setLoading(false);
