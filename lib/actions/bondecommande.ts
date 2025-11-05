@@ -114,6 +114,36 @@ export async function getAllBonDeCommandeWithProformasByUser() {
     );
 
     // Group by user
+    type ProformaData = {
+      id: string;
+      date_facture: Date | null;
+      date_echeance: Date | null;
+      status_facture: string | null;
+      nbr_voiture_commande: number | null;
+      accessoire_nom: string | null;
+      accessoire_description: string | null;
+      accessoire_nbr: number | null;
+      client?: unknown;
+      clientEntreprise?: unknown;
+      voiture?: unknown;
+      prix_unitaire?: number | null;
+      montant_ht?: number | null;
+      total_ht?: number | null;
+      remise?: number | null;
+      montant_remise?: number | null;
+      montant_net_ht?: number | null;
+      tva?: number | null;
+      montant_tva?: number | null;
+      total_ttc?: number | null;
+      avance_payee?: number | null;
+      reste_payer?: number | null;
+      accessoire_prix?: number | null;
+      accessoire_subtotal?: number | null;
+      lignes?: unknown[];
+      accessoires?: unknown[];
+      userId: string;
+    };
+
     const groupedByUser: Record<string, Array<{
       bonDeCommande: {
         id: string;
@@ -121,7 +151,7 @@ export async function getAllBonDeCommandeWithProformasByUser() {
         createdAt: Date;
         updatedAt: Date;
       };
-      proforma: any;
+      proforma: ProformaData;
     }>> = {};
 
     bonDeCommandesWithProformas.forEach((bdc) => {
@@ -143,6 +173,20 @@ export async function getAllBonDeCommandeWithProformasByUser() {
     });
 
     // Serialize the data (convert Decimal to numbers)
+    type SerializedProforma = ProformaData & {
+      prix_unitaire: number;
+      montant_ht: number;
+      total_ht: number;
+      remise: number;
+      montant_remise: number;
+      montant_net_ht: number;
+      tva: number;
+      montant_tva: number;
+      total_ttc: number;
+      avance_payee: number;
+      reste_payer: number;
+    };
+
     const serializedData: Record<string, Array<{
       bonDeCommande: {
         id: string;
@@ -150,8 +194,8 @@ export async function getAllBonDeCommandeWithProformasByUser() {
         createdAt: Date;
         updatedAt: Date;
       };
-      proforma: any;
-      user: any;
+      proforma: SerializedProforma;
+      user: unknown;
     }>> = {};
 
     Object.keys(groupedByUser).forEach((userId) => {
@@ -182,16 +226,16 @@ export async function getAllBonDeCommandeWithProformasByUser() {
           reste_payer: item.proforma.reste_payer ? Number(item.proforma.reste_payer) : 0,
           accessoire_prix: item.proforma.accessoire_prix ? Number(item.proforma.accessoire_prix) : null,
           accessoire_subtotal: item.proforma.accessoire_subtotal ? Number(item.proforma.accessoire_subtotal) : null,
-          lignes: item.proforma.lignes?.map((ligne: any) => ({
+          lignes: item.proforma.lignes?.map((ligne: Record<string, unknown>) => ({
             ...ligne,
-            prix_unitaire: ligne.prix_unitaire ? Number(ligne.prix_unitaire) : 0,
-            montant_ligne: ligne.montant_ligne ? Number(ligne.montant_ligne) : 0,
+            prix_unitaire: typeof ligne.prix_unitaire === 'number' || typeof ligne.prix_unitaire === 'object' ? Number(ligne.prix_unitaire) : 0,
+            montant_ligne: typeof ligne.montant_ligne === 'number' || typeof ligne.montant_ligne === 'object' ? Number(ligne.montant_ligne) : 0,
           })),
-          accessoires: item.proforma.accessoires?.map((accessoire: any) => ({
-            id: accessoire.id || '',
-            nom: accessoire.nom || '',
-            description: accessoire.description || null,
-            prix: accessoire.prix ? Number(accessoire.prix) : 0,
+          accessoires: item.proforma.accessoires?.map((accessoire: Record<string, unknown>) => ({
+            id: typeof accessoire.id === 'string' ? accessoire.id : '',
+            nom: typeof accessoire.nom === 'string' ? accessoire.nom : '',
+            description: typeof accessoire.description === 'string' ? accessoire.description : null,
+            prix: typeof accessoire.prix === 'number' || typeof accessoire.prix === 'object' ? Number(accessoire.prix) : 0,
             quantity: accessoire.quantity ? Number(accessoire.quantity) : 1,
             image: accessoire.image || null,
           })),

@@ -117,7 +117,7 @@ export function TableauChuteDetailDialog({ open, onOpenChange, data }: TableauCh
             
             {data.rapportRendezVous.degre_interet && (
               <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-500 mb-1">Degré d'intérêt</p>
+                <p className="text-sm text-slate-500 mb-1">Degré d&apos;intérêt</p>
                 <Badge variant="outline">{data.rapportRendezVous.degre_interet}</Badge>
               </div>
             )}
@@ -131,7 +131,7 @@ export function TableauChuteDetailDialog({ open, onOpenChange, data }: TableauCh
 
             {data.rapportRendezVous.motivations_achat && (
               <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-500 mb-2">Motivations d'achat</p>
+                <p className="text-sm text-slate-500 mb-2">Motivations d&apos;achat</p>
                 <p className="text-sm">{data.rapportRendezVous.motivations_achat}</p>
               </div>
             )}

@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { Loader2, Building2, Users } from 'lucide-react';
 
 const clientEntrepriseSchema = z.object({
-  nom_entreprise: z.string().min(2, 'Le nom de l\'entreprise doit contenir au moins 2 caractères'),
+  nom_entreprise: z.string().min(2, 'Le nom de l&apos;entreprise doit contenir au moins 2 caractères'),
   sigle: z.string().optional(),
   email: z.string().email('Email invalide').optional().or(z.literal('')),
   telephone: z.string().min(8, 'Le téléphone doit contenir au moins 8 caractères'),
@@ -111,7 +111,7 @@ export function ClientEntrepriseForm({ userId, userName, onSuccess }: ClientEntr
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Informations de l'entreprise
+                Informations de l&apos;entreprise
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,9 +119,9 @@ export function ClientEntrepriseForm({ userId, userName, onSuccess }: ClientEntr
                   control={form.control}
                   name="nom_entreprise"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nom de l'entreprise *</FormLabel>
-                      <FormControl>
+                  <FormItem>
+                    <FormLabel>Nom de l&apos;entreprise *</FormLabel>
+                    <FormControl>
                         <Input placeholder="ABC Corporation" {...field} />
                       </FormControl>
                       <FormMessage />
@@ -190,7 +190,7 @@ export function ClientEntrepriseForm({ userId, userName, onSuccess }: ClientEntr
                   name="secteur_activite"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Secteur d'activité</FormLabel>
+                      <FormLabel>Secteur d&apos;activité</FormLabel>
                       <FormControl>
                         <Input placeholder="Automobile, Finance, etc." {...field} />
                       </FormControl>

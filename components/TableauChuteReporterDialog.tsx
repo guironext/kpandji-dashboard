@@ -38,13 +38,13 @@ export function TableauChuteReporterDialog({
 
   // Generate month-year combinations starting from December 2025
   const monthYearOptions = [];
-  for (let year of years) {
+  for (const year of years) {
     if (year === 2025) {
       // For 2025, only include December
       monthYearOptions.push({ value: 'Décembre 2025', label: 'Décembre 2025' });
     } else {
       // For other years, include all months
-      for (let month of months) {
+      for (const month of months) {
         monthYearOptions.push({ value: `${month} ${year}`, label: `${month} ${year}` });
       }
     }

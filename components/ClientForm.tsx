@@ -154,7 +154,7 @@ export function ClientForm({ userId, userName, onSuccess }: ClientFormProps) {
                 name="secteur_activite"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Secteur d'activité</FormLabel>
+                    <FormLabel>Secteur d&apos;activité</FormLabel>
                     <FormControl>
                       <Input placeholder="Automobile, Finance, etc." {...field} />
                     </FormControl>

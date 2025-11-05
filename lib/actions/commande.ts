@@ -81,9 +81,9 @@ export async function createCommande(data: {
     };
     
     return { success: true, data: serializedCommande };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating commande:", error);
-    const errorMessage = error?.message || "Erreur lors de la création de la commande";
+    const errorMessage = error instanceof Error ? error.message : "Erreur lors de la création de la commande";
     return { success: false, error: errorMessage };
   }
 }
@@ -375,7 +375,7 @@ export async function getAllCommandesGrouped() {
     // Convert Decimal to number and serialize all data
     const serializedCommandes = commandes.map(cmd => {
       // Create a plain object with all Decimal fields converted
-      const serialized: any = {
+      const serialized = {
         id: cmd.id,
         etapeCommande: cmd.etapeCommande,
         date_livraison: cmd.date_livraison,

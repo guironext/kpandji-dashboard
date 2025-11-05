@@ -35,9 +35,9 @@ export async function createFournisseurCommandeLocal(data: {
 
     revalidatePath("/comptable/fournisseur-locaux");
     return { success: true, data: fournisseurCommandeLocal };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating fournisseur commande local:", error);
-    const errorMessage = error?.message || "Erreur lors de la création du fournisseur";
+    const errorMessage = error instanceof Error ? error.message : "Erreur lors de la création du fournisseur";
     return { success: false, error: errorMessage };
   }
 }
@@ -104,9 +104,9 @@ export async function updateFournisseurCommandeLocal(
 
     revalidatePath("/comptable/fournisseur-locaux");
     return { success: true, data: fournisseur };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating fournisseur:", error);
-    return { success: false, error: error?.message || "Erreur lors de la mise à jour" };
+    return { success: false, error: error instanceof Error ? error.message : "Erreur lors de la mise à jour" };
   }
 }
 
