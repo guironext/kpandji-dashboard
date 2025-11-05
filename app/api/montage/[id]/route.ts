@@ -3,11 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { etapeMontage } = await request.json()
-    const montageId = params.id
+    const { id: montageId } = await params
 
     if (!etapeMontage) {
       return NextResponse.json({ error: 'Missing etapeMontage' }, { status: 400 })

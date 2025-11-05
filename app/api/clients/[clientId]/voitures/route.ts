@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { clientId: string } }
+  { params }: { params: Promise<{ clientId: string }> }
 ) {
   try {
+    const { clientId } = await params;
     const voitures = await prisma.voiture.findMany({
-      where: { clientId: params.clientId },
+      where: { clientId },
       include: { voitureModel: true },
     });
     return NextResponse.json(voitures);
