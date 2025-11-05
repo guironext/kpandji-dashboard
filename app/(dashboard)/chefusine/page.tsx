@@ -60,7 +60,7 @@ type CommandeWithRelations = {
   date_livraison: Date;
   createdAt: Date;
   updatedAt: Date;
-  clientId: string;
+  clientId: string | null;
   voitureModelId?: string | null;
   conteneurId?: string | null;
   commandeLocalId?: string | null;
