@@ -227,23 +227,28 @@ export async function getAllBonDeCommandeWithProformasByUser() {
           reste_payer: item.proforma.reste_payer ? Number(item.proforma.reste_payer) : 0,
           accessoire_prix: item.proforma.accessoire_prix ? Number(item.proforma.accessoire_prix) : null,
           accessoire_subtotal: item.proforma.accessoire_subtotal ? Number(item.proforma.accessoire_subtotal) : null,
-          lignes: item.proforma.lignes?.map((ligne: Record<string, unknown>) => ({
-            ...ligne,
-            prix_unitaire: typeof ligne.prix_unitaire === 'number' || typeof ligne.prix_unitaire === 'object' ? Number(ligne.prix_unitaire) : 0,
-            montant_ligne: typeof ligne.montant_ligne === 'number' || typeof ligne.montant_ligne === 'object' ? Number(ligne.montant_ligne) : 0,
-          })),
-          accessoires: item.proforma.accessoires?.map((accessoire: Record<string, unknown>) => ({
-            id: typeof accessoire.id === 'string' ? accessoire.id : '',
-            nom: typeof accessoire.nom === 'string' ? accessoire.nom : '',
-            description: typeof accessoire.description === 'string' ? accessoire.description : null,
-            prix: typeof accessoire.prix === 'number' || typeof accessoire.prix === 'object' ? Number(accessoire.prix) : 0,
-            quantity: accessoire.quantity ? Number(accessoire.quantity) : 1,
-            image: accessoire.image || null,
-          })),
-          clientId: item.proforma.clientId || null,
-          clientEntrepriseId: item.proforma.clientEntrepriseId || null,
+          lignes: item.proforma.lignes?.map((ligne: unknown) => {
+            const l = ligne as Record<string, unknown>;
+            return {
+              ...l,
+              prix_unitaire: typeof l.prix_unitaire === 'number' || typeof l.prix_unitaire === 'object' ? Number(l.prix_unitaire) : 0,
+              montant_ligne: typeof l.montant_ligne === 'number' || typeof l.montant_ligne === 'object' ? Number(l.montant_ligne) : 0,
+            };
+          }),
+          accessoires: item.proforma.accessoires?.map((accessoire: unknown) => {
+            const a = accessoire as Record<string, unknown>;
+            return {
+              id: typeof a.id === 'string' ? a.id : '',
+              nom: typeof a.nom === 'string' ? a.nom : '',
+              description: typeof a.description === 'string' ? a.description : null,
+              prix: typeof a.prix === 'number' || typeof a.prix === 'object' ? Number(a.prix) : 0,
+              quantity: a.quantity ? Number(a.quantity) : 1,
+              image: a.image || null,
+            };
+          }),
+          userId: item.proforma.userId,
         },
-        user: item.proforma.user
+        user: (item.proforma as unknown as Record<string, unknown>).user
       }));
     });
 
