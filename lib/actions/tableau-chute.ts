@@ -217,7 +217,6 @@ export async function getAllTableauChute() {
             rendezVous: {
               select: {
                 date: true,
-                duree: true,
                 statut: true,
               },
             },
@@ -256,7 +255,7 @@ export async function createTableauChuteRendezVous(data: {
     const tableauChuteRendezVous = await prisma.tableau_chute_rendez_vous.create({
       data: {
         mois_chute: data.mois_chute,
-        modeles_discutes: data.modeles_discutes,
+        modeles_discutes: data.modeles_discutes as never,
         rapportRendezVousId: data.rapportRendezVousId,
         userId: user.id,
       },
