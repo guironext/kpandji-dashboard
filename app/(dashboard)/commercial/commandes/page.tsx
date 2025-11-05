@@ -135,7 +135,6 @@ export default function AjouterCommandePage() {
   const [showForm, setShowForm] = useState(false);
   const [editingCommande, setEditingCommande] = useState<CommandeData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
