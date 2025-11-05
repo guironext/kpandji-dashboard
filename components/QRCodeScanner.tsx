@@ -48,7 +48,7 @@ export default function QRCodeScanner({ onScan }: QRCodeScannerProps) {
           }
         }
       );
-    } catch (err) {
+    } catch {
       setError('Failed to start camera');
       setIsScanning(false);
     }
