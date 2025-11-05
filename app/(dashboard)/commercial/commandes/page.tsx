@@ -34,7 +34,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createCommande, getCommandesProposees,  updateCommande, deleteCommande } from "@/lib/actions/commande";
 import { getAllClients } from "@/lib/actions/client";
-import { getAllFournisseurs } from "@/lib/actions/fournisseur";
 import { getAllModele } from "@/lib/actions/modele";
 import { useRouter } from "next/navigation";
 import { 
@@ -129,7 +128,6 @@ const ComposableFormItem = <TFieldValues extends FieldValues = FieldValues>({
 export default function AjouterCommandePage() {
   const [commandes, setCommandes] = useState<CommandeData[]>([]);
   const [clients, setClients] = useState<{ id: string; nom: string; telephone: string }[]>([]);
-  const [fournisseurs, setFournisseurs] = useState<{ id: string; nom: string; type_Activite?: string }[]>([]);
   const [modeles, setModeles] = useState<{ id: string; model: string }[]>([]);
   const [selectedFournisseurs, setSelectedFournisseurs] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -156,21 +154,13 @@ export default function AjouterCommandePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [clientsRes, fournisseursRes, modelesRes, commandesRes] = await Promise.all([
+        const [clientsRes, modelesRes, commandesRes] = await Promise.all([
           getAllClients(),
-          getAllFournisseurs(),
           getAllModele(),
           getCommandesProposees(), // Changed from getAllCommandes()
         ]);
 
         if (clientsRes.success) setClients(clientsRes.data || []);
-        if (fournisseursRes.success) setFournisseurs(
-          fournisseursRes.data?.map(f => ({
-            id: f.id,
-            nom: f.nom,
-            type_Activite: f.type_Activite || undefined
-          })) || []
-        );
         if (modelesRes.success) setModeles(modelesRes.data || []);
         if (commandesRes.success) setCommandes(commandesRes.data as CommandeData[] || []);
       } catch{
@@ -240,7 +230,6 @@ export default function AjouterCommandePage() {
       return;
     }
 
-    setIsDeleting(commandeId);
     try {
       const result = await deleteCommande(commandeId);
       if (result.success) {
@@ -253,8 +242,6 @@ export default function AjouterCommandePage() {
       }
     } catch{
       toast.error("Erreur lors de la suppression de la commande");
-    } finally {
-      setIsDeleting(null);
     }
   };
 
