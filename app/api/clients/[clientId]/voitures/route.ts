@@ -12,7 +12,7 @@ export async function GET(
       include: { voitureModel: true },
     });
     return NextResponse.json(voitures);
-  } catch (_error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch voitures" },
       { status: 500 }
