@@ -45,6 +45,7 @@ export async function generateNextNumero(factureId: string) {
     const bonDeCommande = await prisma.bonDeCommande.create({
       data: {
         numero: fullNumero,
+        prefix_numero: 'BC',
         factureId: factureId
       }
     });
