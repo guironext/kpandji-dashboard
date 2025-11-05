@@ -6,20 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 //import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { updateSparePart, getCommandesWithModelsForSubcase } from '@/lib/actions/subcase'
+import { updateSparePart } from '@/lib/actions/subcase'
 import { Package, Save } from 'lucide-react'
 import { toast } from 'sonner'
-
-interface VoitureModel {
-  id: string;
-  model: string;
-  fiche_technique: string | null;
-}
-
-interface Commande {
-  id: string;
-  voitureModel: VoitureModel | null;
-}
 
 interface SparePart {
   id: string;
@@ -43,7 +32,7 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
   open,
   onOpenChange,
   sparePart,
-  subcaseId,
+  // subcaseId, // Unused but kept in interface for future use
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
@@ -54,14 +43,6 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
     commandeId: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [commandes, setCommandes] = useState<Commande[]>([])
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  useEffect(() => {
-    if (open && subcaseId) {
-      fetchCommandes()
-    }
-  }, [open, subcaseId])
 
   useEffect(() => {
     if (sparePart && open) {
@@ -74,20 +55,6 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
       })
     }
   }, [sparePart, open])
-
-  const fetchCommandes = async () => {
-    setLoadingModels(true)
-    try {
-      const result = await getCommandesWithModelsForSubcase(subcaseId)
-      if (result.success && result.data) {
-        setCommandes(result.data)
-      }
-    } catch (error) {
-      console.error('Error fetching commandes:', error)
-    } finally {
-      setLoadingModels(false)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
