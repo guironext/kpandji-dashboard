@@ -1,0 +1,842 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         String                      @id @default(uuid())
+  clerkId                    String                      @unique
+  email                      String                      @unique
+  firstName                  String
+  lastName                   String
+  role                       UserRole                    @default(EMPLOYEE)
+  department                 String?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  telephone                  String?
+  clients                    Client[]
+  client_entreprises         Client_entreprise[]
+  employees                  Employee[]
+  factures                   Facture[]
+  paiements                  Paiement[]
+  tableaux_chute             Tableau_chute[]
+  tableaux_chute_rendez_vous Tableau_chute_rendez_vous[]
+}
+
+model Employee {
+  id            String         @id @default(uuid())
+  nom           String
+  prenoms       String
+  contact       String
+  bloodType     String
+  specialite    String?
+  userId        String
+  email         String?
+  user          User           @relation(fields: [userId], references: [id])
+  equipesChef   Equipe[]
+  equipeMembres EquipeMembre[]
+  localBuys     LocalBuy[]
+  testes        Teste[]
+}
+
+model Client {
+  id                String              @id @default(uuid())
+  nom               String
+  email             String?
+  telephone         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  userId            String
+  commercial        String?
+  entreprise        String?
+  localisation      String?
+  secteur_activite  String?
+  status_client     StatusClient        @default(PROSPECT)
+  premiere_commande Boolean             @default(false)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commandes         Commande[]
+  factures          Facture[]
+  paiements         Paiement[]
+  rapportRendezVous RapportRendezVous[]
+  rendez_vous       RendezVous[]
+  tableaux_chute    Tableau_chute[]
+  voitures          Voiture[]
+}
+
+model Client_entreprise {
+  id                           String              @id @default(uuid())
+  nom_entreprise               String
+  sigle                        String?
+  email                        String?
+  telephone                    String
+  nom_personne_contact         String?
+  fonction_personne_contact    String?
+  email_personne_contact       String?
+  telephone_personne_contact   String?
+  localisation                 String?
+  secteur_activite             String?
+  flotte_vehicules             Boolean?
+  flotte_vehicules_description String?
+  status_client                StatusClient        @default(PROSPECT)
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime            @updatedAt
+  commercial                   String?
+  userId                       String
+  premiere_commande            Boolean             @default(false)
+  user                         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commandes                    Commande[]
+  factures                     Facture[]
+  paiements                    Paiement[]
+  rapportRendezVous            RapportRendezVous[]
+  rendez_vous                  RendezVous[]
+  tableaux_chute               Tableau_chute[]
+  voitures                     Voiture[]
+}
+
+model RendezVous {
+  id                  String              @id @default(uuid())
+  date                DateTime
+  resume_rendez_vous  String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  statut              RendezVousStatut    @default(EN_ATTENTE)
+  note                String?
+  clientId            String?
+  clientEntrepriseId  String?
+  rapportRendezVous   RapportRendezVous[]
+  clientEntreprise    Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client              Client?             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  voitures_souhaitees Voiture[]
+}
+
+model RapportRendezVous {
+  id                         String                      @id @default(uuid())
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  date_rendez_vous           DateTime
+  heure_rendez_vous          String
+  lieu_rendez_vous           String
+  lieu_autre                 String?
+  conseiller_commercial      String
+  duree_rendez_vous          String
+  nom_prenom_client          String
+  telephone_client           String
+  email_client               String?
+  profession_societe         String?
+  type_client                String
+  presentation_gamme         Boolean                     @default(false)
+  essai_vehicule             Boolean                     @default(false)
+  negociation_commerciale    Boolean                     @default(false)
+  livraison_vehicule         Boolean                     @default(false)
+  service_apres_vente        Boolean                     @default(false)
+  objet_autre                String?
+  modeles_discutes           Json?
+  motivations_achat          String?
+  points_positifs            String?
+  objections_freins          String?
+  degre_interet              String?
+  decision_attendue          String?
+  devis_offre_remise         Boolean                     @default(false)
+  reference_offre            String?
+  financement_propose        String?
+  assurance_entretien        Boolean                     @default(false)
+  reprise_ancien_vehicule    Boolean                     @default(false)
+  actions_suivi              Json?
+  commentaire_global         String?
+  voitureId                  String?
+  rendezVousId               String
+  clientId                   String?
+  clientEntrepriseId         String?
+  clientEntreprise           Client_entreprise?          @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client                     Client?                     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rendezVous                 RendezVous                  @relation(fields: [rendezVousId], references: [id])
+  voiture                    Voiture?                    @relation(fields: [voitureId], references: [id])
+  tableaux_chute             Tableau_chute[]
+  tableaux_chute_rendez_vous Tableau_chute_rendez_vous[]
+}
+
+model Tableau_chute_rendez_vous {
+  id                  String            @id @default(uuid())
+  mois_chute          String
+  modeles_discutes    Json?
+  rapportRendezVousId String
+  userId              String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  rapportRendezVous   RapportRendezVous @relation(fields: [rapportRendezVousId], references: [id])
+  user                User              @relation(fields: [userId], references: [id])
+}
+
+model VoitureModel {
+  id              String         @id @default(uuid())
+  model           String
+  fiche_technique String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  description     String?
+  image           String?
+  commandes       Commande[]
+  factureLignes   FactureLigne[]
+  voitures        Voiture[]
+}
+
+model Accessoire {
+  id         String    @id @default(uuid())
+  nom        String
+  voitureId  String?
+  factureId  String?
+  commandeId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  image      String?
+  facture    Facture?  @relation("FactureToAccessoire", fields: [factureId], references: [id])
+  voiture    Voiture?  @relation(fields: [voitureId], references: [id])
+  commande   Commande? @relation("CommandeToAccessoire", fields: [commandeId], references: [id])
+}
+
+model Voiture {
+  id                 String              @id @default(uuid())
+  nbr_portes         String
+  transmission       Transmission
+  motorisation       Motorisation
+  couleur            String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  clientId           String?
+  commandeId         String?
+  commandeLocalId    String?
+  conteneurId        String?
+  voitureModelId     String?
+  etatVoiture        EtatVoiture
+  clientEntrepriseId String?
+  description        String?
+  rendezVousId       String?
+  accessoires        Accessoire[]
+  corrections        Correction[]
+  factures           Facture[]
+  rapportRendezVous  RapportRendezVous[]
+  spareParts         SparePart[]
+  tableaux_chute     Tableau_chute[]
+  testes             Teste[]
+  clientEntreprise   Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id])
+  client             Client?             @relation(fields: [clientId], references: [id])
+  commande           Commande?           @relation(fields: [commandeId], references: [id])
+  commandeLocal      CommandeLocal?      @relation(fields: [commandeLocalId], references: [id])
+  conteneur          Conteneur?          @relation(fields: [conteneurId], references: [id])
+  rendezVous         RendezVous?         @relation(fields: [rendezVousId], references: [id])
+  voitureModel       VoitureModel?       @relation(fields: [voitureModelId], references: [id])
+}
+
+model Facture {
+  id                     String             @id @default(uuid())
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  clientId               String?
+  clientEntrepriseId     String?
+  userId                 String
+  date_facture           DateTime
+  date_echeance          DateTime
+  status_facture         StatusFacture      @default(EN_ATTENTE)
+  voitureId              String?
+  nbr_voiture_commande   Int
+  prix_unitaire          Decimal
+  montant_ht             Decimal
+  total_ht               Decimal
+  remise                 Decimal
+  montant_remise         Decimal
+  montant_net_ht         Decimal
+  tva                    Decimal
+  montant_tva            Decimal
+  total_ttc              Decimal
+  avance_payee           Decimal
+  reste_payer            Decimal
+  accessoire_description String?
+  accessoire_nbr         Int?
+  accessoire_nom         String?
+  accessoire_prix        Decimal?
+  accessoire_subtotal    Decimal?
+  bon_pour_acquis        Boolean            @default(false)
+  accessoires            Accessoire[]       @relation("FactureToAccessoire")
+  bonDeCommande          BonDeCommande?
+  commandes              Commande[]
+  clientEntreprise       Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client                 Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user                   User               @relation(fields: [userId], references: [id])
+  voiture                Voiture?           @relation(fields: [voitureId], references: [id])
+  lignes                 FactureLigne[]
+  paiements              Paiement[]
+}
+
+model FactureLigne {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  factureId      String
+  voitureModelId String
+  couleur        String
+  nbr_voiture    Int
+  prix_unitaire  Decimal
+  montant_ligne  Decimal
+  motorisation   String?
+  transmission   String?
+  facture        Facture      @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  voitureModel   VoitureModel @relation(fields: [voitureModelId], references: [id])
+}
+
+model BonDeCommande {
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  numero        String
+  factureId     String   @unique
+  prefix_numero String
+  facture       Facture  @relation(fields: [factureId], references: [id])
+}
+
+model Paiement {
+  id                 String             @id @default(uuid())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  factureId          String
+  clientId           String?
+  clientEntrepriseId String?
+  userId             String
+  avance_payee       Decimal
+  reste_payer        Decimal
+  date_paiement      DateTime
+  mode_paiement      ModePaiement
+  status_paiement    StatusPaiement     @default(EN_ATTENTE)
+  clientEntreprise   Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  facture            Facture            @relation(fields: [factureId], references: [id])
+  user               User               @relation(fields: [userId], references: [id])
+}
+
+model Tableau_chute {
+  id                  String             @id @default(uuid())
+  mois_chute          String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  clientId            String?
+  clientEntrepriseId  String?
+  userId              String?
+  rapportRendezVousId String
+  voitureId           String?
+  clientEntreprise    Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client              Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rapportRendezVous   RapportRendezVous  @relation(fields: [rapportRendezVousId], references: [id])
+  user                User?              @relation(fields: [userId], references: [id])
+  voiture             Voiture?           @relation(fields: [voitureId], references: [id])
+}
+
+model Commande {
+  id                 String             @id @default(uuid())
+  etapeCommande      EtapeCommande
+  date_livraison     DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  clientId           String?
+  conteneurId        String?
+  commandeLocalId    String?
+  couleur            String
+  montageId          String?            @unique
+  motorisation       Motorisation
+  nbr_portes         String
+  transmission       Transmission
+  voitureModelId     String?
+  clientEntrepriseId String?
+  factureId          String?
+  prix_unitaire      Decimal?
+  clientEntreprise   Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  commandeLocal      CommandeLocal?     @relation(fields: [commandeLocalId], references: [id])
+  conteneur          Conteneur?         @relation(fields: [conteneurId], references: [id])
+  facture            Facture?           @relation(fields: [factureId], references: [id])
+  montage            Montage?           @relation("CommandeToMontage", fields: [montageId], references: [id])
+  voitureModel       VoitureModel?      @relation(fields: [voitureModelId], references: [id])
+  accessoires        Accessoire[]       @relation("CommandeToAccessoire")
+  corrections        Correction[]
+  montages           Montage[]          @relation("CommandeToMontages")
+  spareParts         SparePart[]
+  testes             Teste[]
+  tools              Tool[]
+  voitures           Voiture[]
+  fournisseurs       Fournisseur[]      @relation("CommandeToFournisseur")
+}
+
+model Conteneur {
+  id                 String                  @id @default(uuid())
+  conteneurNumber    String                  @unique
+  sealNumber         String
+  totalPackages      String?
+  grossWeight        String?
+  netWeight          String?
+  stuffingMap        String?
+  dateEmbarquement   DateTime?
+  dateArriveProbable DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  etapeConteneur     EtapeConteneur          @default(EN_ATTENTE)
+  commandes          Commande[]
+  subcases           Subcase[]
+  verifications      VerificationConteneur[]
+  voitures           Voiture[]
+}
+
+model Subcase {
+  id            String      @id @default(uuid())
+  subcaseNumber String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  conteneurId   String
+  spareParts    SparePart[]
+  conteneur     Conteneur   @relation(fields: [conteneurId], references: [id])
+  tools         Tool[]
+}
+
+model Storage {
+  id            String      @id @default(uuid())
+  storageNumber String?
+  porte_Number  String?
+  rayon         String?
+  etage         String?
+  caseNumber    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  spareParts    SparePart[]
+}
+
+model CommandeLocal {
+  id                String                     @id @default(uuid())
+  article           String
+  description       String
+  quantity          Int
+  price             Decimal
+  total             Decimal
+  date_livraison    DateTime
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  commandes         Commande[]
+  piecesComplements PieceComplement[]
+  spareParts        SparePart[]
+  tools             Tool[]
+  voitures          Voiture[]
+  fournisseurs      FournisseurCommandeLocal[]
+}
+
+model SparePart {
+  id                           String                        @id @default(uuid())
+  partCode                     String
+  partName                     String
+  partNameFrench               String?
+  quantity                     Int
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  commandeLocalId              String?
+  voitureId                    String?
+  subcaseId                    String?
+  verificationConteneurId      String?
+  commandeId                   String?
+  storageId                    String?
+  etapeSparePart               EtapeSparePart                @default(TRANSITE)
+  statusVerification           StatusVerification            @default(EN_ATTENTE)
+  commande                     Commande?                     @relation(fields: [commandeId], references: [id])
+  commandeLocal                CommandeLocal?                @relation(fields: [commandeLocalId], references: [id])
+  Storage                      Storage?                      @relation(fields: [storageId], references: [id])
+  subcase                      Subcase?                      @relation(fields: [subcaseId], references: [id])
+  verificationConteneur        VerificationConteneur?        @relation(fields: [verificationConteneurId], references: [id])
+  voiture                      Voiture?                      @relation(fields: [voitureId], references: [id])
+  corrections                  Correction[]                  @relation("CorrectionToSparePart")
+  montageSparePartAttributions MontageSparePartAttribution[] @relation("MontageSparePartAttributionToSparePart")
+  montageSpareParts            MontageSparePart[]            @relation("MontageSparePartToSparePart")
+}
+
+model PieceComplement {
+  id                      String                 @id @default(uuid())
+  partCode                String
+  partName                String
+  partNameFrench          String?
+  vehicleModel            String
+  quantity                Int
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  commandeLocalId         String
+  verificationConteneurId String?
+  commandeLocal           CommandeLocal          @relation(fields: [commandeLocalId], references: [id])
+  verificationConteneur   VerificationConteneur? @relation(fields: [verificationConteneurId], references: [id])
+}
+
+model Tool {
+  id                      String                 @id @default(uuid())
+  toolCode                String
+  toolName                String
+  quantity                Int
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  check                   Boolean                @default(false)
+  commandeId              String?
+  commandeLocalId         String?
+  subcaseId               String?
+  verificationConteneurId String?
+  etapeTool               EtapeTool              @default(TRANSITE)
+  commande                Commande?              @relation(fields: [commandeId], references: [id])
+  commandeLocal           CommandeLocal?         @relation(fields: [commandeLocalId], references: [id])
+  subcase                 Subcase?               @relation(fields: [subcaseId], references: [id])
+  verificationConteneur   VerificationConteneur? @relation(fields: [verificationConteneurId], references: [id])
+  corrections             Correction[]           @relation("CorrectionToTool")
+  montageSpareParts       MontageSparePart[]     @relation("MontageSparePartToTool")
+}
+
+model Fournisseur {
+  id                 String                     @id @default(uuid())
+  nom                String
+  email              String?
+  telephone          String?
+  adresse            String?
+  ville              String?
+  code_postal        String?
+  pays               String?
+  type_Activite      String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  commandes          Commande[]                 @relation("CommandeToFournisseur")
+}
+
+model FournisseurCommandeLocal {
+  id              String         @id @default(uuid())
+  nom             String
+  email           String?
+  telephone       String?
+  adresse         String?
+  ville           String?
+  code_postal     String?
+  pays            String?
+  type_Activite   String?
+  commandeLocalId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  commandeLocal   CommandeLocal[]
+}
+
+model LocalBuy {
+  id             String   @id @default(uuid())
+  partName       String
+  partNameFrench String?
+  partCode       String
+  quantity       Int
+  price          Float?
+  description    String?
+  montant        Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+}
+
+model VerificationConteneur {
+  id                  String                @id @default(uuid())
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  conteneurId         String
+  PieceComplement     PieceComplement[]
+  rapportVerification RapportVerification[]
+  spares              SparePart[]
+  tools               Tool[]
+  conteneur           Conteneur             @relation(fields: [conteneurId], references: [id])
+}
+
+model RapportVerification {
+  id                      String                @id @default(uuid())
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  verificationConteneurId String
+  verificationConteneur   VerificationConteneur @relation(fields: [verificationConteneurId], references: [id])
+}
+
+model Montage {
+  id                String             @id @default(uuid())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  no_chassis        String?
+  commandeId        String
+  etapeMontage      EtapeMontage       @default(CREATION)
+  commandeMontage   Commande?          @relation("CommandeToMontage")
+  equipes           Equipe[]
+  commande          Commande           @relation("CommandeToMontages", fields: [commandeId], references: [id])
+  montageSpareParts MontageSparePart[]
+  rapportMontage    RapportMontage[]
+}
+
+model MontageSparePart {
+  id                           String                        @id @default(uuid())
+  qte_commandee                String?
+  qte_attribue                 String?
+  qte_restante                 String?
+  equipe_montage               String?
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  montageId                    String
+  montage                      Montage                       @relation(fields: [montageId], references: [id])
+  montageSparePartAttributions MontageSparePartAttribution[]
+  equipes                      Equipe[]                      @relation("EquipeToMontageSparePart")
+  sparePart                    SparePart[]                   @relation("MontageSparePartToSparePart")
+  tools                        Tool[]                        @relation("MontageSparePartToTool")
+}
+
+model MontageSparePartAttribution {
+  id                 String           @id @default(uuid())
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  equipeId           String
+  montageSparePartId String
+  equipe             Equipe           @relation(fields: [equipeId], references: [id])
+  montageSparePart   MontageSparePart @relation(fields: [montageSparePartId], references: [id])
+  sparePart          SparePart[]      @relation("MontageSparePartAttributionToSparePart")
+}
+
+model RapportMontage {
+  id        String   @id @default(uuid())
+  details   String
+  montageId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  montage   Montage  @relation(fields: [montageId], references: [id])
+}
+
+model Equipe {
+  id                           String                        @id @default(uuid())
+  nomEquipe                    String
+  chefEquipeId                 String
+  activite                     String
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  montageId                    String?
+  chefEquipe                   Employee                      @relation(fields: [chefEquipeId], references: [id])
+  montage                      Montage?                      @relation(fields: [montageId], references: [id])
+  membres                      EquipeMembre[]
+  montageSparePartAttributions MontageSparePartAttribution[]
+  rapportEquipe                RapportEquipe[]
+  montageSpareParts            MontageSparePart[]            @relation("EquipeToMontageSparePart")
+}
+
+model EquipeMembre {
+  id         String   @id @default(uuid())
+  qualite    Qualite
+  fonction   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  equipeId   String
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  equipe     Equipe   @relation(fields: [equipeId], references: [id])
+}
+
+model Teste {
+  id           String         @id @default(uuid())
+  activite     String
+  dateTeste    DateTime
+  heureTeste   DateTime
+  resultat     String
+  commentaire  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  voitureId    String
+  employeeId   String
+  commandeId   String?
+  rapportTeste RapportTeste[]
+  commande     Commande?      @relation(fields: [commandeId], references: [id])
+  employee     Employee       @relation(fields: [employeeId], references: [id])
+  voiture      Voiture        @relation(fields: [voitureId], references: [id])
+}
+
+model RapportTeste {
+  id        String   @id @default(uuid())
+  details   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  testeId   String
+  teste     Teste    @relation(fields: [testeId], references: [id])
+}
+
+model Correction {
+  id                String              @id @default(uuid())
+  details           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  voitureId         String
+  commandeId        String?
+  commande          Commande?           @relation(fields: [commandeId], references: [id])
+  voiture           Voiture             @relation(fields: [voitureId], references: [id])
+  rapportCorrection RapportCorrection[]
+  spares            SparePart[]         @relation("CorrectionToSparePart")
+  tools             Tool[]              @relation("CorrectionToTool")
+}
+
+model RapportCorrection {
+  id           String     @id @default(uuid())
+  details      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  correctionId String
+  correction   Correction @relation(fields: [correctionId], references: [id])
+}
+
+model RapportEquipe {
+  id        String   @id @default(uuid())
+  details   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  equipeId  String
+  equipe    Equipe   @relation(fields: [equipeId], references: [id])
+}
+
+enum StatusClient {
+  CLIENT
+  PROSPECT
+  ABANDONNE
+  FAVORABLE
+  A_SUIVRE
+}
+
+enum RendezVousStatut {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+}
+
+enum StatusFacture {
+  EN_ATTENTE
+  PROFORMA
+  FACTURE
+  PAYEE
+  ANNULEE
+}
+
+enum ModePaiement {
+  CB
+  CHEQUE
+  VIREMENT
+}
+
+enum StatusPaiement {
+  EN_ATTENTE
+  PAYE
+  ANNULE
+}
+
+enum EtapeMontage {
+  CREATION
+  VALIDE
+  EXECUTION
+  VERIFICATION
+  CORRECTION
+  TERMINEE
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  COMMERCIAL
+  CHEFUSINE
+  CHEFEQUIPE
+  MAGASINIER
+  RH
+  CHEFQUALITE
+  EMPLOYEE
+  SAV
+  LOGISTIQUE
+  FINANCE
+  DIRECTEUR_GENERAL
+  CLIENTELLE
+  COMPTABLE
+  CONCESSIONAIRE
+}
+
+enum Transmission {
+  AUTOMATIQUE
+  MANUEL
+}
+
+enum EtatVoiture {
+  PIECES
+  MONTAGE
+  TESTE
+  PARKING
+  CORRECTION
+  VENTE
+  LIVREE
+}
+
+enum Motorisation {
+  ELECTRIQUE
+  ESSENCE
+  DIESEL
+  HYBRIDE
+}
+
+enum EtapeCommande {
+  PROPOSITION
+  VALIDE
+  TRANSITE
+  RENSEIGNEE
+  ARRIVE
+  VERIFIER
+  MONTAGE
+  TESTE
+  PARKING
+  CORRECTION
+  VENTE
+  DECHARGE
+}
+
+enum Qualite {
+  CHEF_EQUIPE
+  MEMBRE_EQUIPE
+}
+
+enum EtapeConteneur {
+  EN_ATTENTE
+  CHARGE
+  TRANSITE
+  RENSEIGNE
+  ARRIVE
+  DECHARGE
+  VERIFIE
+}
+
+enum EtapeTool {
+  TRANSITE
+  RENSEIGNE
+  ARRIVE
+  VERIFIE
+  ATTRIBUE
+  CONSOMME
+  RETOUR
+  DECHARGE
+}
+
+enum EtapeSparePart {
+  TRANSITE
+  RENSEIGNE
+  ARRIVE
+  VERIFIE
+  ATTRIBUE
+  CONSOMME
+  RETOUR
+  DECHARGE
+  RANGE
+}
+
+enum StatusVerification {
+  EN_ATTENTE
+  RETROUVE
+  MODIFIE
+  NON_RETROUVE
+}

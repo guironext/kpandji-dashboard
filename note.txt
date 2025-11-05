@@ -1,0 +1,43 @@
+kpandji_management
+
+
+
+ngrok http --url=robin-prime-goose.ngrok-free.app 3000
+
+
+consider this 
+=========================================================
+npm i prisma
+npx prisma init
+=>schematfile
+|!!npx prisma dev
+||| npx prisma migrate dev
+|||| 
+npx prisma migrate reset
+|||| npx prisma db push
+npm i @prisma/client
+npm i --save-dev prisma@latest                       │
+npm i @prisma/client@latest 
+
+npx prisma db push --force-reset
+
+========================================================
+1. Installation Status ✅
+You already have Prisma installed:
+@prisma/client (v6.14.0) - Production dependency
+prisma (v6.14.0) - Development dependency
+2. Environment Configuration
+Create a .env file in your project root:
+3. Database Setup Commands
+Run these commands in your terminal:
+# Generate Prisma Client (creates the client in lib/generated/prisma)
+npx prisma generate
+
+# Create and apply database migrations
+npx prisma migrate dev --name init
+
+# (Optional) Open Prisma Studio to view/edit data
+npx prisma studio
+
+4. Database Provider Options
+Option A: Local PostgreSQL (Recommended for Development)

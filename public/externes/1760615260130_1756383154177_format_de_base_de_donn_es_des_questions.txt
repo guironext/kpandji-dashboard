@@ -1,0 +1,107 @@
+ const Questions = [
+    {
+      id:1,
+      stageId:"Evangiles",
+      sectionId:"personnages",
+      text: "Lequel de ces hommes a eu l’oreille coupée par Pierre et guérie par le Seigneur Jésus?",
+      options: [
+        { id: 0, text: "Maléléel", isCorrect: false },
+        { id: 1, text: "Malchus", isCorrect: true },
+        { id: 2, text: "Manahem", isCorrect: false },
+      ],
+    },
+    {
+      id:2,
+      stageId:"Evangiles",
+      sectionId:"personnages",
+      text: "Quand Jésus enfant fut présenté au temple, ils y trouvèrent une prophétesse très âgée qui y servait Dieu. Elle s’appelait :",
+      options: [
+        { id: 0, text: "Anne", isCorrect: true },
+        { id: 1, text: "Jeanne ", isCorrect: false },
+        { id: 2, text: "Marthe", isCorrect: false },
+      ],
+    },
+    {
+      id:3,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces personnages, lequel était un homme juste et pieux, qui, à Jérusalem, prit l’enfant Jésus dans ses bras et béni les parents de Jésus et loua Dieu ?",
+      options: [
+        { id: 0, text: "Siméon", isCorrect: true },
+        { id: 1, text: "Zacharie", isCorrect: false },
+        { id: 2, text: "Samuel", isCorrect: false },
+      ],
+    },
+    {
+      id:4,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces personnages, lequel était ce riche homme qui était disciple de Jésus et qui demanda le corps de Jésus à Pilate pour l’enterrer dans un sépulcre lui appartenant ?",
+      options: [
+        { id: 0, text: "Gamaliel", isCorrect: false },
+        { id: 1, text: "Joseph d’Arimathée", isCorrect: true },
+        { id: 2, text: "Nicodème", isCorrect: false },
+      ],
+    },
+    {
+      id:5,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces Hérode, lequel a voulu tuer Jésus bébé ?",
+      options: [
+        { id: 0, text: "Antipater", isCorrect: false },
+        { id: 1, text: "Agrippa", isCorrect: false },
+        { id: 2, text: "Hérode le Grand", isCorrect: true },
+      ],
+    },
+    {
+      id:6,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces apôtres, lequel a été personnellement ( « évangélisé ») appelé par Jésus à le suivre.",
+      options: [
+        { id: 0, text: "Philippe", isCorrect: true },
+        { id: 1, text: "Pierre,", isCorrect: false },
+        { id: 2, text: "André", isCorrect: false },
+      ],
+    },
+    {
+      id:7,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces apôtres, à qui il a été dit : « Nous avons trouvé celui dont il est parlé dans la loi de Moïse et dans les prophètes, Jésus de Nazareth, fils de Joseph. »",
+      options: [
+        { id: 0, text: "Philippe", isCorrect: false },
+        { id: 1, text: "Thomas", isCorrect: false },
+        { id: 2, text: "Nathanaël", isCorrect: true },
+      ],
+    },
+    {
+      id:8,
+      stageId:"Evangiles",
+      sectionId:"A laquelle des Marie ; Le Seigneur Jésus apparut, après sa résurrection ?",
+      options: [
+        { id: 0, text: "Marie de Magdala", isCorrect: true },
+        { id: 1, text: "Marie mère de Jésus ", isCorrect: false },
+        { id: 2, text: "Marie de Béthanie", isCorrect: false },
+      ],
+    },
+
+
+--------------------------------------------------------------------------
+    {
+      id:9,
+      stageId:"Evangiles",
+      sectionId:"Parmi ces Hérode, devant lequel Paul a comparu",
+      options: [
+        { id: 0, text: "Hérode Antipas", isCorrect: false },
+        { id: 1, text: "Hérode Agrippa 1", isCorrect: false },
+        { id: 2, text: "Hérode Agrippa 2", isCorrect: true }, 
+      ],
+    },
+
+--------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+  ]
