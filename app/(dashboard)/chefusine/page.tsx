@@ -1,5 +1,6 @@
 "use client";
 
+// Chef usine dashboard - production management
 import React, { useEffect, useState } from "react";
 import {
   Card,
