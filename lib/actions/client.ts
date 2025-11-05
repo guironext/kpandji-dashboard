@@ -125,7 +125,7 @@ export async function updateClient(id: string, data: {
     }
     
     // Explicitly exclude userId to prevent foreign key constraint violations
-    const { userId, ...safeData } = data as any;
+    const { userId, ...safeData } = data as Record<string, unknown> & { userId?: unknown };
     if (userId !== undefined) {
       console.warn("Attempted to update userId field, which is not allowed. Ignoring userId:", userId);
     }

@@ -417,7 +417,7 @@ export async function getAllCommandesGrouped() {
       }
       acc[etape].push(cmd);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, typeof serializedCommandes>);
 
     return { success: true, data: grouped };
   } catch (error) {
