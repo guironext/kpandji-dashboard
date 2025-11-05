@@ -77,15 +77,12 @@ export default function AttributionDialog({
 
   const fetchEquipes = async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/equipes');
       const data = await response.json();
       setEquipes(data);
     } catch (error) {
       console.error('Failed to fetch equipes:', error);
       toast.error('Erreur lors du chargement des équipes');
-    } finally {
-      setLoading(false);
     }
   };
 
