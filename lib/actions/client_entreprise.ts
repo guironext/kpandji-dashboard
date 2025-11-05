@@ -150,20 +150,20 @@ export async function updateClientEntreprise(id: string, data: {
     
     // Clean the data to ensure we don't accidentally update userId
     const updateData = {
-      ...(safeData.nom_entreprise !== undefined && { nom_entreprise: safeData.nom_entreprise }),
-      ...(safeData.sigle !== undefined && { sigle: safeData.sigle }),
-      ...(safeData.email !== undefined && { email: safeData.email }),
-      ...(safeData.telephone !== undefined && { telephone: safeData.telephone }),
-      ...(safeData.nom_personne_contact !== undefined && { nom_personne_contact: safeData.nom_personne_contact }),
-      ...(safeData.fonction_personne_contact !== undefined && { fonction_personne_contact: safeData.fonction_personne_contact }),
-      ...(safeData.email_personne_contact !== undefined && { email_personne_contact: safeData.email_personne_contact }),
-      ...(safeData.telephone_personne_contact !== undefined && { telephone_personne_contact: safeData.telephone_personne_contact }),
-      ...(safeData.localisation !== undefined && { localisation: safeData.localisation }),
-      ...(safeData.secteur_activite !== undefined && { secteur_activite: safeData.secteur_activite }),
-      ...(safeData.flotte_vehicules !== undefined && { flotte_vehicules: safeData.flotte_vehicules }),
-      ...(safeData.flotte_vehicules_description !== undefined && { flotte_vehicules_description: safeData.flotte_vehicules_description }),
-      ...(safeData.commercial !== undefined && { commercial: safeData.commercial }),
-      ...(safeData.status_client !== undefined && { status_client: safeData.status_client }),
+      ...(safeData.nom_entreprise !== undefined && { nom_entreprise: safeData.nom_entreprise as string }),
+      ...(safeData.sigle !== undefined && { sigle: safeData.sigle as string | null }),
+      ...(safeData.email !== undefined && { email: safeData.email as string | null }),
+      ...(safeData.telephone !== undefined && { telephone: safeData.telephone as string }),
+      ...(safeData.nom_personne_contact !== undefined && { nom_personne_contact: safeData.nom_personne_contact as string | null }),
+      ...(safeData.fonction_personne_contact !== undefined && { fonction_personne_contact: safeData.fonction_personne_contact as string | null }),
+      ...(safeData.email_personne_contact !== undefined && { email_personne_contact: safeData.email_personne_contact as string | null }),
+      ...(safeData.telephone_personne_contact !== undefined && { telephone_personne_contact: safeData.telephone_personne_contact as string | null }),
+      ...(safeData.localisation !== undefined && { localisation: safeData.localisation as string | null }),
+      ...(safeData.secteur_activite !== undefined && { secteur_activite: safeData.secteur_activite as string | null }),
+      ...(safeData.flotte_vehicules !== undefined && { flotte_vehicules: safeData.flotte_vehicules as boolean | null }),
+      ...(safeData.flotte_vehicules_description !== undefined && { flotte_vehicules_description: safeData.flotte_vehicules_description as string | null }),
+      ...(safeData.commercial !== undefined && { commercial: safeData.commercial as string | null }),
+      ...(safeData.status_client !== undefined && { status_client: safeData.status_client as "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE" }),
     };
     
     console.log("Final update data (excluding userId):", updateData);

@@ -132,14 +132,14 @@ export async function updateClient(id: string, data: {
     
     // Clean the data to ensure we don't accidentally update userId
     const updateData = {
-      ...(safeData.nom !== undefined && { nom: safeData.nom }),
-      ...(safeData.email !== undefined && { email: safeData.email }),
-      ...(safeData.telephone !== undefined && { telephone: safeData.telephone }),
-      ...(safeData.entreprise !== undefined && { entreprise: safeData.entreprise }),
-      ...(safeData.secteur_activite !== undefined && { secteur_activite: safeData.secteur_activite }),
-      ...(safeData.localisation !== undefined && { localisation: safeData.localisation }),
-      ...(safeData.commercial !== undefined && { commercial: safeData.commercial }),
-      ...(safeData.status_client !== undefined && { status_client: safeData.status_client }),
+      ...(safeData.nom !== undefined && { nom: safeData.nom as string }),
+      ...(safeData.email !== undefined && { email: safeData.email as string | null }),
+      ...(safeData.telephone !== undefined && { telephone: safeData.telephone as string }),
+      ...(safeData.entreprise !== undefined && { entreprise: safeData.entreprise as string | null }),
+      ...(safeData.secteur_activite !== undefined && { secteur_activite: safeData.secteur_activite as string | null }),
+      ...(safeData.localisation !== undefined && { localisation: safeData.localisation as string | null }),
+      ...(safeData.commercial !== undefined && { commercial: safeData.commercial as string | null }),
+      ...(safeData.status_client !== undefined && { status_client: safeData.status_client as "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE" }),
     };
     
     console.log("Final update data (excluding userId):", updateData);
