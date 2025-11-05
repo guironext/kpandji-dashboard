@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -24,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClientEntreprise } from '@/lib/actions/client_entreprise';
 import { toast } from 'sonner';
 import { Loader2, Building2, Users } from 'lucide-react';
@@ -40,10 +38,10 @@ const clientEntrepriseSchema = z.object({
   telephone_personne_contact: z.string().optional(),
   localisation: z.string().optional(),
   secteur_activite: z.string().optional(),
-  flotte_vehicules: z.boolean().default(false),
+  flotte_vehicules: z.boolean(),
   flotte_vehicules_description: z.string().optional(),
   commercial: z.string().optional(),
-  status_client: z.enum(['CLIENT', 'PROSPECT', 'FAVORABLE', 'A_SUIVRE', 'ABANDONNE']).default('PROSPECT'),
+  status_client: z.enum(['CLIENT', 'PROSPECT', 'FAVORABLE', 'A_SUIVRE', 'ABANDONNE']),
 });
 
 type ClientEntrepriseFormData = z.infer<typeof clientEntrepriseSchema>;
