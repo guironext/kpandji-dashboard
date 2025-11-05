@@ -7,7 +7,7 @@ export async function GET() {
       orderBy: { model: 'asc' }
     });
     return NextResponse.json(models);
-  } catch (_error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch models" },
       { status: 500 }
