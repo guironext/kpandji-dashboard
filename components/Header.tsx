@@ -7,7 +7,6 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { Button } from "./ui/button";
 import { MenuIcon, Bell, Settings } from "lucide-react";
 import Image from "next/image";
-import { SearchForm } from "./search-form";
 
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const { isLoaded, isSignedIn, user } = useUser();
