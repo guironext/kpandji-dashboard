@@ -61,9 +61,13 @@ type CommandeWithRelations = {
   createdAt: Date;
   updatedAt: Date;
   clientId: string | null;
+  clientEntrepriseId?: string | null;
   voitureModelId?: string | null;
   conteneurId?: string | null;
   commandeLocalId?: string | null;
+  montageId?: string | null;
+  factureId?: string | null;
+  prix_unitaire?: number | null;
   client?: { nom: string } | null;
   voitureModel?: { model: string } | null;
   fournisseurs?: { id: string; nom: string }[];
