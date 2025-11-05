@@ -67,10 +67,15 @@ type CommandeWithRelations = {
   commandeLocalId?: string | null;
   montageId?: string | null;
   factureId?: string | null;
-  prix_unitaire?: number | null;
-  client?: { nom: string } | null;
-  voitureModel?: { model: string } | null;
-  fournisseurs?: { id: string; nom: string }[];
+  prix_unitaire?: Decimal | number | null;
+  client?: unknown;
+  clientEntreprise?: unknown;
+  voitureModel?: unknown;
+  fournisseurs?: unknown[];
+};
+
+type Decimal = {
+  toNumber(): number;
 };
 
 type EquipeWithRelations = {
