@@ -46,7 +46,7 @@ const MONTHS = [
 
 export function TableauChuteDialog({ 
   clients, 
-  rapportId, 
+  // rapportId, // Unused but kept in interface for future use
   voitureId, 
   rendezVousId, 
   onSuccess,
