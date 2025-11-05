@@ -6,8 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -23,10 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/actions/client';
 import { toast } from 'sonner';
-import { Loader2, User, Building2 } from 'lucide-react';
+import { Loader2, User} from 'lucide-react';
 
 const clientSchema = z.object({
   nom: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
@@ -36,7 +33,7 @@ const clientSchema = z.object({
   secteur_activite: z.string().optional(),
   localisation: z.string().optional(),
   commercial: z.string().optional(),
-  status_client: z.enum(['CLIENT', 'PROSPECT', 'FAVORABLE', 'A_SUIVRE', 'ABANDONNE']).default('PROSPECT'),
+  status_client: z.enum(['CLIENT', 'PROSPECT', 'FAVORABLE', 'A_SUIVRE', 'ABANDONNE']),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;

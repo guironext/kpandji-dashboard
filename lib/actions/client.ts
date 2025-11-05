@@ -11,7 +11,7 @@ export async function createClient(data: {
   secteur_activite?: string;
   localisation?: string;
   commercial?: string;
-  status_client?: "CLIENT" | "PROSPECT" | "ABANDONNE"; // Add status field
+  status_client?: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE";
   userId: string;
 }) {
   try {
