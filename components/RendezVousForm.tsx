@@ -39,7 +39,7 @@ const rendezVousSchema = z.object({
   date: z.string().min(1, 'La date est requise'),
   time: z.string().min(1, 'L\'heure est requise'),
   clientType: z.enum(['CLIENT', 'CLIENT_ENTREPRISE'], {
-    required_error: 'Veuillez sélectionner un type de client',
+    message: 'Veuillez sélectionner un type de client',
   }),
   clientId: z.string().min(1, 'Veuillez sélectionner un client'),
 });
@@ -80,10 +80,10 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
         ]);
 
         if (clientsResult.success) {
-          setClients(clientsResult.data);
+          setClients(clientsResult.data as Client[] || []);
         }
         if (clientEntreprisesResult.success) {
-          setClientEntreprises(clientEntreprisesResult.data);
+          setClientEntreprises(clientEntreprisesResult.data as ClientEntreprise[] || []);
         }
       } catch (error) {
         console.error('Error fetching clients:', error);
