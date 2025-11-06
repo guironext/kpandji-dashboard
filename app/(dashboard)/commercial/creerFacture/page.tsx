@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,7 @@ type Accessoire = {
   image?: string | null;
 };
 
-export default function CreerFacturePage() {
+function CreerFacturePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const factureId = searchParams.get("id");
@@ -927,5 +927,23 @@ export default function CreerFacturePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreerFacturePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 p-8">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-4xl mx-auto w-full">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <CreerFacturePageContent />
+    </Suspense>
   );
 }
