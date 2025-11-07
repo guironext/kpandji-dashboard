@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { put } from "@vercel/blob";
 
 const createAccessoireSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
@@ -26,9 +27,7 @@ export async function createAccessoire(
   try {
     createAccessoireSchema.parse(data);
 
-    const externesDir = join(process.cwd(), "public", "externes");
-    await mkdir(externesDir, { recursive: true });
-
+    const isProduction = process.env.NODE_ENV === 'production';
     let imagePath = "";
 
     if (file) {
@@ -40,14 +39,30 @@ export async function createAccessoire(
 
       const timestamp = Date.now();
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filename = `${timestamp}_${sanitizedName}`;
-      const filepath = join(externesDir, filename);
 
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filepath, buffer);
+      if (isProduction) {
+        // Use Vercel Blob in production
+        const filename = `accessoires/${timestamp}_${sanitizedName}`;
+        
+        const blob = await put(filename, file, {
+          access: 'public',
+        });
+        
+        imagePath = blob.url;
+      } else {
+        // Use local filesystem in development
+        const externesDir = join(process.cwd(), "public", "externes");
+        await mkdir(externesDir, { recursive: true });
+        
+        const filename = `${timestamp}_${sanitizedName}`;
+        const filepath = join(externesDir, filename);
 
-      imagePath = `/externes/${filename}`;
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filepath, buffer);
+
+        imagePath = `/externes/${filename}`;
+      }
     }
 
     const accessoire = await prisma.accessoire.create({
