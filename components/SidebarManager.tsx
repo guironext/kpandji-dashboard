@@ -38,27 +38,7 @@ const navItems = [
     href: "/manager",
     category: "main"
   },
-  {
-    id: 2,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Ordre Montage",
-    href: "/manager/montage",
-    category: "operations"
-  },
-  {
-    id: 3,
-    icon: <Wrench className="w-5 h-5" />,
-    label: "Ordre Correction",
-    href: "/manager/correction",
-    category: "operations"
-  },
-  {
-    id: 4,
-    icon: <AlertTriangle className="w-5 h-5" />,
-    label: "Réclamation Pièces",
-    href: "/manager/reclamationpieces",
-    category: "operations"
-  },
+  
   {
     id: 5,
     icon: <ClipboardList className="w-5 h-5" />,
@@ -100,6 +80,27 @@ const navItems = [
     label: "Commandes Arrivées",
     href: "/manager/commandes-arrivees",
     category: "commandes"
+  },
+  {
+    id: 2,
+    icon: <ClipboardCheck className="w-5 h-5" />,
+    label: "Ordre Montage",
+    href: "/manager/montage",
+    category: "operations"
+  },
+  {
+    id: 3,
+    icon: <Wrench className="w-5 h-5" />,
+    label: "Ordre Correction",
+    href: "/manager/correction",
+    category: "operations"
+  },
+  {
+    id: 4,
+    icon: <AlertTriangle className="w-5 h-5" />,
+    label: "Réclamation Pièces",
+    href: "/manager/reclamationpieces",
+    category: "operations"
   },
   {
     id: 11,
