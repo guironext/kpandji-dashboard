@@ -20,7 +20,7 @@ const isDirecteurGeneralRoute = createRouteMatcher(["/directeurgeneral", "/direc
 const isClientelleRoute = createRouteMatcher(["/clientelle", "/clientelle/(.*)"]);
 const isComptableRoute = createRouteMatcher(["/comptable", "/comptable/(.*)"]);
 const isConcessionnaireRoute = createRouteMatcher(["/concessionnaire", "/concessionnaire/(.*)"]);
-
+const isSuperviseurRoute = createRouteMatcher(["/superviseur", "/superviseur/(.*)"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
@@ -94,6 +94,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         break;
       case "CONCESSIONAIRE":
         redirectUrl = "/concessionnaire";
+        break;
+      case "SUPERVISEUR":
+        redirectUrl = "/superviseur";
         break;
       default:
         return NextResponse.next();
@@ -171,6 +174,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
       case "CONCESSIONAIRE":
         redirectUrl = "/concessionnaire";
         break;
+      case "SUPERVISEUR":
+        redirectUrl = "/superviseur";
+        break;
       default:
         return NextResponse.next();
     }
@@ -236,6 +242,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
           break;
         case "CONCESSIONAIRE":
           redirectUrl = "/concessionnaire";
+          break;
+        case "SUPERVISEUR":
+          redirectUrl = "/superviseur";
           break;
         default:
           return NextResponse.next();
@@ -393,6 +402,14 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
   if (isConcessionnaireRoute(req)) {
     if (sessionClaims?.metadata?.role === "CONCESSIONAIRE") {
+      return NextResponse.next();
+    } else {
+      const homepageUrl = new URL("/", req.url);
+      return NextResponse.redirect(homepageUrl);
+    }
+  }
+  if (isSuperviseurRoute(req)) {
+    if (sessionClaims?.metadata?.role === "SUPERVISEUR") {
       return NextResponse.next();
     } else {
       const homepageUrl = new URL("/", req.url);

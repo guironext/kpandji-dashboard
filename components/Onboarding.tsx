@@ -280,6 +280,7 @@ const OnboardingForm = ({
                                   <SelectItem value="ADMIN">Admin</SelectItem>
                                   <SelectItem value="MAGASINIER">Magasinier</SelectItem>
                                   <SelectItem value="MANAGER">Manager</SelectItem>
+                                  <SelectItem value="SUPERVISEUR">Superviseur</SelectItem>
                                   <SelectItem value="CHEFUSINE">Chef Usine</SelectItem>
                                   <SelectItem value="EMPLOYEE">Employé</SelectItem>
                                   <SelectItem value="CHEFEQUIPE">Chef Équipe</SelectItem>
