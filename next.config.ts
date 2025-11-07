@@ -3,6 +3,22 @@ import path from "path";
 
 // Force Vercel to rebuild - Updated: 2025-11-05 at 13:45
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Handle Prisma with custom output directory
