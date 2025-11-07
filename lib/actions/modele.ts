@@ -5,6 +5,7 @@ import { writeFile, mkdir, readdir, unlink, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { put } from "@vercel/blob";
 
 // Schema for model creation - matches VoitureModel from Prisma schema
 const createModelSchema = z.object({
@@ -32,10 +33,7 @@ export async function createModel(
     // Validate input data
     createModelSchema.parse(data);
     
-    // Create externes folder if it doesn't exist
-    const externesDir = join(process.cwd(), "public", "externes");
-    await mkdir(externesDir, { recursive: true });
-    
+    const isProduction = process.env.NODE_ENV === 'production';
     let imagePath = "";
     let ficheTechniquePath = "";
     
@@ -50,18 +48,36 @@ export async function createModel(
         size: file.size,
       });
       
-      // Generate unique filename
-      const timestamp = Date.now();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filename = `${timestamp}_${sanitizedName}`;
-      const filepath = join(externesDir, filename);
+      let uploadedPath: string;
       
-      // Convert File to Buffer and save
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filepath, buffer);
-      
-      const uploadedPath = `/externes/${filename}`;
+      if (isProduction) {
+        // Use Vercel Blob in production
+        const timestamp = Date.now();
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const filename = `modeles/${timestamp}_${sanitizedName}`;
+        
+        const blob = await put(filename, file, {
+          access: 'public',
+        });
+        
+        uploadedPath = blob.url;
+      } else {
+        // Use local filesystem in development
+        const externesDir = join(process.cwd(), "public", "externes");
+        await mkdir(externesDir, { recursive: true });
+        
+        const timestamp = Date.now();
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const filename = `${timestamp}_${sanitizedName}`;
+        const filepath = join(externesDir, filename);
+        
+        // Convert File to Buffer and save
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filepath, buffer);
+        
+        uploadedPath = `/externes/${filename}`;
+      }
       
       // If hasFicheTechnique, last file is fiche technique
       if (hasFicheTechnique && i === files.length - 1) {
@@ -100,9 +116,11 @@ export async function createModel(
       };
     }
     
+    // Return more detailed error message for debugging
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
     return {
       success: false,
-      message: "Erreur lors de la création du modèle",
+      message: `Erreur lors de la création du modèle: ${errorMessage}. Note: L'upload de fichiers ne fonctionne pas sur Vercel (système de fichiers en lecture seule). Utilisez un service cloud comme Cloudinary, AWS S3, ou Vercel Blob.`,
     };
   }
 }
@@ -236,9 +254,7 @@ export async function updateModele(
   try {
     createModelSchema.partial().parse(data);
     
-    const externesDir = join(process.cwd(), "public", "externes");
-    await mkdir(externesDir, { recursive: true });
-    
+    const isProduction = process.env.NODE_ENV === 'production';
     let imagePath: string | undefined;
     let ficheTechniquePath: string | undefined;
     
@@ -252,16 +268,35 @@ export async function updateModele(
           size: file.size,
         });
         
-        const timestamp = Date.now();
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-        const filename = `${timestamp}_${sanitizedName}`;
-        const filepath = join(externesDir, filename);
+        let uploadedPath: string;
         
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        await writeFile(filepath, buffer);
-        
-        const uploadedPath = `/externes/${filename}`;
+        if (isProduction) {
+          // Use Vercel Blob in production
+          const timestamp = Date.now();
+          const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+          const filename = `modeles/${timestamp}_${sanitizedName}`;
+          
+          const blob = await put(filename, file, {
+            access: 'public',
+          });
+          
+          uploadedPath = blob.url;
+        } else {
+          // Use local filesystem in development
+          const externesDir = join(process.cwd(), "public", "externes");
+          await mkdir(externesDir, { recursive: true });
+          
+          const timestamp = Date.now();
+          const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+          const filename = `${timestamp}_${sanitizedName}`;
+          const filepath = join(externesDir, filename);
+          
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          await writeFile(filepath, buffer);
+          
+          uploadedPath = `/externes/${filename}`;
+        }
         
         if (hasFicheTechnique && i === files.length - 1) {
           ficheTechniquePath = uploadedPath;
