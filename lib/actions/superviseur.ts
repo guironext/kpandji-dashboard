@@ -2,6 +2,59 @@
 
 import { prisma } from "../prisma";
 
+interface CommercialPerformance {
+  id: string;
+  name: string;
+  email: string;
+  telephone: string;
+  clients: number;
+  prospects: number;
+  rendezVous: number;
+  commandes: number;
+  factures: number;
+  revenue: number;
+  conversionRate: string | number;
+}
+
+interface RapportRendezVousData {
+  id: string;
+  date_rendez_vous: Date;
+  heure_rendez_vous: string;
+  lieu_rendez_vous: string;
+  lieu_autre: string | null;
+  duree_rendez_vous: string;
+  nom_prenom_client: string;
+  telephone_client: string;
+  email_client: string | null;
+  profession_societe: string | null;
+  type_client: string;
+  presentation_gamme: boolean;
+  essai_vehicule: boolean;
+  negociation_commerciale: boolean;
+  livraison_vehicule: boolean;
+  service_apres_vente: boolean;
+  objet_autre: string | null;
+  modeles_discutes: string | null;
+  motivations_achat: string | null;
+  points_positifs: string | null;
+  objections_freins: string | null;
+  degre_interet: string | null;
+  decision_attendue: string | null;
+  devis_offre_remise: boolean;
+  reference_offre: string | null;
+  financement_propose: string | null;
+  assurance_entretien: string | null;
+  reprise_ancien_vehicule: string | null;
+  actions_suivi: string | null;
+  commentaire_global: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  client: unknown;
+  clientEntreprise: unknown;
+  rendezVous: unknown;
+  voiture: unknown;
+}
+
 // Get all users with role COMMERCIAL
 export async function getAllCommercialUsers() {
   try {
@@ -68,7 +121,7 @@ export async function getCommercialActivitiesStats() {
       totalCommandes: 0,
       totalFactures: 0,
       totalRevenue: 0,
-      commercialPerformance: [] as any[],
+      commercialPerformance: [] as CommercialPerformance[],
     };
 
     commercials.forEach(commercial => {
@@ -526,7 +579,7 @@ export async function getAllRapportRendezVousByUser() {
     });
 
     // Group reports by conseiller_commercial (commercial advisor)
-    const reportsByUser = new Map<string, any[]>();
+    const reportsByUser = new Map<string, RapportRendezVousData[]>();
 
     allReports.forEach(report => {
       const commercialName = report.conseiller_commercial;

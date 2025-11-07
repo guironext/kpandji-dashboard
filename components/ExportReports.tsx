@@ -10,12 +10,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface ExportReportsProps {
-  reportsByUser: any[];
-  totalReports: number;
+interface Report {
+  id: string;
+  date_rendez_vous: Date;
+  heure_rendez_vous: string;
+  duree_rendez_vous: string;
+  nom_prenom_client: string;
+  telephone_client: string;
+  email_client: string | null;
+  type_client: string;
+  lieu_rendez_vous: string;
+  degre_interet: string | null;
+  motivations_achat: string | null;
+  points_positifs: string | null;
+  objections_freins: string | null;
+  commentaire_global: string | null;
 }
 
-export const ExportReports = ({ reportsByUser, totalReports }: ExportReportsProps) => {
+interface ReportsByUser {
+  conseiller_commercial: string;
+  totalReports: number;
+  reports: Report[];
+}
+
+interface ExportReportsProps {
+  reportsByUser: ReportsByUser[];
+}
+
+export const ExportReports = ({ reportsByUser }: ExportReportsProps) => {
   const exportToCSV = () => {
     const headers = [
       "Conseiller Commercial",
@@ -35,7 +57,7 @@ export const ExportReports = ({ reportsByUser, totalReports }: ExportReportsProp
     ];
 
     const rows = reportsByUser.flatMap(userGroup =>
-      userGroup.reports.map((report: any) => [
+      userGroup.reports.map((report) => [
         userGroup.conseiller_commercial,
         new Date(report.date_rendez_vous).toLocaleDateString("fr-FR"),
         report.heure_rendez_vous,

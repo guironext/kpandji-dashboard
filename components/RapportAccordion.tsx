@@ -43,8 +43,51 @@ import {
   Package,
 } from "lucide-react";
 
+interface Report {
+  id: string;
+  date_rendez_vous: Date;
+  heure_rendez_vous: string;
+  duree_rendez_vous: string;
+  nom_prenom_client: string;
+  telephone_client: string;
+  email_client: string | null;
+  type_client: string;
+  lieu_rendez_vous: string;
+  lieu_autre: string | null;
+  profession_societe: string | null;
+  degre_interet: string | null;
+  motivations_achat: string | null;
+  points_positifs: string | null;
+  objections_freins: string | null;
+  commentaire_global: string | null;
+  decision_attendue: string | null;
+  presentation_gamme: boolean;
+  essai_vehicule: boolean;
+  negociation_commerciale: boolean;
+  livraison_vehicule: boolean;
+  service_apres_vente: boolean;
+  devis_offre_remise: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  voiture?: {
+    id: string;
+    couleur: string;
+    motorisation: string;
+    transmission: string;
+    voitureModel?: {
+      model: string;
+    };
+  } | null;
+}
+
+interface ReportsByUser {
+  conseiller_commercial: string;
+  totalReports: number;
+  reports: Report[];
+}
+
 interface RapportAccordionProps {
-  reportsByUser: any[];
+  reportsByUser: ReportsByUser[];
 }
 
 export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {
@@ -54,7 +97,7 @@ export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {
   // Filter reports based on search and interest level
   const filteredReportsByUser = reportsByUser.map(userGroup => ({
     ...userGroup,
-    reports: userGroup.reports.filter((report: any) => {
+    reports: userGroup.reports.filter((report) => {
       const matchesSearch = 
         report.nom_prenom_client.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.telephone_client.includes(searchTerm) ||
@@ -172,7 +215,7 @@ export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6">
               <div className="space-y-4 pt-4">
-                {userGroup.reports.map((report: any) => (
+                {userGroup.reports.map((report) => (
                   <Card
                     key={report.id}
                     className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50"
