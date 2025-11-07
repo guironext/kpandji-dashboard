@@ -227,7 +227,7 @@ const RapportRendezVousPage = async () => {
                   Consultez et analysez les rapports de rendez-vous organisés par conseiller
                 </CardDescription>
               </div>
-              <ExportReports reportsByUser={reportsByUser} totalReports={totalReports} />
+              <ExportReports reportsByUser={reportsByUser} />
             </div>
           </CardHeader>
           <CardContent className="p-6">

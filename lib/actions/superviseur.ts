@@ -49,10 +49,33 @@ interface RapportRendezVousData {
   commentaire_global: string | null;
   createdAt: Date;
   updatedAt: Date;
-  client: unknown;
-  clientEntreprise: unknown;
-  rendezVous: unknown;
-  voiture: unknown;
+  client: {
+    id: string;
+    nom: string;
+    telephone: string;
+    email: string | null;
+  } | null;
+  clientEntreprise: {
+    id: string;
+    nom_entreprise: string;
+    telephone: string;
+    email: string | null;
+  } | null;
+  rendezVous: {
+    id: string;
+    date: Date;
+    statut: string;
+    resume_rendez_vous: string | null;
+  } | null;
+  voiture: {
+    id: string;
+    couleur: string;
+    motorisation: string;
+    transmission: string;
+    voitureModel?: {
+      model: string;
+    };
+  } | null;
 }
 
 // Get all users with role COMMERCIAL
@@ -155,7 +178,7 @@ export async function getCommercialActivitiesStats() {
         id: commercial.id,
         name: `${commercial.firstName} ${commercial.lastName}`,
         email: commercial.email,
-        telephone: commercial.telephone,
+        telephone: commercial.telephone || '',
         clients,
         prospects,
         rendezVous,
@@ -457,7 +480,6 @@ export async function getAllRendezVousByUser() {
                 client: {
                   select: {
                     nom: true,
-                    prenom: true,
                     telephone: true,
                     email: true,
                   },
@@ -496,14 +518,16 @@ export async function getAllRendezVousByUser() {
     const rendezVousByUser = commercials.map(commercial => {
       // Combine rendez-vous from both clients and client_entreprises
       const allRendezVous = [
-        ...commercial.clients.flatMap(c => c.rendez_vous.map(rdv => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...commercial.clients.flatMap((c: any) => c.rendez_vous.map((rdv: any) => ({
           ...rdv,
-          clientName: `${c.prenom} ${c.nom}`,
+          clientName: c.nom,
           clientType: 'PARTICULIER' as const,
           clientPhone: rdv.client?.telephone || c.telephone,
           clientEmail: rdv.client?.email || c.email,
         }))),
-        ...commercial.client_entreprises.flatMap(c => c.rendez_vous.map(rdv => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...commercial.client_entreprises.flatMap((c: any) => c.rendez_vous.map((rdv: any) => ({
           ...rdv,
           clientName: rdv.clientEntreprise?.nom_entreprise || c.nom_entreprise,
           clientType: 'ENTREPRISE' as const,
@@ -606,7 +630,7 @@ export async function getAllRapportRendezVousByUser() {
         livraison_vehicule: report.livraison_vehicule,
         service_apres_vente: report.service_apres_vente,
         objet_autre: report.objet_autre,
-        modeles_discutes: report.modeles_discutes,
+        modeles_discutes: typeof report.modeles_discutes === 'string' ? report.modeles_discutes : null,
         motivations_achat: report.motivations_achat,
         points_positifs: report.points_positifs,
         objections_freins: report.objections_freins,
@@ -614,17 +638,23 @@ export async function getAllRapportRendezVousByUser() {
         decision_attendue: report.decision_attendue,
         devis_offre_remise: report.devis_offre_remise,
         reference_offre: report.reference_offre,
-        financement_propose: report.financement_propose,
-        assurance_entretien: report.assurance_entretien,
-        reprise_ancien_vehicule: report.reprise_ancien_vehicule,
-        actions_suivi: report.actions_suivi,
+        financement_propose: typeof report.financement_propose === 'string' ? report.financement_propose : null,
+        assurance_entretien: typeof report.assurance_entretien === 'string' ? report.assurance_entretien : null,
+        reprise_ancien_vehicule: typeof report.reprise_ancien_vehicule === 'string' ? report.reprise_ancien_vehicule : null,
+        actions_suivi: typeof report.actions_suivi === 'string' ? report.actions_suivi : null,
         commentaire_global: report.commentaire_global,
         createdAt: report.createdAt,
         updatedAt: report.updatedAt,
         client: report.client,
         clientEntreprise: report.clientEntreprise,
         rendezVous: report.rendezVous,
-        voiture: report.voiture,
+        voiture: report.voiture ? {
+          id: report.voiture.id,
+          couleur: report.voiture.couleur,
+          motorisation: report.voiture.motorisation as string,
+          transmission: report.voiture.transmission as string,
+          voitureModel: report.voiture.voitureModel || undefined,
+        } : null,
       });
     });
 
