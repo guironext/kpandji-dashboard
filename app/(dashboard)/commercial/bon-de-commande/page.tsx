@@ -354,7 +354,7 @@ export default function Page() {
                 <h1 className="text-2xl font-bold text-orange-900">
                   KPANDJI AUTOMOBILES
                 </h1>
-                <p className="text-sm text-black font-thin">
+                <p className="text-sm text-black font-normal">
                   Constructeur et Assembleur Automobile
                 </p>
               </div>
@@ -504,7 +504,7 @@ export default function Page() {
                                 <div className="flex flex-col gap-y-1">
                                   <p className="font-semibold">{ligne.voitureModel?.model || "N/A"}</p>
                                   {ligne.voitureModel?.description && (
-                                    <p className="text-[8px] text-wrap max-w-5xl font-light text-black ">
+                                    <p className="text-[8px] text-wrap max-w-5xl font-normal text-black ">
                                       {ligne.voitureModel.description}
                                     </p>
                                   )}

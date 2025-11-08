@@ -152,6 +152,7 @@ export async function updateClient(id: string, data: {
     console.log("Client updated successfully:", client);
     revalidatePath("/manager");
     revalidatePath("/commercial/programme");
+    revalidatePath("/commercial/prospects");
     return { success: true, data: client };
   } catch (error) {
     console.error("Error updating client:", error);
@@ -173,6 +174,7 @@ export async function deleteClient(id: string) {
     });
     
     revalidatePath("/manager");
+    revalidatePath("/commercial/prospects");
     return { success: true };
   } catch (error) {
     console.error("Error deleting client:", error);

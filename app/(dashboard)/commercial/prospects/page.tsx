@@ -6,10 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ClientForm } from '@/components/ClientForm';
 import { ClientEntrepriseForm } from '@/components/ClientEntrepriseForm';
-import { getClientsByUser } from '@/lib/actions/client';
-import { getClientEntreprisesByUser } from '@/lib/actions/client_entreprise';
+import { getClientsByUser, updateClient, deleteClient } from '@/lib/actions/client';
+import { getClientEntreprisesByUser, updateClientEntreprise, deleteClientEntreprise } from '@/lib/actions/client_entreprise';
 import { 
   Users, 
   Building2, 
@@ -21,7 +32,8 @@ import {
   Briefcase,
   Trash2,
   Edit,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -66,6 +78,42 @@ const ProspectsPage = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedClientEntreprise, setSelectedClientEntreprise] = useState<ClientEntreprise | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
+  const [editingClientEntreprise, setEditingClientEntreprise] = useState<ClientEntreprise | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isSubmittingClientEdit, setIsSubmittingClientEdit] = useState(false);
+  
+  // Form fields for editing client entreprise
+  const [formData, setFormData] = useState({
+    nom_entreprise: '',
+    sigle: '',
+    email: '',
+    telephone: '',
+    nom_personne_contact: '',
+    fonction_personne_contact: '',
+    email_personne_contact: '',
+    telephone_personne_contact: '',
+    localisation: '',
+    secteur_activite: '',
+    flotte_vehicules: false,
+    flotte_vehicules_description: '',
+    commercial: '',
+    status_client: 'PROSPECT' as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE',
+  });
+
+  // Form fields for editing individual client
+  const [clientFormData, setClientFormData] = useState({
+    nom: '',
+    email: '',
+    telephone: '',
+    entreprise: '',
+    localisation: '',
+    secteur_activite: '',
+    commercial: '',
+    status_client: 'PROSPECT' as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE',
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,6 +182,127 @@ const ProspectsPage = () => {
     setIsModalOpen(true);
   };
 
+  const handleEditClientEntreprise = (clientEntreprise: ClientEntreprise) => {
+    setEditingClientEntreprise(clientEntreprise);
+    setFormData({
+      nom_entreprise: clientEntreprise.nom_entreprise,
+      sigle: clientEntreprise.sigle || '',
+      email: clientEntreprise.email || '',
+      telephone: clientEntreprise.telephone,
+      nom_personne_contact: clientEntreprise.nom_personne_contact || '',
+      fonction_personne_contact: clientEntreprise.fonction_personne_contact || '',
+      email_personne_contact: clientEntreprise.email_personne_contact || '',
+      telephone_personne_contact: clientEntreprise.telephone_personne_contact || '',
+      localisation: clientEntreprise.localisation || '',
+      secteur_activite: clientEntreprise.secteur_activite || '',
+      flotte_vehicules: clientEntreprise.flotte_vehicules || false,
+      flotte_vehicules_description: clientEntreprise.flotte_vehicules_description || '',
+      commercial: clientEntreprise.commercial || '',
+      status_client: clientEntreprise.status_client as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingClientEntreprise) return;
+
+    setIsSubmittingEdit(true);
+    try {
+      const result = await updateClientEntreprise(editingClientEntreprise.id, formData);
+
+      if (result.success) {
+        toast.success('Client entreprise mis à jour avec succès!');
+        setIsEditModalOpen(false);
+        handleFormSuccess(); // Refresh the data
+      } else {
+        toast.error(result.error || 'Erreur lors de la mise à jour');
+      }
+    } catch (error) {
+      console.error('Error updating client entreprise:', error);
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleDeleteClientEntreprise = async (id: string) => {
+    // Confirm deletion
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce client entreprise ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      const result = await deleteClientEntreprise(id);
+
+      if (result.success) {
+        toast.success('Client entreprise supprimé avec succès!');
+        handleFormSuccess(); // Refresh the data
+      } else {
+        toast.error(result.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Error deleting client entreprise:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleEditClient = (client: Client) => {
+    setEditingClient(client);
+    setClientFormData({
+      nom: client.nom,
+      email: client.email || '',
+      telephone: client.telephone,
+      entreprise: client.entreprise || '',
+      localisation: client.localisation || '',
+      secteur_activite: client.secteur_activite || '',
+      commercial: client.commercial || '',
+      status_client: client.status_client as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE',
+    });
+    setIsEditClientModalOpen(true);
+  };
+
+  const handleSaveClientEdit = async () => {
+    if (!editingClient) return;
+
+    setIsSubmittingClientEdit(true);
+    try {
+      const result = await updateClient(editingClient.id, clientFormData);
+
+      if (result.success) {
+        toast.success('Client mis à jour avec succès!');
+        setIsEditClientModalOpen(false);
+        handleFormSuccess(); // Refresh the data
+      } else {
+        toast.error(result.error || 'Erreur lors de la mise à jour');
+      }
+    } catch (error) {
+      console.error('Error updating client:', error);
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setIsSubmittingClientEdit(false);
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    // Confirm deletion
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      const result = await deleteClient(id);
+
+      if (result.success) {
+        toast.success('Client supprimé avec succès!');
+        handleFormSuccess(); // Refresh the data
+      } else {
+        toast.error(result.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -423,10 +592,21 @@ const ProspectsPage = () => {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                            <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEditClient(client)}
+                            
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300">
+                            <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+                            onClick={() => handleDeleteClient(client.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -573,11 +753,21 @@ const ProspectsPage = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
 
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                            <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEditClientEntreprise(clientEntreprise)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
 
-                            <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300">
+                            <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+                            onClick={() => handleDeleteClientEntreprise(clientEntreprise.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                             
@@ -825,6 +1015,397 @@ const ProspectsPage = () => {
                   })}
                 </span>
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Entreprise Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-green-600" />
+              </div>
+              <span className="text-xl font-semibold">
+                Modifier l&apos;entreprise
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Company Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-green-600" />
+                Informations de l&apos;entreprise
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nom_entreprise">Nom de l&apos;entreprise *</Label>
+                  <Input
+                    id="nom_entreprise"
+                    value={formData.nom_entreprise}
+                    onChange={(e) => setFormData({ ...formData, nom_entreprise: e.target.value })}
+                    placeholder="ABC Corporation"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sigle">Sigle</Label>
+                  <Input
+                    id="sigle"
+                    value={formData.sigle}
+                    onChange={(e) => setFormData({ ...formData, sigle: e.target.value })}
+                    placeholder="ABC"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email entreprise</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="contact@abc-corp.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telephone">Téléphone entreprise *</Label>
+                  <Input
+                    id="telephone"
+                    value={formData.telephone}
+                    onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                    placeholder="+33 1 23 45 67 89"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="localisation">Localisation</Label>
+                  <Input
+                    id="localisation"
+                    value={formData.localisation}
+                    onChange={(e) => setFormData({ ...formData, localisation: e.target.value })}
+                    placeholder="Paris, France"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="secteur_activite">Secteur d&apos;activité</Label>
+                  <Input
+                    id="secteur_activite"
+                    value={formData.secteur_activite}
+                    onChange={(e) => setFormData({ ...formData, secteur_activite: e.target.value })}
+                    placeholder="Automobile, Finance, etc."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Person Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5 text-green-600" />
+                Personne de contact
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nom_personne_contact">Nom complet</Label>
+                  <Input
+                    id="nom_personne_contact"
+                    value={formData.nom_personne_contact}
+                    onChange={(e) => setFormData({ ...formData, nom_personne_contact: e.target.value })}
+                    placeholder="Marie Martin"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fonction_personne_contact">Fonction</Label>
+                  <Input
+                    id="fonction_personne_contact"
+                    value={formData.fonction_personne_contact}
+                    onChange={(e) => setFormData({ ...formData, fonction_personne_contact: e.target.value })}
+                    placeholder="Directeur des achats"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email_personne_contact">Email contact</Label>
+                  <Input
+                    id="email_personne_contact"
+                    type="email"
+                    value={formData.email_personne_contact}
+                    onChange={(e) => setFormData({ ...formData, email_personne_contact: e.target.value })}
+                    placeholder="marie.martin@abc-corp.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telephone_personne_contact">Téléphone contact</Label>
+                  <Input
+                    id="telephone_personne_contact"
+                    value={formData.telephone_personne_contact}
+                    onChange={(e) => setFormData({ ...formData, telephone_personne_contact: e.target.value })}
+                    placeholder="+33 6 12 34 56 78"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Commercial Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Informations commerciales</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="commercial">Commercial assigné</Label>
+                  <Input
+                    id="commercial"
+                    value={formData.commercial}
+                    onChange={(e) => setFormData({ ...formData, commercial: e.target.value })}
+                    placeholder="Nom du commercial"
+                    className="bg-gray-50"
+                    readOnly
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status_client">Statut</Label>
+                  <Select
+                    value={formData.status_client}
+                    onValueChange={(value) => setFormData({ ...formData, status_client: value as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE' })}
+                  >
+                    <SelectTrigger id="status_client">
+                      <SelectValue placeholder="Sélectionner un statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROSPECT">Prospect</SelectItem>
+                      <SelectItem value="CLIENT">Client</SelectItem>
+                      <SelectItem value="FAVORABLE">Favorable</SelectItem>
+                      <SelectItem value="A_SUIVRE">À suivre</SelectItem>
+                      <SelectItem value="ABANDONNE">Abandonné</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 pt-2">
+                <Checkbox
+                  id="flotte_vehicules"
+                  checked={formData.flotte_vehicules}
+                  onCheckedChange={(checked) => setFormData({ ...formData, flotte_vehicules: checked === true })}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="flotte_vehicules" className="font-medium cursor-pointer">
+                    Possède une flotte de véhicules
+                  </Label>
+                </div>
+              </div>
+
+              {formData.flotte_vehicules && (
+                <div className="space-y-2">
+                  <Label htmlFor="flotte_vehicules_description">Description de la flotte</Label>
+                  <Textarea
+                    id="flotte_vehicules_description"
+                    value={formData.flotte_vehicules_description}
+                    onChange={(e) => setFormData({ ...formData, flotte_vehicules_description: e.target.value })}
+                    placeholder="Décrivez la flotte de véhicules (nombre, types, etc.)"
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isSubmittingEdit}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSubmittingEdit}
+                className="bg-green-600 hover:bg-green-700 text-white min-w-[140px]"
+              >
+                {isSubmittingEdit ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="mr-2 h-4 w-4" />
+                    Enregistrer
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Individual Client Modal */}
+      <Dialog open={isEditClientModalOpen} onOpenChange={setIsEditClientModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <User className="h-5 w-5 text-blue-600" />
+              </div>
+              <span className="text-xl font-semibold">
+                Modifier le client
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Client Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600" />
+                Informations du client
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client_nom">Nom complet *</Label>
+                  <Input
+                    id="client_nom"
+                    value={clientFormData.nom}
+                    onChange={(e) => setClientFormData({ ...clientFormData, nom: e.target.value })}
+                    placeholder="Jean Dupont"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_telephone">Téléphone *</Label>
+                  <Input
+                    id="client_telephone"
+                    value={clientFormData.telephone}
+                    onChange={(e) => setClientFormData({ ...clientFormData, telephone: e.target.value })}
+                    placeholder="+33 6 12 34 56 78"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_email">Email</Label>
+                  <Input
+                    id="client_email"
+                    type="email"
+                    value={clientFormData.email}
+                    onChange={(e) => setClientFormData({ ...clientFormData, email: e.target.value })}
+                    placeholder="jean.dupont@example.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_entreprise">Entreprise</Label>
+                  <Input
+                    id="client_entreprise"
+                    value={clientFormData.entreprise}
+                    onChange={(e) => setClientFormData({ ...clientFormData, entreprise: e.target.value })}
+                    placeholder="Nom de l'entreprise"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_localisation">Localisation</Label>
+                  <Input
+                    id="client_localisation"
+                    value={clientFormData.localisation}
+                    onChange={(e) => setClientFormData({ ...clientFormData, localisation: e.target.value })}
+                    placeholder="Paris, France"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_secteur_activite">Secteur d&apos;activité</Label>
+                  <Input
+                    id="client_secteur_activite"
+                    value={clientFormData.secteur_activite}
+                    onChange={(e) => setClientFormData({ ...clientFormData, secteur_activite: e.target.value })}
+                    placeholder="Automobile, Finance, etc."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Commercial Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Informations commerciales</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client_commercial">Commercial assigné</Label>
+                  <Input
+                    id="client_commercial"
+                    value={clientFormData.commercial}
+                    onChange={(e) => setClientFormData({ ...clientFormData, commercial: e.target.value })}
+                    placeholder="Nom du commercial"
+                    className="bg-gray-50"
+                    readOnly
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client_status">Statut</Label>
+                  <Select
+                    value={clientFormData.status_client}
+                    onValueChange={(value) => setClientFormData({ ...clientFormData, status_client: value as 'CLIENT' | 'PROSPECT' | 'FAVORABLE' | 'A_SUIVRE' | 'ABANDONNE' })}
+                  >
+                    <SelectTrigger id="client_status">
+                      <SelectValue placeholder="Sélectionner un statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROSPECT">Prospect</SelectItem>
+                      <SelectItem value="CLIENT">Client</SelectItem>
+                      <SelectItem value="FAVORABLE">Favorable</SelectItem>
+                      <SelectItem value="A_SUIVRE">À suivre</SelectItem>
+                      <SelectItem value="ABANDONNE">Abandonné</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditClientModalOpen(false)}
+                disabled={isSubmittingClientEdit}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveClientEdit}
+                disabled={isSubmittingClientEdit}
+                className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]"
+              >
+                {isSubmittingClientEdit ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <User className="mr-2 h-4 w-4" />
+                    Enregistrer
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>
