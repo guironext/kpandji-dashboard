@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "../prisma";
+import { Decimal } from "@prisma/client/runtime/library";
 
 interface CommercialPerformance {
   id: string;
@@ -76,6 +77,27 @@ interface RapportRendezVousData {
       model: string;
     };
   } | null;
+}
+
+// Helper function to serialize facture Decimal fields
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeFacture(facture: any) {
+  return {
+    ...facture,
+    prix_unitaire: facture.prix_unitaire ? Number(facture.prix_unitaire) : 0,
+    montant_ht: facture.montant_ht ? Number(facture.montant_ht) : 0,
+    total_ht: facture.total_ht ? Number(facture.total_ht) : 0,
+    remise: facture.remise ? Number(facture.remise) : 0,
+    montant_remise: facture.montant_remise ? Number(facture.montant_remise) : 0,
+    montant_net_ht: facture.montant_net_ht ? Number(facture.montant_net_ht) : 0,
+    tva: facture.tva ? Number(facture.tva) : 0,
+    montant_tva: facture.montant_tva ? Number(facture.montant_tva) : 0,
+    total_ttc: facture.total_ttc ? Number(facture.total_ttc) : 0,
+    avance_payee: facture.avance_payee ? Number(facture.avance_payee) : 0,
+    reste_payer: facture.reste_payer ? Number(facture.reste_payer) : 0,
+    accessoire_prix: facture.accessoire_prix ? Number(facture.accessoire_prix) : null,
+    accessoire_subtotal: facture.accessoire_subtotal ? Number(facture.accessoire_subtotal) : null,
+  };
 }
 
 // Get all users with role COMMERCIAL
@@ -334,13 +356,16 @@ export async function getRecentCommercialActivities(limit: number = 10) {
       }),
     ]);
 
+    // Serialize factures to convert Decimal fields to numbers
+    const serializedFactures = recentFactures.map(serializeFacture);
+
     return { 
       success: true, 
       data: {
         recentClients,
         recentRendezVous,
         recentCommandes,
-        recentFactures,
+        recentFactures: serializedFactures,
       }
     };
   } catch (error) {
@@ -387,7 +412,21 @@ export async function getCommercialPerformanceDetail(userId: string) {
       return { success: false, error: "Commercial not found" };
     }
 
-    return { success: true, data: commercial };
+    // Serialize factures in the commercial data
+    const serializedCommercial = {
+      ...commercial,
+      factures: commercial.factures.map(serializeFacture),
+      clients: commercial.clients.map(client => ({
+        ...client,
+        factures: client.factures.map(serializeFacture),
+      })),
+      client_entreprises: commercial.client_entreprises.map(clientEntreprise => ({
+        ...clientEntreprise,
+        factures: clientEntreprise.factures.map(serializeFacture),
+      })),
+    };
+
+    return { success: true, data: serializedCommercial };
   } catch (error) {
     console.error("Error fetching commercial performance detail:", error);
     return { success: false, error: "Failed to fetch commercial performance detail" };

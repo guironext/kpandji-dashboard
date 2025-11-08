@@ -330,8 +330,8 @@ export default function Page() {
                                 <Image 
                                   src={ligne.voitureModel.image} 
                                   alt={ligne.voitureModel.model || "Vehicle"} 
-                                  width={100} 
-                                  height={80}
+                                  width={110} 
+                                  height={90}
                                   unoptimized
                                   className="object-contain"
                                 />
@@ -339,7 +339,7 @@ export default function Page() {
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                               {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[7px] font-light text-black max-w-80 text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
+                              <p className="text-[7px] font-normal text-black max-w-80 text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
                                 <div>
                                   <p className="text-[7px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
@@ -455,7 +455,7 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="flex w-full justify-between mt-16 mb-20 px-8">
+                  <div className="flex w-full justify-between mt-16 mb-16 px-8">
                     <div></div>
                     <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
                   </div>
@@ -478,9 +478,9 @@ export default function Page() {
                 <p className="text-black">SOLDE à la livraison</p>
               </div>
               <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
-                <p className="font-thin text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                <p className="font-thin text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                <p className="font-thin text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+                <p className="font-normal text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+                <p className="font-normal text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+                <p className="font-normal text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
               </div>
             </div>
           </div>
