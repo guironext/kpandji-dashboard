@@ -45,34 +45,41 @@ const navItems = [
   },
   {
     id: 4,
+    icon: <Warehouse className="w-5 h-5" />,
+    label: "Stock disponible",
+    href: "/commercial/stock-disponible",
+    category: "operations"
+  },
+  {
+    id: 5,
     icon: <UserCheck className="w-5 h-5" />,
     label: "Prospects",
     href: "/commercial/prospects",
     category: "operations"
   },
   {
-    id: 5,
+    id: 6,
     icon: <Users className="w-5 h-5" />,
     label: "Clients",
     href: "/commercial/clients",
     category: "operations"
   },
   {
-    id: 6,
+    id: 7,
     icon: <Calendar className="w-5 h-5" />,
     label: "Rendez-vous",
     href: "/commercial/rendez-vous",
     category: "operations"
   },
   {
-    id: 7,
+    id: 8,
     icon: <ClipboardList className="w-5 h-5" />,
     label: "Rapport Rendez-vous",
     href: "/commercial/rapport-rendez-vous",
     category: "operations"
   },
   {
-    id: 8,
+    id: 9,
     icon: <Eye className="w-5 h-5" />,
     label: "Suivi Rendez-vous",
     href: "/commercial/suivi-rendez-vous",

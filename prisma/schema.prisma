@@ -173,16 +173,17 @@ model Tableau_chute_rendez_vous {
 }
 
 model VoitureModel {
-  id              String         @id @default(uuid())
-  model           String
-  fiche_technique String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  description     String?
-  image           String?
-  commandes       Commande[]
-  factureLignes   FactureLigne[]
-  voitures        Voiture[]
+  id               String            @id @default(uuid())
+  model            String
+  fiche_technique  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  description      String?
+  image            String?
+  commandes        Commande[]
+  factureLignes    FactureLigne[]
+  voitures         Voiture[]
+  stockDisponibles StockDisponible[]
 }
 
 model Accessoire {
@@ -493,22 +494,22 @@ model Tool {
 }
 
 model Fournisseur {
-  id                 String                     @id @default(uuid())
-  nom                String
-  email              String?
-  telephone          String?
-  adresse            String?
-  ville              String?
-  code_postal        String?
-  pays               String?
-  type_Activite      String?
-  createdAt          DateTime                   @default(now())
-  updatedAt          DateTime                   @updatedAt
-  commandes          Commande[]                 @relation("CommandeToFournisseur")
+  id            String     @id @default(uuid())
+  nom           String
+  email         String?
+  telephone     String?
+  adresse       String?
+  ville         String?
+  code_postal   String?
+  pays          String?
+  type_Activite String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  commandes     Commande[] @relation("CommandeToFournisseur")
 }
 
 model FournisseurCommandeLocal {
-  id              String         @id @default(uuid())
+  id              String          @id @default(uuid())
   nom             String
   email           String?
   telephone       String?
@@ -518,8 +519,8 @@ model FournisseurCommandeLocal {
   pays            String?
   type_Activite   String?
   commandeLocalId String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   commandeLocal   CommandeLocal[]
 }
 
@@ -556,6 +557,19 @@ model RapportVerification {
   updatedAt               DateTime              @updatedAt
   verificationConteneurId String
   verificationConteneur   VerificationConteneur @relation(fields: [verificationConteneurId], references: [id])
+}
+
+model StockDisponible {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  voitureModelId String
+  couleur        String
+  motorisation   String
+  transmission   String
+  voitureModel   VoitureModel @relation(fields: [voitureModelId], references: [id])
+  quantity       Int          @default(1)
+  acquisitionDate DateTime     @default(now())
 }
 
 model Montage {

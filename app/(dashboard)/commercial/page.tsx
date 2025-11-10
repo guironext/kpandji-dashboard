@@ -288,7 +288,7 @@ const CommercialDashboard = () => {
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
 
         <Card 
         onClick={() => router.push('/commercial/clients')}
@@ -337,6 +337,20 @@ const CommercialDashboard = () => {
              
             </div>
             <Receipt className="h-8 w-8 text-orange-500" />
+          </div>
+        </Card>
+
+        <Card 
+        onClick={() => router.push('/commercial/stock-disponible')}
+        className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-blue-600">STOCK DISPONIBLE</div>
+             
+            </div>
+ 
+            <p className="h-8 w-8 text-blue-500 font-bold">15</p>
           </div>
         </Card>
       </div>
