@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
+import { getUserSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -141,6 +142,8 @@ export default function Page() {
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const [showSignature, setShowSignature] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -200,6 +203,23 @@ export default function Page() {
     }
   };
 
+  const handleSignature = async () => {
+    if (showSignature) {
+      setShowSignature(false);
+      return;
+    }
+
+    const result = await getUserSignature();
+    if (result.success && result.data) {
+      setSignatureImage(result.data.image);
+      setShowSignature(true);
+      toast.success("Signature ajoutée au proforma");
+    } else {
+      toast.error("Aucune signature trouvée. Veuillez d'abord créer votre signature.");
+      router.push("./signature");
+    }
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `@media print { body * { visibility: hidden; } #printable-area, #printable-area * { visibility: visible; } #printable-area { position: absolute; left: 0; top: 0; width: 100%; } .print-hide { display: none !important; } .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, .bg-gray-900, .text-amber-400, .text-orange-400, .text-orange-600, .text-black, .border-amber-500, .border-amber-600, .border-orange-600, .border-black { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; } @page { size: A4; margin: 1cm; } }` }} />
@@ -219,6 +239,9 @@ export default function Page() {
               </Button>
               <Button onClick={handleDelete} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
                 SUPPRIMER
+              </Button>
+              <Button onClick={handleSignature} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
+                {showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
               </Button>
             </div>
           </div>
@@ -455,13 +478,29 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="flex w-full justify-between mt-16 mb-16 px-8">
+                  <div className="flex w-full justify-between mt-10 px-8">
                     <div></div>
-                    <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
+                      {showSignature && signatureImage && (
+                        <div className="relative w-48 h-20 -mt-3">
+                          <Image 
+                            src={signatureImage} 
+                            alt="Signature" 
+                            fill
+                            className="object-contain"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      {showSignature && !signatureImage && (
+                        <div className="text-xs text-gray-500 italic">Signature en cours de chargement...</div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col w-full rounded-b-lg text-[9px]">
+                <div className="flex flex-col w-full rounded-b-lg text-[9px] -mt-8">
                   <div className="flex flex-col">
                     <p className="font-bold text-blue-600">Notes</p>
                     <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>

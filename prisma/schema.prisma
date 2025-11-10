@@ -24,8 +24,18 @@ model User {
   employees                  Employee[]
   factures                   Facture[]
   paiements                  Paiement[]
+  signatures                 Signature?
   tableaux_chute             Tableau_chute[]
   tableaux_chute_rendez_vous Tableau_chute_rendez_vous[]
+}
+
+model Signature {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  image     String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Employee {
@@ -341,6 +351,7 @@ model Commande {
   date_livraison     DateTime
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+  commandeFlag       CommandeFlag       @default(VENDUE)
   clientId           String?
   conteneurId        String?
   commandeLocalId    String?
@@ -560,15 +571,15 @@ model RapportVerification {
 }
 
 model StockDisponible {
-  id             String       @id @default(uuid())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  voitureModelId String
-  couleur        String
-  motorisation   String
-  transmission   String
-  voitureModel   VoitureModel @relation(fields: [voitureModelId], references: [id])
-  quantity       Int          @default(1)
+  id              String       @id @default(uuid())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  voitureModelId  String
+  couleur         String
+  motorisation    String
+  transmission    String
+  voitureModel    VoitureModel @relation(fields: [voitureModelId], references: [id])
+  quantity        Int          @default(1)
   acquisitionDate DateTime     @default(now())
 }
 
@@ -854,4 +865,9 @@ enum StatusVerification {
   RETROUVE
   MODIFIE
   NON_RETROUVE
+}
+
+enum CommandeFlag {
+  VENDUE
+  DISPONIBLE
 }

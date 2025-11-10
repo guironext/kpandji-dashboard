@@ -15,6 +15,7 @@ import {
   Package,
   TrendingUp,
   FileCheck,
+  Pen,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -119,6 +120,13 @@ const navItems = [
     icon: <FileCheck className="w-5 h-5" />,
     label: "Bon pour Acquis",
     href: "/commercial/bon-pour-acquis",
+    category: "facturation"
+  },
+  {
+    id: 15,
+    icon: <Pen className="w-5 h-5" />,
+    label: "Signature",
+    href: "/commercial/signature",
     category: "facturation"
   }
 ];

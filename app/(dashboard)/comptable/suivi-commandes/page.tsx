@@ -159,7 +159,7 @@ export default function SuiviCommandesPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {commandes.map((cmd) => (
-                  <Card key={cmd.id} className="bg-white hover:shadow-xl transition-all duration-300 border border-gray-200">
+                  <Card key={cmd.id} className="bg-white hover:shadow-xl transition-all duration-300 border border-gray-400">
                     <CardHeader className={`${ETAPE_COLORS[etape]} text-white pb-3`}>
                       <CardTitle className="flex justify-between items-center text-sm">
                         <span className="font-mono">#{cmd.id.slice(-7).toUpperCase()}</span>
@@ -188,6 +188,9 @@ export default function SuiviCommandesPage() {
                             {cmd.voitureModel?.model || "N/A"}
                           </p>
                           <p className="text-xs text-gray-600">{cmd.couleur}</p>
+                          <p className="text-xs text-gray-600">{cmd.nbr_portes}</p>
+                          <p className="text-xs text-gray-600">{cmd.transmission}</p>
+                          <p className="text-xs text-gray-600">{cmd.motorisation}</p>
                         </div>
                       </div>
 

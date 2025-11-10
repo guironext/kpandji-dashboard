@@ -174,8 +174,14 @@ export async function updateCommandeStatus(commandeId: string, fournisseurIds: s
       }
     });
 
+    // Serialize Decimal fields
+    const serializedCommande = {
+      ...commande,
+      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    };
+
     revalidatePath("/manager/commandes-proposees");
-    return { success: true, data: commande };
+    return { success: true, data: serializedCommande };
   } catch (error) {
     console.error("Error updating commande status:", error);
     return { success: false, error: "Failed to update commande status" };
@@ -198,7 +204,13 @@ export async function getCommandesValides() {
       orderBy: { createdAt: 'desc' }
     });
     
-    return { success: true, data: commandes };
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes valides:", error);
     return { success: false, error: "Failed to fetch commandes valides" };
@@ -220,7 +232,13 @@ export async function getCommandesTransites() {
       orderBy: { createdAt: 'desc' }
     });
     
-    return { success: true, data: commandes };
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes transites:", error);
     return { success: false, error: "Failed to fetch commandes transites" };
@@ -243,8 +261,14 @@ export async function updateCommandeToTransite(commandeId: string, conteneurId: 
       }
     });
 
+    // Serialize Decimal fields
+    const serializedCommande = {
+      ...commande,
+      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    };
+
     revalidatePath("/manager/commandes-transites");
-    return { success: true, data: commande };
+    return { success: true, data: serializedCommande };
   } catch (error) {
     console.error("Error updating commande to transite:", error);
     return { success: false, error: "Failed to update commande to transite" };
@@ -267,7 +291,13 @@ export async function getCommande(id: string) {
       return { success: false, error: "Commande not found" };
     }
     
-    return { success: true, data: commande };
+    // Serialize Decimal fields
+    const serializedCommande = {
+      ...commande,
+      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    };
+    
+    return { success: true, data: serializedCommande };
   } catch (error) {
     console.error("Error fetching commande:", error);
     return { success: false, error: "Failed to fetch commande" };
@@ -320,8 +350,14 @@ export async function updateCommande(id: string, data: {
       });
     }
 
+    // Serialize Decimal fields
+    const serializedCommande = {
+      ...commande,
+      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    };
+
     revalidatePath("/manager");
-    return { success: true, data: commande };
+    return { success: true, data: serializedCommande };
   } catch (error) {
     console.error("Error updating commande:", error);
     return { success: false, error: "Failed to update commande" };
@@ -359,7 +395,13 @@ export async function getCommandesByUserId(userId: string) {
       orderBy: { createdAt: 'desc' }
     });
     
-    return { success: true, data: commandes };
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching user commandes:", error);
     return { success: false, error: "Failed to fetch user commandes" };
