@@ -192,8 +192,8 @@ model VoitureModel {
   image            String?
   commandes        Commande[]
   factureLignes    FactureLigne[]
-  voitures         Voiture[]
   stockDisponibles StockDisponible[]
+  voitures         Voiture[]
 }
 
 model Accessoire {
@@ -205,9 +205,9 @@ model Accessoire {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   image      String?
+  commande   Commande? @relation("CommandeToAccessoire", fields: [commandeId], references: [id])
   facture    Facture?  @relation("FactureToAccessoire", fields: [factureId], references: [id])
   voiture    Voiture?  @relation(fields: [voitureId], references: [id])
-  commande   Commande? @relation("CommandeToAccessoire", fields: [commandeId], references: [id])
 }
 
 model Voiture {
@@ -351,7 +351,6 @@ model Commande {
   date_livraison     DateTime
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
-  commandeFlag       CommandeFlag       @default(VENDUE)
   clientId           String?
   conteneurId        String?
   commandeLocalId    String?
@@ -364,14 +363,17 @@ model Commande {
   clientEntrepriseId String?
   factureId          String?
   prix_unitaire      Decimal?
+  commandeFlag       CommandeFlag       @default(VENDUE)
+  commandeGroupeeId  String?
+  accessoires        Accessoire[]       @relation("CommandeToAccessoire")
   clientEntreprise   Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  commandeGroupee    CommandeGroupee?   @relation(fields: [commandeGroupeeId], references: [id])
   commandeLocal      CommandeLocal?     @relation(fields: [commandeLocalId], references: [id])
   conteneur          Conteneur?         @relation(fields: [conteneurId], references: [id])
   facture            Facture?           @relation(fields: [factureId], references: [id])
   montage            Montage?           @relation("CommandeToMontage", fields: [montageId], references: [id])
   voitureModel       VoitureModel?      @relation(fields: [voitureModelId], references: [id])
-  accessoires        Accessoire[]       @relation("CommandeToAccessoire")
   corrections        Correction[]
   montages           Montage[]          @relation("CommandeToMontages")
   spareParts         SparePart[]
@@ -379,6 +381,18 @@ model Commande {
   tools              Tool[]
   voitures           Voiture[]
   fournisseurs       Fournisseur[]      @relation("CommandeToFournisseur")
+}
+
+model CommandeGroupee {
+  id               String     @id @default(uuid())
+  date_validation  DateTime
+  stock_global     String
+  vendue           String
+  details          String
+  stock_disponible String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  commandes        Commande[]
 }
 
 model Conteneur {
@@ -438,7 +452,7 @@ model CommandeLocal {
   spareParts        SparePart[]
   tools             Tool[]
   voitures          Voiture[]
-  fournisseurs      FournisseurCommandeLocal[]
+  fournisseurs      FournisseurCommandeLocal[] @relation("CommandeLocalToFournisseurCommandeLocal")
 }
 
 model SparePart {
@@ -532,7 +546,7 @@ model FournisseurCommandeLocal {
   commandeLocalId String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
-  commandeLocal   CommandeLocal[]
+  commandeLocal   CommandeLocal[] @relation("CommandeLocalToFournisseurCommandeLocal")
 }
 
 model LocalBuy {
@@ -578,9 +592,9 @@ model StockDisponible {
   couleur         String
   motorisation    String
   transmission    String
-  voitureModel    VoitureModel @relation(fields: [voitureModelId], references: [id])
   quantity        Int          @default(1)
   acquisitionDate DateTime     @default(now())
+  voitureModel    VoitureModel @relation(fields: [voitureModelId], references: [id])
 }
 
 model Montage {
@@ -780,9 +794,9 @@ enum UserRole {
   FINANCE
   DIRECTEUR_GENERAL
   CLIENTELLE
-  SUPERVISEUR
   COMPTABLE
   CONCESSIONAIRE
+  SUPERVISEUR
 }
 
 enum Transmission {

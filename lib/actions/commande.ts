@@ -467,3 +467,74 @@ export async function getAllCommandesGrouped() {
     return { success: false, error: "Failed to fetch grouped commandes" };
   }
 }
+
+export async function getCommandesDisponibles() {
+  try {
+    const commandes = await prisma.commande.findMany({
+      where: {
+        commandeFlag: "DISPONIBLE"
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        voitureModel: true,
+        fournisseurs: true,
+        conteneur: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
+  } catch (error) {
+    console.error("Error fetching commandes disponibles:", error);
+    return { success: false, error: "Failed to fetch commandes disponibles" };
+  }
+}
+
+export async function attribuerCommande(
+  commandeId: string,
+  factureId: string,
+  clientId?: string,
+  clientEntrepriseId?: string
+) {
+  try {
+    if (!clientId && !clientEntrepriseId) {
+      return { success: false, error: "Un client ou une entreprise cliente est requis" };
+    }
+
+    const commande = await prisma.commande.update({
+      where: { id: commandeId },
+      data: {
+        commandeFlag: "VENDUE",
+        factureId: factureId,
+        ...(clientId && { clientId }),
+        ...(clientEntrepriseId && { clientEntrepriseId }),
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        voitureModel: true,
+        fournisseurs: true,
+        conteneur: true,
+      }
+    });
+
+    // Serialize Decimal fields
+    const serializedCommande = {
+      ...commande,
+      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    };
+
+    revalidatePath("/comptable/facture");
+    return { success: true, data: serializedCommande };
+  } catch (error) {
+    console.error("Error attribuing commande:", error);
+    return { success: false, error: "Failed to attribute commande" };
+  }
+}

@@ -6,24 +6,19 @@ import {
   Warehouse,
   Truck,
   ClipboardList,
-  CheckCircle,
-  Clock,
   AlertTriangle,
-  UserPlus,
   CarFront,
-  Building2,
   Wrench,
-  Shield,
-  Database,
   ClipboardCheck,
   FileSpreadsheet,
-  BarChart,
   Container,
-  CheckSquare,
   Settings,
   CalendarDays,
   TrendingDown,
-  PackageCheck
+  PackageCheck,
+  ListOrdered,
+  Package,
+  FileEdit
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -40,147 +35,113 @@ const navItems = [
   },
   
   {
-    id: 5,
+    id: 2,
     icon: <ClipboardList className="w-5 h-5" />,
-    label: "Nouvelle Commande",
-    href: "/manager/ajouter-commande",
+    label: "Créer Cmde Groupée",
+    href: "/manager/commande-groupee",
+    category: "commandes"
+  },
+
+  {
+    id: 3,
+    icon: <ListOrdered className="w-5 h-5" />,
+    label: "Liste Cmdes Groupées",
+    href: "/manager/liste-commandes-groupees",
+    category: "commandes"
+  },
+  {
+    id: 4,
+    icon: <Container className="w-5 h-5" />,
+    label: "Conteneurisation",
+    href: "/manager/conteneurisation",
+    category: "commandes"
+  },
+  {
+    id: 5,
+    icon: <Container className="w-5 h-5" />,
+    label: "Liste Conteneurs",
+    href: "/manager/liste-conteneurs",
     category: "commandes"
   },
   {
     id: 6,
-    icon: <Clock className="w-5 h-5" />,
-    label: "Commandes Proposées",
-    href: "/manager/commandes-proposees",
+    icon: <PackageCheck className="w-5 h-5" />,
+    label: "Renseigner Pièces",
+    href: "/manager/renseigner-pieces",
     category: "commandes"
   },
   {
     id: 7,
-    icon: <CheckCircle className="w-5 h-5" />,
-    label: "Commandes Validées",
-    href: "/manager/commandes-validees",
-    category: "commandes"
+    icon: <Truck className="w-5 h-5" />,
+    label: "Conteneur Arrivés",
+    href: "/manager/conteneur-arrives",
+    category: "operations"
   },
   {
     id: 8,
-    icon: <Truck className="w-5 h-5" />,
-    label: "Commandes Transites",
-    href: "/manager/commandes-transites",
-    category: "commandes"
+    icon: <Package className="w-5 h-5" />,
+    label: "Dépotage & Vérification",
+    href: "/manager/depotage",
+    category: "operations"
   },
   {
     id: 9,
-    icon: <CheckSquare className="w-5 h-5" />,
-    label: "Cmdes Renseignées",
-    href: "/manager/commandes-transites-renseignees",
-    category: "commandes"
-  },
-  {
-    id: 10,
-    icon: <PackageCheck className="w-5 h-5" />,
-    label: "Commandes Arrivées",
-    href: "/manager/commandes-arrivees",
-    category: "commandes"
-  },
-  {
-    id: 2,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Ordre Montage",
-    href: "/manager/montage",
-    category: "operations"
-  },
-  {
-    id: 3,
-    icon: <Wrench className="w-5 h-5" />,
-    label: "Ordre Correction",
-    href: "/manager/correction",
-    category: "operations"
-  },
-  {
-    id: 4,
     icon: <AlertTriangle className="w-5 h-5" />,
     label: "Réclamation Pièces",
     href: "/manager/reclamationpieces",
     category: "operations"
   },
   {
+    id: 10,
+    icon: <Wrench className="w-5 h-5" />,
+    label: "Ordre Montage",
+    href: "/manager/montage",
+    category: "management"
+  },
+  {
     id: 11,
-    icon: <Users className="w-5 h-5" />,
-    label: "Gestion Équipe",
-    href: "/manager/equipe",
+    icon: <FileEdit className="w-5 h-5" />,
+    label: "Ordre Correction",
+    href: "/manager/correction",
     category: "management"
   },
   {
     id: 12,
-    icon: <UserPlus className="w-5 h-5" />,
-    label: "Ajouter Client",
-    href: "/manager/ajouter-client",
-    category: "management"
-  },
-  {
-    id: 13,
     icon: <CarFront className="w-5 h-5" />,
-    label: "Ajouter Modèle",
+    label: "Sortie Parking",
     href: "/manager/ajouter-modele",
     category: "management"
   },
   {
-    id: 14,
-    icon: <Building2 className="w-5 h-5" />,
-    label: "Ajouter Fournisseur",
-    href: "/manager/ajouter-fournisseur",
-    category: "management"
-  },
-  {
-    id: 15,
-    icon: <Container className="w-5 h-5" />,
-    label: "Ajouter Conteneur",
-    href: "/manager/ajouter-conteneur",
-    category: "management"
-  },
-  {
-    id: 16,
-    icon: <Database className="w-5 h-5" />,
-    label: "Voitures en stock",
-    href: "/manager/voiturestock",
-    category: "inventory"
-  },
-  {
-    id: 17,
+    id: 13,
     icon: <FileSpreadsheet className="w-5 h-5" />,
     label: "Rapport Montages",
     href: "/manager/rapportmontages",
     category: "reports"
   },
   {
-    id: 18,
-    icon: <Shield className="w-5 h-5" />,
+    id: 14,
+    icon: <ClipboardCheck className="w-5 h-5" />,
     label: "Rapport Vérification",
     href: "/manager/rapportverification",
     category: "reports"
   },
   {
-    id: 19,
-    icon: <BarChart className="w-5 h-5" />,
-    label: "Rapport Performance",
-    href: "/manager/rapportperformance",
-    category: "reports"
-  },
-  {
-    id: 20,
+    id: 15,
     icon: <CalendarDays className="w-5 h-5" />,
     label: "Rapport Rendez-vous",
     href: "/manager/rapportrendezvous",
     category: "reports"
   },
   {
-    id: 21,
+    id: 16,
     icon: <TrendingDown className="w-5 h-5" />,
     label: "Tableau de Chute",
     href: "/manager/tableau-chute",
     category: "reports"
   },
   {
-    id: 22,
+    id: 17,
     icon: <Settings className="w-5 h-5" />,
     label: "Paramètres",
     href: "/manager/parametres",

@@ -32,7 +32,7 @@ import {
 import { ChevronLeft, ChevronRight, FileText, User, Car, Package, Calendar, Palette, DoorClosed, Cog, Zap, Layers } from "lucide-react";
 import { getFactures, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import { createCommande } from "@/lib/actions/commande";
+import { createCommande, getCommandesDisponibles, attribuerCommande } from "@/lib/actions/commande";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 
@@ -145,6 +145,32 @@ type Facture = {
   }>;
 };
 
+type CommandeDisponible = {
+  id: string;
+  couleur: string;
+  transmission: string;
+  motorisation: string;
+  date_livraison: string | Date;
+  etapeCommande: string;
+  voitureModel?: {
+    model: string;
+    image?: string | null;
+    description?: string | null;
+    [key: string]: unknown;
+  } | null;
+  client?: {
+    nom: string;
+    telephone?: string;
+    [key: string]: unknown;
+  } | null;
+  clientEntreprise?: {
+    nom_entreprise: string;
+    telephone?: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+};
+
 function getAccessoireImage(
   accessoireNom: string | null | undefined,
   accessoiresList: Array<{ id: string; nom: string; image?: string | null }>
@@ -161,6 +187,9 @@ export default function Page() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAttribuerDialogOpen, setIsAttribuerDialogOpen] = useState(false);
+  const [commandesDisponibles, setCommandesDisponibles] = useState<CommandeDisponible[]>([]);
+  const [selectedCommandeId, setSelectedCommandeId] = useState<string>("");
   const [formData, setFormData] = useState({
     couleur: "",
     nbr_portes: "4",
@@ -304,6 +333,57 @@ export default function Page() {
     }
   };
 
+  const handleAttribuerCommande = async () => {
+    const currentFacture = currentData[0];
+    if (!currentFacture) {
+      toast.error("Aucune facture sélectionnée");
+      return;
+    }
+
+    // Fetch available commandes
+    const result = await getCommandesDisponibles();
+    if (result.success && result.data) {
+      setCommandesDisponibles(result.data);
+      setIsAttribuerDialogOpen(true);
+    } else {
+      toast.error("Erreur lors de la récupération des commandes disponibles");
+    }
+  };
+
+  const handleSubmitAttribution = async () => {
+    const currentFacture = currentData[0];
+    if (!currentFacture || !selectedCommandeId) {
+      toast.error("Veuillez sélectionner une commande");
+      return;
+    }
+
+    try {
+      const result = await attribuerCommande(
+        selectedCommandeId,
+        currentFacture.id,
+        currentFacture.clientId || undefined,
+        currentFacture.clientEntrepriseId || undefined
+      );
+
+      if (result.success) {
+        toast.success("Commande attribuée avec succès");
+        setIsAttribuerDialogOpen(false);
+        setSelectedCommandeId("");
+        
+        // Refresh factures to update button state
+        const updatedFactures = await getFactures();
+        if (updatedFactures.success && updatedFactures.data) {
+          setFactures(updatedFactures.data as Facture[]);
+        }
+      } else {
+        toast.error(result.error || "Erreur lors de l'attribution de la commande");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de l'attribution de la commande");
+      console.error("Attribution error:", error);
+    }
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -343,6 +423,13 @@ export default function Page() {
                 {currentData[0]?.commandes && currentData[0].commandes.length > 0 
                   ? "Commande Déjà Créée" 
                   : "Lancer la Commande"}
+              </Button>
+              <Button
+                onClick={handleAttribuerCommande}
+                disabled={currentData.length === 0 || (currentData[0]?.commandes && currentData[0].commandes.length > 0)}
+                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Attribuer une Commande
               </Button>
             </div>
           </div>
@@ -849,6 +936,131 @@ export default function Page() {
             >
               <Package className="w-4 h-4 mr-2" />
               Créer la Commande
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAttribuerDialogOpen} onOpenChange={setIsAttribuerDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-y-auto bg-gradient-to-br from-orange-50 via-white to-amber-50">
+          <DialogHeader className="space-y-3 pb-4 border-b-2 border-amber-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-gray-900">Attribuer une Commande</DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  Sélectionnez une commande disponible pour la facture <span className="font-semibold text-amber-600">#{currentData[0]?.id.slice(-7)}</span>
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="grid gap-5 py-6">
+            {/* Client Information */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-base text-gray-900">Client</h3>
+              </div>
+              <div className="text-sm font-semibold text-gray-900 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                {currentData[0]?.client?.nom || currentData[0]?.clientEntreprise?.nom_entreprise || "Non spécifié"}
+              </div>
+            </div>
+
+            {/* Available Commandes */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Car className="w-5 h-5 text-orange-600" />
+                <h3 className="font-bold text-base text-gray-900">Commandes Disponibles</h3>
+              </div>
+              
+              {commandesDisponibles.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">Aucune commande disponible</p>
+                  <p className="text-sm mt-1">Il n&apos;y a pas de commandes disponibles pour le moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {commandesDisponibles.map((commande) => (
+                    <div
+                      key={commande.id}
+                      onClick={() => setSelectedCommandeId(commande.id)}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedCommandeId === commande.id
+                          ? "border-amber-500 bg-amber-50 shadow-md"
+                          : "border-gray-200 hover:border-amber-300 hover:bg-amber-25"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              selectedCommandeId === commande.id
+                                ? "border-amber-500 bg-amber-500"
+                                : "border-gray-300"
+                            }`}>
+                              {selectedCommandeId === commande.id && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-gray-900">
+                              {commande.voitureModel?.model || "Modèle non spécifié"}
+                            </h4>
+                          </div>
+                          <div className="ml-6 space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-3 h-3" />
+                              <span>Couleur: <span className="font-medium">{commande.couleur}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Cog className="w-3 h-3" />
+                              <span>Transmission: <span className="font-medium">{commande.transmission}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-3 h-3" />
+                              <span>Motorisation: <span className="font-medium">{commande.motorisation}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3 h-3" />
+                              <span>Date de livraison: <span className="font-medium">{new Date(commande.date_livraison).toLocaleDateString()}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Layers className="w-3 h-3" />
+                              <span>Étape: <span className="font-medium">{commande.etapeCommande}</span></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="border-t-2 border-amber-300 pt-4 gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsAttribuerDialogOpen(false);
+                setSelectedCommandeId("");
+              }}
+              className="border-2 border-gray-300 hover:bg-gray-100 font-semibold"
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSubmitAttribution}
+              disabled={!selectedCommandeId}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg hover:shadow-xl transition-all px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Attribuer la Commande
             </Button>
           </DialogFooter>
         </DialogContent>

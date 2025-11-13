@@ -55,6 +55,7 @@ interface Commande {
   couleur: string;
   date_livraison: Date;
   createdAt: Date;
+  commandeFlag?: string;
   client?: {
     nom: string;
     entreprise?: string | null;
@@ -110,6 +111,7 @@ const CommercialDashboard = () => {
   const totalCommandes = commandes.length;
   const commandesEnCours = commandes.filter(c => ['PROPOSITION', 'VALIDE', 'TRANSITE', 'RENSEIGNEE', 'ARRIVE'].includes(c.etapeCommande)).length;
   const commandesLivrees = commandes.filter(c => c.etapeCommande === 'VENTE').length;
+ 
   
   // Commercial-specific metrics
   const conversionRate = prospects > 0 ? Math.round((activeClients / prospects) * 100) : 0;
@@ -350,7 +352,9 @@ const CommercialDashboard = () => {
              
             </div>
  
-            <p className="h-8 w-8 text-blue-500 font-bold">15</p>
+            <p className="h-8 w-8 text-blue-500 font-bold">
+              
+            </p>
           </div>
         </Card>
       </div>

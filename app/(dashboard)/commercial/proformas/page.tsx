@@ -229,7 +229,7 @@ export default function Page() {
           <div className="flex w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
               <Button onClick={() => router.push("./creerFacture")} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg">
-                CREER UN PROFORMA
+                CREER PROFORMA
               </Button>
               <Button onClick={handlePrint} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg">
                 IMPRIMER
