@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -182,6 +183,7 @@ function getAccessoireImage(
 }
 
 export default function Page() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -431,6 +433,24 @@ export default function Page() {
               >
                 Attribuer une Commande
               </Button>
+            </div>
+            <div className="flex gap-x-2 items-center">
+            <Button
+              onClick={() => {
+                const currentFacture = currentData[0];
+                if (currentFacture) {
+                  router.push(`/comptable/facture/${currentFacture.id}/paiement`);
+                }
+              }}
+              disabled={currentData.length === 0}
+              className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Reçu de Caisse
+            </Button>
+              <p>Reste à Payer:</p>
+              <p className="text-sm text-gray-800 font-bold text-right">
+                {currentData[0] ? formatNumberWithSpaces(currentData[0].reste_payer) + " FCFA" : "0 FCFA"}
+              </p>
             </div>
           </div>
 

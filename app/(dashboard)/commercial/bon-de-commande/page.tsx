@@ -17,6 +17,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { generateNextNumero, getBonDeCommandeByFactureId } from "@/lib/actions/bondecommande";
+import { updateClient } from "@/lib/actions/client";
+import { updateClientEntreprise } from "@/lib/actions/client_entreprise";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -217,6 +219,35 @@ export default function Page() {
     if (result.success && result.data) {
       setNumero(result.data.numero);
       toast.success(`Numéro généré: ${result.data.numero}`);
+      
+      // Update client status to CLIENT if successful
+      if (currentFacture.clientId) {
+        try {
+          const clientUpdateResult = await updateClient(currentFacture.clientId, {
+            status_client: "CLIENT"
+          });
+          if (!clientUpdateResult.success) {
+            console.error("Failed to update client status:", clientUpdateResult.error);
+          }
+        } catch (error) {
+          console.error("Error updating client status:", error);
+        }
+      }
+      
+      // Update client_entreprise status to CLIENT if successful
+      if (currentFacture.clientEntrepriseId) {
+        try {
+          const clientEntrepriseUpdateResult = await updateClientEntreprise(currentFacture.clientEntrepriseId, {
+            status_client: "CLIENT"
+          });
+          if (!clientEntrepriseUpdateResult.success) {
+            console.error("Failed to update client_entreprise status:", clientEntrepriseUpdateResult.error);
+          }
+        } catch (error) {
+          console.error("Error updating client_entreprise status:", error);
+        }
+      }
+      
     } else {
       toast.error("Erreur lors de la génération du numéro");
     }

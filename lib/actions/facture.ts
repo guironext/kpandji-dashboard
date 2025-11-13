@@ -344,6 +344,11 @@ export async function getFactures() {
             etapeCommande: true,
             createdAt: true
           }
+        },
+        paiements: {
+          select: {
+            avance_payee: true
+          }
         }
       },
       orderBy: [
@@ -353,7 +358,23 @@ export async function getFactures() {
       ]
     });
     
-    const serializedFactures = factures.map(serializeFacture);
+    // Recalculate reste_payer based on actual payments
+    const facturesWithRecalculatedReste = factures.map(facture => {
+      const totalPaid = facture.paiements.reduce(
+        (sum, paiement) => sum + Number(paiement.avance_payee),
+        0
+      );
+      const totalTtc = Number(facture.total_ttc);
+      const recalculatedRestePayer = Math.max(0, totalTtc - totalPaid);
+      
+      return {
+        ...facture,
+        reste_payer: new Decimal(recalculatedRestePayer),
+        avance_payee: new Decimal(totalPaid)
+      };
+    });
+    
+    const serializedFactures = facturesWithRecalculatedReste.map(serializeFacture);
     
     return { success: true, data: serializedFactures };
   } catch (error) {
@@ -709,7 +730,12 @@ export async function getFactureById(factureId: string) {
             voitureModel: true
           }
         },
-        accessoires: true
+        accessoires: true,
+        paiements: {
+          select: {
+            avance_payee: true
+          }
+        }
       }
     });
     
@@ -717,7 +743,21 @@ export async function getFactureById(factureId: string) {
       return { success: false, error: "Facture not found" };
     }
     
-    return { success: true, data: serializeFacture(facture) };
+    // Recalculate reste_payer based on actual payments
+    const totalPaid = facture.paiements.reduce(
+      (sum, paiement) => sum + Number(paiement.avance_payee),
+      0
+    );
+    const totalTtc = Number(facture.total_ttc);
+    const recalculatedRestePayer = Math.max(0, totalTtc - totalPaid);
+    
+    const factureWithRecalculatedReste = {
+      ...facture,
+      reste_payer: new Decimal(recalculatedRestePayer),
+      avance_payee: new Decimal(totalPaid)
+    };
+    
+    return { success: true, data: serializeFacture(factureWithRecalculatedReste) };
   } catch (error) {
     console.error("Error fetching facture:", error);
     return { success: false, error: "Failed to fetch facture" };
