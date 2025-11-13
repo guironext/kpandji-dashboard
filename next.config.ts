@@ -19,9 +19,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverActions: {
-    bodySizeLimit: '10mb', // Increased from default 1mb to support file uploads
-  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Handle Prisma with custom output directory
