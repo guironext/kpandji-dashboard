@@ -7,7 +7,6 @@ import { Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateRapportRendezVousComplet } from '@/lib/actions/rendezvous';
 import { RapportRendezVousForm } from './RapportRendezVousForm';
-import { Prisma } from '@prisma/client';
 
 interface RapportRendezVous {
   id: string;
@@ -141,7 +140,7 @@ export function EditRapportRendezVousDialog({
         livraison_vehicule: data.livraison_vehicule,
         service_apres_vente: data.service_apres_vente,
         objet_autre: data.objet_autre,
-        modeles_discutes: data.modeles_discutes as unknown as Prisma.InputJsonValue[],
+        modeles_discutes: data.modeles_discutes,
         motivations_achat: data.motivations_achat,
         points_positifs: data.points_positifs,
         objections_freins: data.objections_freins,
@@ -152,7 +151,7 @@ export function EditRapportRendezVousDialog({
         financement_propose: data.financement_propose,
         assurance_entretien: data.assurance_entretien,
         reprise_ancien_vehicule: data.reprise_ancien_vehicule,
-        actions_suivi: data.actions_suivi as unknown as Prisma.InputJsonValue[],
+        actions_suivi: data.actions_suivi,
         commentaire_global: data.commentaire_global,
       });
 
