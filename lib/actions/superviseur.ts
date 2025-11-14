@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "../prisma";
-import { Decimal } from "@prisma/client/runtime/library";
 
 interface CommercialPerformance {
   id: string;

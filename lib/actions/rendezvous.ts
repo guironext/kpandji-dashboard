@@ -506,7 +506,7 @@ export async function updateRapportRendezVousComplet(
   }
 ) {
   try {
-    const updateData: any = {};
+    const updateData: Prisma.RapportRendezVousUpdateInput = {};
     
     if (data.date_rendez_vous) {
       updateData.date_rendez_vous = new Date(data.date_rendez_vous);
