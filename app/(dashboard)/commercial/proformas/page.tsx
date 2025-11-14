@@ -267,7 +267,7 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex w-full justify-center my-8">
+                <div className="flex w-full justify-center my-4">
                   <h1 className="text-xl font-bold text-black border border-black px-4 py-2 rounded-lg">
                     FACTURE {facture.status_facture}
                   </h1>
@@ -362,12 +362,12 @@ export default function Page() {
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                               {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[7px] font-normal text-black max-w-80 text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
+                              <p className="text-[10px] font-normal text-black max-w-80 text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
                                 <div>
-                                  <p className="text-[7px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
-                                  {ligne.transmission && <p className="text-[7px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
-                                  {ligne.motorisation && <p className="text-[7px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
+                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
+                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
+                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
                                 </div>
                               )}
                             </TableCell>
@@ -478,7 +478,7 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="flex w-full justify-between mt-10 px-8">
+                  <div className="flex w-full justify-between mt-5 px-8">
                     <div></div>
                     <div className="flex flex-col items-center gap-4">
                       <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
