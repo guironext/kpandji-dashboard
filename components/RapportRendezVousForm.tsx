@@ -83,74 +83,79 @@ interface RapportRendezVousFormProps {
   };
   onClose: () => void;
   onSubmit: (data: RapportRendezVousData) => void;
+  initialData?: Partial<RapportRendezVousData>;
 }
 
-export function RapportRendezVousForm({ rendezVous, onClose, onSubmit }: RapportRendezVousFormProps) {
+export function RapportRendezVousForm({ rendezVous, onClose, onSubmit, initialData }: RapportRendezVousFormProps) {
   const { user, isLoaded } = useUser();
   
   const [formData, setFormData] = useState({
     // 1. Détails du rendez-vous
-    date_rendez_vous: new Date(rendezVous.date).toISOString().split('T')[0],
-    heure_rendez_vous: new Date(rendezVous.date).toTimeString().slice(0, 5),
-    lieu_rendez_vous: 'Showroom',
-    lieu_autre: '',
-    conseiller_commercial: '',
-    duree_rendez_vous: '',
+    date_rendez_vous: initialData?.date_rendez_vous || new Date(rendezVous.date).toISOString().split('T')[0],
+    heure_rendez_vous: initialData?.heure_rendez_vous || new Date(rendezVous.date).toTimeString().slice(0, 5),
+    lieu_rendez_vous: initialData?.lieu_rendez_vous || 'Showroom',
+    lieu_autre: initialData?.lieu_autre || '',
+    conseiller_commercial: initialData?.conseiller_commercial || '',
+    duree_rendez_vous: initialData?.duree_rendez_vous || '',
     
     // 2. Informations sur le client
-    nom_prenom_client: rendezVous.client?.nom || rendezVous.clientEntreprise?.nom_entreprise || '',
-    telephone_client: rendezVous.client?.telephone || rendezVous.clientEntreprise?.telephone || '',
-    email_client: rendezVous.client?.email || rendezVous.clientEntreprise?.email || '',
-    profession_societe: rendezVous.client?.entreprise || '',
-    type_client: rendezVous.client ? 'Particulier' : 'Professionnel',
+    nom_prenom_client: initialData?.nom_prenom_client || rendezVous.client?.nom || rendezVous.clientEntreprise?.nom_entreprise || '',
+    telephone_client: initialData?.telephone_client || rendezVous.client?.telephone || rendezVous.clientEntreprise?.telephone || '',
+    email_client: initialData?.email_client || rendezVous.client?.email || rendezVous.clientEntreprise?.email || '',
+    profession_societe: initialData?.profession_societe || rendezVous.client?.entreprise || '',
+    type_client: initialData?.type_client || (rendezVous.client ? 'Particulier' : 'Professionnel'),
     
     // 3. Objet du rendez-vous
-    presentation_gamme: false,
-    essai_vehicule: false,
-    negociation_commerciale: false,
-    livraison_vehicule: false,
-    service_apres_vente: false,
-    objet_autre: '',
+    presentation_gamme: initialData?.presentation_gamme ?? false,
+    essai_vehicule: initialData?.essai_vehicule ?? false,
+    negociation_commerciale: initialData?.negociation_commerciale ?? false,
+    livraison_vehicule: initialData?.livraison_vehicule ?? false,
+    service_apres_vente: initialData?.service_apres_vente ?? false,
+    objet_autre: initialData?.objet_autre || '',
     
     // 4. Modèles discutés
     modeles_discutes: [] as ModeleDiscute[],
     
     // 5. Impressions et besoins du client
-    motivations_achat: '',
-    points_positifs: '',
-    objections_freins: '',
-    degre_interet: '',
-    decision_attendue: '',
+    motivations_achat: initialData?.motivations_achat || '',
+    points_positifs: initialData?.points_positifs || '',
+    objections_freins: initialData?.objections_freins || '',
+    degre_interet: initialData?.degre_interet || '',
+    decision_attendue: initialData?.decision_attendue || '',
     
     // 6. Propositions faites
-    devis_offre_remise: false,
-    reference_offre: '',
-    financement_propose: '',
-    assurance_entretien: false,
-    reprise_ancien_vehicule: false,
+    devis_offre_remise: initialData?.devis_offre_remise ?? false,
+    reference_offre: initialData?.reference_offre || '',
+    financement_propose: initialData?.financement_propose || '',
+    assurance_entretien: initialData?.assurance_entretien ?? false,
+    reprise_ancien_vehicule: initialData?.reprise_ancien_vehicule ?? false,
     
     // 7. Suivi / Actions à entreprendre
     actions_suivi: [] as ActionSuivi[],
     
     // 8. Commentaire global du conseiller
-    commentaire_global: '',
+    commentaire_global: initialData?.commentaire_global || '',
   });
 
-  const [modelesDiscutes, setModelesDiscutes] = useState<ModeleDiscute[]>([]);
-  const [actionsSuivi, setActionsSuivi] = useState<ActionSuivi[]>([]);
+  const [modelesDiscutes, setModelesDiscutes] = useState<ModeleDiscute[]>(
+    initialData?.modeles_discutes || []
+  );
+  const [actionsSuivi, setActionsSuivi] = useState<ActionSuivi[]>(
+    initialData?.actions_suivi || []
+  );
 
-  // Auto-populate conseiller_commercial with current user's name
+  // Auto-populate conseiller_commercial with current user's name (only if not already set)
   useEffect(() => {
-    if (isLoaded && user) {
+    if (isLoaded && user && !initialData?.conseiller_commercial) {
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
       if (fullName) {
         setFormData(prev => ({
           ...prev,
-          conseiller_commercial: fullName
+          conseiller_commercial: prev.conseiller_commercial || fullName
         }));
       }
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, initialData?.conseiller_commercial]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({

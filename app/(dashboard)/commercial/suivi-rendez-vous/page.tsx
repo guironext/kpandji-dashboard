@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
-  Loader2, 
   Calendar, 
   FileText, 
   User, 
@@ -21,10 +20,18 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
+  MapPin,
+  Mail,
+  Briefcase,
+  Sparkles,
+  Filter,
+  X,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getRapportRendezVousByUser } from '@/lib/actions/rendezvous';
 import { TableauChuteRendezVousDialog } from '@/components/TableauChuteRendezVousDialog';
+import { EditRapportRendezVousDialog } from '@/components/EditRapportRendezVousDialog';
 
 interface RapportRendezVous {
   id: string;
@@ -373,26 +380,26 @@ export default function SuiviRendezVousPage() {
   const getDegreInteretBadge = (degre: string | null) => {
     switch (degre) {
       case 'Fort':
-        return <Badge className="bg-green-100 text-green-800">Fort</Badge>;
+        return <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 shadow-md">Fort</Badge>;
       case 'Moyen':
-        return <Badge className="bg-yellow-100 text-yellow-800">Moyen</Badge>;
+        return <Badge className="bg-amber-500 text-white hover:bg-amber-600 shadow-md">Moyen</Badge>;
       case 'Faible':
-        return <Badge className="bg-red-100 text-red-800">Faible</Badge>;
+        return <Badge className="bg-red-500 text-white hover:bg-red-600 shadow-md">Faible</Badge>;
       default:
-        return <Badge variant="outline">Non renseigné</Badge>;
+        return <Badge variant="outline" className="border-gray-300">Non renseigné</Badge>;
     }
   };
 
   const getDecisionBadge = (decision: string | null) => {
     switch (decision) {
       case 'Immédiate':
-        return <Badge className="bg-green-100 text-green-800">Immédiate</Badge>;
+        return <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 shadow-md">Immédiate</Badge>;
       case 'En réflexion':
-        return <Badge className="bg-yellow-100 text-yellow-800">En réflexion</Badge>;
+        return <Badge className="bg-amber-500 text-white hover:bg-amber-600 shadow-md">En réflexion</Badge>;
       case 'Après étude financement':
-        return <Badge className="bg-blue-100 text-blue-800">Après étude financement</Badge>;
+        return <Badge className="bg-blue-500 text-white hover:bg-blue-600 shadow-md">Après étude financement</Badge>;
       default:
-        return <Badge variant="outline">Non renseigné</Badge>;
+        return <Badge variant="outline" className="border-gray-300">Non renseigné</Badge>;
     }
   };
 
@@ -400,24 +407,19 @@ export default function SuiviRendezVousPage() {
     const degreInteret = rapport.degre_interet;
     const decisionAttendue = rapport.decision_attendue;
     
-    // High priority: Fort interest + Immédiate decision
     if (degreInteret === 'Fort' && decisionAttendue === 'Immédiate') {
-      return 'border-l-4 border-l-green-500';
+      return 'border-l-[6px] border-l-emerald-500 shadow-emerald-100';
     }
-    // Medium-high priority: Fort interest OR Immédiate decision
     if (degreInteret === 'Fort' || decisionAttendue === 'Immédiate') {
-      return 'border-l-4 border-l-yellow-500';
+      return 'border-l-[6px] border-l-amber-500 shadow-amber-100';
     }
-    // Medium priority: Moyen interest
     if (degreInteret === 'Moyen') {
-      return 'border-l-4 border-l-blue-500';
+      return 'border-l-[6px] border-l-blue-500 shadow-blue-100';
     }
-    // Low priority: Faible interest or no data
     if (degreInteret === 'Faible') {
-      return 'border-l-4 border-l-red-500';
+      return 'border-l-[6px] border-l-red-500 shadow-red-100';
     }
-    // Default: no special border
-    return 'border-l-4 border-l-gray-300';
+    return 'border-l-[6px] border-l-gray-300 shadow-gray-100';
   };
 
   const getPriorityBadge = (rapport: RapportRendezVous) => {
@@ -425,18 +427,18 @@ export default function SuiviRendezVousPage() {
     const decisionAttendue = rapport.decision_attendue;
     
     if (degreInteret === 'Fort' && decisionAttendue === 'Immédiate') {
-      return <Badge className="bg-green-500 text-white">Priorité Haute</Badge>;
+      return <Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg px-3 py-1 text-sm font-semibold">🔥 Priorité Haute</Badge>;
     }
     if (degreInteret === 'Fort' || decisionAttendue === 'Immédiate') {
-      return <Badge className="bg-yellow-500 text-white">Priorité Moyenne-Haute</Badge>;
+      return <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg px-3 py-1 text-sm font-semibold">⚡ Priorité Moyenne-Haute</Badge>;
     }
     if (degreInteret === 'Moyen') {
-      return <Badge className="bg-blue-500 text-white">Priorité Moyenne</Badge>;
+      return <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg px-3 py-1 text-sm font-semibold">📋 Priorité Moyenne</Badge>;
     }
     if (degreInteret === 'Faible') {
-      return <Badge className="bg-red-500 text-white">Priorité Faible</Badge>;
+      return <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg px-3 py-1 text-sm font-semibold">📌 Priorité Faible</Badge>;
     }
-    return <Badge variant="outline">À évaluer</Badge>;
+    return <Badge variant="outline" className="border-gray-300 px-3 py-1 text-sm">À évaluer</Badge>;
   };
 
   // Calculate statistics
@@ -456,7 +458,6 @@ export default function SuiviRendezVousPage() {
   // Filter and sort rapports
   const filteredAndSortedRapports = [...rapports]
     .filter(rapport => {
-      // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         return (
@@ -467,7 +468,6 @@ export default function SuiviRendezVousPage() {
         );
       }
       
-      // Priority filter
       if (priorityFilter !== 'all') {
         const degreInteret = rapport.degre_interet;
         const decisionAttendue = rapport.decision_attendue;
@@ -508,179 +508,223 @@ export default function SuiviRendezVousPage() {
       const scoreB = getPriorityScore(b);
       
       if (scoreA !== scoreB) {
-        return scoreB - scoreA; // Higher priority first
+        return scoreB - scoreA;
       }
       
-      // If same priority, sort by date (most recent first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Chargement des rapports...</span>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-blue-600 animate-pulse" />
+          </div>
+          <p className="text-lg font-semibold text-gray-700">Chargement des rapports...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container mx-auto p-6 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
         {/* Enhanced Header */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
-                  <BarChart3 className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    Suivi des Rendez-vous
-                  </h1>
-                  <p className="text-gray-600 text-lg">Tableau de bord des rapports clients</p>
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl p-8 md:p-10">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <BarChart3 className="h-10 w-10 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-lg">
+                      Suivi des Rendez-vous
+                    </h1>
+                    <p className="text-blue-100 text-lg md:text-xl mt-1 font-medium">Tableau de bord des rapports clients</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                onClick={handleRefresh} 
-                disabled={refreshing} 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Actualiser
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={handleRefresh} 
+                  disabled={refreshing} 
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-2 border-white/30 shadow-lg h-12 px-6 font-semibold transition-all duration-300"
+                >
+                  <RefreshCw className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Actualiser
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-6">
+        {/* Enhanced Statistics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200 hover:border-emerald-400 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Total Rapports</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.total}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Total Rapports</p>
+                  <p className="text-4xl font-bold text-emerald-900">{stats.total}</p>
                 </div>
-                <div className="p-3 bg-green-500 rounded-full">
-                  <FileText className="h-6 w-6 text-white" />
+                <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <FileText className="h-7 w-7 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-red-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-6">
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-red-50 to-rose-100 border-2 border-red-200 hover:border-red-400 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-400/20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">Priorité Haute</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.highPriority}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-red-700 uppercase tracking-wide">Priorité Haute</p>
+                  <p className="text-4xl font-bold text-red-900">{stats.highPriority}</p>
                 </div>
-                <div className="p-3 bg-red-500 rounded-full">
-                  <AlertCircle className="h-6 w-6 text-white" />
+                <div className="p-4 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <AlertCircle className="h-7 w-7 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-50 to-amber-100 border-yellow-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-6">
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-amber-50 to-yellow-100 border-2 border-amber-200 hover:border-amber-400 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">Priorité Moyenne-Haute</p>
-                  <p className="text-3xl font-bold text-yellow-900">{stats.mediumHighPriority}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Moyenne-Haute</p>
+                  <p className="text-4xl font-bold text-amber-900">{stats.mediumHighPriority}</p>
                 </div>
-                <div className="p-3 bg-yellow-500 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-white" />
+                <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <TrendingUp className="h-7 w-7 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-6">
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-100 border-2 border-blue-200 hover:border-blue-400 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Priorité Moyenne</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.mediumPriority}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Priorité Moyenne</p>
+                  <p className="text-4xl font-bold text-blue-900">{stats.mediumPriority}</p>
                 </div>
-                <div className="p-3 bg-blue-500 rounded-full">
-                  <Clock className="h-6 w-6 text-white" />
+                <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="h-7 w-7 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="p-6">
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200 hover:border-purple-400 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400/20 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">Récents (7j)</p>
-                  <p className="text-3xl font-bold text-purple-900">{stats.recent}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-purple-700 uppercase tracking-wide">Récents (7j)</p>
+                  <p className="text-4xl font-bold text-purple-900">{stats.recent}</p>
                 </div>
-                <div className="p-3 bg-purple-500 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-white" />
+                <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <CheckCircle className="h-7 w-7 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Filter Section */}
-        <Card className="bg-white shadow-lg border border-gray-100">
+        {/* Enhanced Search and Filter Section */}
+        <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-2 border-gray-200 rounded-2xl overflow-hidden">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                   <Input
-                    placeholder="Rechercher par nom, téléphone, email..."
+                    placeholder="Rechercher par nom, téléphone, email, profession..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 text-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="pl-12 h-14 text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm transition-all duration-200"
                   />
+                  {searchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mr-2">
+                  <Filter className="h-4 w-4" />
+                  Filtres:
+                </div>
                 <Button
                   variant={priorityFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('all')}
-                  className="h-12 px-6"
+                  className={`h-12 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                    priorityFilter === 'all' 
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'border-2 hover:border-blue-300'
+                  }`}
                 >
                   Tous ({stats.total})
                 </Button>
                 <Button
                   variant={priorityFilter === 'high' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('high')}
-                  className="h-12 px-6 bg-red-500 hover:bg-red-600 text-white"
+                  className={`h-12 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                    priorityFilter === 'high' 
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'border-2 hover:border-red-300'
+                  }`}
                 >
-                  Haute ({stats.highPriority})
+                  🔥 Haute ({stats.highPriority})
                 </Button>
                 <Button
                   variant={priorityFilter === 'medium-high' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('medium-high')}
-                  className="h-12 px-6 bg-yellow-500 hover:bg-yellow-600 text-white"
+                  className={`h-12 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                    priorityFilter === 'medium-high' 
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'border-2 hover:border-amber-300'
+                  }`}
                 >
-                  Moyenne-Haute ({stats.mediumHighPriority})
+                  ⚡ Moyenne-Haute ({stats.mediumHighPriority})
                 </Button>
                 <Button
                   variant={priorityFilter === 'medium' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('medium')}
-                  className="h-12 px-6 bg-blue-500 hover:bg-blue-600 text-white"
+                  className={`h-12 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                    priorityFilter === 'medium' 
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'border-2 hover:border-blue-300'
+                  }`}
                 >
-                  Moyenne ({stats.mediumPriority})
+                  📋 Moyenne ({stats.mediumPriority})
                 </Button>
                 <Button
                   variant={priorityFilter === 'recent' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('recent')}
-                  className="h-12 px-6 bg-purple-500 hover:bg-purple-600 text-white"
+                  className={`h-12 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                    priorityFilter === 'recent' 
+                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'border-2 hover:border-purple-300'
+                  }`}
                 >
-                  Récents ({stats.recent})
+                  ✨ Récents ({stats.recent})
                 </Button>
               </div>
             </div>
@@ -690,25 +734,25 @@ export default function SuiviRendezVousPage() {
         {/* Reports Section */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               Rapports de Rendez-vous
             </h2>
-            <div className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-full">
+            <div className="text-sm font-semibold text-gray-600 bg-white/80 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-md border border-gray-200">
               {filteredAndSortedRapports.length} rapport(s) affiché(s)
             </div>
           </div>
 
           {filteredAndSortedRapports.length === 0 ? (
-            <Card className="bg-white shadow-lg border border-gray-100">
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="p-4 bg-gray-100 rounded-full mb-6">
-                  <FileText className="h-16 w-16 text-gray-400" />
+            <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-2 border-gray-200 rounded-2xl">
+              <CardContent className="flex flex-col items-center justify-center py-20">
+                <div className="p-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl mb-6 shadow-lg">
+                  <FileText className="h-20 w-20 text-gray-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Aucun rapport trouvé</h3>
-                <p className="text-gray-600 text-center text-lg max-w-md">
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">Aucun rapport trouvé</h3>
+                <p className="text-gray-600 text-center text-lg max-w-md mb-6">
                   {searchTerm || priorityFilter !== 'all' 
                     ? "Aucun rapport ne correspond à vos critères de recherche."
-                    : "Vous n&apos;avez pas encore créé de rapports de rendez-vous."
+                    : "Vous n'avez pas encore créé de rapports de rendez-vous."
                   }
                 </p>
                 {(searchTerm || priorityFilter !== 'all') && (
@@ -717,7 +761,7 @@ export default function SuiviRendezVousPage() {
                       setSearchTerm('');
                       setPriorityFilter('all');
                     }}
-                    className="mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg h-12 px-8 rounded-xl font-semibold"
                   >
                     Réinitialiser les filtres
                   </Button>
@@ -729,40 +773,40 @@ export default function SuiviRendezVousPage() {
               {filteredAndSortedRapports.map((rapport) => (
                 <Card 
                   key={rapport.id} 
-                  className={`bg-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${getCardBorderColor(rapport)}`}
+                  className={`bg-white/90 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${getCardBorderColor(rapport)} rounded-2xl overflow-hidden`}
                 >
-                  <CardHeader className="pb-4">
+                  <CardHeader className="pb-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                          <FileText className="h-6 w-6 text-white" />
+                        <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
+                          <FileText className="h-7 w-7 text-white" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <CardTitle className="text-2xl font-bold text-gray-900">
+                          <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900">
                               {rapport.nom_prenom_client}
                             </CardTitle>
                             {getPriorityBadge(rapport)}
                           </div>
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{new Date(rapport.date_rendez_vous).toLocaleDateString('fr-FR')}</span>
+                            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg">
+                              <Calendar className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium">{new Date(rapport.date_rendez_vous).toLocaleDateString('fr-FR')}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{rapport.heure_rendez_vous}</span>
+                            <div className="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-lg">
+                              <Clock className="h-4 w-4 text-purple-600" />
+                              <span className="font-medium">{rapport.heure_rendez_vous}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              <span>{rapport.conseiller_commercial}</span>
+                            <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-lg">
+                              <User className="h-4 w-4 text-green-600" />
+                              <span className="font-medium">{rapport.conseiller_commercial}</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-4 w-4" />
-                              <span>{rapport.telephone_client}</span>
+                            <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-lg">
+                              <Phone className="h-4 w-4 text-amber-600" />
+                              <span className="font-medium">{rapport.telephone_client}</span>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-gray-500 mt-3 font-medium">
                             Créé le {new Date(rapport.createdAt).toLocaleDateString('fr-FR', {
                               year: 'numeric',
                               month: 'long',
@@ -777,11 +821,27 @@ export default function SuiviRendezVousPage() {
                         <Button
                           onClick={() => handlePrint(rapport)}
                           variant="outline"
-                          className="border-gray-300 hover:border-blue-500 hover:text-blue-600"
+                          className="border-2 border-gray-300 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 h-11 px-6 rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <Printer className="h-4 w-4 mr-2" />
                           Imprimer
                         </Button>
+
+                        <EditRapportRendezVousDialog
+                          rapport={rapport}
+                          onSuccess={() => {
+                            handleRefresh();
+                          }}
+                          trigger={
+                            <Button
+                              variant="outline"
+                              className="border-2 border-gray-300 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 h-11 px-6 rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Modifier
+                            </Button>
+                          }
+                        />
                         
                         <TableauChuteRendezVousDialog
                           rapport={rapport}
@@ -794,200 +854,245 @@ export default function SuiviRendezVousPage() {
                       </div>
                     </div>
                   </CardHeader>
-                      <CardContent className="space-y-6">
-                        {/* 1. Détails du rendez-vous */}
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            1. Détails du rendez-vous
-                          </h3>
-                          <div className="grid md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>Date:</strong> {new Date(rapport.date_rendez_vous).toLocaleDateString('fr-FR')}</div>
-                            <div><strong>Heure:</strong> {rapport.heure_rendez_vous}</div>
-                            <div><strong>Lieu:</strong> {rapport.lieu_rendez_vous} {rapport.lieu_autre && `(${rapport.lieu_autre})`}</div>
-                            <div><strong>Durée:</strong> {rapport.duree_rendez_vous}</div>
-                            <div><strong>Conseiller:</strong> {rapport.conseiller_commercial}</div>
-                          </div>
+                  <CardContent className="p-6 space-y-5">
+                    {/* 1. Détails du rendez-vous */}
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-5 rounded-xl border border-blue-100 shadow-sm">
+                      <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2 text-lg">
+                        <Calendar className="h-5 w-5" />
+                        1. Détails du rendez-vous
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700">Date:</span>
+                          <span className="text-gray-600">{new Date(rapport.date_rendez_vous).toLocaleDateString('fr-FR')}</span>
                         </div>
-
-                        {/* 2. Informations sur le client */}
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            2. Informations sur le client
-                          </h3>
-                          <div className="grid md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>Nom:</strong> {rapport.nom_prenom_client}</div>
-                            <div><strong>Téléphone:</strong> {rapport.telephone_client}</div>
-                            <div><strong>Email:</strong> {rapport.email_client || 'Non renseigné'}</div>
-                            <div><strong>Type:</strong> {rapport.type_client}</div>
-                            {rapport.profession_societe && (
-                              <div><strong>Profession/Société:</strong> {rapport.profession_societe}</div>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700">Heure:</span>
+                          <span className="text-gray-600">{rapport.heure_rendez_vous}</span>
                         </div>
-
-                        {/* 3. Objet du rendez-vous */}
-                        <div className="bg-purple-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                            <Car className="h-4 w-4" />
-                            3. Objet du rendez-vous
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {rapport.presentation_gamme && <Badge variant="secondary">Présentation gamme</Badge>}
-                            {rapport.essai_vehicule && <Badge variant="secondary">Essai véhicule</Badge>}
-                            {rapport.negociation_commerciale && <Badge variant="secondary">Négociation</Badge>}
-                            {rapport.livraison_vehicule && <Badge variant="secondary">Livraison</Badge>}
-                            {rapport.service_apres_vente && <Badge variant="secondary">SAV</Badge>}
-                            {rapport.objet_autre && <Badge variant="outline">Autre: {rapport.objet_autre}</Badge>}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold text-gray-700">Lieu:</span>
+                          <span className="text-gray-600">{rapport.lieu_rendez_vous} {rapport.lieu_autre && `(${rapport.lieu_autre})`}</span>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold text-gray-700">Durée:</span>
+                          <span className="text-gray-600">{rapport.duree_rendez_vous}</span>
+                        </div>
+                        <div className="flex items-center gap-2 md:col-span-2">
+                          <User className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold text-gray-700">Conseiller:</span>
+                          <span className="text-gray-600">{rapport.conseiller_commercial}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                        {/* 4. Modèles discutés */}
-                        {(rapport.modeles_discutes as unknown[])?.length > 0 && (
-                          <div className="bg-amber-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
-                              <Car className="h-4 w-4" />
-                              4. Modèles discutés
-                            </h3>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left p-2">Modèle</th>
-                                    <th className="text-left p-2">Motorisation</th>
-                                    <th className="text-left p-2">Transmission</th>
-                                    <th className="text-left p-2">Couleur</th>
-                                    <th className="text-left p-2">Observation</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(rapport.modeles_discutes as unknown[])?.map((modele: unknown, idx: number) => (
-                                    <tr key={idx} className="border-b">
-                                      <td className="p-2">{(modele as Record<string, unknown>).modele as string || ''}</td>
-                                      <td className="p-2">{(modele as Record<string, unknown>).motorisation as string || ''}</td>
-                                      <td className="p-2">{(modele as Record<string, unknown>).transmission as string || ''}</td>
-                                      <td className="p-2">{(modele as Record<string, unknown>).couleur as string || ''}</td>
-                                      <td className="p-2">{(modele as Record<string, unknown>).observation as string || ''}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                    {/* 2. Informations sur le client */}
+                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
+                      <h3 className="font-bold text-emerald-900 mb-4 flex items-center gap-2 text-lg">
+                        <User className="h-5 w-5" />
+                        2. Informations sur le client
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700">Nom:</span>
+                          <span className="text-gray-600">{rapport.nom_prenom_client}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold text-gray-700">Téléphone:</span>
+                          <span className="text-gray-600">{rapport.telephone_client}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-500" />
+                          <span className="font-semibold text-gray-700">Email:</span>
+                          <span className="text-gray-600">{rapport.email_client || 'Non renseigné'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700">Type:</span>
+                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">{rapport.type_client}</Badge>
+                        </div>
+                        {rapport.profession_societe && (
+                          <div className="flex items-center gap-2 md:col-span-2">
+                            <Briefcase className="h-4 w-4 text-gray-500" />
+                            <span className="font-semibold text-gray-700">Profession/Société:</span>
+                            <span className="text-gray-600">{rapport.profession_societe}</span>
                           </div>
                         )}
+                      </div>
+                    </div>
 
-                        {/* 5. Impressions et besoins du client */}
-                        <div className="bg-cyan-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-cyan-900 mb-3 flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            5. Impressions et besoins du client
-                          </h3>
-                          <div className="space-y-3 text-sm">
-                            {rapport.motivations_achat && (
-                              <div>
-                                <strong>Motivations d&apos;achat:</strong>
-                                <p className="mt-1 text-gray-700">{rapport.motivations_achat}</p>
-                              </div>
-                            )}
-                            {rapport.points_positifs && (
-                              <div>
-                                <strong>Points positifs:</strong>
-                                <p className="mt-1 text-gray-700">{rapport.points_positifs}</p>
-                              </div>
-                            )}
-                            {rapport.objections_freins && (
-                              <div>
-                                <strong>Objections/Freins:</strong>
-                                <p className="mt-1 text-gray-700">{rapport.objections_freins}</p>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <strong>Intérêt:</strong>
-                                {getDegreInteretBadge(rapport.degre_interet ?? null)}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <strong>Décision:</strong>
-                                {getDecisionBadge(rapport.decision_attendue ?? null)}
-                              </div>
-                            </div>
-                          </div>
+                    {/* 3. Objet du rendez-vous */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-100 shadow-sm">
+                      <h3 className="font-bold text-purple-900 mb-4 flex items-center gap-2 text-lg">
+                        <Car className="h-5 w-5" />
+                        3. Objet du rendez-vous
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {rapport.presentation_gamme && <Badge className="bg-purple-500 text-white hover:bg-purple-600 shadow-md">Présentation gamme</Badge>}
+                        {rapport.essai_vehicule && <Badge className="bg-pink-500 text-white hover:bg-pink-600 shadow-md">Essai véhicule</Badge>}
+                        {rapport.negociation_commerciale && <Badge className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-md">Négociation</Badge>}
+                        {rapport.livraison_vehicule && <Badge className="bg-violet-500 text-white hover:bg-violet-600 shadow-md">Livraison</Badge>}
+                        {rapport.service_apres_vente && <Badge className="bg-rose-500 text-white hover:bg-rose-600 shadow-md">SAV</Badge>}
+                        {rapport.objet_autre && <Badge variant="outline" className="border-purple-300 text-purple-700">Autre: {rapport.objet_autre}</Badge>}
+                      </div>
+                    </div>
+
+                    {/* 4. Modèles discutés */}
+                    {(rapport.modeles_discutes as unknown[])?.length > 0 && (
+                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-5 rounded-xl border border-amber-100 shadow-sm">
+                        <h3 className="font-bold text-amber-900 mb-4 flex items-center gap-2 text-lg">
+                          <Car className="h-5 w-5" />
+                          4. Modèles discutés
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b-2 border-amber-200">
+                                <th className="text-left p-3 font-semibold text-amber-900">Modèle</th>
+                                <th className="text-left p-3 font-semibold text-amber-900">Motorisation</th>
+                                <th className="text-left p-3 font-semibold text-amber-900">Transmission</th>
+                                <th className="text-left p-3 font-semibold text-amber-900">Couleur</th>
+                                <th className="text-left p-3 font-semibold text-amber-900">Observation</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(rapport.modeles_discutes as unknown[])?.map((modele: unknown, idx: number) => (
+                                <tr key={idx} className="border-b border-amber-100 hover:bg-amber-50/50 transition-colors">
+                                  <td className="p-3 font-medium">{(modele as Record<string, unknown>).modele as string || ''}</td>
+                                  <td className="p-3">{(modele as Record<string, unknown>).motorisation as string || ''}</td>
+                                  <td className="p-3">{(modele as Record<string, unknown>).transmission as string || ''}</td>
+                                  <td className="p-3">{(modele as Record<string, unknown>).couleur as string || ''}</td>
+                                  <td className="p-3 text-gray-600">{(modele as Record<string, unknown>).observation as string || ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
+                      </div>
+                    )}
 
-                        {/* 6. Propositions faites */}
-                        <div className="bg-emerald-50 p-4 rounded-lg">
-                          <h3 className="font-semibold text-emerald-900 mb-3 flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            6. Propositions faites
-                          </h3>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className={rapport.devis_offre_remise ? 'text-green-600' : 'text-gray-400'}>
-                                {rapport.devis_offre_remise ? '☑' : '☐'}
-                              </span>
-                              <span>Devis/Offre remise {rapport.reference_offre && `(Réf: ${rapport.reference_offre})`}</span>
-                            </div>
-                            <div><strong>Financement proposé:</strong> {rapport.financement_propose || 'Non renseigné'}</div>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <span className={rapport.assurance_entretien ? 'text-green-600' : 'text-gray-400'}>
-                                  {rapport.assurance_entretien ? '☑' : '☐'}
-                                </span>
-                                <span>Assurance/Entretien</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className={rapport.reprise_ancien_vehicule ? 'text-green-600' : 'text-gray-400'}>
-                                  {rapport.reprise_ancien_vehicule ? '☑' : '☐'}
-                                </span>
-                                <span>Reprise ancien véhicule</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 7. Actions de suivi */}
-                        {(rapport.actions_suivi as unknown[])?.length > 0 && (
-                          <div className="bg-violet-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-violet-900 mb-3 flex items-center gap-2">
-                              <Phone className="h-4 w-4" />
-                              7. Actions de suivi
-                            </h3>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left p-2">Action</th>
-                                    <th className="text-left p-2">Responsable</th>
-                                    <th className="text-left p-2">Échéance</th>
-                                    <th className="text-left p-2">Statut</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(rapport.actions_suivi as unknown[])?.map((action: unknown, idx: number) => (
-                                    <tr key={idx} className="border-b">
-                                      <td className="p-2">{(action as Record<string, unknown>).action as string || ''}</td>
-                                      <td className="p-2">{(action as Record<string, unknown>).responsable as string || ''}</td>
-                                      <td className="p-2">{(action as Record<string, unknown>).echeance as string || ''}</td>
-                                      <td className="p-2">{(action as Record<string, unknown>).statut as string || ''}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                    {/* 5. Impressions et besoins du client */}
+                    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-5 rounded-xl border border-cyan-100 shadow-sm">
+                      <h3 className="font-bold text-cyan-900 mb-4 flex items-center gap-2 text-lg">
+                        <User className="h-5 w-5" />
+                        5. Impressions et besoins du client
+                      </h3>
+                      <div className="space-y-4 text-sm">
+                        {rapport.motivations_achat && (
+                          <div className="bg-white/60 p-4 rounded-lg border border-cyan-200">
+                            <strong className="text-gray-700 block mb-2">Motivations d&apos;achat:</strong>
+                            <p className="text-gray-700 leading-relaxed">{rapport.motivations_achat}</p>
                           </div>
                         )}
-
-                        {/* 8. Commentaire global */}
-                        {rapport.commentaire_global && (
-                          <div className="bg-rose-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-rose-900 mb-3 flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              8. Commentaire global du conseiller
-                            </h3>
-                            <p className="text-sm text-gray-700">{rapport.commentaire_global}</p>
+                        {rapport.points_positifs && (
+                          <div className="bg-white/60 p-4 rounded-lg border border-cyan-200">
+                            <strong className="text-gray-700 block mb-2">Points positifs:</strong>
+                            <p className="text-gray-700 leading-relaxed">{rapport.points_positifs}</p>
                           </div>
                         )}
+                        {rapport.objections_freins && (
+                          <div className="bg-white/60 p-4 rounded-lg border border-cyan-200">
+                            <strong className="text-gray-700 block mb-2">Objections/Freins:</strong>
+                            <p className="text-gray-700 leading-relaxed">{rapport.objections_freins}</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-4 pt-2">
+                          <div className="flex items-center gap-2 bg-white/60 px-4 py-2 rounded-lg border border-cyan-200">
+                            <strong className="text-gray-700">Intérêt:</strong>
+                            {getDegreInteretBadge(rapport.degre_interet ?? null)}
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/60 px-4 py-2 rounded-lg border border-cyan-200">
+                            <strong className="text-gray-700">Décision:</strong>
+                            {getDecisionBadge(rapport.decision_attendue ?? null)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 6. Propositions faites */}
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
+                      <h3 className="font-bold text-emerald-900 mb-4 flex items-center gap-2 text-lg">
+                        <FileText className="h-5 w-5" />
+                        6. Propositions faites
+                      </h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2 bg-white/60 p-3 rounded-lg border border-emerald-200">
+                          <span className={`text-lg ${rapport.devis_offre_remise ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            {rapport.devis_offre_remise ? '☑' : '☐'}
+                          </span>
+                          <span className="font-medium text-gray-700">Devis/Offre remise {rapport.reference_offre && <span className="text-emerald-600">(Réf: {rapport.reference_offre})</span>}</span>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-lg border border-emerald-200">
+                          <strong className="text-gray-700">Financement proposé:</strong> 
+                          <span className="ml-2 text-gray-600">{rapport.financement_propose || 'Non renseigné'}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div className="flex items-center gap-2 bg-white/60 p-3 rounded-lg border border-emerald-200">
+                            <span className={`text-lg ${rapport.assurance_entretien ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              {rapport.assurance_entretien ? '☑' : '☐'}
+                            </span>
+                            <span className="font-medium text-gray-700">Assurance/Entretien</span>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/60 p-3 rounded-lg border border-emerald-200">
+                            <span className={`text-lg ${rapport.reprise_ancien_vehicule ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              {rapport.reprise_ancien_vehicule ? '☑' : '☐'}
+                            </span>
+                            <span className="font-medium text-gray-700">Reprise ancien véhicule</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 7. Actions de suivi */}
+                    {(rapport.actions_suivi as unknown[])?.length > 0 && (
+                      <div className="bg-gradient-to-r from-violet-50 to-purple-50 p-5 rounded-xl border border-violet-100 shadow-sm">
+                        <h3 className="font-bold text-violet-900 mb-4 flex items-center gap-2 text-lg">
+                          <Phone className="h-5 w-5" />
+                          7. Actions de suivi
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b-2 border-violet-200">
+                                <th className="text-left p-3 font-semibold text-violet-900">Action</th>
+                                <th className="text-left p-3 font-semibold text-violet-900">Responsable</th>
+                                <th className="text-left p-3 font-semibold text-violet-900">Échéance</th>
+                                <th className="text-left p-3 font-semibold text-violet-900">Statut</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(rapport.actions_suivi as unknown[])?.map((action: unknown, idx: number) => (
+                                <tr key={idx} className="border-b border-violet-100 hover:bg-violet-50/50 transition-colors">
+                                  <td className="p-3 font-medium">{(action as Record<string, unknown>).action as string || ''}</td>
+                                  <td className="p-3">{(action as Record<string, unknown>).responsable as string || ''}</td>
+                                  <td className="p-3">{(action as Record<string, unknown>).echeance as string || ''}</td>
+                                  <td className="p-3">
+                                    <Badge variant="secondary" className="bg-violet-100 text-violet-800">
+                                      {(action as Record<string, unknown>).statut as string || ''}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 8. Commentaire global */}
+                    {rapport.commentaire_global && (
+                      <div className="bg-gradient-to-r from-rose-50 to-pink-50 p-5 rounded-xl border border-rose-100 shadow-sm">
+                        <h3 className="font-bold text-rose-900 mb-4 flex items-center gap-2 text-lg">
+                          <FileText className="h-5 w-5" />
+                          8. Commentaire global du conseiller
+                        </h3>
+                        <div className="bg-white/60 p-4 rounded-lg border border-rose-200">
+                          <p className="text-sm text-gray-700 leading-relaxed">{rapport.commentaire_global}</p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

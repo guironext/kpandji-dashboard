@@ -470,6 +470,91 @@ export async function getRapportRendezVousByUser(clerkUserId: string) {
   }
 }
 
+export async function updateRapportRendezVousComplet(
+  rapportId: string,
+  data: {
+    date_rendez_vous?: string;
+    heure_rendez_vous?: string;
+    lieu_rendez_vous?: string;
+    lieu_autre?: string;
+    conseiller_commercial?: string;
+    duree_rendez_vous?: string;
+    nom_prenom_client?: string;
+    telephone_client?: string;
+    email_client?: string;
+    profession_societe?: string;
+    type_client?: string;
+    presentation_gamme?: boolean;
+    essai_vehicule?: boolean;
+    negociation_commerciale?: boolean;
+    livraison_vehicule?: boolean;
+    service_apres_vente?: boolean;
+    objet_autre?: string;
+    modeles_discutes?: Prisma.InputJsonValue[];
+    motivations_achat?: string;
+    points_positifs?: string;
+    objections_freins?: string;
+    degre_interet?: string;
+    decision_attendue?: string;
+    devis_offre_remise?: boolean;
+    reference_offre?: string;
+    financement_propose?: string;
+    assurance_entretien?: boolean;
+    reprise_ancien_vehicule?: boolean;
+    actions_suivi?: Prisma.InputJsonValue[];
+    commentaire_global?: string;
+  }
+) {
+  try {
+    const updateData: any = {};
+    
+    if (data.date_rendez_vous) {
+      updateData.date_rendez_vous = new Date(data.date_rendez_vous);
+    }
+    if (data.heure_rendez_vous !== undefined) updateData.heure_rendez_vous = data.heure_rendez_vous;
+    if (data.lieu_rendez_vous !== undefined) updateData.lieu_rendez_vous = data.lieu_rendez_vous;
+    if (data.lieu_autre !== undefined) updateData.lieu_autre = data.lieu_autre;
+    if (data.conseiller_commercial !== undefined) updateData.conseiller_commercial = data.conseiller_commercial;
+    if (data.duree_rendez_vous !== undefined) updateData.duree_rendez_vous = data.duree_rendez_vous;
+    if (data.nom_prenom_client !== undefined) updateData.nom_prenom_client = data.nom_prenom_client;
+    if (data.telephone_client !== undefined) updateData.telephone_client = data.telephone_client;
+    if (data.email_client !== undefined) updateData.email_client = data.email_client;
+    if (data.profession_societe !== undefined) updateData.profession_societe = data.profession_societe;
+    if (data.type_client !== undefined) updateData.type_client = data.type_client;
+    if (data.presentation_gamme !== undefined) updateData.presentation_gamme = data.presentation_gamme;
+    if (data.essai_vehicule !== undefined) updateData.essai_vehicule = data.essai_vehicule;
+    if (data.negociation_commerciale !== undefined) updateData.negociation_commerciale = data.negociation_commerciale;
+    if (data.livraison_vehicule !== undefined) updateData.livraison_vehicule = data.livraison_vehicule;
+    if (data.service_apres_vente !== undefined) updateData.service_apres_vente = data.service_apres_vente;
+    if (data.objet_autre !== undefined) updateData.objet_autre = data.objet_autre;
+    if (data.modeles_discutes !== undefined) updateData.modeles_discutes = data.modeles_discutes;
+    if (data.motivations_achat !== undefined) updateData.motivations_achat = data.motivations_achat;
+    if (data.points_positifs !== undefined) updateData.points_positifs = data.points_positifs;
+    if (data.objections_freins !== undefined) updateData.objections_freins = data.objections_freins;
+    if (data.degre_interet !== undefined) updateData.degre_interet = data.degre_interet;
+    if (data.decision_attendue !== undefined) updateData.decision_attendue = data.decision_attendue;
+    if (data.devis_offre_remise !== undefined) updateData.devis_offre_remise = data.devis_offre_remise;
+    if (data.reference_offre !== undefined) updateData.reference_offre = data.reference_offre;
+    if (data.financement_propose !== undefined) updateData.financement_propose = data.financement_propose;
+    if (data.assurance_entretien !== undefined) updateData.assurance_entretien = data.assurance_entretien;
+    if (data.reprise_ancien_vehicule !== undefined) updateData.reprise_ancien_vehicule = data.reprise_ancien_vehicule;
+    if (data.actions_suivi !== undefined) updateData.actions_suivi = data.actions_suivi;
+    if (data.commentaire_global !== undefined) updateData.commentaire_global = data.commentaire_global;
+
+    const rapport = await prisma.rapportRendezVous.update({
+      where: { id: rapportId },
+      data: updateData,
+    });
+
+    revalidatePath("/commercial/suivi-rendez-vous");
+    revalidatePath("/commercial/rapport-rendez-vous");
+    return { success: true, data: rapport };
+  } catch (error) {
+    console.error("Error updating complete rapport rendez-vous:", error);
+    return { success: false, error: "Failed to update appointment report" };
+  }
+}
+
 export async function getAllRapportRendezVous() {
   try {
     const rapports = await prisma.rapportRendezVous.findMany({
