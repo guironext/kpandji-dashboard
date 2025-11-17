@@ -177,7 +177,7 @@ function getAccessoireImage(
   return matched?.image || null;
 }
 
-export default function FactureDetailPage() {
+export default function ImpotPage() {
   const router = useRouter();
   const params = useParams();
   const factureId = params.id as string;
@@ -314,7 +314,7 @@ export default function FactureDetailPage() {
           <div className="flex w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
               <Button
-                onClick={() => router.push("/comptable/suivi-bon-commande")}
+                onClick={() => router.push("/comptable/facture")}
                 className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg"
               >
                 RETOUR
@@ -329,29 +329,11 @@ export default function FactureDetailPage() {
           </div>
 
           <div id="printable-area">
-            <div className="flex w-full justify-between border-b-4 border-amber-600 pb-4 mb-3">
-              <div>
-                <Image
-                  src="/logo.png"
-                  alt="Logo"
-                  width={100}
-                  height={50}
-                  priority
-                />
-              </div>
-              <div className="flex flex-col justify-center -mb-14">
-                <h1 className="text-2xl font-bold text-blac">
-                  KPANDJI AUTOMOBILES
-                </h1>
-                <p className="text-sm text-gray-800 font-thin">
-                  Constructeur et Assembleur Automobile
-                </p>
-              </div>
-            </div>
+           
 
             <div>
               <div>
-                <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
+                <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2 mt-60">
                   <div></div>
                   <div className="flex text-sm text-black gap-x-2">
                     <p>Date:</p>
@@ -361,35 +343,15 @@ export default function FactureDetailPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex w-full justify-center my-8">
-                <h1 className="text-xl font-bold text-black border border-black px-4 py-2 rounded-lg ">
-                  {facture.status_facture}
-                </h1>
-              </div>
+              
 
-              <div className="flex w-full justify-between mb-6">
-                <div className=" text-black font-semibold text-2xl ">
-                  <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
-                    <p>Numéro de Facture:</p>
-                    <p className="uppercase">{facture.id.slice(-7)} </p>
-                  </div>
-                  <div className="flex text-xs text-gray-800 gap-x-2">
-                    <p>Créé par:</p>
-                    <p>
-                      {facture.user?.firstName} {facture.user?.lastName}
-                    </p>
-                  </div>
-                  <div className="flex text-xs text-gray-800 gap-x-2">
-                    <p>Contact:</p>
-                    <p>{facture.user?.email}</p>
-                  </div>
-                  <div className="flex text-xs text-gray-800 gap-x-2">
-                    <p>Téléphone:</p>
-                    <p>{facture.user?.telephone || "N/A"}</p>
-                  </div>
-                </div>
+              <div className="flex w-full justify-between mt-16 mb-7">
+                
 
                 <div className=" text-black font-semibold text-2xl ">
+                  <div className="text-xl font-bold">
+                    DOIT :
+                  </div>
                   <div className="flex text-sm font-semibold gap-2">
                     <p>Client:</p>
                     <p>
@@ -663,7 +625,7 @@ export default function FactureDetailPage() {
                       <TableCell
                         colSpan={5}
                         className="text-right font-medium pr-6 text-black "
-                      >
+                        >
                         {formatNumberWithSpaces(facture.montant_net_ht)}
                       </TableCell>
                     </TableRow>
@@ -715,45 +677,16 @@ export default function FactureDetailPage() {
                 <div className="flex w-full justify-between mt-16 mb-20 px-8">
                   <div></div>
                   <div className="text-black font-bold text-sm uppercase">
-                    Direction Commerciale
+                    LA DIRECTION
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col  w-full  rounded-b-lg text-[9px] ">
-                <div className="flex flex-col">
-                  <p className="font-bold text-blue-600">Notes</p>
-                  <p className="font-semibold">
-                    date d&apos;échéance:{" "}
-                    {new Date(facture.date_echeance).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
+              
             </div>
 
-            <div className="flex flex-col w-full bottom-0 right-0 left-0">
-              <div className="flex flex-col  w-full mb-2  rounded-b-lg text-[9px]  ">
-                <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
-                <p className="text-black">60% d&apos;accompte à la commande</p>
-                <p className="text-black font-semibold">
-                  DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS
-                </p>
-                <p className="text-black">SOLDE à la livraison</p>
-              </div>
-              <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black ">
-                <p className=" font-thin text-center">
-                  Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
-                  Tel : 00225 01 01 04 77 03
-                </p>
-                <p className=" font-thin text-center">
-                  Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC
-                  :2213233 – ECOBANK : CI059 01046 121659429001 46
-                </p>
-                <p className=" font-thin text-center">
-                  kpandjiautomobiles@gmail.com / www.kpandji.com
-                </p>
-              </div>
-            </div>
+           
+
           </div>
         </div>
       </div>

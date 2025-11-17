@@ -407,9 +407,26 @@ export default function Page() {
         <div className="bg-white rounded-lg shadow-2xl p-8">
           <div className="flex w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
-              <Button onClick={handlePrint} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg">
+              <Button 
+                onClick={handlePrint}
+                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg">
                 IMPRIMER
               </Button>
+
+              <Button
+                onClick={() => {
+                  const currentFacture = currentData[0];
+                  if (currentFacture) {
+                    router.push(`/comptable/facture/${currentFacture.id}/impot`);
+                  }
+                }}
+                disabled={currentData.length === 0}
+                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                FACTURE IMPOT
+              </Button>
+
+
               <Button
                 onClick={handleDelete}
                 disabled={currentData.length === 0}
@@ -564,14 +581,14 @@ export default function Page() {
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                               {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[7px] font-light text-black max-w-80 text-wrap">
+                              <p className="text-[10px] font-light text-black max-w-80 text-wrap">
                                 {ligne.voitureModel?.description || "N/A"}
                               </p>
                               {ligne.couleur && (
                                 <div>
-                                  <p className="text-[7px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
-                                  {ligne.transmission && <p className="text-[7px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
-                                  {ligne.motorisation && <p className="text-[7px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
+                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
+                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
+                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
                                 </div>
                               )}
                             </TableCell>
@@ -590,12 +607,12 @@ export default function Page() {
                               <Image src={accessoire.image} alt={accessoire.nom || "Accessoire"} width={100} height={80} />
                             ) : (<div className="text-xs text-white hidden"></div>)}
                           </TableCell>
+                         
                           <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                             {accessoire.nom}
-                            {accessoire.description && (
-                              <p className="text-[7px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>
-                            )}
+                            {accessoire.description && <p className="text-[10px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
                           </TableCell>
+
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
                           <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
@@ -615,7 +632,7 @@ export default function Page() {
                           <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                             {facture.accessoire_nom}
                             {facture.accessoire_description && (
-                              <p className="text-[7px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>
+                              <p className="text-[10px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>
                             )}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
@@ -637,6 +654,8 @@ export default function Page() {
                         <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
                         <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
                       </TableRow>
+
+                      {facture.remise !== 0 && (
                       <TableRow className="bg-white">
                         <TableCell className="text-center text-black font-bold"></TableCell>
                         <TableCell className="text-center text-black font-bold"></TableCell>
@@ -645,6 +664,8 @@ export default function Page() {
                         <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
                         <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
                       </TableRow>
+                      )}  
+                      {facture.remise !== 0 && (
                       <TableRow className="bg-green-50">
                         <TableCell className="text-center text-black font-bold"></TableCell>
                         <TableCell className="text-center text-black font-bold"></TableCell>
@@ -653,6 +674,7 @@ export default function Page() {
                         <TableCell className="text-right text-black">Montant Net HT</TableCell>
                         <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
                       </TableRow>
+                      )}
                       <TableRow className="bg-white">
                         <TableCell className="text-center text-black font-bold"></TableCell>
                         <TableCell className="text-center text-black font-bold"></TableCell>
@@ -679,7 +701,7 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="flex w-full justify-between mt-16 mb-20 px-8">
+                  <div className="flex w-full justify-between mt-12 mb-10 px-8">
                     <div></div>
                     <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
                   </div>
@@ -1035,7 +1057,7 @@ export default function Page() {
                           <div className="ml-6 space-y-1 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
                               <Palette className="w-3 h-3" />
-                              <span>Couleur: <span className="font-medium">{commande.couleur}</span></span>
+                              <span>Couleur: <span className="font-medium uppercase">{commande.couleur}</span></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Cog className="w-3 h-3" />

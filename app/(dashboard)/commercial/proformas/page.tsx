@@ -362,7 +362,7 @@ export default function Page() {
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                               {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[10px] font-normal text-black max-w-80 text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
+                              <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
                                 <div>
                                   <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
@@ -404,7 +404,7 @@ export default function Page() {
                           </TableCell>
                           <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                             {accessoire.nom}
-                            {accessoire.description && <p className="text-[7px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
+                            {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
@@ -449,21 +449,26 @@ export default function Page() {
                         <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
                         <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
                       </TableRow>
+                      {facture.remise !== 0 && (      
                       <TableRow className="bg-white">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
                         <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
                       </TableRow>
+                      )}
+                      {facture.remise !== 0 && (
                       <TableRow className="bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">Montant Net HT</TableCell>
                         <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
                       </TableRow>
+                      )}
                       <TableRow className="bg-white">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">TVA({facture.tva}%)</TableCell>
                         <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_tva)}</TableCell>
                       </TableRow>
+                      
                       <TableRow className="text-sm bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
