@@ -259,7 +259,7 @@ export default function Page() {
 
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
-                <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
+                <div className="flex items-end mt-12 justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
                   <div></div>
                   <div className="flex text-sm text-black gap-x-2">
                     <p>Date:</p>
@@ -273,7 +273,7 @@ export default function Page() {
                   </h1>
                 </div>
 
-                <div className="flex w-full justify-between mb-6">
+                <div className="flex w-full justify-between mb-10">
                   <div className="text-black font-semibold text-2xl">
                     <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
                       <p>Numéro de Proforma:</p>
@@ -505,7 +505,7 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex flex-col w-full rounded-b-lg text-[9px] -mt-8">
+                <div className="flex flex-col w-full rounded-b-lg text-[9px] mt-6">
                   <div className="flex flex-col">
                     <p className="font-bold text-blue-600">Notes</p>
                     <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
