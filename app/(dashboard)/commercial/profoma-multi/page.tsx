@@ -582,10 +582,10 @@ export default function Page() {
                               {ligne.voitureModel?.model || "N/A"}
                               <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
-                                <div>
-                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
-                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
-                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
+                                <div className="flex gap-x-2">
+                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}-</p>
+                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}-</p>}
+                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}-</p>}
                                 </div>
                               )}
                             </TableCell>

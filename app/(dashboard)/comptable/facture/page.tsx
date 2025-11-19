@@ -390,16 +390,59 @@ export default function Page() {
     <>
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 210mm !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
           body * { visibility: hidden; }
           #printable-area, #printable-area * { visibility: visible; }
-          #printable-area { position: absolute; left: 0; top: 0; width: 100%; }
-          .print-hide { display: none !important; }
-          .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, .bg-gray-900, .text-amber-400, .text-orange-400, .text-orange-600, .text-black, .border-amber-500, .border-amber-600, .border-orange-600, .border-black {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            color-adjust: exact;
+          #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm !important;
+            padding: 10mm 15mm !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
-          @page { size: A4; margin: 1cm; }
+          .print-hide { display: none !important; }
+          @page {
+            size: A4;
+            margin: 0 !important;
+          }
+          /* Header - first child */
+          #printable-area > div:first-child {
+            margin-bottom: 5mm !important;
+            padding-bottom: 3mm !important;
+            page-break-after: avoid;
+          }
+          /* Each facture container should start on a new page except the first */
+          #printable-area > div:not(:first-child) {
+            page-break-before: always;
+            page-break-inside: avoid;
+            min-height: calc(297mm - 20mm - 15mm) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+          /* Footer - stick to bottom */
+          .print-footer {
+            margin-top: auto !important;
+            padding-top: 5mm !important;
+            page-break-inside: avoid !important;
+            page-break-before: auto !important;
+          }
         }
       ` }} />
 
@@ -713,22 +756,23 @@ export default function Page() {
                     <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
                   </div>
                 </div>
+
+                {/*footer*/}
+                <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0 mt-auto">
+                  <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
+                    <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
+                    <p className="text-black">60% d&apos;accompte à la commande</p>
+                    <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+                    <p className="text-black">SOLDE à la livraison</p>
+                  </div>
+                  <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
+                    <p className="font-thin text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+                    <p className="font-thin text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+                    <p className="font-thin text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+                  </div>
+                </div>
               </div>
             ))}
-
-            <div className="flex flex-col w-full bottom-0 right-0 left-0">
-              <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
-                <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
-                <p className="text-black">60% d&apos;accompte à la commande</p>
-                <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p className="text-black">SOLDE à la livraison</p>
-              </div>
-              <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
-                <p className="font-thin text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                <p className="font-thin text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                <p className="font-thin text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
-              </div>
-            </div>
           </div>
 
           <div className="flex justify-center items-center gap-4 mt-6 print-hide">
