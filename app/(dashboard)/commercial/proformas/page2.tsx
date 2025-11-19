@@ -135,27 +135,13 @@ function getAccessoireImage(
   return matched?.image || null;
 }
 
-function getAccessoirePrice(
-  accessoireNom: string,
-  prix: number | null | undefined,
-  accessoiresList: Array<{ id: string; nom: string; prix?: number | null }>
-): number {
-  // If prix is already set and valid, use it
-  if (prix !== null && prix !== undefined && prix > 0) {
-    return prix;
-  }
-  // Otherwise, try to find it from the master accessoires list
-  const matched = accessoiresList.find((acc) => acc.nom === accessoireNom);
-  return matched?.prix || 0;
-}
-
 export default function Page() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
-  const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; prix?: number | null; image?: string | null }>>([]);
+  const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
 
@@ -181,12 +167,7 @@ export default function Page() {
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         console.log("All accessoires:", JSON.stringify(accessoiresResult.data, null, 2));
-        setAccessoires(accessoiresResult.data.map(acc => ({
-          id: acc.id,
-          nom: acc.nom,
-          prix: acc.prix ?? null,
-          image: acc.image || null,
-        })));
+        setAccessoires(accessoiresResult.data);
       }
     };
     fetchData();
@@ -278,7 +259,7 @@ export default function Page() {
 
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
-                <div className="flex items-end mt-12 justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
+                <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
                   <div></div>
                   <div className="flex text-sm text-black gap-x-2">
                     <p>Date:</p>
@@ -292,7 +273,7 @@ export default function Page() {
                   </h1>
                 </div>
 
-                <div className="flex w-full justify-between mb-10">
+                <div className="flex w-full justify-between mb-6">
                   <div className="text-black font-semibold text-2xl">
                     <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
                       <p>Numéro de Proforma:</p>
@@ -398,13 +379,9 @@ export default function Page() {
                       })}
 
                       {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => {
-                        const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
                         console.log(`Rendering accessoire ${accIndex}:`, {
                           id: accessoire.id,
                           nom: accessoire.nom,
-                          prix: accessoire.prix,
-                          calculatedPrix: accessoirePrix,
-                          quantity: accessoire.quantity,
                           image: accessoire.image,
                           hasImage: !!accessoire.image
                         });
@@ -430,12 +407,8 @@ export default function Page() {
                             {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
-                          <TableCell className="text-right text-black text-sm">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires))}
-                          </TableCell>
-                          <TableCell className="text-black text-right text-sm pr-6">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires) * (accessoire.quantity || 1))}
-                          </TableCell>
+                          <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
                         </TableRow>
                       );
                       })}
@@ -532,7 +505,7 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex flex-col w-full rounded-b-lg text-[9px] mt-6">
+                <div className="flex flex-col w-full rounded-b-lg text-[9px] -mt-8">
                   <div className="flex flex-col">
                     <p className="font-bold text-blue-600">Notes</p>
                     <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>

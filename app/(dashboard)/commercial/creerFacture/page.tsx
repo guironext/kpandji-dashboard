@@ -630,11 +630,14 @@ function CreerFacturePageContent() {
                   <div>
                     <Label className="text-sm text-amber-700 font-bold">Nom *</Label>
                     <Select
-                      value={item.nom}
+                      value={accessoires.find(acc => acc.nom === item.nom)?.id || ""}
                       onValueChange={(value) => {
-                        const updated = [...accessoryItems];
-                        updated[index].nom = value;
-                        setAccessoryItems(updated);
+                        const selectedAccessoire = accessoires.find(acc => acc.id === value);
+                        if (selectedAccessoire) {
+                          const updated = [...accessoryItems];
+                          updated[index].nom = selectedAccessoire.nom;
+                          setAccessoryItems(updated);
+                        }
                       }}
                     >
                       <SelectTrigger className="border-amber-300">
@@ -642,7 +645,7 @@ function CreerFacturePageContent() {
                       </SelectTrigger>
                       <SelectContent>
                         {accessoires.map((accessoire) => (
-                          <SelectItem key={accessoire.id} value={accessoire.nom}>
+                          <SelectItem key={accessoire.id} value={accessoire.id}>
                             {accessoire.nom}
                           </SelectItem>
                         ))}

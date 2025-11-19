@@ -586,6 +586,9 @@ export async function createFactureWithMultipleLines(data: {
           const matchingAccessoire = allAccessoires.find(a => a.nom === acc.nom);
           return {
             nom: acc.nom,
+            description: acc.description || null,
+            prix: acc.prix_unitaire ? new Decimal(acc.prix_unitaire) : null,
+            quantity: acc.quantity || 1,
             image: matchingAccessoire?.image || null
           };
         })

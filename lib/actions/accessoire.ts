@@ -96,9 +96,24 @@ export async function getAllAccessoires() {
       orderBy: { createdAt: "desc" },
     });
 
+    // Convert Decimal fields to numbers for client components
+    const serializedAccessoires = accessoires.map(acc => ({
+      id: acc.id,
+      nom: acc.nom,
+      description: acc.description,
+      prix: acc.prix ? Number(acc.prix) : null,
+      quantity: acc.quantity ? Number(acc.quantity) : null,
+      image: acc.image,
+      voitureId: acc.voitureId,
+      factureId: acc.factureId,
+      commandeId: acc.commandeId,
+      createdAt: acc.createdAt,
+      updatedAt: acc.updatedAt,
+    }));
+
     return {
       success: true,
-      data: accessoires,
+      data: serializedAccessoires,
     };
   } catch (error) {
     console.error("Error fetching accessoires:", error);

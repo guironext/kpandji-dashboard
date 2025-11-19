@@ -110,20 +110,27 @@ const navItems = [
   },
   {
     id: 13,
+    icon: <FileText className="w-5 h-5" />,
+    label: "Proformas-multi",
+    href: "/commercial/profoma-multi",
+    category: "facturation"
+  },
+  {
+    id: 14,
     icon: <Receipt className="w-5 h-5" />,
     label: "Bon de Commande",
     href: "/commercial/bon-de-commande",
     category: "facturation"
   },
   {
-    id: 14,
+    id: 15,
     icon: <FileCheck className="w-5 h-5" />,
     label: "Bon pour Acquis",
     href: "/commercial/bon-pour-acquis",
     category: "facturation"
   },
   {
-    id: 15,
+    id: 16,
     icon: <Pen className="w-5 h-5" />,
     label: "Signature",
     href: "/commercial/signature",

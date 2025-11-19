@@ -135,27 +135,13 @@ function getAccessoireImage(
   return matched?.image || null;
 }
 
-function getAccessoirePrice(
-  accessoireNom: string,
-  prix: number | null | undefined,
-  accessoiresList: Array<{ id: string; nom: string; prix?: number | null }>
-): number {
-  // If prix is already set and valid, use it
-  if (prix !== null && prix !== undefined && prix > 0) {
-    return prix;
-  }
-  // Otherwise, try to find it from the master accessoires list
-  const matched = accessoiresList.find((acc) => acc.nom === accessoireNom);
-  return matched?.prix || 0;
-}
-
 export default function Page() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
-  const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; prix?: number | null; image?: string | null }>>([]);
+  const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
 
@@ -163,30 +149,16 @@ export default function Page() {
     const fetchData = async () => {
       if (!clerkId) return;
       
-      console.log("=== FETCHING DATA ===");
       const [facturesResult, accessoiresResult] = await Promise.all([
         getFacturesByUser(clerkId),
         getAllAccessoires(),
       ]);
       
-      console.log("Factures result:", facturesResult);
-      console.log("Accessoires result:", accessoiresResult);
-      
       if (facturesResult.success && facturesResult.data) {
-        console.log("Factures with accessoires:", JSON.stringify(facturesResult.data.map(f => ({
-          id: f.id,
-          accessoires: f.accessoires
-        })), null, 2));
         setFactures(facturesResult.data as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
-        console.log("All accessoires:", JSON.stringify(accessoiresResult.data, null, 2));
-        setAccessoires(accessoiresResult.data.map(acc => ({
-          id: acc.id,
-          nom: acc.nom,
-          prix: acc.prix ?? null,
-          image: acc.image || null,
-        })));
+        setAccessoires(accessoiresResult.data);
       }
     };
     fetchData();
@@ -241,7 +213,234 @@ export default function Page() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `@media print { body * { visibility: hidden; } #printable-area, #printable-area * { visibility: visible; } #printable-area { position: absolute; left: 0; top: 0; width: 100%; } .print-hide { display: none !important; } .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, .bg-gray-900, .text-amber-400, .text-orange-400, .text-orange-600, .text-black, .border-amber-500, .border-amber-600, .border-orange-600, .border-black { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; } @page { size: A4; margin: 1cm; } }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 210mm !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          body * { visibility: hidden; }
+          #printable-area, #printable-area * { visibility: visible; }
+          #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm !important;
+            padding: 10mm 15mm !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          /* Header - first child */
+          #printable-area > div:first-child {
+            margin-bottom: 5mm !important;
+            padding-bottom: 3mm !important;
+            page-break-after: avoid;
+          }
+          /* Each facture container should start on a new page except the first */
+          #printable-area > div:not(:first-child) {
+            page-break-before: always;
+            page-break-inside: avoid;
+            min-height: calc(297mm - 20mm - 15mm) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+          .print-hide { display: none !important; }
+          @page {
+            size: A4;
+            margin: 0 !important;
+          }
+          /* Typography - optimized for A4 */
+          #printable-area h1 {
+            font-size: 20px !important;
+            margin: 1.5mm 0 !important;
+            line-height: 1.2 !important;
+            page-break-after: avoid;
+          }
+          #printable-area h2 {
+            font-size: 18px !important;
+            margin: 1.5mm 0 !important;
+            page-break-after: avoid;
+          }
+          #printable-area p {
+            font-size: 11px !important;
+            margin: 0.5mm 0 !important;
+            line-height: 1.3 !important;
+          }
+          /* Facture container - prevent breaking */
+          #printable-area > div > div {
+            page-break-inside: avoid;
+            margin-bottom: 8mm !important;
+          }
+          /* Footer - stick to bottom */
+          .print-footer {
+            margin-top: auto !important;
+            padding-top: 5mm !important;
+            page-break-inside: avoid !important;
+            page-break-before: auto !important;
+          }
+          /* Table wrapper */
+          div.mb-4 {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            page-break-inside: avoid;
+          }
+          /* Table styles - optimized for A4 */
+          table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            font-size: 9px !important;
+            margin: 3mm 0 !important;
+            display: table !important;
+            page-break-inside: auto;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+          thead tr {
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          tbody {
+            display: table-row-group !important;
+          }
+          tfoot {
+            display: table-footer-group !important;
+          }
+          tfoot tr {
+            page-break-before: avoid;
+            page-break-inside: avoid;
+          }
+          tr {
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+            display: table-row !important;
+          }
+          th, td {
+            padding: 4px 3px !important;
+            font-size: 9px !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            vertical-align: top !important;
+            line-height: 1.2 !important;
+            display: table-cell !important;
+            max-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+          /* Table cells with flex content */
+          td.flex {
+            display: table-cell !important;
+          }
+          td.flex > * {
+            display: block !important;
+          }
+          th {
+            font-size: 8px !important;
+            font-weight: bold !important;
+            padding: 5px 3px !important;
+          }
+          /* Column widths - optimized for A4 */
+          th:nth-child(1), td:nth-child(1) { 
+            width: 4% !important; 
+            min-width: 15px !important;
+            max-width: 4% !important;
+          }
+          th:nth-child(2), td:nth-child(2) { 
+            width: 12% !important; 
+            min-width: 50px !important;
+            max-width: 12% !important;
+          }
+          th:nth-child(3), td:nth-child(3) { 
+            width: 38% !important; 
+            min-width: 120px !important;
+            max-width: 38% !important;
+          }
+          th:nth-child(4), td:nth-child(4) { 
+            width: 8% !important; 
+            min-width: 35px !important;
+            max-width: 8% !important;
+          }
+          th:nth-child(5), td:nth-child(5) { 
+            width: 18% !important; 
+            min-width: 70px !important;
+            max-width: 18% !important;
+          }
+          th:nth-child(6), td:nth-child(6) { 
+            width: 20% !important; 
+            min-width: 75px !important;
+            max-width: 20% !important;
+          }
+          /* Images - smaller for print */
+          img {
+            max-width: 70px !important;
+            max-height: 60px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+          }
+          /* Text sizes - optimized for print */
+          .text-2xl { font-size: 18px !important; }
+          .text-xl { font-size: 16px !important; }
+          .text-lg { font-size: 14px !important; }
+          .text-sm { font-size: 10px !important; }
+          .text-xs { font-size: 9px !important; }
+          .text-\[10px\] { font-size: 7px !important; }
+          .text-\[9px\] { font-size: 6px !important; }
+          .text-\[7px\] { font-size: 5px !important; }
+          /* Spacing - optimized for A4 */
+          .mb-3 { margin-bottom: 2mm !important; }
+          .mb-4 { margin-bottom: 3mm !important; }
+          .mb-6 { margin-bottom: 4mm !important; }
+          .mb-10 { margin-bottom: 6mm !important; }
+          .mt-12 { margin-top: 4mm !important; }
+          .my-4 { margin-top: 2mm !important; margin-bottom: 2mm !important; }
+          .pb-4 { padding-bottom: 3mm !important; }
+          .px-4 { padding-left: 3mm !important; padding-right: 3mm !important; }
+          .py-2 { padding-top: 1.5mm !important; padding-bottom: 1.5mm !important; }
+          .gap-x-2 { gap: 1.5mm !important; }
+          .gap-y-1 { gap: 1mm !important; }
+          .gap-2 { gap: 1.5mm !important; }
+          /* Negative margins */
+          .-mb-14 { margin-bottom: -2mm !important; }
+          /* Flex fixes */
+          .flex { display: flex !important; }
+          .flex-col { flex-direction: column !important; }
+          .justify-between { justify-content: space-between !important; }
+          .justify-center { justify-content: center !important; }
+          .items-center { align-items: center !important; }
+          .items-end { align-items: flex-end !important; }
+          .w-full { width: 100% !important; }
+          /* Borders */
+          .border { border-width: 1px !important; }
+          .border-b { border-bottom-width: 1px !important; }
+          .border-b-4 { border-bottom-width: 1.5px !important; }
+          .border-t { border-top-width: 1px !important; }
+          .border-black { border-color: black !important; }
+          .border-amber-600 { border-color: #d97706 !important; }
+          .border-orange-200 { border-color: #fed7aa !important; }
+          /* Rounded corners */
+          .rounded-lg { border-radius: 3px !important; }
+          /* Overflow */
+          .overflow-hidden { overflow: hidden !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          /* Prevent page breaks in critical sections */
+          .font-bold { page-break-after: avoid; }
+        }
+      ` }} />
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-8">
@@ -278,7 +477,7 @@ export default function Page() {
 
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
-                <div className="flex items-end mt-12 justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
+                <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
                   <div></div>
                   <div className="flex text-sm text-black gap-x-2">
                     <p>Date:</p>
@@ -292,7 +491,7 @@ export default function Page() {
                   </h1>
                 </div>
 
-                <div className="flex w-full justify-between mb-10">
+                <div className="flex w-full justify-between mb-6">
                   <div className="text-black font-semibold text-2xl">
                     <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
                       <p>Numéro de Proforma:</p>
@@ -398,16 +597,6 @@ export default function Page() {
                       })}
 
                       {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => {
-                        const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
-                        console.log(`Rendering accessoire ${accIndex}:`, {
-                          id: accessoire.id,
-                          nom: accessoire.nom,
-                          prix: accessoire.prix,
-                          calculatedPrix: accessoirePrix,
-                          quantity: accessoire.quantity,
-                          image: accessoire.image,
-                          hasImage: !!accessoire.image
-                        });
                         return (
                         <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
                           <TableCell className="text-black font-semibold">{(facture.lignes ? facture.lignes.length : 0) + accIndex + 1}</TableCell>
@@ -430,12 +619,8 @@ export default function Page() {
                             {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
-                          <TableCell className="text-right text-black text-sm">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires))}
-                          </TableCell>
-                          <TableCell className="text-black text-right text-sm pr-6">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires) * (accessoire.quantity || 1))}
-                          </TableCell>
+                          <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
                         </TableRow>
                       );
                       })}
@@ -532,28 +717,29 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex flex-col w-full rounded-b-lg text-[9px] mt-6">
+                <div className="flex flex-col w-full rounded-b-lg text-[9px] -mt-18">
                   <div className="flex flex-col">
                     <p className="font-bold text-blue-600">Notes</p>
                     <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
                   </div>
                 </div>
+
+                {/*footer*/}
+                <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0 mt-auto">
+                  <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
+                    <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
+                    <p className="text-black">60% d&apos;accompte à la commande</p>
+                    <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+                    <p className="text-black">SOLDE à la livraison</p>
+                  </div>
+                  <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
+                    <p className="font-normal text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+                    <p className="font-normal text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+                    <p className="font-normal text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+                  </div>
+                </div>
               </div>
             ))}
-
-            <div className="flex flex-col w-full bottom-0 right-0 left-0">
-              <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
-                <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
-                <p className="text-black">60% d&apos;accompte à la commande</p>
-                <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p className="text-black">SOLDE à la livraison</p>
-              </div>
-              <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
-                <p className="font-normal text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                <p className="font-normal text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                <p className="font-normal text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
-              </div>
-            </div>
           </div>
 
           <div className="flex justify-center items-center gap-4 mt-6 print-hide">

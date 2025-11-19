@@ -199,6 +199,9 @@ model VoitureModel {
 model Accessoire {
   id         String    @id @default(uuid())
   nom        String
+  description String?
+  prix       Decimal?
+  quantity   Int?      @default(1)
   voitureId  String?
   factureId  String?
   commandeId String?

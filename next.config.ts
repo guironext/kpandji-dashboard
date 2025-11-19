@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Webpack config for production builds
+  // Note: Turbopack (used in dev) ignores webpack config and uses serverExternalPackages instead
+  // This warning is harmless - webpack config is only used for production builds
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Handle Prisma with custom output directory
@@ -35,7 +38,16 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Turbopack uses this for Prisma handling
   serverExternalPackages: ['@prisma/client'],
+  // Configure Turbopack to avoid webpack warning
+  experimental: {
+    turbo: {
+      resolveAlias: {
+        '.prisma/client': path.resolve(__dirname, 'lib/generated/prisma'),
+      },
+    },
+  },
 };
 
 export default nextConfig;
