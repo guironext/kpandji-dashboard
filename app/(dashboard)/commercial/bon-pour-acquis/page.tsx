@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getProformasWithoutBonDeCommande, updateBonPourAcquis } from "@/lib/actions/facture";
+import { getProformasWithoutBonDeCommandeByUser, updateBonPourAcquis } from "@/lib/actions/facture";
+import { useAuth } from "@clerk/nextjs";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
@@ -186,6 +187,7 @@ function getAccessoireImage(
 }
 
 export default function Page() {
+  const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -195,9 +197,11 @@ export default function Page() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!clerkId) return;
+      
       console.log("=== FETCHING DATA ===");
       const [facturesResult, accessoiresResult] = await Promise.all([
-        getProformasWithoutBonDeCommande(),
+        getProformasWithoutBonDeCommandeByUser(clerkId),
         getAllAccessoires(),
       ]);
       
@@ -214,7 +218,7 @@ export default function Page() {
       }
     };
     fetchData();
-  }, []);
+  }, [clerkId]);
 
   const totalPages = Math.ceil(factures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;

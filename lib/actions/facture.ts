@@ -252,6 +252,52 @@ export async function getProformasWithoutBonDeCommande() {
   }
 }
 
+export async function getProformasWithoutBonDeCommandeByUser(clerkId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { clerkId }
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const proformas = await prisma.facture.findMany({
+      where: { 
+        status_facture: "PROFORMA",
+        bonDeCommande: null,
+        userId: user.id
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        user: true,
+        voiture: {
+          include: {
+            voitureModel: true
+          }
+        },
+        lignes: {
+          include: {
+            voitureModel: true
+          }
+        },
+        accessoires: true,
+        bonDeCommande: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Convert Decimal fields to numbers
+    const serializedProformas = proformas.map(serializeFacture);
+    
+    return { success: true, data: serializedProformas };
+  } catch (error) {
+    console.error("Error fetching proformas without bon de commande by user:", error);
+    return { success: false, error: "Failed to fetch proformas" };
+  }
+}
+
 export async function getFacturesWithBonPourAcquis() {
   try {
     const factures = await prisma.facture.findMany({
