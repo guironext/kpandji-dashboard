@@ -65,6 +65,13 @@ const navItems = [
     category: "commandes"
   },
   {
+    id: 12,
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+    label: "Point Paiement",
+    href: "/comptable/point-paiement",
+    category: "commandes"
+  },
+  {
     id: 7,
     icon: <PackageCheck className="w-5 h-5" />,
     label: "Commandes",

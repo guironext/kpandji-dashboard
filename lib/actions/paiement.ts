@@ -240,6 +240,151 @@ export async function getFactureWithPaiements(factureId: string) {
   }
 }
 
+export async function getAllPaiementsGroupedByClient() {
+  try {
+    const paiements = await prisma.paiement.findMany({
+      include: {
+        client: {
+          select: {
+            id: true,
+            nom: true,
+            telephone: true,
+            email: true,
+            entreprise: true,
+            localisation: true,
+            commercial: true,
+          },
+        },
+        clientEntreprise: {
+          select: {
+            id: true,
+            nom_entreprise: true,
+            sigle: true,
+            telephone: true,
+            email: true,
+            localisation: true,
+            commercial: true,
+          },
+        },
+        facture: {
+          select: {
+            id: true,
+            date_facture: true,
+            total_ttc: true,
+          },
+        },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        numeroEntreeCaisse: true,
+      },
+      orderBy: {
+        date_paiement: "desc",
+      },
+    });
+
+    // Group payments by client/clientEntreprise
+    const groupedByClient: Record<string, typeof paiements> = {};
+    const groupedByClientEntreprise: Record<string, typeof paiements> = {};
+
+    paiements.forEach((paiement) => {
+      if (paiement.clientId && paiement.client) {
+        const clientId = paiement.clientId;
+        if (!groupedByClient[clientId]) {
+          groupedByClient[clientId] = [];
+        }
+        groupedByClient[clientId].push(paiement);
+      } else if (paiement.clientEntrepriseId && paiement.clientEntreprise) {
+        const clientEntrepriseId = paiement.clientEntrepriseId;
+        if (!groupedByClientEntreprise[clientEntrepriseId]) {
+          groupedByClientEntreprise[clientEntrepriseId] = [];
+        }
+        groupedByClientEntreprise[clientEntrepriseId].push(paiement);
+      }
+    });
+
+    // Transform the data
+    const clientsData = Object.entries(groupedByClient).map(([clientId, paiements]) => {
+      const client = paiements[0].client!;
+      const totalAmount = paiements.reduce(
+        (sum, p) => sum + Number(p.avance_payee),
+        0
+      );
+      return {
+        clientId,
+        client,
+        paiements: paiements.map((p) => ({
+          id: p.id,
+          avance_payee: Number(p.avance_payee),
+          reste_payer: Number(p.reste_payer),
+          date_paiement: p.date_paiement,
+          mode_paiement: p.mode_paiement,
+          status_paiement: p.status_paiement,
+          createdAt: p.createdAt,
+          facture: {
+            id: p.facture.id,
+            date_facture: p.facture.date_facture,
+            total_ttc: Number(p.facture.total_ttc),
+          },
+          user: p.user,
+          numeroEntreeCaisse: p.numeroEntreeCaisse,
+        })),
+        totalAmount,
+      };
+    });
+
+    const clientEntreprisesData = Object.entries(groupedByClientEntreprise).map(
+      ([clientEntrepriseId, paiements]) => {
+        const clientEntreprise = paiements[0].clientEntreprise!;
+        const totalAmount = paiements.reduce(
+          (sum, p) => sum + Number(p.avance_payee),
+          0
+        );
+        return {
+          clientEntrepriseId,
+          clientEntreprise,
+          paiements: paiements.map((p) => ({
+            id: p.id,
+            avance_payee: Number(p.avance_payee),
+            reste_payer: Number(p.reste_payer),
+            date_paiement: p.date_paiement,
+            mode_paiement: p.mode_paiement,
+            status_paiement: p.status_paiement,
+            createdAt: p.createdAt,
+            facture: {
+              id: p.facture.id,
+              date_facture: p.facture.date_facture,
+              total_ttc: Number(p.facture.total_ttc),
+            },
+            user: p.user,
+            numeroEntreeCaisse: p.numeroEntreeCaisse,
+          })),
+          totalAmount,
+        };
+      }
+    );
+
+    return {
+      success: true,
+      data: {
+        clients: clientsData,
+        clientEntreprises: clientEntreprisesData,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching paiements grouped by client:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des paiements",
+      data: { clients: [], clientEntreprises: [] },
+    };
+  }
+}
+
 export async function generateNumeroEntreeCaisse(paiementId: string) {
   try {
     // Check if NumeroEntreeCaisse already exists for this paiement
