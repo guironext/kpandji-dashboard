@@ -2,7 +2,7 @@
 
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from "../generated/prisma/runtime/library";
 import { currentUser } from "@clerk/nextjs/server";
 
 export async function createPaiement(data: {

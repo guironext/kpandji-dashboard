@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createSubcase } from '@/lib/actions/subcase'
 import { Package } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface SubCaseDialogProps {
   open: boolean;
@@ -30,7 +31,10 @@ const SubCaseDialog: React.FC<SubCaseDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!subcaseNumber.trim()) return
+    if (!subcaseNumber.trim()) {
+      toast.error('Veuillez entrer un numéro de sub-case')
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -40,12 +44,16 @@ const SubCaseDialog: React.FC<SubCaseDialogProps> = ({
       })
       
       if (result.success) {
+        toast.success('Sub-case créé avec succès!')
         setSubcaseNumber('')
         onSuccess()
         onOpenChange(false)
+      } else {
+        toast.error(result.error || 'Erreur lors de la création du sub-case')
       }
     } catch (error) {
       console.error('Error creating subcase:', error)
+      toast.error('Erreur lors de la création du sub-case')
     } finally {
       setIsSubmitting(false)
     }

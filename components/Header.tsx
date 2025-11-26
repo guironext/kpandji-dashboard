@@ -79,16 +79,20 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
             </button>
 
             {/* User Welcome Message */}
-            {user && (
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  Bienvenue, {user.firstName}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {user.emailAddresses?.[0]?.emailAddress}
-                </p>
-              </div>
-            )}
+            <div className="hidden sm:block text-right">
+              {isLoaded && user ? (
+                <>
+                  <p className="text-sm font-medium text-gray-900">
+                    Bienvenue, {user.firstName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {user.emailAddresses?.[0]?.emailAddress}
+                  </p>
+                </>
+              ) : (
+                <div className="h-8 w-32 bg-gray-100 rounded animate-pulse" />
+              )}
+            </div>
 
             {/* User Authentication */}
             <div className="ml-2">

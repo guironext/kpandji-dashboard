@@ -40,7 +40,21 @@ export async function getSubcasesByConteneur(conteneurId: string) {
       orderBy: { createdAt: 'desc' }
     });
     
-    return { success: true, data: subcases };
+    // Serialize Date objects in subcases and nested conteneur
+    const serializedSubcases = subcases.map((subcase) => ({
+      ...subcase,
+      createdAt: subcase.createdAt.toISOString(),
+      updatedAt: subcase.updatedAt.toISOString(),
+      conteneur: subcase.conteneur ? {
+        ...subcase.conteneur,
+        createdAt: subcase.conteneur.createdAt.toISOString(),
+        updatedAt: subcase.conteneur.updatedAt.toISOString(),
+        dateEmbarquement: subcase.conteneur.dateEmbarquement?.toISOString() || null,
+        dateArriveProbable: subcase.conteneur.dateArriveProbable?.toISOString() || null,
+      } : null,
+    }));
+    
+    return { success: true, data: serializedSubcases };
   } catch (error) {
     console.error("Error fetching subcases:", error);
     return { success: false, error: "Failed to fetch subcases" };

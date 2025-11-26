@@ -233,7 +233,7 @@ export default function AjouterAccessoiresPage() {
                 <CardHeader className="space-y-3 pb-6 pt-8 bg-gradient-to-br from-orange-50 to-amber-50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                      <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                         Catalogue des Accessoires
                       </CardTitle>
                       <CardDescription className="text-orange-700/70 font-semibold mt-2 text-base">

@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // Skip metadata generation for favicon to avoid cache issues
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

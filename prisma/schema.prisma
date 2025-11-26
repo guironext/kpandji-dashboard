@@ -3,10 +3,14 @@ generator client {
   output   = "../lib/generated/prisma"
 }
 
+
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
 
 model User {
   id                         String                      @id @default(uuid())

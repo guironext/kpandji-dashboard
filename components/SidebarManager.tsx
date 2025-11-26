@@ -63,54 +63,48 @@ const navItems = [
     href: "/manager/liste-conteneurs",
     category: "commandes"
   },
-  {
-    id: 6,
-    icon: <PackageCheck className="w-5 h-5" />,
-    label: "Renseigner Pièces",
-    href: "/manager/renseigner-pieces",
-    category: "commandes"
-  },
+  
   {
     id: 7,
     icon: <Truck className="w-5 h-5" />,
     label: "Conteneur Arrivés",
     href: "/manager/conteneur-arrives",
-    category: "operations"
+    category: "commandes"
   },
   {
     id: 8,
     icon: <Package className="w-5 h-5" />,
     label: "Dépotage & Vérification",
     href: "/manager/depotage",
-    category: "operations"
+    category: "commandes"
   },
   {
     id: 9,
     icon: <AlertTriangle className="w-5 h-5" />,
     label: "Réclamation Pièces",
     href: "/manager/reclamationpieces",
-    category: "operations"
+    category: "commandes"
   },
   {
     id: 10,
     icon: <Wrench className="w-5 h-5" />,
     label: "Ordre Montage",
     href: "/manager/montage",
-    category: "management"
+    category: "operations"
   },
   {
     id: 11,
     icon: <FileEdit className="w-5 h-5" />,
     label: "Ordre Correction",
     href: "/manager/correction",
-    category: "management"
+    category: "operations"
   },
   {
     id: 12,
     icon: <CarFront className="w-5 h-5" />,
     label: "Sortie Parking",
     href: "/manager/ajouter-modele",
-    category: "management"
+    category: "operations"
   },
   {
     id: 13,
@@ -129,17 +123,11 @@ const navItems = [
   {
     id: 15,
     icon: <CalendarDays className="w-5 h-5" />,
-    label: "Rapport Rendez-vous",
-    href: "/manager/rapportrendezvous",
+    label: "Départements",
+    href: "/manager/departements",
     category: "reports"
   },
-  {
-    id: 16,
-    icon: <TrendingDown className="w-5 h-5" />,
-    label: "Tableau de Chute",
-    href: "/manager/tableau-chute",
-    category: "reports"
-  },
+
   {
     id: 17,
     icon: <Settings className="w-5 h-5" />,

@@ -29,8 +29,8 @@ const navItems = [
   {
     id: 2,
     icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Commandes en Transit",
-    href: "/magasinier/piecesencoursenvoies",
+    label: "Renseigner-commande",
+    href: "/magasinier/renseigner-commande",
     category: "inventory"
   },
   {
