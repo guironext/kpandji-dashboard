@@ -48,10 +48,13 @@ const TransiteDialog: React.FC<TransiteDialogProps> = ({
     setIsLoading(true)
     try {
       const result = await getAllConteneurs()
-      if (result.success) {
-        // Filter only containers with etapeConteneur === "EN_ATTENTE"
-        const enAttenteConteneurs = (result.data || []).filter(
-          conteneur => conteneur.etapeConteneur === "EN_ATTENTE"
+      if (result.success && result.data) {
+        // Ensure data is an array and filter only containers with etapeConteneur === "EN_ATTENTE"
+        const conteneursArray = Array.isArray(result.data) 
+          ? (result.data as unknown as Conteneur[])
+          : []
+        const enAttenteConteneurs = conteneursArray.filter(
+          (conteneur) => conteneur.etapeConteneur === "EN_ATTENTE"
         )
         setConteneurs(enAttenteConteneurs)
       }
