@@ -14,8 +14,6 @@ import {
   Container,
   Settings,
   CalendarDays,
-  TrendingDown,
-  PackageCheck,
   ListOrdered,
   Package,
   FileEdit

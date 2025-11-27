@@ -20,9 +20,7 @@ import {
   ShoppingCart, 
   Car,
   Search,
-  Filter,
   BarChart3,
-  Sparkles,
   Bell,
   Layers
 } from "lucide-react"

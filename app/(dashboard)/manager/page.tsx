@@ -27,8 +27,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Eye,
-  Settings,
-  Clock,
   CheckSquare,
   AlertCircle,
   Play,
@@ -39,7 +37,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAllCommandes } from "@/lib/actions/commande";
-import type { Commande } from "@/lib/generated/prisma";
 
 type CommandeWithRelations = {
   id: string;
@@ -48,16 +45,18 @@ type CommandeWithRelations = {
   etapeCommande: string;
   motorisation: string;
   couleur: string;
-  date_livraison: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  clientId: string;
+  date_livraison: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  clientId: string | null;
   voitureModelId?: string | null;
   conteneurId?: string | null;
   commandeLocalId?: string | null;
-  client?: { nom: string } | null;
-  voitureModel?: { model: string } | null;
+  prix_unitaire?: number | null;
+  client?: { nom: string; [key: string]: unknown } | null;
+  voitureModel?: { model: string; [key: string]: unknown } | null;
   fournisseurs?: { id: string; nom: string }[];
+  [key: string]: unknown;
 };
 
 const ManagerDashboard = () => {
@@ -69,7 +68,7 @@ const ManagerDashboard = () => {
     const fetchCommandes = async () => {
       const result = await getAllCommandes();
       if (result.success && result.data) {
-        setCommandes(result.data);
+        setCommandes(result.data as unknown as CommandeWithRelations[]);
       }
       setLoading(false);
     };
