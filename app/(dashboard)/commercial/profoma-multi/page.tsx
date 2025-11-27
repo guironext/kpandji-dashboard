@@ -233,38 +233,95 @@ export default function Page() {
             position: absolute;
             left: 0;
             top: 0;
-            width: 210mm !important;
-            padding: 10mm 15mm !important;
+            width: 215mm !important;
+            padding: 5mm 10mm 50mm 10mm !important;
             margin: 0 !important;
             box-sizing: border-box !important;
             background: white !important;
             display: flex !important;
             flex-direction: column !important;
           }
-          /* Header - first child */
-          #printable-area > div:first-child {
-            margin-bottom: 5mm !important;
-            padding-bottom: 3mm !important;
-            page-break-after: avoid;
-          }
-          /* Each facture container should start on a new page except the first */
-          #printable-area > div:not(:first-child) {
-            page-break-before: always;
-            page-break-inside: avoid;
-            min-height: calc(297mm - 20mm - 15mm) !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-          }
           .print-hide { display: none !important; }
+          
+          /* Page setup */
           @page {
             size: A4;
             margin: 0 !important;
           }
+          
+          /* Header - appears only on first page */
+          #printable-area > div:first-child {
+            margin-bottom: 3mm !important;
+            padding-bottom: 3mm !important;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Facture containers - allow breaking across pages */
+          #printable-area > div:not(:first-child) {
+            page-break-before: auto !important;
+            page-break-inside: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
+            position: relative !important;
+          }
+          
+          /* Facture info sections (date, title, client info) - keep with header on first page */
+          #printable-area > div:not(:first-child) > div:first-child,
+          #printable-area > div:not(:first-child) > div:nth-child(2),
+          #printable-area > div:not(:first-child) > div:nth-child(3) {
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Table container - allow breaking */
+          #printable-area > div:not(:first-child) > div.mb-2 {
+            page-break-inside: auto !important;
+            margin-bottom: 8mm !important;
+            flex: 1 !important;
+          }
+          
+          /* Page break after every 3rd item */
+          .page-break-after {
+            page-break-after: always !important;
+          }
+          
+          /* Footer sections container - stick to bottom */
+          #printable-area > div:not(:first-child) > div.mt-4,
+          #printable-area > div:not(:first-child) > div.flex.w-full.justify-between.mt-5,
+          #printable-area > div:not(:first-child) > div.flex.flex-col.w-full.rounded-b-lg,
+          #printable-area > div:not(:first-child) > div.print-footer {
+            margin-top: auto !important;
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Footer - stick to bottom of each page */
+          .print-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 10mm !important;
+            right: 10mm !important;
+            width: calc(100% - 20mm) !important;
+            padding-top: 5mm !important;
+            padding-bottom: 5mm !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+            z-index: 1000 !important;
+            margin-top: 0 !important;
+          }
+          
+          /* Table footer - keep with other footer sections */
+          tfoot {
+            display: table-footer-group !important;
+            page-break-before: avoid !important;
+          }
+          
           /* Typography - optimized for A4 */
           #printable-area h1 {
             font-size: 20px !important;
-            margin: 1.5mm 0 !important;
+            margin: 1mm 0 !important;
             line-height: 1.2 !important;
             page-break-after: avoid;
           }
@@ -278,26 +335,16 @@ export default function Page() {
             margin: 0.5mm 0 !important;
             line-height: 1.3 !important;
           }
-          /* Facture container - prevent breaking */
-          #printable-area > div > div {
-            page-break-inside: avoid;
-            margin-bottom: 8mm !important;
-          }
-          /* Footer - stick to bottom */
-          .print-footer {
-            margin-top: auto !important;
-            padding-top: 5mm !important;
-            page-break-inside: avoid !important;
-            page-break-before: auto !important;
-          }
-          /* Table wrapper */
+          
+          /* Table wrapper - allow breaking */
           div.mb-4 {
             width: 100% !important;
             max-width: 100% !important;
             overflow: visible !important;
-            page-break-inside: avoid;
+            page-break-inside: auto !important;
           }
-          /* Table styles - optimized for A4 */
+          
+          /* Table styles - optimized for A4, allow breaking */
           table {
             width: 100% !important;
             max-width: 100% !important;
@@ -306,32 +353,52 @@ export default function Page() {
             font-size: 9px !important;
             margin: 3mm 0 !important;
             display: table !important;
-            page-break-inside: auto;
+            page-break-inside: auto !important;
           }
+          
+          /* Table header - repeat on each page */
           thead {
             display: table-header-group !important;
           }
           thead tr {
-            page-break-after: avoid;
-            page-break-inside: avoid;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
           }
+          
           tbody {
             display: table-row-group !important;
           }
+          
+          /* Table footer - appear on last page only */
           tfoot {
             display: table-footer-group !important;
+            page-break-before: avoid !important;
           }
           tfoot tr {
-            page-break-before: avoid;
-            page-break-inside: avoid;
-          }
-          tr {
+            page-break-before: avoid !important;
             page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+          }
+          tfoot tr:last-child {
+            page-break-after: avoid !important;
+          }
+          
+          /* Table rows - allow breaking across pages */
+          tr {
+            page-break-inside: auto !important;
             page-break-after: auto !important;
             display: table-row !important;
           }
+          
+          /* Table body rows - explicitly allow breaking */
+          tbody tr {
+            page-break-inside: auto !important;
+            page-break-after: auto !important;
+          }
+          
+          /* Prevent breaking inside individual cells */
           th, td {
-            padding: 4px 3px !important;
+            padding: 2px 1px !important;
             font-size: 9px !important;
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
@@ -340,19 +407,22 @@ export default function Page() {
             display: table-cell !important;
             max-width: 0 !important;
             box-sizing: border-box !important;
+            page-break-inside: avoid !important;
           }
+          
           /* Table cells with flex content */
           td.flex {
             display: table-cell !important;
           }
           td.flex > * {
-            display: block !important;
+            display: flex !important;
           }
           th {
             font-size: 8px !important;
             font-weight: bold !important;
             padding: 5px 3px !important;
           }
+          
           /* Column widths - optimized for A4 */
           th:nth-child(1), td:nth-child(1) { 
             width: 4% !important; 
@@ -384,6 +454,7 @@ export default function Page() {
             min-width: 75px !important;
             max-width: 20% !important;
           }
+          
           /* Images - smaller for print */
           img {
             max-width: 70px !important;
@@ -392,6 +463,7 @@ export default function Page() {
             height: auto !important;
             object-fit: contain !important;
           }
+          
           /* Text sizes - optimized for print */
           .text-2xl { font-size: 18px !important; }
           .text-xl { font-size: 16px !important; }
@@ -401,6 +473,7 @@ export default function Page() {
           .text-\[10px\] { font-size: 7px !important; }
           .text-\[9px\] { font-size: 6px !important; }
           .text-\[7px\] { font-size: 5px !important; }
+          
           /* Spacing - optimized for A4 */
           .mb-3 { margin-bottom: 2mm !important; }
           .mb-4 { margin-bottom: 3mm !important; }
@@ -414,8 +487,10 @@ export default function Page() {
           .gap-x-2 { gap: 1.5mm !important; }
           .gap-y-1 { gap: 1mm !important; }
           .gap-2 { gap: 1.5mm !important; }
+          
           /* Negative margins */
           .-mb-14 { margin-bottom: -2mm !important; }
+          
           /* Flex fixes */
           .flex { display: flex !important; }
           .flex-col { flex-direction: column !important; }
@@ -424,6 +499,7 @@ export default function Page() {
           .items-center { align-items: center !important; }
           .items-end { align-items: flex-end !important; }
           .w-full { width: 100% !important; }
+          
           /* Borders */
           .border { border-width: 1px !important; }
           .border-b { border-bottom-width: 1px !important; }
@@ -432,16 +508,19 @@ export default function Page() {
           .border-black { border-color: black !important; }
           .border-amber-600 { border-color: #d97706 !important; }
           .border-orange-200 { border-color: #fed7aa !important; }
+          
           /* Rounded corners */
           .rounded-lg { border-radius: 3px !important; }
+          
           /* Overflow */
           .overflow-hidden { overflow: hidden !important; }
           .overflow-x-auto { overflow: visible !important; }
+          
           /* Prevent page breaks in critical sections */
           .font-bold { page-break-after: avoid; }
         }
       ` }} />
-
+      
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-8">
           <div className="flex w-full justify-between mb-6 print-hide">
@@ -465,16 +544,22 @@ export default function Page() {
           </div>
 
           <div id="printable-area">
+            {/* Header */}
             <div className="flex w-full justify-between border-b-4 border-amber-600 pb-4 mb-3">
               <div>
                 <Image src="/logo.png" alt="Logo" width={100} height={50} priority />
               </div>
               <div className="flex flex-col justify-center -mb-14">
-                <h1 className="text-2xl font-bold text-black">KPANDJI AUTOMOBILES</h1>
-                <p className="text-sm text-gray-800 font-thin">Constructeur et Assembleur Automobile</p>
+                <h1 className="text-2xl font-bold text-black">
+                  KPANDJI AUTOMOBILES
+                </h1>
+                <p className="text-sm text-gray-800 font-thin">
+                  Constructeur et Assembleur Automobile
+                </p>
               </div>
             </div>
 
+            {/* Factures */}
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
                 <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
@@ -485,13 +570,13 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex w-full justify-center my-4">
+                <div className="flex w-full justify-center my-2">
                   <h1 className="text-xl font-bold text-black border border-black px-4 py-2 rounded-lg">
                     FACTURE {facture.status_facture}
                   </h1>
                 </div>
 
-                <div className="flex w-full justify-between mb-6">
+                <div className="flex w-full justify-between mb-2">
                   <div className="text-black font-semibold text-2xl">
                     <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
                       <p>Numéro de Proforma:</p>
@@ -535,7 +620,7 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="mb-4">
+                <div className="mb-2">
                   <Table className="rounded-lg overflow-hidden">
                     <TableHeader>
                       <TableRow className="bg-green-50 border-b border-black">
@@ -548,112 +633,163 @@ export default function Page() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {currentData.map((factureItem) => {
-                        const lignes = factureItem.lignes && factureItem.lignes.length > 0
-                          ? factureItem.lignes
+                      {(() => {
+                        // Combine all items (lignes + accessoires) into one array
+                        const lignes = facture.lignes && facture.lignes.length > 0
+                          ? facture.lignes
                           : [{
                               id: "1",
                               voitureModelId: "",
                               couleur: "",
-                              nbr_voiture: factureItem.nbr_voiture_commande,
-                              prix_unitaire: factureItem.prix_unitaire,
-                              montant_ligne: factureItem.montant_ht,
+                              nbr_voiture: facture.nbr_voiture_commande,
+                              prix_unitaire: facture.prix_unitaire,
+                              montant_ligne: facture.montant_ht,
                               transmission: "",
                               motorisation: "",
-                              voitureModel: factureItem.voiture?.voitureModel || null,
+                              voitureModel: facture.voiture?.voitureModel || null,
                             }];
 
-                        return lignes.map((ligne, index) => (
-                          <TableRow key={`${factureItem.id}-${ligne.id}`} className={index % 2 === 0 ? "bg-white border-b border-orange-200" : "bg-white hover:bg-orange-50 border-b border-orange-200"}>
-                            <TableCell className="text-black font-semibold">{index + 1}</TableCell>
-                            <TableCell className="text-black">
-                              {ligne.voitureModel?.image ? (
-                                <Image 
-                                  src={ligne.voitureModel.image} 
-                                  alt={ligne.voitureModel.model || "Vehicle"} 
-                                  width={110} 
-                                  height={90}
-                                  unoptimized
-                                  className="object-contain"
-                                />
-                              ) : "N/A"}
-                            </TableCell>
-                            <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                              {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
-                              {ligne.couleur && (
-                                <div className="flex gap-x-2">
-                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}-</p>
-                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}-</p>}
-                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}-</p>}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
-                            <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
-                            <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
-                          </TableRow>
-                        ));
-                      })}
+                        type TableItem = {
+                          type: 'ligne';
+                          data: typeof lignes[0];
+                          index: number;
+                        } | {
+                          type: 'accessoire';
+                          data: NonNullable<typeof facture.accessoires>[0];
+                          index: number;
+                        } | {
+                          type: 'accessoire_nom';
+                          data: typeof facture;
+                          index: number;
+                        };
+                        
+                        const allItems: TableItem[] = [];
 
-                      {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => {
-                        return (
-                        <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
-                          <TableCell className="text-black font-semibold">{(facture.lignes ? facture.lignes.length : 0) + accIndex + 1}</TableCell>
-                          <TableCell className="text-black">
-                            {accessoire.image ? (
-                              <Image 
-                                src={accessoire.image} 
-                                alt={accessoire.nom || "Accessoire"} 
-                                width={100} 
-                                height={80}
-                                unoptimized
-                                className="object-contain"
-                              />
-                            ) : (
-                              <div className="text-xs text-gray-400">Pas d&apos;image</div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                            {accessoire.nom}
-                            {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
-                          </TableCell>
-                          <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
-                          <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
-                          <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
-                        </TableRow>
-                      );
-                      })}
-                      
-                      {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
-                        <TableRow className="bg-white border-b border-orange-200">
-                          <TableCell className="text-black font-semibold">{facture.lignes ? facture.lignes.length + 1 : 1}</TableCell>      
-                          <TableCell className="text-black">
-                            {(() => {
-                              const imagePath = getAccessoireImage(facture.accessoire_nom, accessoires);
-                              return imagePath ? (
-                                <Image 
-                                  src={imagePath} 
-                                  alt={facture.accessoire_nom || "Accessoire"} 
-                                  width={100} 
-                                  height={80}
-                                  unoptimized
-                                  className="object-contain"
-                                />
-                              ) : (
-                                <div className="text-xs text-gray-500">Pas d&apos;image</div>
-                              );
-                            })()}
-                          </TableCell>
-                          <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                            {facture.accessoire_nom}
-                            {facture.accessoire_description && <p className="text-[7px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>}
-                          </TableCell>
-                          <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
-                          <TableCell className="text-right text-black text-sm">{((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</TableCell>
-                          <TableCell className="text-black text-right text-sm pr-6">{(facture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</TableCell>
-                        </TableRow>
-                      )}
+                        // Add lignes
+                        lignes.forEach((ligne, idx) => {
+                          allItems.push({ type: 'ligne', data: ligne, index: idx });
+                        });
+
+                        // Add accessoires
+                        if (facture.accessoires && facture.accessoires.length > 0) {
+                          facture.accessoires.forEach((accessoire, idx) => {
+                            allItems.push({ type: 'accessoire', data: accessoire, index: idx });
+                          });
+                        }
+
+                        // Add single accessoire_nom if exists
+                        if (facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0)) {
+                          allItems.push({ type: 'accessoire_nom', data: facture, index: 0 });
+                        }
+
+                        return allItems.map((item, globalIndex) => {
+                          const isThirdItem = (globalIndex + 1) % 3 === 0;
+                          const rowClass = globalIndex % 2 === 0 
+                            ? `bg-white border-b border-orange-200 ${isThirdItem ? 'page-break-after' : ''}`
+                            : `bg-white hover:bg-orange-50 border-b border-orange-200 ${isThirdItem ? 'page-break-after' : ''}`;
+
+                          if (item.type === 'ligne') {
+                            const ligne = item.data;
+                            return (
+                              <TableRow key={`${facture.id}-ligne-${ligne.id}`} className={rowClass}>
+                                <TableCell className="text-black font-semibold">{globalIndex + 1}</TableCell>
+                                <TableCell className="text-black">
+                                  {ligne.voitureModel?.image ? (
+                                    <Image 
+                                      src={ligne.voitureModel.image} 
+                                      alt={ligne.voitureModel.model || "Vehicle"} 
+                                      width={110} 
+                                      height={90}
+                                      unoptimized
+                                      className="object-contain"
+                                    />
+                                  ) : "N/A"}
+                                </TableCell>
+                                <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
+                                  {ligne.voitureModel?.model || "N/A"}
+                                  <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
+                                  {ligne.couleur && (
+                                    <div className="flex gap-x-2" style={{ display: "flex!important" }}>
+                                      <p style={{ display: "flex" }} className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}-</p>
+                                      {ligne.transmission && (
+                                        <p style={{ display: "flex" }} className="text-[10px] font-normal text-amber-700">
+                                          Transmission: {ligne.transmission}-
+                                        </p>
+                                      )}
+                                      {ligne.motorisation && (
+                                        <p style={{ display: "flex" }} className="text-[10px] font-normal text-amber-700">
+                                          Motorisation: {ligne.motorisation}-
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
+                                <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
+                                <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
+                              </TableRow>
+                            );
+                          } else if (item.type === 'accessoire') {
+                            const accessoire = item.data;
+                            return (
+                              <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className={rowClass}>
+                                <TableCell className="text-black font-semibold">{globalIndex + 1}</TableCell>
+                                <TableCell className="text-black">
+                                  {accessoire.image ? (
+                                    <Image 
+                                      src={accessoire.image} 
+                                      alt={accessoire.nom || "Accessoire"} 
+                                      width={100} 
+                                      height={80}
+                                      unoptimized
+                                      className="object-contain"
+                                    />
+                                  ) : (
+                                    <div className="text-xs text-gray-400">Pas d&apos;image</div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
+                                  {accessoire.nom}
+                                  {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
+                                </TableCell>
+                                <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
+                                <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
+                                <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
+                              </TableRow>
+                            );
+                          } else {
+                            // accessoire_nom
+                            const factureData = item.data;
+                            const imagePath = getAccessoireImage(factureData.accessoire_nom, accessoires);
+                            return (
+                              <TableRow key={`${facture.id}-accessoire-nom`} className={rowClass}>
+                                <TableCell className="text-black font-semibold">{globalIndex + 1}</TableCell>      
+                                <TableCell className="text-black">
+                                  {imagePath ? (
+                                    <Image 
+                                      src={imagePath} 
+                                      alt={factureData.accessoire_nom || "Accessoire"} 
+                                      width={100} 
+                                      height={80}
+                                      unoptimized
+                                      className="object-contain"
+                                    />
+                                  ) : (
+                                    <div className="text-xs text-gray-500">Pas d&apos;image</div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
+                                  {factureData.accessoire_nom}
+                                  {factureData.accessoire_description && <p className="text-[7px] font-light text-black max-w-80 text-wrap">{factureData.accessoire_description}</p>}
+                                </TableCell>
+                                <TableCell className="text-black text-center text-sm">{factureData.accessoire_nbr || 1}</TableCell>
+                                <TableCell className="text-right text-black text-sm">{((factureData.accessoire_prix || 0) / (factureData.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</TableCell>
+                                <TableCell className="text-black text-right text-sm pr-6">{(factureData.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                        });
+                      })()}
                     </TableBody>
                     <TableFooter className="text-sm border-t border-b border-black mt-4">
                       <TableRow className="bg-green-50">

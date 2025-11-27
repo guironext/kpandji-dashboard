@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { EtapeCommande, EtapeConteneur } from "@/lib/generated/prisma";
+import { EtapeCommande, EtapeConteneur, EtapeCommandeGroupee } from "@/lib/generated/prisma";
 import { revalidatePath } from "next/cache";
 
 // Fetch all validated commandes
@@ -172,6 +172,82 @@ export async function sendConteneur(conteneurId: string) {
   } catch (error) {
     console.error("Error sending conteneur:", error);
     return { success: false, error: "Failed to send conteneur" };
+  }
+}
+
+// Fetch all VALIDE commandeGroupee with their commandes
+export async function getValideCommandesGroupees() {
+  try {
+    const commandesGroupees = await prisma.commandeGroupee.findMany({
+      where: {
+        etapeCommandeGroupee: EtapeCommandeGroupee.VALIDE,
+      },
+      include: {
+        commandes: {
+          include: {
+            voitureModel: true,
+            client: true,
+            clientEntreprise: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Serialize Decimal values and dates
+    const serialized = commandesGroupees.map((cg) => ({
+      ...cg,
+      date_validation: cg.date_validation.toISOString(),
+      createdAt: cg.createdAt.toISOString(),
+      updatedAt: cg.updatedAt.toISOString(),
+      commandes: cg.commandes.map((cmd) => ({
+        ...cmd,
+        prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+        date_livraison: cmd.date_livraison.toISOString(),
+        createdAt: cmd.createdAt.toISOString(),
+        updatedAt: cmd.updatedAt.toISOString(),
+      })),
+    }));
+
+    return { success: true, data: serialized };
+  } catch (error) {
+    console.error("Error fetching VALIDE commandes groupées:", error);
+    return { success: false, error: "Failed to fetch commandes groupées" };
+  }
+}
+
+// Update commandeGroupee and its commandes to TRANSITE when empty
+export async function updateCommandeGroupeeToTransite(commandeGroupeeId: string) {
+  try {
+    // Check if commandeGroupee has any commandes left
+    const commandeGroupee = await prisma.commandeGroupee.findUnique({
+      where: { id: commandeGroupeeId },
+      include: {
+        commandes: true,
+      },
+    });
+
+    if (!commandeGroupee) {
+      return { success: false, error: "Commande groupée not found" };
+    }
+
+    // If there are no commandes left, update to TRANSITE
+    if (commandeGroupee.commandes.length === 0) {
+      await prisma.commandeGroupee.update({
+        where: { id: commandeGroupeeId },
+        data: {
+          etapeCommandeGroupee: EtapeCommandeGroupee.TRANSITE,
+        },
+      });
+    }
+
+    revalidatePath("/manager/conteneurisation");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating commande groupée to TRANSITE:", error);
+    return { success: false, error: "Failed to update commande groupée" };
   }
 }
 

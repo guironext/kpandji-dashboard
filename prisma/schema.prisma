@@ -407,6 +407,7 @@ model CommandeGroupee {
   vendue           String
   details          String
   stock_disponible String
+  etapeCommandeGroupee EtapeCommandeGroupee @default(VALIDE)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   commandes        Commande[]
@@ -902,4 +903,9 @@ enum StatusVerification {
 enum CommandeFlag {
   VENDUE
   DISPONIBLE
+}
+
+enum EtapeCommandeGroupee {
+  VALIDE
+  TRANSITE
 }

@@ -241,7 +241,246 @@ export default function Page() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `@media print { body * { visibility: hidden; } #printable-area, #printable-area * { visibility: visible; } #printable-area { position: absolute; left: 0; top: 0; width: 100%; } .print-hide { display: none !important; } .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, .bg-gray-900, .text-amber-400, .text-orange-400, .text-orange-600, .text-black, .border-amber-500, .border-amber-600, .border-orange-600, .border-black { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; } @page { size: A4; margin: 1cm; } }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 210mm !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          body * { visibility: hidden; }
+          #printable-area, #printable-area * { visibility: visible; }
+          #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 215mm !important;
+            padding: 5mm 10mm 50mm 10mm !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .print-hide { display: none !important; }
+          
+          /* Page setup */
+          @page {
+            size: A4;
+            margin: 0 !important;
+          }
+          
+          /* Footer - stick to bottom of each page */
+          .print-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 10mm !important;
+            right: 10mm !important;
+            width: calc(100% - 20mm) !important;
+            padding-top: 5mm !important;
+            padding-bottom: 5mm !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+            z-index: 1000 !important;
+            margin-top: 0 !important;
+          }
+          
+          /* Keep footer sections together */
+          .print-footer > div {
+            page-break-inside: avoid !important;
+          }
+          
+          /* Table styles - ensure proper display */
+          table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            font-size: 9px !important;
+            margin: 3mm 0 !important;
+            display: table !important;
+            page-break-inside: auto !important;
+          }
+          
+          /* Table header */
+          thead {
+            display: table-header-group !important;
+          }
+          thead tr {
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Table body */
+          tbody {
+            display: table-row-group !important;
+          }
+          
+          /* Table footer */
+          tfoot {
+            display: table-footer-group !important;
+          }
+          tfoot tr {
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Table rows */
+          tr {
+            page-break-inside: auto !important;
+            page-break-after: auto !important;
+            display: table-row !important;
+          }
+          
+          /* Table cells */
+          th, td {
+            padding: 4px 3px !important;
+            font-size: 9px !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            vertical-align: top !important;
+            line-height: 1.2 !important;
+            display: table-cell !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            border: 1px solid #e5e7eb !important;
+          }
+          
+          /* Table header cells */
+          th {
+            font-size: 8px !important;
+            font-weight: bold !important;
+            padding: 5px 3px !important;
+            background-color: #f0fdf4 !important;
+            border-bottom: 2px solid black !important;
+          }
+          
+          /* Table cells with flex content */
+          td.flex {
+            display: table-cell !important;
+          }
+          td.flex > * {
+            display: block !important;
+          }
+          
+          /* Table wrapper */
+          div.mb-4 {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            page-break-inside: auto !important;
+          }
+          
+          /* Column widths - optimized for A4 */
+          th:nth-child(1), td:nth-child(1) { 
+            width: 4% !important; 
+            min-width: 15px !important;
+            max-width: 4% !important;
+          }
+          th:nth-child(2), td:nth-child(2) { 
+            width: 12% !important; 
+            min-width: 50px !important;
+            max-width: 12% !important;
+          }
+          th:nth-child(3), td:nth-child(3) { 
+            width: 38% !important; 
+            min-width: 120px !important;
+            max-width: 38% !important;
+          }
+          th:nth-child(4), td:nth-child(4) { 
+            width: 8% !important; 
+            min-width: 35px !important;
+            max-width: 8% !important;
+          }
+          th:nth-child(5), td:nth-child(5) { 
+            width: 18% !important; 
+            min-width: 70px !important;
+            max-width: 18% !important;
+          }
+          th:nth-child(6), td:nth-child(6) { 
+            width: 20% !important; 
+            min-width: 75px !important;
+            max-width: 20% !important;
+          }
+          
+          /* Images in table */
+          img {
+            max-width: 70px !important;
+            max-height: 60px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+          }
+          
+          /* Text sizes */
+          .text-2xl { font-size: 18px !important; }
+          .text-xl { font-size: 16px !important; }
+          .text-lg { font-size: 14px !important; }
+          .text-sm { font-size: 10px !important; }
+          .text-xs { font-size: 9px !important; }
+          .text-\[10px\] { font-size: 7px !important; }
+          .text-\[9px\] { font-size: 6px !important; }
+          .text-\[7px\] { font-size: 5px !important; }
+          
+          /* Spacing */
+          .mb-3 { margin-bottom: 2mm !important; }
+          .mb-4 { margin-bottom: 3mm !important; }
+          .mb-6 { margin-bottom: 4mm !important; }
+          .mb-10 { margin-bottom: 6mm !important; }
+          .mt-12 { margin-top: 4mm !important; }
+          .my-4 { margin-top: 2mm !important; margin-bottom: 2mm !important; }
+          .pb-4 { padding-bottom: 3mm !important; }
+          .px-4 { padding-left: 3mm !important; padding-right: 3mm !important; }
+          .py-2 { padding-top: 1.5mm !important; padding-bottom: 1.5mm !important; }
+          .gap-x-2 { gap: 1.5mm !important; }
+          .gap-y-1 { gap: 1mm !important; }
+          .gap-2 { gap: 1.5mm !important; }
+          
+          /* Flex fixes */
+          .flex { display: flex !important; }
+          .flex-col { flex-direction: column !important; }
+          .justify-between { justify-content: space-between !important; }
+          .justify-center { justify-content: center !important; }
+          .items-center { align-items: center !important; }
+          .items-end { align-items: flex-end !important; }
+          .w-full { width: 100% !important; }
+          
+          /* Borders */
+          .border { border-width: 1px !important; }
+          .border-b { border-bottom-width: 1px !important; }
+          .border-b-4 { border-bottom-width: 1.5px !important; }
+          .border-t { border-top-width: 1px !important; }
+          .border-black { border-color: black !important; }
+          .border-amber-600 { border-color: #d97706 !important; }
+          .border-orange-200 { border-color: #fed7aa !important; }
+          
+          /* Rounded corners */
+          .rounded-lg { border-radius: 3px !important; }
+          
+          /* Overflow */
+          .overflow-hidden { overflow: hidden !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          
+          /* Colors */
+          .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, 
+          .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, 
+          .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, 
+          .bg-gray-900, .bg-green-50,
+          .text-amber-400, .text-orange-400, .text-orange-600, .text-black, 
+          .border-amber-500, .border-amber-600, .border-orange-600, .border-black {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+        }
+      ` }} />
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-8">
@@ -383,7 +622,7 @@ export default function Page() {
                               {ligne.voitureModel?.model || "N/A"}
                               <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
-                                <div>
+                                <div className="flex  gap-x-1">
                                   <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
                                   {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
                                   {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
@@ -540,8 +779,8 @@ export default function Page() {
                 </div>
               </div>
             ))}
-
-            <div className="flex flex-col w-full bottom-0 right-0 left-0">
+{/*footer*/}
+            <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0">
               <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
                 <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
                 <p className="text-black">60% d&apos;accompte à la commande</p>

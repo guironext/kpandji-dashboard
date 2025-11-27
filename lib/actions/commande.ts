@@ -117,7 +117,8 @@ export async function getCommandesProposees() {
   try {
     const commandes = await prisma.commande.findMany({
       where: {
-        etapeCommande: "PROPOSITION"
+        etapeCommande: "PROPOSITION",
+        commandeFlag: "DISPONIBLE"
       },
       include: {
         client: true,
@@ -494,6 +495,64 @@ export async function getCommandesDisponibles() {
   } catch (error) {
     console.error("Error fetching commandes disponibles:", error);
     return { success: false, error: "Failed to fetch commandes disponibles" };
+  }
+}
+
+export async function getCommandesVenduesProposition() {
+  try {
+    const commandes = await prisma.commande.findMany({
+      where: {
+        etapeCommande: "PROPOSITION",
+        commandeFlag: "VENDUE"
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        voitureModel: true,
+        fournisseurs: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
+  } catch (error) {
+    console.error("Error fetching commandes vendues proposition:", error);
+    return { success: false, error: "Failed to fetch commandes vendues proposition" };
+  }
+}
+
+export async function getCommandesDisponiblesProposition() {
+  try {
+    const commandes = await prisma.commande.findMany({
+      where: {
+        etapeCommande: "PROPOSITION",
+        commandeFlag: "DISPONIBLE"
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        voitureModel: true,
+        fournisseurs: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
+  } catch (error) {
+    console.error("Error fetching commandes disponibles proposition:", error);
+    return { success: false, error: "Failed to fetch commandes disponibles proposition" };
   }
 }
 

@@ -3,6 +3,53 @@
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
 
+// Type guard for objects with toNumber method
+interface HasToNumber {
+  toNumber: () => number;
+}
+
+// Type guard for objects with toString method
+interface HasToString {
+  toString: () => string;
+}
+
+// Helper function to safely convert Decimal to number
+function decimalToNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value);
+  // Handle Prisma Decimal object - check for Decimal instance
+  if (value && typeof value === 'object') {
+    // Check if it's a Decimal object by checking for toString method and constructor name
+    if ('constructor' in value && value.constructor && typeof value.constructor === 'function' && value.constructor.name === 'Decimal') {
+      try {
+        const str = String(value);
+        return parseFloat(str);
+      } catch {
+        return null;
+      }
+    }
+    // Also check for Prisma Decimal by checking if it has a toNumber method
+    if ('toNumber' in value && typeof (value as HasToNumber).toNumber === 'function') {
+      try {
+        return (value as HasToNumber).toNumber();
+      } catch {
+        return null;
+      }
+    }
+    // Fallback: try toString method
+    if ('toString' in value && typeof (value as HasToString).toString === 'function') {
+      try {
+        const str = (value as HasToString).toString();
+        return parseFloat(str);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
 export async function createSubcase(data: {
   subcaseNumber: string;
   conteneurId: string;
@@ -163,7 +210,25 @@ export async function getCommandesWithModelsForSubcase(subcaseId: string) {
       return { success: false, error: "Subcase not found" };
     }
     
-    return { success: true, data: subcase.conteneur.commandes };
+    // Serialize Decimal values and Date objects
+    const serializedCommandes = subcase.conteneur.commandes.map((commande) => {
+      const { prix_unitaire, createdAt, updatedAt, date_livraison, ...rest } = commande;
+      return {
+        ...rest,
+        prix_unitaire: decimalToNumber(prix_unitaire),
+        createdAt: createdAt.toISOString(),
+        updatedAt: updatedAt.toISOString(),
+        date_livraison: date_livraison?.toISOString() || null,
+        // Ensure nested objects are plain objects
+        voitureModel: commande.voitureModel ? {
+          ...commande.voitureModel,
+          createdAt: commande.voitureModel.createdAt instanceof Date ? commande.voitureModel.createdAt.toISOString() : commande.voitureModel.createdAt,
+          updatedAt: commande.voitureModel.updatedAt instanceof Date ? commande.voitureModel.updatedAt.toISOString() : commande.voitureModel.updatedAt,
+        } : null,
+      };
+    });
+    
+    return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes with models:", error);
     return { success: false, error: "Failed to fetch commandes" };
