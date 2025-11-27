@@ -45,9 +45,14 @@ const numberToFrench = (num: number): string => {
     const rest = num % 1000;
     return (thousand > 1 ? numberToFrench(thousand) + " " : "") + "mille" + (rest ? " " + numberToFrench(rest) : "");
   }
-  const million = Math.floor(num / 1000000);
-  const rest = num % 1000000;
-  return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  if (num < 1000000000) {
+    const million = Math.floor(num / 1000000);
+    const rest = num % 1000000;
+    return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  }
+  const milliard = Math.floor(num / 1000000000);
+  const rest = num % 1000000000;
+  return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
 };
 
 type Facture = {

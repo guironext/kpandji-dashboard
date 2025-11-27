@@ -21,6 +21,11 @@ import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 
+
+
+const MILLIARD = 1000000000; // 10^9
+const BILLION = 1000000000000; // 10^12
+
 const numberToFrench = (num: number): string => {
   const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
   const teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
@@ -45,9 +50,19 @@ const numberToFrench = (num: number): string => {
     const rest = num % 1000;
     return (thousand > 1 ? numberToFrench(thousand) + " " : "") + "mille" + (rest ? " " + numberToFrench(rest) : "");
   }
-  const million = Math.floor(num / 1000000);
-  const rest = num % 1000000;
-  return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  if (num < MILLIARD) {
+    const million = Math.floor(num / 1000000);
+    const rest = num % 1000000;
+    return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  }
+  if (num < BILLION) {
+    const milliard = Math.floor(num / MILLIARD);
+    const rest = num % MILLIARD;
+    return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  }
+  const billion = Math.floor(num / BILLION);
+  const rest = num % BILLION;
+  return numberToFrench(billion) + " billion" + (billion > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
 };
 
 type Facture = {
