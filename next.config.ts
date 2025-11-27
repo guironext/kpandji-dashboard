@@ -41,11 +41,9 @@ const nextConfig: NextConfig = {
   // Turbopack uses this for Prisma handling
   serverExternalPackages: ['@prisma/client'],
   // Configure Turbopack to avoid webpack warning
-  experimental: {
-    turbo: {
-      resolveAlias: {
-        '.prisma/client': path.resolve(__dirname, 'lib/generated/prisma'),
-      },
+  turbopack: {
+    resolveAlias: {
+      '.prisma/client': path.resolve(__dirname, 'lib/generated/prisma'),
     },
   },
   // Skip metadata generation for favicon to avoid cache issues
