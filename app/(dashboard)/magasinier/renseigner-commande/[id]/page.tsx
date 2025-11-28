@@ -151,12 +151,17 @@ export default function RenseignerCommandeDetailPage() {
       return;
     }
 
+
+    
+
+
     if (!confirm(`Êtes-vous sûr de vouloir clôturer le conteneur ${conteneur.conteneurNumber} ? Cette action marquera le conteneur comme renseigné.`)) {
       return;
     }
 
     setIsClosingConteneur(true);
     try {
+      // This will set etapeConteneur to 'RENSEIGNE' and etapeCommande to 'RENSEIGNEE' for all commandes
       const result = await markConteneurAsRenseigne(conteneur.id);
       if (result.success) {
         toast.success(`Le conteneur ${conteneur.conteneurNumber} a été clôturé avec succès!`);
