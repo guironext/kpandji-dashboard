@@ -52,13 +52,15 @@ export default async function ListeCommandesGroupeesPage() {
     return (
       <ListeCommandesGroupeesClient commandesGroupees={serializedCommandesGroupees} />
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database connection error:', error)
     
     // Check if it's a connection error
-    if (error?.message?.includes('Can\'t reach database server') || 
-        error?.code === 'P1001' || 
-        error?.code === 'P1017') {
+    const isConnectionError = 
+      (error instanceof Error && error.message?.includes('Can\'t reach database server')) ||
+      (typeof error === 'object' && error !== null && 'code' in error && (error.code === 'P1001' || error.code === 'P1017'))
+    
+    if (isConnectionError) {
       // Return a user-friendly error page
       return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/20 to-indigo-50/30 p-4">
