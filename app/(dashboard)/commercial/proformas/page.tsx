@@ -202,7 +202,515 @@ export default function Page() {
   const endIndex = startIndex + itemsPerPage;
   const currentData = factures.slice(startIndex, endIndex);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const currentFacture = currentData[0];
+    if (!currentFacture) {
+      toast.error("Aucune facture à imprimer");
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error("Impossible d'ouvrir la fenêtre d'impression. Veuillez autoriser les pop-ups.");
+      return;
+    }
+
+    // Get the lignes data
+    const lignes = currentFacture.lignes && currentFacture.lignes.length > 0
+      ? currentFacture.lignes
+      : [{
+          id: "1",
+          voitureModelId: "",
+          couleur: "",
+          nbr_voiture: currentFacture.nbr_voiture_commande,
+          prix_unitaire: currentFacture.prix_unitaire,
+          montant_ligne: currentFacture.montant_ht,
+          transmission: "",
+          motorisation: "",
+          voitureModel: currentFacture.voiture?.voitureModel || null,
+        }];
+
+    // Generate table rows for vehicles
+    const vehicleRows = lignes.map((ligne, index) => {
+      const vehicleImage = ligne.voitureModel?.image 
+        ? `<img src="${ligne.voitureModel.image}" alt="${ligne.voitureModel.model || 'Vehicle'}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
+        : "N/A";
+      
+      const colorInfo = ligne.couleur 
+        ? `<div style="font-size: 10px; color: #92400e;">Couleur: ${ligne.couleur}${ligne.transmission ? ` Transmission: ${ligne.transmission}` : ''}${ligne.motorisation ? ` Motorisation: ${ligne.motorisation}` : ''}</div>`
+        : '';
+
+      return `
+        <tr style="border-bottom: 1px solid #fed7aa;">
+          <td style="padding: 8px; text-align: center; font-weight: 600;">${index + 1}</td>
+          <td style="padding: 8px;">${vehicleImage}</td>
+          <td style="padding: 8px;">
+            <div style="font-size: 18px; font-weight: 600;">${ligne.voitureModel?.model || "N/A"}</div>
+            <div style="font-size: 10px; margin-top: 4px;">${ligne.voitureModel?.description || "N/A"}</div>
+            ${colorInfo}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 14px;">${ligne.nbr_voiture}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px;">${formatNumberWithSpaces(Number(ligne.prix_unitaire))}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${formatNumberWithSpaces(Number(ligne.montant_ligne))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Generate table rows for accessories
+    let accessoryRows = '';
+    if (currentFacture.accessoires && currentFacture.accessoires.length > 0) {
+      accessoryRows = currentFacture.accessoires.map((accessoire, accIndex) => {
+        const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
+        const accessoryImage = accessoire.image 
+          ? `<img src="${accessoire.image}" alt="${accessoire.nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
+          : '<div style="font-size: 12px; color: #9ca3af;">Pas d\'image</div>';
+        
+        return `
+          <tr style="border-bottom: 1px solid #fed7aa;">
+            <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + accIndex + 1}</td>
+            <td style="padding: 8px;">${accessoryImage}</td>
+            <td style="padding: 8px;">
+              <div style="font-size: 18px; font-weight: 600;">${accessoire.nom}</div>
+              ${accessoire.description ? `<div style="font-size: 9px; margin-top: 4px; max-width: 320px;">${accessoire.description}</div>` : ''}
+            </td>
+            <td style="padding: 8px; text-align: center; font-size: 14px;">${accessoire.quantity || 1}</td>
+            <td style="padding: 8px; text-align: right; font-size: 14px;">${formatNumberWithSpaces(accessoirePrix)}</td>
+            <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${formatNumberWithSpaces(accessoirePrix * (accessoire.quantity || 1))}</td>
+          </tr>
+        `;
+      }).join('');
+    } else if (currentFacture.accessoire_nom) {
+      const imagePath = getAccessoireImage(currentFacture.accessoire_nom, accessoires);
+      const accessoryImage = imagePath 
+        ? `<img src="${imagePath}" alt="${currentFacture.accessoire_nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
+        : '<div style="font-size: 12px; color: #6b7280;">Pas d\'image</div>';
+      
+      accessoryRows = `
+        <tr style="border-bottom: 1px solid #fed7aa;">
+          <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + 1}</td>
+          <td style="padding: 8px;">${accessoryImage}</td>
+          <td style="padding: 8px;">
+            <div style="font-size: 18px; font-weight: 600;">${currentFacture.accessoire_nom}</div>
+            ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${currentFacture.accessoire_description}</div>` : ''}
+          </td>
+          <td style="padding: 8px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px;">${((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${(currentFacture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</td>
+        </tr>
+      `;
+    }
+
+    // Signature image
+    const signatureHtml = showSignature && signatureImage 
+      ? `<img src="${signatureImage}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
+      : '';
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Proforma - ${currentFacture.id.slice(-7)}</title>
+          <meta charset="UTF-8">
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            html, body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              color: #000;
+              height: 100%;
+            }
+            body {
+              display: flex;
+              flex-direction: column;
+              min-height: 100vh;
+              padding: 20px;
+            }
+            .content-wrapper {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 4px solid #d97706;
+              padding-bottom: 16px;
+              margin-bottom: 12px;
+            }
+            .header-left img {
+              width: 100px;
+              height: 50px;
+              object-fit: contain;
+            }
+            .header-right {
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            .header-right h1 {
+              font-size: 24px;
+              font-weight: bold;
+              margin: 0;
+              color: #000;
+            }
+            .header-right p {
+              font-size: 14px;
+              color: #374151;
+              font-weight: 300;
+              margin: 0;
+            }
+            .date-section {
+              display: flex;
+              justify-content: flex-end;
+              margin-top: 48px;
+              font-size: 14px;
+              font-weight: 600;
+              color: #4b5563;
+            }
+            .title-section {
+              display: flex;
+              justify-content: center;
+              margin: 16px 0;
+            }
+            .title-section h1 {
+              font-size: 20px;
+              font-weight: bold;
+              color: #000;
+              border: 1px solid #000;
+              padding: 8px 16px;
+              border-radius: 8px;
+            }
+            .info-section {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 40px;
+            }
+            .info-left, .info-right {
+              font-size: 24px;
+              font-weight: 600;
+              color: #000;
+            }
+            .info-item {
+              display: flex;
+              gap: 8px;
+              font-size: 12px;
+              margin-bottom: 8px;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #111827;
+            }
+            .info-value {
+              color: #374151;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 16px;
+            }
+            thead tr {
+              background-color: #f0fdf4;
+              border-bottom: 1px solid #000;
+            }
+            th {
+              padding: 8px;
+              text-align: left;
+              font-weight: bold;
+              color: #000;
+              font-size: 14px;
+            }
+            th.text-center {
+              text-align: center;
+            }
+            th.text-right {
+              text-align: right;
+            }
+            tbody tr {
+              border-bottom: 1px solid #fed7aa;
+            }
+            td {
+              padding: 8px;
+              font-size: 14px;
+              color: #000;
+            }
+            td.text-center {
+              text-align: center;
+            }
+            td.text-right {
+              text-align: right;
+            }
+            th:nth-child(6), td:nth-child(6) {
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            tfoot tr {
+              background-color: #f0fdf4;
+            }
+            tfoot td {
+              padding: 8px;
+              font-weight: 600;
+            }
+            .total-row {
+              background-color: #f0fdf4;
+              font-weight: 600;
+              text-transform: uppercase;
+            }
+            .amount-text {
+              font-size: 14px;
+              font-weight: 300;
+              color: #000;
+              margin-top: 16px;
+            }
+            .amount-text span {
+              font-weight: 600;
+            }
+            .signature-section {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 20px;
+              padding: 0 32px;
+            }
+            .signature-right {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 16px;
+            }
+            .signature-label {
+              font-weight: bold;
+              font-size: 14px;
+              text-transform: uppercase;
+              color: #000;
+            }
+            .notes-section {
+              margin-top: 24px;
+              font-size: 9px;
+            }
+            .notes-section p {
+              margin: 4px 0;
+            }
+            .notes-title {
+              font-weight: bold;
+              color: #2563eb;
+            }
+            .footer {
+              margin-top: auto;
+              padding-top: 24px;
+            }
+            .footer-conditions {
+              margin-bottom: 8px;
+            }
+            .footer-conditions-title {
+              font-weight: bold;
+              color: #ea580c;
+              margin-top: 8px;
+            }
+            .footer-conditions p {
+              color: #000;
+              margin: 2px 0;
+            }
+            .footer-info {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              background-color: #f0fdf4;
+              border-top: 1px solid #000;
+              padding-top: 7px;
+              font-size: 10px;
+              color: #000;
+            }
+            @media print {
+              html, body {
+                height: auto;
+                min-height: 100vh;
+              }
+              body {
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+              }
+              .content-wrapper {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: calc(100vh - 100mm);
+              }
+              .footer {
+                margin-top: auto;
+                position: relative;
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="content-wrapper">
+          <div class="header">
+              <div class="header-left">
+                <img src="${window.location.origin}/logo.png" alt="Logo" />
+              </div>
+              <div class="header-right">
+                <h1>KPANDJI AUTOMOBILES</h1>
+                <p>Constructeur et Assembleur Automobile</p>
+              </div>
+            </div>
+
+            <div class="date-section">
+              <div style="display: flex; gap: 8px;">
+                <span>Date:</span>
+                <span>${new Date(currentFacture.date_facture).toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            <div class="title-section">
+              <h1>FACTURE ${currentFacture.status_facture}</h1>
+            </div>
+
+            <div class="info-section">
+              <div class="info-left">
+                <div class="info-item">
+                  <span class="info-label">Numéro de Proforma:</span>
+                  <span class="info-value" style="text-transform: uppercase;">${currentFacture.id.slice(-7)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Créé par:</span>
+                  <span class="info-value">${currentFacture.user?.firstName} ${currentFacture.user?.lastName}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Contact:</span>
+                  <span class="info-value">${currentFacture.user?.email}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Téléphone:</span>
+                  <span class="info-value">${currentFacture.user?.telephone || 'N/A'}</span>
+                </div>
+              </div>
+              <div class="info-right">
+                <div class="info-item">
+                  <span class="info-label">Client:</span>
+                  <span class="info-value">${currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise}</span>
+                </div>
+                ${currentFacture.client?.entreprise ? `
+                <div class="info-item">
+                  <span class="info-label">Entreprise:</span>
+                  <span class="info-value">${currentFacture.client.entreprise}</span>
+                </div>
+                ` : ''}
+                <div class="info-item">
+                  <span class="info-label">Téléphone:</span>
+                  <span class="info-value">${currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || 'N/A'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Localisation:</span>
+                  <span class="info-value">${currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Véhicule</th>
+                  <th>Description</th>
+                  <th class="text-center">Quantité</th>
+                  <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT</th>
+                  <th class="text-right" style="white-space: nowrap;">Total HT FCFA</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vehicleRows}
+                ${accessoryRows}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600;">Total HT</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ht)}</td>
+                </tr>
+                ${currentFacture.remise !== 0 ? `
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right">Remise (${currentFacture.remise}%)</td>
+                  <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_remise)}</td>
+                </tr>
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600;">Montant Net HT</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_net_ht)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right">TVA(${currentFacture.tva}%)</td>
+                  <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_tva)}</td>
+                </tr>
+                <tr class="total-row">
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ttc)}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="amount-text">
+              Arrêter la présente facture à la somme de <span>${numberToFrench(Math.floor(currentFacture.total_ttc))} francs CFA</span>
+            </div>
+
+            <div class="signature-section">
+              <div></div>
+              <div class="signature-right">
+                <div class="signature-label">Direction Commerciale</div>
+                ${signatureHtml}
+              </div>
+            </div>
+
+            <div class="notes-section">
+              <p class="notes-title">Notes</p>
+              <p style="font-weight: 600;">date d'échéance: ${new Date(currentFacture.date_echeance).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="footer-conditions">
+              <p class="footer-conditions-title">CONDITIONS:</p>
+              <p>60% d'accompte à la commande</p>
+              <p style="font-weight: 600;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+              <p>SOLDE à la livraison</p>
+            </div>
+            <div class="footer-info">
+              <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+              <p>Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+              <p>kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for images to load before printing
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    };
+  };
+  
   const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const goToPrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
@@ -246,255 +754,16 @@ export default function Page() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 210mm !important;
-            height: auto !important;
-            overflow: visible !important;
-          }
-          body * { visibility: hidden; }
-          #printable-area, #printable-area * { visibility: visible; }
-          #printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 215mm !important;
-            padding: 5mm 10mm 50mm 10mm !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-            background: white !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .print-hide { display: none !important; }
-          
-          /* Page setup */
-          @page {
-            size: A4;
-            margin: 0 !important;
-          }
-          
-          /* Footer - stick to bottom of each page */
-          .print-footer {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 10mm !important;
-            right: 10mm !important;
-            width: calc(100% - 20mm) !important;
-            padding-top: 5mm !important;
-            padding-bottom: 5mm !important;
-            background: white !important;
-            page-break-inside: avoid !important;
-            z-index: 1000 !important;
-            margin-top: 0 !important;
-          }
-          
-          /* Keep footer sections together */
-          .print-footer > div {
-            page-break-inside: avoid !important;
-          }
-          
-          /* Table styles - ensure proper display */
-          table {
-            width: 100% !important;
-            max-width: 100% !important;
-            table-layout: fixed !important;
-            border-collapse: collapse !important;
-            font-size: 9px !important;
-            margin: 3mm 0 !important;
-            display: table !important;
-            page-break-inside: auto !important;
-          }
-          
-          /* Table header */
-          thead {
-            display: table-header-group !important;
-          }
-          thead tr {
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-          }
-          
-          /* Table body */
-          tbody {
-            display: table-row-group !important;
-          }
-          
-          /* Table footer */
-          tfoot {
-            display: table-footer-group !important;
-          }
-          tfoot tr {
-            page-break-before: avoid !important;
-            page-break-inside: avoid !important;
-          }
-          
-          /* Table rows */
-          tr {
-            page-break-inside: auto !important;
-            page-break-after: auto !important;
-            display: table-row !important;
-          }
-          
-          /* Table cells */
-          th, td {
-            padding: 4px 3px !important;
-            font-size: 9px !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            vertical-align: top !important;
-            line-height: 1.2 !important;
-            display: table-cell !important;
-            box-sizing: border-box !important;
-            page-break-inside: avoid !important;
-            border: 1px solid #e5e7eb !important;
-          }
-          
-          /* Table header cells */
-          th {
-            font-size: 8px !important;
-            font-weight: bold !important;
-            padding: 5px 3px !important;
-            background-color: #f0fdf4 !important;
-            border-bottom: 2px solid black !important;
-          }
-          
-          /* Table cells with flex content */
-          td.flex {
-            display: table-cell !important;
-          }
-          td.flex > * {
-            display: block !important;
-          }
-          
-          /* Table wrapper */
-          div.mb-4 {
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow: visible !important;
-            page-break-inside: auto !important;
-          }
-          
-          /* Column widths - optimized for A4 */
-          th:nth-child(1), td:nth-child(1) { 
-            width: 4% !important; 
-            min-width: 15px !important;
-            max-width: 4% !important;
-          }
-          th:nth-child(2), td:nth-child(2) { 
-            width: 12% !important; 
-            min-width: 50px !important;
-            max-width: 12% !important;
-          }
-          th:nth-child(3), td:nth-child(3) { 
-            width: 38% !important; 
-            min-width: 120px !important;
-            max-width: 38% !important;
-          }
-          th:nth-child(4), td:nth-child(4) { 
-            width: 8% !important; 
-            min-width: 35px !important;
-            max-width: 8% !important;
-          }
-          th:nth-child(5), td:nth-child(5) { 
-            width: 18% !important; 
-            min-width: 70px !important;
-            max-width: 18% !important;
-          }
-          th:nth-child(6), td:nth-child(6) { 
-            width: 20% !important; 
-            min-width: 75px !important;
-            max-width: 20% !important;
-          }
-          
-          /* Images in table */
-          img {
-            max-width: 70px !important;
-            max-height: 60px !important;
-            width: auto !important;
-            height: auto !important;
-            object-fit: contain !important;
-          }
-          
-          /* Text sizes */
-          .text-2xl { font-size: 18px !important; }
-          .text-xl { font-size: 16px !important; }
-          .text-lg { font-size: 14px !important; }
-          .text-sm { font-size: 10px !important; }
-          .text-xs { font-size: 9px !important; }
-          .text-\[10px\] { font-size: 7px !important; }
-          .text-\[9px\] { font-size: 6px !important; }
-          .text-\[7px\] { font-size: 5px !important; }
-          
-          /* Spacing */
-          .mb-3 { margin-bottom: 2mm !important; }
-          .mb-4 { margin-bottom: 3mm !important; }
-          .mb-6 { margin-bottom: 4mm !important; }
-          .mb-10 { margin-bottom: 6mm !important; }
-          .mt-12 { margin-top: 4mm !important; }
-          .my-4 { margin-top: 2mm !important; margin-bottom: 2mm !important; }
-          .pb-4 { padding-bottom: 3mm !important; }
-          .px-4 { padding-left: 3mm !important; padding-right: 3mm !important; }
-          .py-2 { padding-top: 1.5mm !important; padding-bottom: 1.5mm !important; }
-          .gap-x-2 { gap: 1.5mm !important; }
-          .gap-y-1 { gap: 1mm !important; }
-          .gap-2 { gap: 1.5mm !important; }
-          
-          /* Flex fixes */
-          .flex { display: flex !important; }
-          .flex-col { flex-direction: column !important; }
-          .justify-between { justify-content: space-between !important; }
-          .justify-center { justify-content: center !important; }
-          .items-center { align-items: center !important; }
-          .items-end { align-items: flex-end !important; }
-          .w-full { width: 100% !important; }
-          
-          /* Borders */
-          .border { border-width: 1px !important; }
-          .border-b { border-bottom-width: 1px !important; }
-          .border-b-4 { border-bottom-width: 1.5px !important; }
-          .border-t { border-top-width: 1px !important; }
-          .border-black { border-color: black !important; }
-          .border-amber-600 { border-color: #d97706 !important; }
-          .border-orange-200 { border-color: #fed7aa !important; }
-          
-          /* Rounded corners */
-          .rounded-lg { border-radius: 3px !important; }
-          
-          /* Overflow */
-          .overflow-hidden { overflow: hidden !important; }
-          .overflow-x-auto { overflow: visible !important; }
-          
-          /* Colors */
-          .bg-gradient-to-r, .bg-gradient-to-br, .bg-black, .bg-white, 
-          .bg-amber-50, .bg-amber-100, .bg-amber-400, .bg-amber-500, .bg-amber-600, 
-          .bg-orange-50, .bg-orange-100, .bg-orange-200, .bg-orange-400, .bg-orange-500, 
-          .bg-gray-900, .bg-green-50,
-          .text-amber-400, .text-orange-400, .text-orange-600, .text-black, 
-          .border-amber-500, .border-amber-600, .border-orange-600, .border-black {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-        }
-      ` }} />
+     
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
-        <div className="bg-white rounded-lg shadow-2xl p-8">
+        <div className="bg-white rounded-lg shadow-2xl p-2">
           <div className="flex w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
               <Button onClick={() => router.push("./creerFacture")} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg">
                 CREER PROFORMA
               </Button>
-              <Button onClick={handlePrint} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg">
+              <Button onClick={handlePrint} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
                 IMPRIMER
               </Button>
               <Button onClick={() => { const currentFacture = currentData[0]; if (currentFacture) router.push(`./creerFacture?id=${currentFacture.id}&mode=edit`); }} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
@@ -588,8 +857,8 @@ export default function Page() {
                         <TableHead className="text-black-600 font-bold">Véhicule</TableHead>
                         <TableHead className="text-black-600 font-bold">Description</TableHead>
                         <TableHead className="text-black-600 font-bold text-center">Quantité</TableHead>
-                        <TableHead className="text-black-600 font-bold text-right">Prix Unitaire HT FCFA</TableHead>
-                        <TableHead className="text-right text-black-600 font-bold">Total HT FCFA</TableHead>
+                        <TableHead className="text-black-600 font-bold text-right no-wrap">Prix Unitaire HT FCFA</TableHead>
+                        <TableHead className="text-right text-black-600 font-bold no-wrap">Total HT FCFA</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -625,7 +894,7 @@ export default function Page() {
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                               {ligne.voitureModel?.model || "N/A"}
-                              <p className="text-[10px] font-normal text-black w-full text-wrap">{ligne.voitureModel?.description || "N/A"}</p>
+                              <p className="text-[10px] font-normal text-black w-full text-wrap max-w-80 ">{ligne.voitureModel?.description || "N/A"}</p>
                               {ligne.couleur && (
                                 <div className="flex  gap-x-1">
                                   <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
@@ -635,8 +904,8 @@ export default function Page() {
                               )}
                             </TableCell>
                             <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
-                            <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
-                            <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
+                            <TableCell className="text-right text-black text-sm no-wrap">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
+                            <TableCell className="text-black text-right text-sm pr-6 no-wrap">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
                           </TableRow>
                         ));
                       })}
