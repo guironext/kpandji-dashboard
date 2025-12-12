@@ -19,7 +19,7 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 });
 
 // Handle connection errors and reconnect
-prisma.$on('error' as never, (e: any) => {
+prisma.$on('error' as never, (e: unknown) => {
   console.error('Prisma Client Error:', e);
 });
 
