@@ -11,11 +11,12 @@ type SearchParams = {
 export default async function ChargerConteneurPage({
   searchParams,
 }: {
-  searchParams: SearchParams
+  searchParams: Promise<SearchParams>
 }) {
-  const commandeIdsParam = searchParams.commandeIds || '[]'
-  const model = searchParams.model || ''
-  const conteneursNeeded = parseInt(searchParams.conteneursNeeded || '0', 10)
+  const resolvedSearchParams = await searchParams
+  const commandeIdsParam = resolvedSearchParams.commandeIds || '[]'
+  const model = resolvedSearchParams.model || ''
+  const conteneursNeeded = parseInt(resolvedSearchParams.conteneursNeeded || '0', 10)
 
   let commandeIds: string[] = []
   try {
