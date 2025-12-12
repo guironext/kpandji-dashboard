@@ -72,8 +72,8 @@ type ConteneurType = {
 }
 
 type Props = {
-  conteneurs: ConteneurType[] | any[]
-  commandes: CommandeType[] | any[]
+  conteneurs: ConteneurType[]
+  commandes: CommandeType[]
 }
 
 const ConteneurTransitClient = ({ conteneurs, commandes }: Props) => {
@@ -108,7 +108,7 @@ const ConteneurTransitClient = ({ conteneurs, commandes }: Props) => {
                 Conteneurs et Commandes en Transit
               </h1>
               <p className="text-gray-600 mt-1 text-sm md:text-base lg:text-lg">
-                Vue d'ensemble des conteneurs et commandes en transit
+                Vue d&apos;ensemble des conteneurs et commandes en transit
               </p>
             </div>
           </div>
@@ -371,7 +371,7 @@ const ConteneurTransitClient = ({ conteneurs, commandes }: Props) => {
                   </div>
                   <p className="text-center font-bold text-xl md:text-2xl mb-2 text-gray-600">Aucun conteneur en transit</p>
                   <p className="text-center text-sm md:text-base text-gray-500 max-w-md">
-                    Aucun conteneur avec l'étape TRANSITE pour le moment
+                    Aucun conteneur avec l&apos;étape TRANSITE pour le moment
                   </p>
                 </div>
               )}
@@ -390,7 +390,7 @@ const ConteneurTransitClient = ({ conteneurs, commandes }: Props) => {
                 <div>
                   <CardTitle className="text-white text-xl md:text-2xl">Commandes en Transit</CardTitle>
                   <p className="text-blue-100 text-sm mt-0.5">
-                    {commandes.length} commande{commandes.length !== 1 ? 's' : ''} trouvée{commandes.length !== 1 ? 's' : ''} avec l'étape TRANSITE
+                    {commandes.length} commande{commandes.length !== 1 ? 's' : ''} trouvée{commandes.length !== 1 ? 's' : ''} avec l&apos;étape TRANSITE
                   </p>
                 </div>
               </div>
@@ -542,7 +542,7 @@ const ConteneurTransitClient = ({ conteneurs, commandes }: Props) => {
                 </div>
                 <p className="text-center font-semibold text-lg md:text-xl mb-2">Aucune commande en transit</p>
                 <p className="text-center text-sm md:text-base text-gray-500">
-                  Les commandes avec l'étape TRANSITE apparaîtront ici
+                  Les commandes avec l&apos;étape TRANSITE apparaîtront ici
                 </p>
               </div>
             )}
