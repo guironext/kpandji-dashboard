@@ -9,14 +9,20 @@ config();
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined}
 
 // Prisma 6 reads DATABASE_URL from environment variables (defined in schema.prisma)
+const logConfig = (process.env.NODE_ENV === "development"
+  ? [
+      { emit: 'event' as const, level: 'error' as const },
+      { emit: 'event' as const, level: 'warn' as const },
+      { emit: 'stdout' as const, level: 'error' as const },
+      { emit: 'stdout' as const, level: 'warn' as const }
+    ] as const
+  : [
+      { emit: 'event' as const, level: 'error' as const },
+      { emit: 'stdout' as const, level: 'error' as const }
+    ] as const) as Array<{ emit: 'event' | 'stdout'; level: 'error' | 'warn' }>
+
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: [
-    { emit: 'event', level: 'error' },
-    ...(process.env.NODE_ENV === "development" 
-      ? [{ emit: 'event', level: 'warn' }, { emit: 'stdout', level: 'error' }, { emit: 'stdout', level: 'warn' }]
-      : [{ emit: 'stdout', level: 'error' }]
-    ),
-  ],
+  log: logConfig,
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
@@ -25,13 +31,13 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 });
 
 // Handle connection errors and reconnect
-prisma.$on('error', (e: unknown) => {
+(prisma.$on as (event: 'error' | 'warn', callback: (e: unknown) => void) => void)('error', (e: unknown) => {
   console.error('Prisma Client Error:', e);
 });
 
 // Handle warnings in development
 if (process.env.NODE_ENV === "development") {
-  prisma.$on('warn', (e: unknown) => {
+  (prisma.$on as (event: 'error' | 'warn', callback: (e: unknown) => void) => void)('warn', (e: unknown) => {
     console.warn('Prisma Client Warning:', e);
   });
 }
