@@ -10,7 +10,13 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefi
 
 // Prisma 6 reads DATABASE_URL from environment variables (defined in schema.prisma)
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  log: [
+    { emit: 'event', level: 'error' },
+    ...(process.env.NODE_ENV === "development" 
+      ? [{ emit: 'event', level: 'warn' }, { emit: 'stdout', level: 'error' }, { emit: 'stdout', level: 'warn' }]
+      : [{ emit: 'stdout', level: 'error' }]
+    ),
+  ],
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
@@ -19,9 +25,16 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 });
 
 // Handle connection errors and reconnect
-prisma.$on('error' as never, (e: unknown) => {
+prisma.$on('error', (e: unknown) => {
   console.error('Prisma Client Error:', e);
 });
+
+// Handle warnings in development
+if (process.env.NODE_ENV === "development") {
+  prisma.$on('warn', (e: unknown) => {
+    console.warn('Prisma Client Warning:', e);
+  });
+}
 
 // Ensure connection is active before queries
 async function ensureConnection() {
