@@ -3,14 +3,24 @@
 
 import { useState } from "react";
 import clsx from "clsx";
+import { Inter } from "next/font/google";
 import Header from "@/components/Header";
 import SidebarCommercial from "@/components/SidebarCommercial";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="h-screen overflow-hidden relative">
+    <div 
+      className={`${inter.variable} h-screen overflow-hidden relative`}
+      style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+    >
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50 h-16">
         <Header toggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
