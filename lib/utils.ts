@@ -31,3 +31,21 @@ export function formatCFAWithMillions(amount: number): string {
   }
   return formatCFA(amount);
 }
+
+// Format USD currency
+export function formatUSD(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+// Format USD with spaces (for display without $ symbol)
+export function formatUSDWithSpaces(amount: number): string {
+  const formatted = amount.toFixed(2);
+  const parts = formatted.split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${integerPart}.${parts[1]}`;
+}

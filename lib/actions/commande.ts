@@ -193,12 +193,18 @@ export async function updateCommandeStatus(commandeId: string, fournisseurIds: s
 
 export async function getCommandesValides() {
   try {
+    // Ensure connection is active
+    await prisma.$connect().catch(() => {
+      // Connection might already be established
+    });
+
     const commandes = await prisma.commande.findMany({
       where: {
         etapeCommande: "VALIDE"
       },
       include: {
         client: true,
+        clientEntreprise: true,
         voitureModel: true,
         fournisseurs: true,
       },
@@ -212,8 +218,45 @@ export async function getCommandesValides() {
     }));
     
     return { success: true, data: serializedCommandes };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error fetching commandes valides:", error);
+    
+    // Check if it's a connection error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as { code?: string })?.code;
+    
+    if (errorCode === 'P1001' || errorMessage.includes('connection') || errorMessage.includes('Closed')) {
+      // Try to reconnect
+      try {
+        await prisma.$disconnect();
+        await prisma.$connect();
+        console.log("Database reconnected, retrying query...");
+        // Retry the query once
+        const commandes = await prisma.commande.findMany({
+          where: {
+            etapeCommande: "VALIDE"
+          },
+          include: {
+            client: true,
+            clientEntreprise: true,
+            voitureModel: true,
+            fournisseurs: true,
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        
+        const serializedCommandes = commandes.map(cmd => ({
+          ...cmd,
+          prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+        }));
+        
+        return { success: true, data: serializedCommandes };
+      } catch (retryError) {
+        console.error("Retry failed:", retryError);
+        return { success: false, error: "Database connection failed. Please check your database server." };
+      }
+    }
+    
     return { success: false, error: "Failed to fetch commandes valides" };
   }
 }
@@ -226,6 +269,7 @@ export async function getCommandesTransites() {
       },
       include: {
         client: true,
+        clientEntreprise: true,
         voitureModel: true,
         fournisseurs: true,
         conteneur: true,
@@ -553,6 +597,34 @@ export async function getCommandesDisponiblesProposition() {
   } catch (error) {
     console.error("Error fetching commandes disponibles proposition:", error);
     return { success: false, error: "Failed to fetch commandes disponibles proposition" };
+  }
+}
+
+export async function getAllCommandesProposition() {
+  try {
+    const commandes = await prisma.commande.findMany({
+      where: {
+        etapeCommande: "PROPOSITION"
+      },
+      include: {
+        client: true,
+        clientEntreprise: true,
+        voitureModel: true,
+        fournisseurs: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Serialize Decimal fields
+    const serializedCommandes = commandes.map(cmd => ({
+      ...cmd,
+      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+    }));
+    
+    return { success: true, data: serializedCommandes };
+  } catch (error) {
+    console.error("Error fetching all commandes proposition:", error);
+    return { success: false, error: "Failed to fetch all commandes proposition" };
   }
 }
 

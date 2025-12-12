@@ -3,14 +3,11 @@ generator client {
   output   = "../lib/generated/prisma"
 }
 
-
 // prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-
 
 model User {
   id                         String                      @id @default(uuid())
@@ -201,20 +198,20 @@ model VoitureModel {
 }
 
 model Accessoire {
-  id         String    @id @default(uuid())
-  nom        String
+  id          String    @id @default(uuid())
+  nom         String
   description String?
-  prix       Decimal?
-  quantity   Int?      @default(1)
-  voitureId  String?
-  factureId  String?
-  commandeId String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  image      String?
-  commande   Commande? @relation("CommandeToAccessoire", fields: [commandeId], references: [id])
-  facture    Facture?  @relation("FactureToAccessoire", fields: [factureId], references: [id])
-  voiture    Voiture?  @relation(fields: [voitureId], references: [id])
+  prix        Decimal?
+  quantity    Int?      @default(1)
+  voitureId   String?
+  factureId   String?
+  commandeId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  image       String?
+  commande    Commande? @relation("CommandeToAccessoire", fields: [commandeId], references: [id])
+  facture     Facture?  @relation("FactureToAccessoire", fields: [factureId], references: [id])
+  voiture     Voiture?  @relation(fields: [voitureId], references: [id])
 }
 
 model Voiture {
@@ -306,6 +303,28 @@ model FactureLigne {
   voitureModel   VoitureModel @relation(fields: [voitureModelId], references: [id])
 }
 
+model SistreInvoice {
+  id            String              @id @default(uuid())
+  invoiceNumber String              @unique
+  invoiceDate   DateTime
+  items         SistreInvoiceItem[]
+  total         Decimal
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model SistreInvoiceItem {
+  id          String        @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Decimal
+  invoice     SistreInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount      Decimal
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
 model BonDeCommande {
   id            String   @id @default(uuid())
   createdAt     DateTime @default(now())
@@ -317,9 +336,9 @@ model BonDeCommande {
 }
 
 model Paiement {
-  id                 String             @id @default(uuid())
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                 String              @id @default(uuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   factureId          String
   clientId           String?
   clientEntrepriseId String?
@@ -328,21 +347,22 @@ model Paiement {
   reste_payer        Decimal
   date_paiement      DateTime
   mode_paiement      ModePaiement
-  status_paiement    StatusPaiement     @default(EN_ATTENTE)
-  clientEntreprise   Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
-  client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  facture            Facture            @relation(fields: [factureId], references: [id])
-  user               User               @relation(fields: [userId], references: [id])
+  status_paiement    StatusPaiement      @default(EN_ATTENTE)
+  clientEntreprise   Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client             Client?             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  facture            Facture             @relation(fields: [factureId], references: [id])
+  user               User                @relation(fields: [userId], references: [id])
   numeroEntreeCaisse NumeroEntreeCaisse?
 }
+
 model NumeroEntreeCaisse {
-  id String @id @default(uuid())
-  numero String @unique
+  id            String   @id @default(uuid())
+  numero        String   @unique
   prefix_numero String
-  paiementId String @unique
-  paiement Paiement @relation(fields: [paiementId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  paiementId    String   @unique
+  paiement      Paiement @relation(fields: [paiementId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Tableau_chute {
@@ -401,16 +421,16 @@ model Commande {
 }
 
 model CommandeGroupee {
-  id               String     @id @default(uuid())
-  date_validation  DateTime
-  stock_global     String
-  vendue           String
-  details          String
-  stock_disponible String
+  id                   String               @id @default(uuid())
+  date_validation      DateTime
+  stock_global         String
+  vendue               String
+  details              String
+  stock_disponible     String
   etapeCommandeGroupee EtapeCommandeGroupee @default(VALIDE)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  commandes        Commande[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  commandes            Commande[]
 }
 
 model Conteneur {

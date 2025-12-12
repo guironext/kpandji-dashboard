@@ -304,6 +304,255 @@ export async function getAllConteneurs() {
   }
 }
 
+export async function getAllConteneursWithTransiteCommandes() {
+  try {
+    const conteneurs = await prisma.conteneur.findMany({
+      where: {
+        commandes: {
+          some: {
+            etapeCommande: "TRANSITE"
+          }
+        }
+      },
+      include: {
+        commandes: {
+          where: {
+            etapeCommande: "TRANSITE"
+          },
+          include: {
+            voitureModel: true,
+            client: true,
+            clientEntreprise: true,
+          }
+        },
+        subcases: true,
+        verifications: true,
+        voitures: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    // Serialize Decimal values and Date objects
+    const serializedConteneurs = conteneurs.map((conteneur) => ({
+      id: conteneur.id,
+      conteneurNumber: conteneur.conteneurNumber,
+      sealNumber: conteneur.sealNumber,
+      totalPackages: conteneur.totalPackages,
+      grossWeight: conteneur.grossWeight,
+      netWeight: conteneur.netWeight,
+      stuffingMap: conteneur.stuffingMap,
+      etapeConteneur: conteneur.etapeConteneur,
+      createdAt: conteneur.createdAt.toISOString(),
+      updatedAt: conteneur.updatedAt.toISOString(),
+      dateEmbarquement: conteneur.dateEmbarquement?.toISOString() || null,
+      dateArriveProbable: conteneur.dateArriveProbable?.toISOString() || null,
+      commandes: conteneur.commandes.map((commande) => {
+        let prixUnitaireFinal: number | null = null;
+        const prixRaw = commande.prix_unitaire;
+        
+        if (prixRaw === null || prixRaw === undefined) {
+          prixUnitaireFinal = null;
+        } else {
+          try {
+            if (typeof prixRaw === 'number') {
+              prixUnitaireFinal = prixRaw;
+            } else if (typeof prixRaw === 'string') {
+              prixUnitaireFinal = parseFloat(prixRaw);
+            } else if (prixRaw && typeof prixRaw === 'object') {
+              if ('constructor' in prixRaw && prixRaw.constructor && typeof prixRaw.constructor === 'function' && prixRaw.constructor.name === 'Decimal') {
+                try {
+                  const str = String(prixRaw);
+                  prixUnitaireFinal = parseFloat(str);
+                } catch {
+                  prixUnitaireFinal = null;
+                }
+              } else if ('toNumber' in prixRaw && typeof (prixRaw as HasToNumber).toNumber === 'function') {
+                prixUnitaireFinal = (prixRaw as HasToNumber).toNumber();
+              } else if ('toString' in prixRaw && typeof (prixRaw as HasToString).toString === 'function') {
+                const str = (prixRaw as HasToString).toString();
+                prixUnitaireFinal = parseFloat(str);
+              }
+            }
+          } catch {
+            prixUnitaireFinal = null;
+          }
+        }
+        
+        return {
+          ...commande,
+          prix_unitaire: prixUnitaireFinal,
+          date_livraison: commande.date_livraison.toISOString(),
+          createdAt: commande.createdAt.toISOString(),
+          updatedAt: commande.updatedAt.toISOString(),
+          voitureModel: commande.voitureModel ? {
+            ...commande.voitureModel,
+            createdAt: commande.voitureModel.createdAt instanceof Date ? commande.voitureModel.createdAt.toISOString() : commande.voitureModel.createdAt,
+            updatedAt: commande.voitureModel.updatedAt instanceof Date ? commande.voitureModel.updatedAt.toISOString() : commande.voitureModel.updatedAt,
+          } : null,
+          client: commande.client ? {
+            ...commande.client,
+            createdAt: commande.client.createdAt instanceof Date ? commande.client.createdAt.toISOString() : commande.client.createdAt,
+            updatedAt: commande.client.updatedAt instanceof Date ? commande.client.updatedAt.toISOString() : commande.client.updatedAt,
+          } : null,
+          clientEntreprise: commande.clientEntreprise ? {
+            ...commande.clientEntreprise,
+            createdAt: commande.clientEntreprise.createdAt instanceof Date ? commande.clientEntreprise.createdAt.toISOString() : commande.clientEntreprise.createdAt,
+            updatedAt: commande.clientEntreprise.updatedAt instanceof Date ? commande.clientEntreprise.updatedAt.toISOString() : commande.clientEntreprise.updatedAt,
+          } : null,
+        };
+      }),
+      subcases: conteneur.subcases.map((subcase) => ({
+        ...subcase,
+        createdAt: subcase.createdAt.toISOString(),
+        updatedAt: subcase.updatedAt.toISOString(),
+      })),
+      verifications: conteneur.verifications.map((verification) => ({
+        ...verification,
+        createdAt: verification.createdAt.toISOString(),
+        updatedAt: verification.updatedAt.toISOString(),
+      })),
+      voitures: conteneur.voitures.map((voiture) => ({
+        ...voiture,
+        createdAt: voiture.createdAt.toISOString(),
+        updatedAt: voiture.updatedAt.toISOString(),
+      })),
+    }));
+    
+    // Use deepConvertDecimals to catch any remaining Decimal objects
+    const finalSerialized = deepConvertDecimals(serializedConteneurs);
+    
+    return { success: true, data: finalSerialized };
+  } catch (error) {
+    console.error("Error fetching conteneurs with TRANSITE commandes:", error);
+    return { success: false, error: "Failed to fetch conteneurs with TRANSITE commandes" };
+  }
+}
+
+export async function getConteneursChargeWithTransiteCommandes() {
+  try {
+    const conteneurs = await prisma.conteneur.findMany({
+      where: {
+        etapeConteneur: "CHARGE",
+        commandes: {
+          some: {
+            etapeCommande: "TRANSITE"
+          }
+        }
+      },
+      include: {
+        commandes: {
+          where: {
+            etapeCommande: "TRANSITE"
+          },
+          include: {
+            voitureModel: true,
+            client: true,
+            clientEntreprise: true,
+          }
+        },
+        subcases: true,
+        verifications: true,
+        voitures: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    // Serialize Decimal values and Date objects
+    const serializedConteneurs = conteneurs.map((conteneur) => ({
+      id: conteneur.id,
+      conteneurNumber: conteneur.conteneurNumber,
+      sealNumber: conteneur.sealNumber,
+      totalPackages: conteneur.totalPackages,
+      grossWeight: conteneur.grossWeight,
+      netWeight: conteneur.netWeight,
+      stuffingMap: conteneur.stuffingMap,
+      etapeConteneur: conteneur.etapeConteneur,
+      createdAt: conteneur.createdAt.toISOString(),
+      updatedAt: conteneur.updatedAt.toISOString(),
+      dateEmbarquement: conteneur.dateEmbarquement?.toISOString() || null,
+      dateArriveProbable: conteneur.dateArriveProbable?.toISOString() || null,
+      commandes: conteneur.commandes.map((commande) => {
+        let prixUnitaireFinal: number | null = null;
+        const prixRaw = commande.prix_unitaire;
+        
+        if (prixRaw === null || prixRaw === undefined) {
+          prixUnitaireFinal = null;
+        } else {
+          try {
+            if (typeof prixRaw === 'number') {
+              prixUnitaireFinal = prixRaw;
+            } else if (typeof prixRaw === 'string') {
+              prixUnitaireFinal = parseFloat(prixRaw);
+            } else if (prixRaw && typeof prixRaw === 'object') {
+              if ('constructor' in prixRaw && prixRaw.constructor && typeof prixRaw.constructor === 'function' && prixRaw.constructor.name === 'Decimal') {
+                try {
+                  const str = String(prixRaw);
+                  prixUnitaireFinal = parseFloat(str);
+                } catch {
+                  prixUnitaireFinal = null;
+                }
+              } else if ('toNumber' in prixRaw && typeof (prixRaw as HasToNumber).toNumber === 'function') {
+                prixUnitaireFinal = (prixRaw as HasToNumber).toNumber();
+              } else if ('toString' in prixRaw && typeof (prixRaw as HasToString).toString === 'function') {
+                const str = (prixRaw as HasToString).toString();
+                prixUnitaireFinal = parseFloat(str);
+              }
+            }
+          } catch {
+            prixUnitaireFinal = null;
+          }
+        }
+        
+        return {
+          ...commande,
+          prix_unitaire: prixUnitaireFinal,
+          date_livraison: commande.date_livraison.toISOString(),
+          createdAt: commande.createdAt.toISOString(),
+          updatedAt: commande.updatedAt.toISOString(),
+          voitureModel: commande.voitureModel ? {
+            ...commande.voitureModel,
+            createdAt: commande.voitureModel.createdAt instanceof Date ? commande.voitureModel.createdAt.toISOString() : commande.voitureModel.createdAt,
+            updatedAt: commande.voitureModel.updatedAt instanceof Date ? commande.voitureModel.updatedAt.toISOString() : commande.voitureModel.updatedAt,
+          } : null,
+          client: commande.client ? {
+            ...commande.client,
+            createdAt: commande.client.createdAt instanceof Date ? commande.client.createdAt.toISOString() : commande.client.createdAt,
+            updatedAt: commande.client.updatedAt instanceof Date ? commande.client.updatedAt.toISOString() : commande.client.updatedAt,
+          } : null,
+          clientEntreprise: commande.clientEntreprise ? {
+            ...commande.clientEntreprise,
+            createdAt: commande.clientEntreprise.createdAt instanceof Date ? commande.clientEntreprise.createdAt.toISOString() : commande.clientEntreprise.createdAt,
+            updatedAt: commande.clientEntreprise.updatedAt instanceof Date ? commande.clientEntreprise.updatedAt.toISOString() : commande.clientEntreprise.updatedAt,
+          } : null,
+        };
+      }),
+      subcases: conteneur.subcases.map((subcase) => ({
+        ...subcase,
+        createdAt: subcase.createdAt.toISOString(),
+        updatedAt: subcase.updatedAt.toISOString(),
+      })),
+      verifications: conteneur.verifications.map((verification) => ({
+        ...verification,
+        createdAt: verification.createdAt.toISOString(),
+        updatedAt: verification.updatedAt.toISOString(),
+      })),
+      voitures: conteneur.voitures.map((voiture) => ({
+        ...voiture,
+        createdAt: voiture.createdAt.toISOString(),
+        updatedAt: voiture.updatedAt.toISOString(),
+      })),
+    }));
+    
+    // Use deepConvertDecimals to catch any remaining Decimal objects
+    const finalSerialized = deepConvertDecimals(serializedConteneurs);
+    
+    return { success: true, data: finalSerialized };
+  } catch (error) {
+    console.error("Error fetching conteneurs CHARGE with TRANSITE commandes:", error);
+    return { success: false, error: "Failed to fetch conteneurs CHARGE with TRANSITE commandes" };
+  }
+}
+
 export async function updateConteneur(id: string, data: {
   conteneurNumber?: string;
   sealNumber?: string;
@@ -323,6 +572,7 @@ export async function updateConteneur(id: string, data: {
     
     revalidatePath("/manager/ajouter-conteneur");
     revalidatePath("/manager/liste-conteneurs");
+    revalidatePath("/manager/listeConteneurs");
     revalidatePath(`/manager/renseigner-conteneur/${id}`);
     return { success: true, data: conteneur };
   } catch (error) {
@@ -756,6 +1006,7 @@ export async function getConteneursTransite() {
         commandes: {
           include: {
             client: true,
+            clientEntreprise: true,
             voitureModel: true,
             fournisseurs: true
           }
@@ -816,6 +1067,10 @@ export async function getConteneursTransite() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
+          date_livraison: commande.date_livraison.toISOString(),
+          createdAt: commande.createdAt.toISOString(),
+          updatedAt: commande.updatedAt.toISOString(),
+          clientEntreprise: commande.clientEntreprise,
         };
       }),
       subcases: conteneur.subcases,

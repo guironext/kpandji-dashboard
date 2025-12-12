@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
       stuffingMap, 
       dateEmbarquement, 
       dateArriveProbable,
-      commandeIds 
+      commandeIds,
+      updateToTransite 
     } = body
 
     // Validate required fields
@@ -76,13 +77,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update commandes to link them to the conteneur
+    // Update commandes to link them to the conteneur and optionally set to TRANSITE
     await prisma.commande.updateMany({
       where: {
         id: { in: commandeIds },
       },
       data: {
         conteneurId: conteneur.id,
+        ...(updateToTransite && { etapeCommande: 'TRANSITE' }),
       },
     })
 

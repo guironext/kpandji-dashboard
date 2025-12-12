@@ -237,21 +237,21 @@ export default function Page() {
         : "N/A";
       
       const colorInfo = ligne.couleur 
-        ? `<div style="font-size: 8px; color: #92400e;">Couleur: ${ligne.couleur}${ligne.transmission ? ` Transmission: ${ligne.transmission}` : ''}${ligne.motorisation ? ` Motorisation: ${ligne.motorisation}` : ''}</div>`
+        ? `<div style="font-size: 10px; color: #92400e;">Couleur: ${ligne.couleur}${ligne.transmission ? ` Transmission: ${ligne.transmission}` : ''}${ligne.motorisation ? ` Motorisation: ${ligne.motorisation}` : ''}</div>`
         : '';
 
       return `
         <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 5px; text-align: center; font-weight: 600;">${index + 1}</td>
-          <td style="padding: 5px;">${vehicleImage}</td>
-          <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${ligne.voitureModel?.model || "N/A"}</div>
-            <div style="font-size: 8px; margin-top: 4px;">${ligne.voitureModel?.description || "N/A"}</div>
+          <td style="padding: 8px; text-align: center; font-weight: 600;">${index + 1}</td>
+          <td style="padding: 8px;">${vehicleImage}</td>
+          <td style="padding: 8px;">
+            <div style="font-size: 18px; font-weight: 600;">${ligne.voitureModel?.model || "N/A"}</div>
+            <div style="font-size: 10px; margin-top: 4px;">${ligne.voitureModel?.description || "N/A"}</div>
             ${colorInfo}
           </td>
-          <td style="padding: 5px; text-align: center; font-size: 13px;">${ligne.nbr_voiture}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatNumberWithSpaces(Number(ligne.prix_unitaire))}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatNumberWithSpaces(Number(ligne.montant_ligne))}</td>
+          <td style="padding: 8px; text-align: center; font-size: 14px;">${ligne.nbr_voiture}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px;">${formatNumberWithSpaces(Number(ligne.prix_unitaire))}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${formatNumberWithSpaces(Number(ligne.montant_ligne))}</td>
         </tr>
       `;
     }).join('');
@@ -263,19 +263,19 @@ export default function Page() {
         const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
         const accessoryImage = accessoire.image 
           ? `<img src="${accessoire.image}" alt="${accessoire.nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
-          : '<div style="font-size: 13px; color: #9ca3af;">Pas d\'image</div>';
+          : '<div style="font-size: 12px; color: #9ca3af;">Pas d\'image</div>';
         
         return `
           <tr style="border-bottom: 1px solid #fed7aa;">
             <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + accIndex + 1}</td>
-            <td style="padding: 5px;">${accessoryImage}</td>
-            <td style="padding: 5px;">
-              <div style="font-size: 13px; font-weight: 600;">${accessoire.nom}</div>
-              ${accessoire.description ? `<div style="font-size: 8px; margin-top: 4px; max-width: 320px;">${accessoire.description}</div>` : ''}
+            <td style="padding: 8px;">${accessoryImage}</td>
+            <td style="padding: 8px;">
+              <div style="font-size: 18px; font-weight: 600;">${accessoire.nom}</div>
+              ${accessoire.description ? `<div style="font-size: 9px; margin-top: 4px; max-width: 320px;">${accessoire.description}</div>` : ''}
             </td>
-            <td style="padding: 5px; text-align: center; font-size: 13px;">${accessoire.quantity || 1}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px;">${formatNumberWithSpaces(accessoirePrix)}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatNumberWithSpaces(accessoirePrix * (accessoire.quantity || 1))}</td>
+            <td style="padding: 8px; text-align: center; font-size: 14px;">${accessoire.quantity || 1}</td>
+            <td style="padding: 8px; text-align: right; font-size: 14px;">${formatNumberWithSpaces(accessoirePrix)}</td>
+            <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${formatNumberWithSpaces(accessoirePrix * (accessoire.quantity || 1))}</td>
           </tr>
         `;
       }).join('');
@@ -283,19 +283,19 @@ export default function Page() {
       const imagePath = getAccessoireImage(currentFacture.accessoire_nom, accessoires);
       const accessoryImage = imagePath 
         ? `<img src="${imagePath}" alt="${currentFacture.accessoire_nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
-        : '<div style="font-size: 13px; color: #6b7280;">Pas d\'image</div>';
+        : '<div style="font-size: 12px; color: #6b7280;">Pas d\'image</div>';
       
       accessoryRows = `
         <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 5px; text-align: center; font-weight: 600;">${lignes.length + 1}</td>
-          <td style="padding: 5px;">${accessoryImage}</td>
-          <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${currentFacture.accessoire_nom}</div>
+          <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + 1}</td>
+          <td style="padding: 8px;">${accessoryImage}</td>
+          <td style="padding: 8px;">
+            <div style="font-size: 18px; font-weight: 600;">${currentFacture.accessoire_nom}</div>
             ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${currentFacture.accessoire_description}</div>` : ''}
           </td>
-          <td style="padding: 5px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px;">${((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px; white-space: nowrap;">${(currentFacture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</td>
+          <td style="padding: 8px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px;">${((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</td>
+          <td style="padding: 8px; text-align: right; font-size: 14px; white-space: nowrap;">${(currentFacture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</td>
         </tr>
       `;
     }
@@ -311,17 +311,10 @@ export default function Page() {
         <head>
           <title>Proforma - ${currentFacture.id.slice(-7)}</title>
           <meta charset="UTF-8">
-          <meta name="color-scheme" content="light">
           <style>
             @page {
               size: A4;
-              margin: 1mm 5mm;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-              color-adjust: exact;
-            }
-            @page:first {
-              margin-top: 10mm;
+              margin: 5mm;
             }
             * {
               -webkit-print-color-adjust: exact !important;
@@ -333,18 +326,13 @@ export default function Page() {
               margin: 0;
               padding: 0;
               color: #000;
+              height: 100%;
             }
-            .page {
-              page-break-after: always;
-              min-height: 277mm;
-              max-height: 277mm;
+            body {
               display: flex;
               flex-direction: column;
-              padding: 8mm;
-              box-sizing: border-box;
-            }
-            .page:last-child {
-              page-break-after: auto;
+              min-height: 100vh;
+              padding: 15px;
             }
             .content-wrapper {
               flex: 1;
@@ -356,9 +344,8 @@ export default function Page() {
               justify-content: space-between;
               align-items: center;
               border-bottom: 4px solid #d97706;
-              padding-bottom: 5px;
-              margin-bottom: 5px;
-              page-break-inside: avoid;
+              padding-bottom: 16px;
+              margin-bottom: 12px;
             }
             .header-left img {
               width: 100px;
@@ -385,17 +372,15 @@ export default function Page() {
             .date-section {
               display: flex;
               justify-content: flex-end;
-              margin-top: 20px;
+              margin-top: 48px;
               font-size: 14px;
               font-weight: 600;
               color: #4b5563;
-              page-break-inside: avoid;
             }
             .title-section {
               display: flex;
               justify-content: center;
               margin: 16px 0;
-              page-break-inside: avoid;
             }
             .title-section h1 {
               font-size: 20px;
@@ -408,8 +393,7 @@ export default function Page() {
             .info-section {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 15px;
-              page-break-inside: avoid;
+              margin-bottom: 40px;
             }
             .info-left, .info-right {
               font-size: 24px;
@@ -434,9 +418,6 @@ export default function Page() {
               border-collapse: collapse;
               margin-bottom: 16px;
             }
-            thead {
-              display: table-header-group;
-            }
             thead tr {
               background-color: #f0fdf4;
               border-bottom: 1px solid #000;
@@ -456,10 +437,6 @@ export default function Page() {
             }
             tbody tr {
               border-bottom: 1px solid #fed7aa;
-              page-break-inside: avoid;
-            }
-            tbody tr:last-child {
-              page-break-after: auto;
             }
             td {
               padding: 8px;
@@ -477,12 +454,8 @@ export default function Page() {
               overflow: hidden;
               text-overflow: ellipsis;
             }
-            tfoot {
-              display: table-footer-group;
-            }
             tfoot tr {
               background-color: #f0fdf4;
-              page-break-inside: avoid;
             }
             tfoot td {
               padding: 8px;
@@ -498,7 +471,6 @@ export default function Page() {
               font-weight: 300;
               color: #000;
               margin-top: 16px;
-              page-break-inside: avoid;
             }
             .amount-text span {
               font-weight: 600;
@@ -508,7 +480,6 @@ export default function Page() {
               justify-content: space-between;
               margin-top: 20px;
               padding: 0 32px;
-              page-break-inside: avoid;
             }
             .signature-right {
               display: flex;
@@ -523,9 +494,8 @@ export default function Page() {
               color: #000;
             }
             .notes-section {
-              margin-top: 15px;
-              font-size: 8px;
-              page-break-inside: avoid;
+              margin-top: 24px;
+              font-size: 9px;
             }
             .notes-section p {
               margin: 4px 0;
@@ -536,27 +506,19 @@ export default function Page() {
             }
             .footer {
               margin-top: auto;
-              padding: 0;
-              margin-bottom: 0;
-              margin-left: 0;
-              margin-right: 0;
-              page-break-inside: avoid;
+              padding-top: 20px;
             }
             .footer-conditions {
-              margin: 0;
-              padding: 0;
+              margin-bottom: 5px;
             }
             .footer-conditions-title {
               font-weight: bold;
               color: #ea580c;
-              margin: 0;
-              padding: 0;
+              margin-top: 5px;
             }
             .footer-conditions p {
               color: #000;
-              margin: 0;
-              padding: 0;
-              font-size: 8px;
+              margin: 2px 0;
             }
             .footer-info {
               display: flex;
@@ -565,258 +527,173 @@ export default function Page() {
               justify-content: center;
               background-color: #f0fdf4;
               border-top: 1px solid #000;
-              font-size: 8px;
+              padding-top: 3px;
+              font-size: 5px;
               color: #000;
-              margin: 0;
-              padding: 0;
-            }
-            .page-number {
-              display: none !important;
             }
             @media print {
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
+              html, body {
+                height: auto;
+                min-height: 100vh;
               }
               body {
-                margin: 0;
                 padding: 0;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
+                display: flex;
+                flex-direction: column;
               }
-              .page {
-                page-break-after: always;
-                min-height: 277mm;
-                max-height: 277mm;
-                background: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              .page:last-child {
-                page-break-after: auto;
-              }
-              thead tr {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              tfoot tr {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .total-row {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+              .content-wrapper {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: calc(100vh - 100mm);
               }
               .footer {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-conditions {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-conditions-title {
-                padding: 0 !important;
-                margin: 0 !important;
-                color: #ea580c !important;
-              }
-              .footer-conditions p {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-info {
-                background-color: #f0fdf4 !important;
-                border-top-color: #000 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .header {
-                border-bottom-color: #d97706 !important;
-                border-bottom-width: 4px !important;
-                border-bottom-style: solid !important;
-              }
-              .title-section h1 {
-                border-color: #000 !important;
-                color: #000 !important;
-              }
-              thead tr {
-                border-bottom-color: #000 !important;
-              }
-              tbody tr {
-                border-bottom-color: #fed7aa !important;
-              }
-              .notes-title {
-                color: #2563eb !important;
-              }
-              img {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-            }
-            @media screen {
-              body {
-                background: #f0f0f0;
-                padding: 20px;
-              }
-              .page {
-                background: white;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                margin: 0 auto 15px;
-                max-width: 210mm;
+                margin-top: auto;
+                position: relative;
+                page-break-inside: avoid;
               }
             }
           </style>
         </head>
         <body>
-          <div class="page">
-            <div class="content-wrapper">
-              <div class="header">
-                <div class="header-left">
-                  <img src="${window.location.origin}/logo.png" alt="Logo" />
-                </div>
-                <div class="header-right">
-                  <h1>KPANDJI AUTOMOBILES</h1>
-                  <p>Constructeur et Assembleur Automobile</p>
-                </div>
+          <div class="content-wrapper">
+          <div class="header">
+              <div class="header-left">
+                <img src="${window.location.origin}/logo.png" alt="Logo" />
               </div>
-
-              <div class="date-section">
-                <div style="display: flex; gap: 8px;">
-                  <span>Date:</span>
-                  <span>${new Date(currentFacture.date_facture).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <div class="title-section">
-                <h1>FACTURE ${currentFacture.status_facture}</h1>
-              </div>
-
-              <div class="info-section">
-                <div class="info-left">
-                  <div class="info-item">
-                    <span class="info-label">Numéro de Proforma:</span>
-                    <span class="info-value" style="text-transform: uppercase;">${currentFacture.id.slice(-7)}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Créé par:</span>
-                    <span class="info-value">${currentFacture.user?.firstName} ${currentFacture.user?.lastName}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Contact:</span>
-                    <span class="info-value">${currentFacture.user?.email}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${currentFacture.user?.telephone || 'N/A'}</span>
-                  </div>
-                </div>
-                <div class="info-right">
-                  <div class="info-item">
-                    <span class="info-label">Client:</span>
-                    <span class="info-value">${currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise}</span>
-                  </div>
-                  ${currentFacture.client?.entreprise ? `
-                  <div class="info-item">
-                    <span class="info-label">Entreprise:</span>
-                    <span class="info-value">${currentFacture.client.entreprise}</span>
-                  </div>
-                  ` : ''}
-                  <div class="info-item">
-                    <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || 'N/A'}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Localisation:</span>
-                    <span class="info-value">${currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Véhicule</th>
-                    <th>Description</th>
-                    <th class="text-center">Quantité</th>
-                    <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT</th>
-                    <th class="text-right" style="white-space: nowrap;">Total HT FCFA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${vehicleRows}
-                  ${accessoryRows}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600;">Total HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ht)}</td>
-                  </tr>
-                  ${currentFacture.remise !== 0 ? `
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right">Remise (${currentFacture.remise}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_remise)}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600;">Montant Net HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_net_ht)}</td>
-                  </tr>
-                  ` : ''}
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right">TVA(${currentFacture.tva}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_tva)}</td>
-                  </tr>
-                  <tr class="total-row">
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ttc)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              <div class="amount-text">
-                Arrêter la présente facture à la somme de <span>${numberToFrench(Math.floor(currentFacture.total_ttc))} francs CFA</span>
-              </div>
-
-              <div class="signature-section">
-                <div></div>
-                <div class="signature-right">
-                  <div class="signature-label">Direction Commerciale</div>
-                  ${signatureHtml}
-                </div>
-              </div>
-
-              <div class="notes-section">
-                <p class="notes-title">Notes</p>
-                <p style="font-weight: 500;">date d'échéance: ${new Date(currentFacture.date_echeance).toLocaleDateString()}</p>
+              <div class="header-right">
+                <h1>KPANDJI AUTOMOBILES</h1>
+                <p>Constructeur et Assembleur Automobile</p>
               </div>
             </div>
 
-            <div class="footer">
-              <div class="footer-conditions">
-                <p class="footer-conditions-title">CONDITIONS:</p>
-                <p>60% d'accompte à la commande</p>
-                <p style="font-weight: 300;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p>SOLDE à la livraison</p>
+            <div class="date-section">
+              <div style="display: flex; gap: 8px;">
+                <span>Date:</span>
+                <span>${new Date(currentFacture.date_facture).toLocaleDateString()}</span>
               </div>
-              <div class="footer-info">
-                <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                <p>Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                <p>kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+            </div>
+
+            <div class="title-section">
+              <h1>FACTURE ${currentFacture.status_facture}</h1>
+            </div>
+
+            <div class="info-section">
+              <div class="info-left">
+                <div class="info-item">
+                  <span class="info-label">Numéro de Proforma:</span>
+                  <span class="info-value" style="text-transform: uppercase;">${currentFacture.id.slice(-7)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Créé par:</span>
+                  <span class="info-value">${currentFacture.user?.firstName} ${currentFacture.user?.lastName}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Contact:</span>
+                  <span class="info-value">${currentFacture.user?.email}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Téléphone:</span>
+                  <span class="info-value">${currentFacture.user?.telephone || 'N/A'}</span>
+                </div>
               </div>
+              <div class="info-right">
+                <div class="info-item">
+                  <span class="info-label">Client:</span>
+                  <span class="info-value">${currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise}</span>
+                </div>
+                ${currentFacture.client?.entreprise ? `
+                <div class="info-item">
+                  <span class="info-label">Entreprise:</span>
+                  <span class="info-value">${currentFacture.client.entreprise}</span>
+                </div>
+                ` : ''}
+                <div class="info-item">
+                  <span class="info-label">Téléphone:</span>
+                  <span class="info-value">${currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || 'N/A'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Localisation:</span>
+                  <span class="info-value">${currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Véhicule</th>
+                  <th>Description</th>
+                  <th class="text-center">Quantité</th>
+                  <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT</th>
+                  <th class="text-right" style="white-space: nowrap;">Total HT FCFA</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vehicleRows}
+                ${accessoryRows}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600;">Total HT</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ht)}</td>
+                </tr>
+                ${currentFacture.remise !== 0 ? `
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right">Remise (${currentFacture.remise}%)</td>
+                  <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_remise)}</td>
+                </tr>
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600;">Montant Net HT</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_net_ht)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td colspan="4"></td>
+                  <td class="text-right">TVA(${currentFacture.tva}%)</td>
+                  <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_tva)}</td>
+                </tr>
+                <tr class="total-row">
+                  <td colspan="4"></td>
+                  <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
+                  <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ttc)}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="amount-text">
+              Arrêter la présente facture à la somme de <span>${numberToFrench(Math.floor(currentFacture.total_ttc))} francs CFA</span>
+            </div>
+
+            <div class="signature-section">
+              <div></div>
+              <div class="signature-right">
+                <div class="signature-label">Direction Commerciale</div>
+                ${signatureHtml}
+              </div>
+            </div>
+
+            <div class="notes-section">
+              <p class="notes-title">Notes</p>
+              <p style="font-weight: 600;">date d'échéance: ${new Date(currentFacture.date_echeance).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="footer-conditions">
+              <p class="footer-conditions-title">CONDITIONS:</p>
+              <p>60% d'accompte à la commande</p>
+              <p style="font-weight: 300;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+              <p>SOLDE à la livraison</p>
+            </div>
+            <div class="footer-info">
+              <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+              <p>Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+              <p>kpandjiautomobiles@gmail.com / www.kpandji.com</p>
             </div>
           </div>
         </body>
@@ -827,48 +704,11 @@ export default function Page() {
     printWindow.document.close();
     
     // Wait for images to load before printing
-    printWindow.addEventListener('load', () => {
-      // Wait for all images to load
-      const images = printWindow.document.querySelectorAll('img');
-      let imagesLoaded = 0;
-      const totalImages = images.length;
-      
-      if (totalImages === 0) {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-        return;
-      }
-      
-      images.forEach((img) => {
-        if (img.complete) {
-          imagesLoaded++;
-        } else {
-          img.addEventListener('load', () => {
-            imagesLoaded++;
-            if (imagesLoaded === totalImages) {
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-          });
-          img.addEventListener('error', () => {
-            imagesLoaded++;
-            if (imagesLoaded === totalImages) {
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-          });
-        }
-      });
-      
-      if (imagesLoaded === totalImages) {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
-    });
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    };
   };
   
   const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -947,7 +787,7 @@ export default function Page() {
               </div>
               <div className="flex flex-col justify-center -mb-14">
                 <h1 className="text-2xl font-bold text-black">KPANDJI AUTOMOBILES</h1>
-                <p className="text-sm text-black font-normal">Constructeur et Assembleur Automobile</p>
+                <p className="text-sm text-gray-800 font-thin">Constructeur et Assembleur Automobile</p>
               </div>
             </div>
 
@@ -969,19 +809,19 @@ export default function Page() {
 
                 <div className="flex w-full justify-between mb-10">
                   <div className="text-black font-semibold text-2xl">
-                    <div className="flex text-xs text-black gap-x-2 font-bold">
+                    <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
                       <p>Numéro de Proforma:</p>
                       <p className="uppercase">{facture.id.slice(-7)}</p>
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       <p>Créé par:</p>
                       <p>{facture.user?.firstName} {facture.user?.lastName}</p>
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       <p>Contact:</p>
                       <p>{facture.user?.email}</p>
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       <p>Téléphone:</p>
                       <p>{facture.user?.telephone}</p>
                     </div>
@@ -992,7 +832,7 @@ export default function Page() {
                       <p>Client:</p>
                       <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       {facture.client?.entreprise && (
                         <>
                           <p>Entreprise:</p>
@@ -1000,11 +840,11 @@ export default function Page() {
                         </>
                       )}
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       <p>Téléphone:</p>
                       <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
                     </div>
-                    <div className="flex text-xs text-black gap-x-2">
+                    <div className="flex text-xs text-gray-900 gap-x-2">
                       <p>Localisation:</p>
                       <p>{facture.client?.localisation || facture.clientEntreprise?.localisation}</p>
                     </div>
@@ -1015,12 +855,12 @@ export default function Page() {
                   <Table className="rounded-lg overflow-hidden">
                     <TableHeader>
                       <TableRow className="bg-green-50 border-b border-black">
-                        <TableHead className="text-black font-bold">#</TableHead>
-                        <TableHead className="text-black font-bold">Véhicule</TableHead>
-                        <TableHead className="text-black font-bold">Description</TableHead>
-                        <TableHead className="text-black font-bold text-center">Quantité</TableHead>
-                        <TableHead className="text-black font-bold text-right no-wrap">Prix Unitaire HT FCFA</TableHead>
-                        <TableHead className="text-right text-black font-bold no-wrap">Total HT FCFA</TableHead>
+                        <TableHead className="text-black-600 font-bold">#</TableHead>
+                        <TableHead className="text-black-600 font-bold">Véhicule</TableHead>
+                        <TableHead className="text-black-600 font-bold">Description</TableHead>
+                        <TableHead className="text-black-600 font-bold text-center">Quantité</TableHead>
+                        <TableHead className="text-black-600 font-bold text-right no-wrap">Prix Unitaire HT FCFA</TableHead>
+                        <TableHead className="text-right text-black-600 font-bold no-wrap">Total HT FCFA</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1097,12 +937,12 @@ export default function Page() {
                                 className="object-contain"
                               />
                             ) : (
-                              <div className="text-xs text-black">Pas d&apos;image</div>
+                              <div className="text-xs text-gray-400">Pas d&apos;image</div>
                             )}
                           </TableCell>
                           <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                             {accessoire.nom}
-                            {accessoire.description && <p className="text-[9px] font-normal text-black max-w-80 text-wrap">{accessoire.description}</p>}
+                            {accessoire.description && <p className="text-[9px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">
@@ -1137,7 +977,7 @@ export default function Page() {
                           </TableCell>
                           <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
                             {facture.accessoire_nom}
-                            {facture.accessoire_description && <p className="text-[7px] font-normal text-black max-w-80 text-wrap">{facture.accessoire_description}</p>}
+                            {facture.accessoire_description && <p className="text-[7px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">{((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</TableCell>
@@ -1180,7 +1020,7 @@ export default function Page() {
                   </Table>
 
                   <div className="mt-4">
-                    <p className="text-sm font-normal text-black">
+                    <p className="text-sm font-thin text-black">
                       Arrêter la présente facture à la somme de <span className="font-semibold">{numberToFrench(Math.floor(facture.total_ttc))} francs CFA</span>
                     </p>
                   </div>
@@ -1232,22 +1072,20 @@ export default function Page() {
           </div>
 
           <div className="flex justify-center items-center gap-4 mt-6 print-hide">
-            <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
+            <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
               <ChevronLeft className="w-5 h-5 mr-2" />
               Page Précédente
             </Button>
 
-            <div className="overflow-x-auto max-w-md scrollbar-hide">
-              <div className="flex items-center gap-2 min-w-max px-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <div key={pageNum} onClick={() => setCurrentPage(pageNum)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setCurrentPage(pageNum); }} className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer flex-shrink-0 ${currentPage === pageNum ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
-                    {pageNum}
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <div key={pageNum} onClick={() => setCurrentPage(pageNum)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setCurrentPage(pageNum); }} className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${currentPage === pageNum ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
+                  {pageNum}
+                </div>
+              ))}
             </div>
 
-            <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
+            <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
               Page Suivante
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>

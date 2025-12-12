@@ -13,14 +13,17 @@ import {
   FileSpreadsheet,
   Container,
   Settings,
-  CalendarDays,
   ListOrdered,
-  Package,
-  FileEdit
+  FileEdit,
+  Database,
+  Ship,
+  CheckSquare,
+  Building2
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 // Organized navigation items with corrected IDs and best icons
 const navItems = [
@@ -31,37 +34,41 @@ const navItems = [
     href: "/manager",
     category: "main"
   },
-  
   {
     id: 2,
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: "Créer Cmde Groupée",
-    href: "/manager/commande-groupee",
-    category: "commandes"
+    icon: <Database className="w-5 h-5" />,
+    label: "SISTRE FACTURE",
+    href: "/manager/sistre",
+    category: "main"
   },
-
   {
     id: 3,
-    icon: <ListOrdered className="w-5 h-5" />,
-    label: "Liste Cmdes Groupées",
-    href: "/manager/liste-commandes-groupees",
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: "commandes",
+    href: "/manager/commandes",
     category: "commandes"
   },
   {
     id: 4,
-    icon: <Container className="w-5 h-5" />,
-    label: "Conteneurisation",
-    href: "/manager/conteneurisation",
+    icon: <ListOrdered className="w-5 h-5" />,
+    label: "Tableau Commandes",
+    href: "/manager/tableau-commandes",
     category: "commandes"
   },
   {
     id: 5,
     icon: <Container className="w-5 h-5" />,
-    label: "Liste Conteneurs",
-    href: "/manager/liste-conteneurs",
+    label: "Conteneurs Chargés",
+    href: "/manager/listeConteneurs",
     category: "commandes"
   },
-  
+  {
+    id: 6,
+    icon: <Ship className="w-5 h-5" />,
+    label: "Conteneurs Transit",
+    href: "/manager/conteneur-transit",
+    category: "commandes"
+  },
   {
     id: 7,
     icon: <Truck className="w-5 h-5" />,
@@ -71,7 +78,7 @@ const navItems = [
   },
   {
     id: 8,
-    icon: <Package className="w-5 h-5" />,
+    icon: <CheckSquare className="w-5 h-5" />,
     label: "Dépotage & Vérification",
     href: "/manager/depotage",
     category: "commandes"
@@ -120,14 +127,13 @@ const navItems = [
   },
   {
     id: 15,
-    icon: <CalendarDays className="w-5 h-5" />,
+    icon: <Building2 className="w-5 h-5" />,
     label: "Départements",
     href: "/manager/departements",
     category: "reports"
   },
-
   {
-    id: 17,
+    id: 16,
     icon: <Settings className="w-5 h-5" />,
     label: "Paramètres",
     href: "/manager/parametres",
@@ -137,6 +143,12 @@ const navItems = [
 
 const SidebarManager = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure we only use pathname after client-side hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Responsive width calculation
   const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";
@@ -199,7 +211,8 @@ const SidebarManager = ({ isOpen }: { isOpen: boolean }) => {
               )}
               
               {items.map((item, index) => {
-                const isActive = pathname === item.href;
+                // Only check active state after mount to prevent hydration mismatch
+                const isActive = mounted && pathname === item.href;
 
                 return (
                   <Link

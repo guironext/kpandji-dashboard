@@ -41,3 +41,13 @@ npx prisma studio
 
 4. Database Provider Options
 Option A: Local PostgreSQL (Recommended for Development)
+
+
+-----++++++++++++++++++++++++++
+we want to activate this button at line 241 so that when we click it open a html  printing page like book in A4 format so that we can see document in defferent page
+
+++++++++++++++++++++++++++++++++
+we want to activate this button at line 241 so that when we click it open a html  printing page like book in A4 format so that we can see document in defferent page and add page number
++++++++++++++++++++++++++++++++++
+in this page we want to dispolay all commande with etapeCommande===valide and groupe them by voitureModel.  we want you to help us defined "Groupe Commande" that will be the minimum quantity of vehicule to order. for exemple if voiture model is equal to "KPANDJI DJETRAN BVA DIESEL" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur. if voiture model is equal to "KPANDJI DJETRAN BVM DIESEL" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur.  if voiture model is equal to "KPANDJI DJETRAN BVM ESSENCE" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur. if  voiture model is aqual to "KPANDJI DJETRAN BVA ESSENCE", we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur.
+if voiture model is equal to KPANDJI CAVALLY, we need 8 cars to have a minimun order and this minimum order equivallent to 3 conteneurs.

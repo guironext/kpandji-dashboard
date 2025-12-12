@@ -11,7 +11,41 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefi
 // Prisma 6 reads DATABASE_URL from environment variables (defined in schema.prisma)
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
 });
+
+// Handle connection errors and reconnect
+prisma.$on('error' as never, (e: any) => {
+  console.error('Prisma Client Error:', e);
+});
+
+// Ensure connection is active before queries
+async function ensureConnection() {
+  try {
+    await prisma.$connect();
+  } catch (error) {
+    console.error('Failed to connect to database:', error);
+    // Try to reconnect after a delay
+    setTimeout(async () => {
+      try {
+        await prisma.$disconnect();
+        await prisma.$connect();
+        console.log('Database reconnected successfully');
+      } catch (reconnectError) {
+        console.error('Failed to reconnect:', reconnectError);
+      }
+    }, 2000);
+  }
+}
+
+// Initialize connection
+if (process.env.NODE_ENV !== "production") {
+  ensureConnection();
+}
 
 // Add connection retry logic
 if (process.env.NODE_ENV !== "production") {

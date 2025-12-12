@@ -154,6 +154,9 @@ export default function SuiviRendezVousPage() {
             .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             .table th { background-color: #f2f2f2; }
+            @media print {
+              body { margin: 0; }
+            }
           </style>
         </head>
         <body>
@@ -373,7 +376,8 @@ export default function SuiviRendezVousPage() {
         </html>
       `);
       printWindow.document.close();
-      printWindow.print();
+      // Focus the new window - user can manually print using Ctrl+P or File > Print
+      printWindow.focus();
     }
   };
 
