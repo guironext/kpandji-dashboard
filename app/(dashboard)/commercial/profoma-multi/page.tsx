@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -159,6 +159,7 @@ export default function Page() {
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  const paginationScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -187,6 +188,34 @@ export default function Page() {
   const handlePrint = () => window.print();
   const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const goToPrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+
+  // Calculate which 9 pages to show
+  const getVisiblePages = () => {
+    const maxVisible = 9;
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    // Adjust start if we're near the end
+    if (endPage - startPage < maxVisible - 1) {
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  };
+
+  // Scroll to current page when it changes
+  useEffect(() => {
+    if (paginationScrollRef.current) {
+      const pageElement = paginationScrollRef.current.querySelector(`[data-page="${currentPage}"]`) as HTMLElement;
+      if (pageElement) {
+        pageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [currentPage]);
 
   const handleDelete = async () => {
     const currentFacture = currentData[0];
@@ -894,20 +923,30 @@ export default function Page() {
           </div>
 
           <div className="flex justify-center items-center gap-4 mt-6 print-hide">
-            <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
+            <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
               <ChevronLeft className="w-5 h-5 mr-2" />
               Page Précédente
             </Button>
 
-            <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                <div key={pageNum} onClick={() => setCurrentPage(pageNum)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setCurrentPage(pageNum); }} className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${currentPage === pageNum ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
-                  {pageNum}
-                </div>
-              ))}
+            <div ref={paginationScrollRef} className="overflow-x-auto max-w-md scrollbar-hide scroll-smooth">
+              <div className="flex items-center gap-2 min-w-max px-2">
+                {getVisiblePages().map((pageNum: number) => (
+                  <div 
+                    key={pageNum} 
+                    data-page={pageNum}
+                    onClick={() => setCurrentPage(pageNum)} 
+                    role="button" 
+                    tabIndex={0} 
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setCurrentPage(pageNum); }} 
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer flex-shrink-0 ${currentPage === pageNum ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+                  >
+                    {pageNum}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
+            <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
               Page Suivante
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>
