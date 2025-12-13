@@ -8,8 +8,8 @@ type SearchParams = {
   conteneursNeeded?: string
 }
 
-type Props = {
-  searchParams: Promise<SearchParams>
+interface Props {
+  readonly searchParams: Promise<SearchParams>
 }
 
 export default async function ChargerConteneurPage({
