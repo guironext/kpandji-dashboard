@@ -8,13 +8,14 @@ type SearchParams = {
   conteneursNeeded?: string
 }
 
-interface Props {
-  readonly searchParams: Promise<SearchParams>
+type PageProps = {
+  searchParams: Promise<SearchParams>
 }
 
-export default async function ChargerConteneurPage({
-  searchParams,
-}: Props) {
+export default async function ChargerConteneurPage(
+  props: PageProps
+) {
+  const { searchParams } = props
   const resolvedSearchParams = await searchParams
   const commandeIdsParam = resolvedSearchParams.commandeIds || '[]'
   const model = resolvedSearchParams.model || ''
