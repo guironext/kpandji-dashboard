@@ -12,14 +12,11 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefi
 const logConfig = (process.env.NODE_ENV === "development"
   ? [
       { emit: 'event' as const, level: 'error' as const },
-      { emit: 'event' as const, level: 'warn' as const },
-      { emit: 'stdout' as const, level: 'error' as const },
-      { emit: 'stdout' as const, level: 'warn' as const }
+      { emit: 'event' as const, level: 'warn' as const }
     ] as const
   : [
-      { emit: 'event' as const, level: 'error' as const },
-      { emit: 'stdout' as const, level: 'error' as const }
-    ] as const) as Array<{ emit: 'event' | 'stdout'; level: 'error' | 'warn' }>
+      { emit: 'event' as const, level: 'error' as const }
+    ] as const) as Array<{ emit: 'event'; level: 'error' | 'warn' }>
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: logConfig,
