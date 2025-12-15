@@ -41,7 +41,7 @@ type Commande = {
   commandeFlag: string
   etapeCommande: string
   prix_unitaire: string | null
-  date_livraison: string
+  date_livraison: string | null
   createdAt: string
   updatedAt: string
   voitureModel: {
@@ -462,7 +462,7 @@ const StockDisponibleClient = ({ commandes }: StockDisponibleClientProps) => {
                       Livraison prévue
                     </span>
                     <span className="font-medium">
-                      {format(new Date(commande.date_livraison), 'dd MMM yyyy', { locale: fr })}
+                      {commande.date_livraison ? format(new Date(commande.date_livraison), 'dd MMM yyyy', { locale: fr }) : 'Non définie'}
                     </span>
                   </div>
                 </div>
@@ -582,7 +582,7 @@ const StockDisponibleClient = ({ commandes }: StockDisponibleClientProps) => {
                         <div>
                           <p className="text-xs text-muted-foreground">Livraison prévue</p>
                           <p className="font-medium">
-                            {format(new Date(commande.date_livraison), 'dd MMMM yyyy', { locale: fr })}
+                            {commande.date_livraison ? format(new Date(commande.date_livraison), 'dd MMMM yyyy', { locale: fr }) : 'Non définie'}
                           </p>
                         </div>
                         {commande.conteneur && (
@@ -700,7 +700,7 @@ const StockDisponibleClient = ({ commandes }: StockDisponibleClientProps) => {
                     <div className="flex justify-between p-2 bg-slate-50 rounded">
                       <span className="text-muted-foreground">Date de livraison</span>
                       <span className="font-medium">
-                        {format(new Date(selectedCommande.date_livraison), 'dd MMMM yyyy', { locale: fr })}
+                        {selectedCommande.date_livraison ? format(new Date(selectedCommande.date_livraison), 'dd MMMM yyyy', { locale: fr }) : 'Non définie'}
                       </span>
                     </div>
                     <div className="flex justify-between p-2 bg-slate-50 rounded">
