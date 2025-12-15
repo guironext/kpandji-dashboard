@@ -2,18 +2,18 @@ import React from 'react'
 import { getCommandesValides } from '@/lib/actions/commande'
 import ChargerConteneurClient from './ChargerConteneurClient'
 
-type SearchParams = {
-  commandeIds?: string
-  model?: string
-  conteneursNeeded?: string
-}
+export const dynamic = 'force-dynamic'
 
-type PageProps = {
-  searchParams: Promise<SearchParams>
+type Props = {
+  searchParams: Promise<{
+    commandeIds?: string
+    model?: string
+    conteneursNeeded?: string
+  }>
 }
 
 export default async function ChargerConteneurPage(
-  props: PageProps
+  props: Props
 ) {
   const { searchParams } = props
   const resolvedSearchParams = await searchParams
