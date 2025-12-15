@@ -13,7 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
 import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getUserSignature } from "@/lib/actions/signature";
@@ -22,6 +23,11 @@ import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 
 const numberToFrench = (num: number): string => {
+  // Vérifier que num est un nombre valide
+  if (num === null || num === undefined || isNaN(num) || !isFinite(num)) {
+    return "zéro";
+  }
+  
   const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
   const teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
   const tens = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"];
@@ -43,15 +49,18 @@ const numberToFrench = (num: number): string => {
   if (num < 1000000) {
     const thousand = Math.floor(num / 1000);
     const rest = num % 1000;
+    // Pour mille, on ne met pas "un" devant, mais pour les autres nombres on le met
     return (thousand > 1 ? numberToFrench(thousand) + " " : "") + "mille" + (rest ? " " + numberToFrench(rest) : "");
   }
   if (num < 1000000000) {
     const million = Math.floor(num / 1000000);
     const rest = num % 1000000;
+    // Toujours mettre "un" devant million si c'est 1
     return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
   }
   const milliard = Math.floor(num / 1000000000);
   const rest = num % 1000000000;
+  // Toujours mettre "un" devant milliard si c'est 1
   return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
 };
 
@@ -163,6 +172,8 @@ export default function Page() {
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; prix?: number | null; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  const [editedAmountTexts, setEditedAmountTexts] = useState<Record<string, string>>({});
+  const [editingAmountText, setEditingAmountText] = useState<string | null>(null);
   const paginationScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -789,7 +800,10 @@ export default function Page() {
               </table>
 
               <div class="amount-text">
-                Arrêter la présente facture à la somme de <span>${numberToFrench(Math.floor(currentFacture.total_ttc))} francs CFA</span>
+                Arrêter la présente facture à la somme de <span>${(() => {
+                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(currentFacture.total_ttc || 0));
+                  return amountText.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                })()} francs CFA</span>
               </div>
 
               <div class="signature-section">
@@ -1209,9 +1223,58 @@ export default function Page() {
                   </Table>
 
                   <div className="mt-4">
-                    <p className="text-sm font-normal text-black">
-                      Arrêter la présente facture à la somme de <span className="font-semibold">{numberToFrench(Math.floor(facture.total_ttc))} francs CFA</span>
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-normal text-black">
+                        Arrêter la présente facture à la somme de
+                      </p>
+                      {editingAmountText === facture.id ? (
+                        <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+                          <Input
+                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))}
+                            onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
+                            className="flex-1 text-sm font-semibold"
+                            placeholder="Saisir la somme en lettres"
+                            autoFocus
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingAmountText(null);
+                              if (!editedAmountTexts[facture.id]) {
+                                const newTexts = { ...editedAmountTexts };
+                                delete newTexts[facture.id];
+                                setEditedAmountTexts(newTexts);
+                              }
+                            }}
+                          >
+                            Valider
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">
+                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))} francs CFA
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingAmountText(facture.id);
+                              if (!editedAmountTexts[facture.id]) {
+                                setEditedAmountTexts({
+                                  ...editedAmountTexts,
+                                  [facture.id]: numberToFrench(Math.floor(facture.total_ttc || 0))
+                                });
+                              }
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex w-full justify-between mt-5 px-8">
