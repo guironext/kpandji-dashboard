@@ -4,14 +4,16 @@ import ChargerConteneurClient from './ChargerConteneurClient'
 
 export const dynamic = 'force-dynamic'
 
+type ChargerConteneurSearchParams = {
+  commandeIds?: string
+  model?: string
+  conteneursNeeded?: string
+}
+
 export default async function ChargerConteneurPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    commandeIds?: string
-    model?: string
-    conteneursNeeded?: string
-  }>
+  searchParams: Promise<ChargerConteneurSearchParams>
 }) {
   const resolvedSearchParams = await searchParams
   const commandeIdsParam = resolvedSearchParams.commandeIds || '[]'
