@@ -4,18 +4,15 @@ import ChargerConteneurClient from './ChargerConteneurClient'
 
 export const dynamic = 'force-dynamic'
 
-type Props = {
+export default async function ChargerConteneurPage({
+  searchParams,
+}: {
   searchParams: Promise<{
     commandeIds?: string
     model?: string
     conteneursNeeded?: string
   }>
-}
-
-export default async function ChargerConteneurPage(
-  props: Props
-) {
-  const { searchParams } = props
+}) {
   const resolvedSearchParams = await searchParams
   const commandeIdsParam = resolvedSearchParams.commandeIds || '[]'
   const model = resolvedSearchParams.model || ''
