@@ -23,7 +23,7 @@ const page = async () => {
   const serializedCommandes = commandesDisponibles.map(cmd => ({
     ...cmd,
     prix_unitaire: cmd.prix_unitaire ? cmd.prix_unitaire.toString() : null,
-    date_livraison: cmd.date_livraison.toISOString(),
+    date_livraison: cmd.date_livraison ? cmd.date_livraison.toISOString() : new Date().toISOString(),
     createdAt: cmd.createdAt.toISOString(),
     updatedAt: cmd.updatedAt.toISOString(),
     conteneur: cmd.conteneur ? {
