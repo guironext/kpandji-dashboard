@@ -69,6 +69,8 @@ async function getTableauChuteRendezVous() {
   return Object.values(groupedByUser)
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function TableauChutePage() {
   const groupedData = await getTableauChuteRendezVous()
   const totalRecords = groupedData.reduce((sum, group) => sum + group.records.length, 0)

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import ListeCommandesGroupeesClient from './ListeCommandesGroupeesClient'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ListeCommandesGroupeesPage() {
   try {
     // Fetch all commandeGroupee from database, ordered by date_validation (most recent first)

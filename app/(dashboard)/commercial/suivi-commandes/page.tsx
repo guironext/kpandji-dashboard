@@ -108,6 +108,8 @@ const etapeLabels = {
   VENTE: 'Vendu',
 }
 
+export const dynamic = 'force-dynamic'
+
 async function Page() {
   const { userId } = await auth()
 

@@ -2,6 +2,8 @@ import React from 'react'
 import { prisma } from '@/lib/prisma'
 import StockDisponibleClient from '@/components/StockDisponibleClient'
 
+export const dynamic = 'force-dynamic'
+
 const page = async () => {
   // Fetch all commandes with commandeFlag === 'DISPONIBLE'
   const commandesDisponibles = await prisma.commande.findMany({
