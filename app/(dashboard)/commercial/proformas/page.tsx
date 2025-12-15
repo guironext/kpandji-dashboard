@@ -802,7 +802,7 @@ export default function Page() {
               <div class="amount-text">
                 Arrêter la présente facture à la somme de <span>${(() => {
                   const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(currentFacture.total_ttc || 0));
-                  return amountText.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                  return amountText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 })()} francs CFA</span>
               </div>
 

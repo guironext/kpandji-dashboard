@@ -20,11 +20,6 @@ const logConfig = (process.env.NODE_ENV === "development"
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: logConfig,
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
 });
 
 // Handle connection errors and reconnect
