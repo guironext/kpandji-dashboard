@@ -9,14 +9,19 @@ config();
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined}
 
 // Prisma 6 reads DATABASE_URL from environment variables (defined in schema.prisma)
-// During build time, if DATABASE_URL is not set, use a dummy URL to allow schema validation
+// During build time, if DATABASE_URL is not set, set a dummy URL to allow schema validation
 // This URL will never be used for actual connections since these routes are dynamic
 const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'development');
 
-const databaseUrl = process.env.DATABASE_URL || (isBuildTime ? 'postgresql://dummy:dummy@dummy:5432/dummy?schema=public' : 'postgresql://dummy:dummy@dummy:5432/dummy');
-
-if (!process.env.DATABASE_URL && !isBuildTime) {
-  console.warn('DATABASE_URL is not set. Using dummy URL for build-time validation only.');
+if (!process.env.DATABASE_URL) {
+  // Set a dummy URL in process.env so Prisma can read it from schema.prisma
+  process.env.DATABASE_URL = isBuildTime 
+    ? 'postgresql://dummy:dummy@dummy:5432/dummy?schema=public'
+    : 'postgresql://dummy:dummy@dummy:5432/dummy';
+  
+  if (!isBuildTime) {
+    console.warn('DATABASE_URL is not set. Using dummy URL for build-time validation only.');
+  }
 }
 
 const logConfig = (process.env.NODE_ENV === "development"
@@ -28,13 +33,10 @@ const logConfig = (process.env.NODE_ENV === "development"
       { emit: 'event' as const, level: 'error' as const }
     ] as const) as Array<{ emit: 'event'; level: 'error' | 'warn' }>
 
+// Prisma will read DATABASE_URL from process.env (defined in schema.prisma)
+// We don't pass datasources explicitly to avoid validation issues
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: isBuildTime ? [] : logConfig,
-  datasources: {
-    db: {
-      url: databaseUrl,
-    },
-  },
 });
 
 // Handle connection errors and reconnect
