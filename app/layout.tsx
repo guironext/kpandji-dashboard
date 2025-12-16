@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   description: "Tableau de bord de gestion de KPANDJI",
 };
 
+// Get Clerk publishable key
+// During build, if key is missing, Clerk will throw an error
+// Make sure to set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env.local file
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,6 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+      publishableKey={clerkPublishableKey}
       localization={{
         locale: "fr",
         signIn: {
