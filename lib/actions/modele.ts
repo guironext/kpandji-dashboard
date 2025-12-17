@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir, readdir, unlink, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma, executeWithRetry } from "@/lib/prisma";
 import { put } from "@vercel/blob";
 
 // Schema for model creation - matches VoitureModel from Prisma schema
@@ -216,9 +216,13 @@ export async function getModele(modelId: string): Promise<{ success: boolean; da
 // Get all models from database
 export async function getAllModele(): Promise<{ success: boolean; data?: ModeleData[]; message: string }> {
   try {
-    const modeles = await prisma.voitureModel.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
+    const modeles = await executeWithRetry(
+      () => prisma.voitureModel.findMany({
+        orderBy: { createdAt: 'desc' }
+      }),
+      3, // max retries
+      1000 // delay between retries
+    );
     
     const modeleData: ModeleData[] = modeles.map(modele => ({
       id: modele.id,

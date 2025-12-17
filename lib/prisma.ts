@@ -34,19 +34,57 @@ const logConfig = (process.env.NODE_ENV === "development"
     ] as const) as Array<{ emit: 'event'; level: 'error' | 'warn' }>
 
 // Prisma will read DATABASE_URL from process.env (defined in schema.prisma)
+// Enhance DATABASE_URL with connection pool settings if not already present
+let databaseUrl = process.env.DATABASE_URL || '';
+if (databaseUrl && !databaseUrl.includes('connection_limit') && !isBuildTime && databaseUrl.startsWith('postgresql://')) {
+  try {
+    // Add connection pool parameters to prevent connection exhaustion
+    const url = new URL(databaseUrl);
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', '10');
+    }
+    if (!url.searchParams.has('pool_timeout')) {
+      url.searchParams.set('pool_timeout', '20');
+    }
+    if (!url.searchParams.has('connect_timeout')) {
+      url.searchParams.set('connect_timeout', '10');
+    }
+    databaseUrl = url.toString();
+  } catch (error) {
+    // If URL parsing fails, use original URL
+    console.warn('Failed to parse DATABASE_URL, using original:', error);
+  }
+}
+
 // We don't pass datasources explicitly to avoid validation issues
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: isBuildTime ? [] : logConfig,
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: databaseUrl,
     },
   },
+  errorFormat: 'minimal',
 });
 
 // Handle connection errors and reconnect
 (prisma.$on as (event: 'error' | 'warn', callback: (e: unknown) => void) => void)('error', (e: unknown) => {
-  console.error('Prisma Client Error:', e);
+  const error = e as { message?: string; code?: string };
+  // Only log connection errors in development, suppress in production to reduce noise
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Prisma Client Error:', e);
+  } else {
+    // In production, only log critical errors (not connection closed errors)
+    if (error.message && !error.message.includes('Closed')) {
+      console.error('Prisma Client Error:', e);
+    }
+  }
+  
+  // Attempt to reconnect on connection errors
+  if (error.message && error.message.includes('connection')) {
+    // Prisma will automatically reconnect on next query
+    // No manual reconnection needed
+  }
 });
 
 // Handle warnings in development
