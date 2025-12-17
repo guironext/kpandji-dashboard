@@ -85,26 +85,34 @@ const navItems = [
     href: "/comptable/suivi-commandes",
     category: "commandes"
   },
+
   {
     id: 9,
-    icon: <Store className="w-5 h-5" />,
-    label: "Fournisseurs Locaux",
-    href: "/comptable/fournisseur-locaux",
-    category: "commandes"
-  },
-  {
-    id: 10,
     icon: <Truck className="w-5 h-5" />,
     label: "Bon Commande Locaux",
     href: "/comptable/bon-commande-locaux",
     category: "commandes"
   },
   {
-    id: 11,
+    id: 10,
     icon: <ShoppingCart className="w-5 h-5" />,
     label: "Commandes Locaux",
     href: "/comptable/commandes-locaux",
     category: "commandes"
+  },
+  {
+    id: 11,
+    icon: <Store className="w-5 h-5" />,
+    label: "Clients",
+    href: "/comptable/clients",
+    category: "partenaires"
+  },
+  {
+    id: 12,
+    icon: <Store className="w-5 h-5" />,
+    label: "Fournisseurs Locaux",
+    href: "/comptable/fournisseur-locaux",
+    category: "partenaires"
   },
  
 ];

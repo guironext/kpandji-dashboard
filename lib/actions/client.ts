@@ -92,6 +92,23 @@ export async function getAllClients() {
   }
 }
 
+export async function getClientsByStatus(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
+  try {
+    const clients = await prisma.client.findMany({
+      where: {
+        status_client: status,
+      },
+      include: { user: true },
+      orderBy: { nom: 'asc' }
+    });
+    
+    return { success: true, data: clients };
+  } catch (error) {
+    console.error("Error fetching clients by status:", error);
+    return { success: false, error: "Failed to fetch clients" };
+  }
+}
+
 export async function updateClient(id: string, data: {
   nom?: string;
   email?: string;

@@ -10,9 +10,10 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { PlusCircle, Trash2, Calendar, FileText, X, Image as ImageIcon, Car, Edit, Sparkles, Zap } from "lucide-react";
+import { PlusCircle, Trash2, Calendar, FileText, X, Image as ImageIcon, Car, Edit, Sparkles, Zap, Printer } from "lucide-react";
 
 export default function AjouterModelePage() {
+  
   const [models, setModels] = useState<
     Array<{
       id: string;
@@ -108,6 +109,8 @@ export default function AjouterModelePage() {
     }
   };
 
+ 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
       {/* Animated Background Elements */}
@@ -118,6 +121,8 @@ export default function AjouterModelePage() {
       </div>
 
       <div className="container mx-auto p-6 lg:p-8 max-w-7xl relative z-10">
+       
+
         {/* Stunning Header with gradient and animations */}
         <div className="mb-8 relative">
           <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-3xl blur-2xl opacity-20"></div>
@@ -138,7 +143,7 @@ export default function AjouterModelePage() {
                       </h1>
                       <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" />
                     </div>
-                    <p className="text-orange-700/70 mt-2 text-lg font-medium flex items-center gap-2">
+                    <p className="text-orange-700/70 mt-2 text-base font-medium flex items-center gap-2">
                       <Zap className="w-4 h-4" />
                       Gérez et organisez votre catalogue de modèles
                     </p>
@@ -146,9 +151,13 @@ export default function AjouterModelePage() {
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                <Badge className="text-xl px-8 py-4 shadow-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 border-0">
+                <Badge 
+                  onClick={() => window.open('/commercial/ajouter-modele/print-all', '_blank')}
+                  className="text-xl px-8 py-4 shadow-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 border-0 cursor-pointer transition-all"
+                >
                   <Car className="w-5 h-5 mr-2" />
                   {models.length} {models.length !== 1 ? 'modèles' : 'modèle'}
+                
                 </Badge>
                 <div className="text-xs text-orange-600 text-center font-semibold">
                   Catalogue Premium
@@ -344,9 +353,12 @@ export default function AjouterModelePage() {
                       </CardDescription>
                     </div>
                     <div className="hidden md:block">
-                      <Badge className="px-6 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg">
-                        <Zap className="w-5 h-5 mr-2" />
-                        Premium
+                      <Badge 
+                        onClick={() => window.open('/commercial/ajouter-modele/print', '_blank')}
+                        className="px-6 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg cursor-pointer hover:from-amber-600 hover:to-orange-600 transition-all"
+                      >
+                        <Printer className="w-4 h-4 mr-2 inline" />
+                        Imprimer le catalogue
                       </Badge>
                     </div>
                   </div>
@@ -431,11 +443,14 @@ export default function AjouterModelePage() {
 
                         {/* Action Buttons */}
                         <div className="flex flex-col gap-3">
+                          
+
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(model)}
                             className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 hover:from-orange-200 hover:to-amber-200 text-orange-700 shadow-md hover:shadow-lg transition-all"
+                            title="Modifier"
                           >
                             <Edit className="w-5 h-5" />
                           </Button>
@@ -445,6 +460,7 @@ export default function AjouterModelePage() {
                             size="icon"
                             onClick={() => handleDelete(model.id)}
                             className="h-12 w-12 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 shadow-md hover:shadow-lg transition-all"
+                            title="Supprimer"
                           >
                             <Trash2 className="w-5 h-5" />
                           </Button>

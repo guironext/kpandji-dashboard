@@ -37,6 +37,11 @@ const logConfig = (process.env.NODE_ENV === "development"
 // We don't pass datasources explicitly to avoid validation issues
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: isBuildTime ? [] : logConfig,
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
 });
 
 // Handle connection errors and reconnect
@@ -51,29 +56,9 @@ if (process.env.NODE_ENV === "development") {
   });
 }
 
-// Ensure connection is active before queries
-async function ensureConnection() {
-  try {
-    await prisma.$connect();
-  } catch (error) {
-    console.error('Failed to connect to database:', error);
-    // Try to reconnect after a delay
-    setTimeout(async () => {
-      try {
-        await prisma.$disconnect();
-        await prisma.$connect();
-        console.log('Database reconnected successfully');
-      } catch (reconnectError) {
-        console.error('Failed to reconnect:', reconnectError);
-      }
-    }, 2000);
-  }
-}
-
-// Initialize connection only if DATABASE_URL is set and not during build
-if (process.env.NODE_ENV !== "production" && process.env.DATABASE_URL && !process.env.NEXT_PHASE) {
-  ensureConnection();
-}
+// Prisma Client manages connections automatically
+// Don't manually connect/disconnect unless necessary
+// Connections are opened on first query and reused from the pool
 
 // Add connection retry logic
 if (process.env.NODE_ENV !== "production") {
@@ -106,14 +91,7 @@ export async function executeWithRetry<T>(
       
       if (isConnectionError && attempt < maxRetries) {
         console.warn(`Database connection error (attempt ${attempt}/${maxRetries}), retrying...`);
-        // Try to reconnect
-        try {
-          await prisma.$disconnect();
-          await prisma.$connect();
-        } catch (reconnectError) {
-          console.error('Failed to reconnect:', reconnectError);
-        }
-        // Wait before retrying
+        // Wait before retrying (Prisma will automatically reconnect)
         await new Promise(resolve => setTimeout(resolve, delay * attempt));
         continue;
       }
