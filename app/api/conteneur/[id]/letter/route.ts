@@ -4,10 +4,11 @@ import { join } from "path";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const conteneurId = params.id;
+    const { id } = await params;
+    const conteneurId = id;
 
     if (!conteneurId) {
       return NextResponse.json(

@@ -46,29 +46,28 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [isManualFrenchEdit, setIsManualFrenchEdit] = useState(false)
-  const [initialFrenchValue, setInitialFrenchValue] = useState('')
 
   useEffect(() => {
     if (sparePart && open) {
-      const frenchValue = sparePart.partNameFrench || ''
+      // Reset manual edit flag first to ensure automatic translation is enabled
+      setIsManualFrenchEdit(false)
       setFormData({
         partCode: sparePart.partCode,
         partName: sparePart.partName,
-        partNameFrench: frenchValue,
+        partNameFrench: '', // Start with empty to trigger translation
         quantity: sparePart.quantity.toString(),
         commandeId: ''
       })
-      setInitialFrenchValue(frenchValue)
-      setIsManualFrenchEdit(false)
     }
   }, [sparePart, open])
 
-  // Auto-translate partName to French when partName changes
+  // Auto-translate partName to French when partName changes or dialog opens
   useEffect(() => {
-    // Only auto-translate if:
+    // Auto-translate if:
     // 1. partName has content
     // 2. User hasn't manually edited the French field
     // 3. Dialog is open
+    // 4. sparePart exists (to ensure we have data)
     if (formData.partName.trim() && !isManualFrenchEdit && open && sparePart) {
       const translatePartName = async () => {
         setIsTranslating(true)
@@ -85,7 +84,7 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
       }
 
       // Debounce translation to avoid too many API calls
-      const timeoutId = setTimeout(translatePartName, 800)
+      const timeoutId = setTimeout(translatePartName, 500)
       return () => clearTimeout(timeoutId)
     }
   }, [formData.partName, isManualFrenchEdit, open, sparePart])
@@ -125,6 +124,8 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      // Reset manual edit flag when closing
+      setIsManualFrenchEdit(false)
       onOpenChange(false)
     }
   }
@@ -180,10 +181,13 @@ const EditSparePartDialog: React.FC<EditSparePartDialogProps> = ({
                 id="partNameFrench"
                 value={formData.partNameFrench}
                 onChange={(e) => {
-                  setIsManualFrenchEdit(true)
-                  setFormData(prev => ({ ...prev, partNameFrench: e.target.value }))
+                  const newValue = e.target.value
+                  // Only set manual edit when user actually changes the value (not from translation)
+                  if (newValue !== formData.partNameFrench) {
+                    setIsManualFrenchEdit(true)
+                  }
+                  setFormData(prev => ({ ...prev, partNameFrench: newValue }))
                 }}
-                onFocus={() => setIsManualFrenchEdit(true)}
                 placeholder="Ex: Filtre à air, Courroie de distribution"
                 className="pr-10"
               />
