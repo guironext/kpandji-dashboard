@@ -825,7 +825,7 @@ export default function Page() {
                 <p class="footer-conditions-title">CONDITIONS:</p>
                 <p>60% d'accompte à la commande</p>
                 <p style="font-weight: 300;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p>SOLDE à la livraison</p>
+                <p>SOLDE avant livraison</p>
               </div>
               <div class="footer-info">
                 <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
@@ -1313,7 +1313,7 @@ export default function Page() {
                 <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
                 <p className="text-black">60% d&apos;accompte à la commande</p>
                 <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p className="text-black">SOLDE à la livraison</p>
+                <p className="text-black">SOLDE avant livraison</p>
               </div>
               <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
                 <p className="font-normal text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>

@@ -184,17 +184,18 @@ model Tableau_chute_rendez_vous {
 }
 
 model VoitureModel {
-  id               String            @id @default(uuid())
-  model            String
-  fiche_technique  String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  description      String?
-  image            String?
-  commandes        Commande[]
-  factureLignes    FactureLigne[]
-  stockDisponibles StockDisponible[]
-  voitures         Voiture[]
+  id                 String              @id @default(uuid())
+  model              String
+  fiche_technique    String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  description        String?
+  image              String?
+  commandes          Commande[]
+  factureLignes      FactureLigne[]
+  stockDisponibles   StockDisponible[]
+  voitures           Voiture[]
+  commandesEnAttente CommandeEnAttente[]
 }
 
 model Accessoire {
@@ -400,6 +401,7 @@ model Commande {
   clientEntrepriseId String?
   factureId          String?
   prix_unitaire      Decimal?
+  numChassis         String?
   commandeFlag       CommandeFlag       @default(VENDUE)
   commandeGroupeeId  String?
   accessoires        Accessoire[]       @relation("CommandeToAccessoire")
@@ -418,6 +420,19 @@ model Commande {
   tools              Tool[]
   voitures           Voiture[]
   fournisseurs       Fournisseur[]      @relation("CommandeToFournisseur")
+  commandeEnAttente  CommandeEnAttente?
+  courrieAvantages   CourrieAvantage[]
+}
+
+model CommandeEnAttente {
+  id                   String        @id @default(uuid())
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  commandeId           String        @unique
+  voitureModelId       String?
+  voitureModel         VoitureModel? @relation(fields: [voitureModelId], references: [id])
+  qteCommandeEnAttente Int
+  commande             Commande?     @relation(fields: [commandeId], references: [id])
 }
 
 model CommandeGroupee {
@@ -436,7 +451,7 @@ model CommandeGroupee {
 model Conteneur {
   id                 String                  @id @default(uuid())
   conteneurNumber    String                  @unique
-  sealNumber         String
+  sealNumber         String?
   totalPackages      String?
   grossWeight        String?
   netWeight          String?
@@ -450,6 +465,22 @@ model Conteneur {
   subcases           Subcase[]
   verifications      VerificationConteneur[]
   voitures           Voiture[]
+  courrieAvantages   CourrieAvantage[]
+}
+
+model CourrieAvantage {
+  id               String    @id @default(uuid())
+  date_livraison   DateTime
+  reference        String
+  numero_conteneur String
+  vin              String
+  moteur           String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  conteneurId      String
+  commandeId       String?
+  conteneur        Conteneur @relation(fields: [conteneurId], references: [id])
+  commande         Commande? @relation(fields: [commandeId], references: [id])
 }
 
 model Subcase {
@@ -864,6 +895,8 @@ enum EtapeCommande {
   PROPOSITION
   VALIDE
   TRANSITE
+  TRANSITE_NON_RENSEIGNE
+  TRANSITE_DEJA_RENSEIGNE
   RENSEIGNEE
   ARRIVE
   VERIFIER
@@ -872,6 +905,7 @@ enum EtapeCommande {
   PARKING
   CORRECTION
   VENTE
+  CHARGE
   DECHARGE
 }
 
@@ -885,6 +919,8 @@ enum EtapeConteneur {
   CHARGE
   TRANSITE
   RENSEIGNE
+  TRANSITE_NON_RENSEIGNE
+  TRANSITE_DEJA_RENSEIGNE
   ARRIVE
   DECHARGE
   VERIFIE
@@ -903,6 +939,8 @@ enum EtapeTool {
 
 enum EtapeSparePart {
   TRANSITE
+  TRANSITE_NON_RENSEIGNE
+  TRANSITE_DEJA_RENSEIGNE
   RENSEIGNE
   ARRIVE
   VERIFIE

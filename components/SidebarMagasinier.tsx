@@ -9,7 +9,6 @@ import {
   Warehouse,
   ClipboardCheck,
   Truck,
-  Archive,
   FileText,
   Settings
 } from "lucide-react";
@@ -29,14 +28,14 @@ const navItems = [
   {
     id: 2,
     icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Renseigner-commande",
-    href: "/magasinier/renseigner-commande",
+    label: "Conteneurs à renseigner",
+    href: "/magasinier/Conteneurs-renseigner",
     category: "inventory"
   },
   {
     id: 3,
     icon: <DrumIcon className="w-5 h-5" />,
-    label: "Pièces vérifiées",
+    label: "Conteneurs à vérifier",
     href: "/magasinier/verification",
     category: "inventory"
   },
@@ -47,13 +46,7 @@ const navItems = [
     href: "/magasinier/stockage",
     category: "inventory"
   },
-  {
-    id: 5,
-    icon: <Archive className="w-5 h-5" />,
-    label: "Stock",
-    href: "/magasinier/stock",
-    category: "inventory"
-  },
+ 
   {
     id: 6,
     icon: <Settings className="w-5 h-5" />,

@@ -49,3 +49,32 @@ export function formatUSDWithSpaces(amount: number): string {
   const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return `${integerPart}.${parts[1]}`;
 }
+
+// Translate English text to French using MyMemory Translation API
+export async function translateToFrench(text: string): Promise<string> {
+  if (!text || text.trim().length === 0) {
+    return '';
+  }
+
+  try {
+    // Use MyMemory Translation API (free, no auth required for basic use)
+    const response = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|fr`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Translation API error');
+    }
+
+    const data = await response.json();
+    
+    if (data.responseData && data.responseData.translatedText) {
+      return data.responseData.translatedText;
+    }
+    
+    return text; // Return original if translation fails
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text; // Return original text on error
+  }
+}

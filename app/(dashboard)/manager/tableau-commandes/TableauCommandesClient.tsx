@@ -22,9 +22,22 @@ import {
   Car,
   AlertCircle,
   BarChart3,
-  Truck
+  Truck,
+  RefreshCw,
+  WifiOff,
+  AlertTriangle,
+  Send
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 type CommandeType = {
   id: string
@@ -39,6 +52,7 @@ type CommandeType = {
   etapeCommande: string
   commandeFlag: string
   voitureModel: {
+    id: string
     model: string
   } | null
   client: {
@@ -51,6 +65,8 @@ type CommandeType = {
 
 type Props = {
   commandes: CommandeType[]
+  error?: string | null
+  isLoading?: boolean
 }
 
 type GroupedRow = {
@@ -90,15 +106,31 @@ const getOrderConfig = (model: string | null) => {
     return { minQuantity: 8, conteneursPerMinOrder: 3 }
   }
   if (modelUpper === 'KPANDJI LATHAYE' || modelUpper.includes('KPANDJI LATHAYE')) {
+    return { minQuantity: 3, conteneursPerMinOrder: 1 }
+  }
+  if (modelUpper === 'KPANDJI BANCO' || modelUpper.includes('KPANDJI BANCO')) {
+    return { minQuantity: 11, conteneursPerMinOrder: 2 }
+  }
+  if (modelUpper === 'KPANDJI DJETRAN PLUS' || modelUpper.includes('KPANDJI DJETRAN PLUS')) {
     return { minQuantity: 2, conteneursPerMinOrder: 1 }
   }
+  
   
   // Default: no minimum order
   return { minQuantity: 0, conteneursPerMinOrder: 0 }
 }
 
-const TableauCommandesClient = ({ commandes }: Props) => {
+const TableauCommandesClient = ({ commandes, error, isLoading }: Props) => {
   const router = useRouter()
+  const [isRetrying, setIsRetrying] = React.useState(false)
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false)
+  
+  const handleRetry = () => {
+    setIsRetrying(true)
+    router.refresh()
+    setTimeout(() => setIsRetrying(false), 2000)
+  }
   
   // Group commandes by voitureModel only (ignoring color differences)
   const tableData = React.useMemo(() => {
@@ -203,6 +235,17 @@ const TableauCommandesClient = ({ commandes }: Props) => {
           const remainingVendu = remainingCommandesSlice.filter(c => c.commandeFlag === 'VENDUE').length
           const remainingDisponible = remainingCommandesSlice.filter(c => c.commandeFlag === 'DISPONIBLE').length
           
+          // Calculate how many commandes are still needed to complete the group
+          // enAttente should show how many MORE commandes are needed
+          // If remainingCommandes < minQuantity, we need (minQuantity - remainingCommandes) more
+          // We store it as negative to indicate incomplete group, but display the positive value
+          const commandesNeeded = minQuantity - remainingCommandes
+          
+          // Debug: Log for KPANDJI LATHAYE to verify calculation
+          if (model.toUpperCase().includes('LATHAYE')) {
+            console.log(`[KPANDJI LATHAYE Debug] totalCommandes: ${totalCommandes}, minQuantity: ${minQuantity}, remainingCommandes: ${remainingCommandes}, commandesNeeded: ${commandesNeeded}, enAttente: ${-commandesNeeded}`)
+          }
+          
           rows.push({
             model,
             couleurs,
@@ -212,7 +255,7 @@ const TableauCommandesClient = ({ commandes }: Props) => {
             total: minQuantity,
             vendu: remainingVendu,
             disponible: remainingDisponible,
-            enAttente: remainingCommandes - minQuantity, // Negative if incomplete
+            enAttente: -commandesNeeded, // Stored as negative: -1 means 1 more needed, -2 means 2 more needed, etc.
             commandeIds: remainingCommandesSlice.map(c => c.id),
             conteneursNeeded: 0 // Incomplete group, no conteneurs needed
           })
@@ -245,6 +288,208 @@ const TableauCommandesClient = ({ commandes }: Props) => {
       totalGroups: tableData.length
     }
   }, [tableData])
+
+  // Get models with en attente quantities
+  const modelsEnAttente = React.useMemo(() => {
+    return tableData
+      .filter(row => row.enAttente < 0 && row.total > 0)
+      .map(row => {
+        // Find the voitureModelId from commandes
+        const firstCommande = commandes.find(c => 
+          c.voitureModel?.model === row.model && row.commandeIds.includes(c.id)
+        )
+        return {
+          model: row.model,
+          voitureModelId: firstCommande?.voitureModel?.id || null,
+          qteEnAttente: Math.abs(row.enAttente),
+          commandeId: row.commandeIds[0] || '', // Use first commandeId for the CommandeEnAttente record
+        }
+      })
+      .filter(item => item.voitureModelId && item.commandeId)
+  }, [tableData, commandes])
+
+  // Handle save to CommandeEnAttente
+  const handleDiffuserAuxCommerciaux = async () => {
+    if (modelsEnAttente.length === 0) {
+      toast.error('Aucun modèle en attente à diffuser')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const promises = modelsEnAttente.map(async (item) => {
+        const response = await fetch('/api/commande-en-attente', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            voitureModelId: item.voitureModelId,
+            qteCommandeEnAttente: item.qteEnAttente,
+            commandeId: item.commandeId,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Erreur lors de la sauvegarde')
+        }
+
+        return response.json()
+      })
+
+      await Promise.all(promises)
+      toast.success(`${modelsEnAttente.length} modèle(s) diffusé(s) aux commerciaux avec succès`)
+      setDialogOpen(false)
+      router.refresh()
+    } catch (error) {
+      console.error('Error saving CommandeEnAttente:', error)
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la diffusion')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Show error state
+  if (error) {
+    const errorLower = error.toLowerCase()
+    const isConnectionError = 
+      errorLower.includes('connection') || 
+      errorLower.includes('connexion') ||
+      errorLower.includes('closed') ||
+      errorLower.includes('reset') ||
+      errorLower.includes('kind: closed') ||
+      errorLower.includes('kind: connectionreset') ||
+      errorLower.includes('connectionreset') ||
+      errorLower.includes('connection closed') ||
+      errorLower.includes('postgresql connection') ||
+      errorLower.includes('p1001')
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 md:p-6 lg:p-8">
+        <div className="max-w-[1920px] mx-auto">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-3 md:p-4 rounded-2xl shadow-lg">
+                <ShoppingCart className="h-6 w-6 md:h-7 md:w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">
+                  Tableau des Commandes Validées
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm md:text-base lg:text-lg">
+                  Analyse des commandes groupées par modèle et caractéristiques
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Card */}
+          <Card className="shadow-xl border-0 overflow-hidden max-w-2xl mx-auto">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center justify-center text-center space-y-6">
+                <div className={`p-6 rounded-full ${
+                  isConnectionError 
+                    ? 'bg-red-100 dark:bg-red-900/20' 
+                    : 'bg-amber-100 dark:bg-amber-900/20'
+                }`}>
+                  {isConnectionError ? (
+                    <WifiOff className="h-16 w-16 text-red-600" />
+                  ) : (
+                    <AlertTriangle className="h-16 w-16 text-amber-600" />
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                    {isConnectionError ? 'Erreur de Connexion' : 'Erreur de Chargement'}
+                  </h2>
+                  <p className="text-gray-600 text-base md:text-lg max-w-md">
+                    {isConnectionError 
+                      ? 'La connexion à la base de données a été interrompue. Veuillez réessayer.'
+                      : 'Une erreur s\'est produite lors du chargement des données.'}
+                  </p>
+                  {error && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-600 font-mono break-all">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <Button
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {isRetrying ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                        Reconnexion...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-5 w-5 mr-2" />
+                        Réessayer
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => router.back()}
+                    variant="outline"
+                    className="px-8 py-6 text-lg font-semibold border-2"
+                  >
+                    Retour
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 md:p-6 lg:p-8">
+        <div className="max-w-[1920px] mx-auto">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-3 md:p-4 rounded-2xl shadow-lg">
+                <ShoppingCart className="h-6 w-6 md:h-7 md:w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">
+                  Tableau des Commandes Validées
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm md:text-base lg:text-lg">
+                  Analyse des commandes groupées par modèle et caractéristiques
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Card */}
+          <Card className="shadow-xl border-0 overflow-hidden">
+            <CardContent className="p-16">
+              <div className="flex flex-col items-center justify-center space-y-6">
+                <RefreshCw className="h-12 w-12 text-blue-600 animate-spin" />
+                <p className="text-xl font-semibold text-gray-700">
+                  Chargement des données...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 md:p-6 lg:p-8">
@@ -334,7 +579,10 @@ const TableauCommandesClient = ({ commandes }: Props) => {
 
         {/* Additional Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="shadow-md border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
+          <Card 
+            onClick={() => setDialogOpen(true)}
+            className="shadow-md border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 cursor-pointer hover:shadow-lg transition-shadow hover:bg-orange-50/50 hover:text-orange-700 hover:border-orange-700"
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -342,6 +590,20 @@ const TableauCommandesClient = ({ commandes }: Props) => {
                   <p className="text-2xl font-bold text-orange-600">{summaryStats.totalEnAttente}</p>
                 </div>
                 <AlertCircle className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2" 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDialogOpen(true)
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Diffuser aux commerciaux
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -379,7 +641,7 @@ const TableauCommandesClient = ({ commandes }: Props) => {
                 <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-sm">
                   <Car className="h-6 w-6" />
                 </div>
-                <div>
+    <div>
                   <CardTitle className="text-white text-xl md:text-2xl">Tableau des Commandes</CardTitle>
                   <p className="text-blue-100 text-sm mt-0.5">
                     {tableData.length} ligne{tableData.length > 1 ? 's' : ''} de données • Analyse détaillée par modèle
@@ -558,7 +820,7 @@ const TableauCommandesClient = ({ commandes }: Props) => {
                                 <div className="flex flex-col items-center">
                                   <div className="flex items-center gap-1">
                                     <TrendingDown className="h-4 w-4 text-orange-500" />
-                                    <span className="font-bold text-orange-600 text-lg md:text-xl">{row.enAttente}</span>
+                                    <span className="font-bold text-orange-600 text-lg md:text-xl">{Math.abs(row.enAttente)}</span>
                                   </div>
                                   <Badge className="bg-orange-100 text-orange-700 text-xs mt-1">Manquant</Badge>
                                 </div>
@@ -611,6 +873,82 @@ const TableauCommandesClient = ({ commandes }: Props) => {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog for En Attente */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <AlertCircle className="h-6 w-6 text-orange-500" />
+                Commandes en Attente
+              </DialogTitle>
+              <DialogDescription>
+                Modèles nécessitant des commandes supplémentaires pour compléter les groupes
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              {modelsEnAttente.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Aucun modèle en attente</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {modelsEnAttente.map((item, index) => (
+                    <Card key={index} className="border border-orange-200 bg-orange-50/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-orange-100 p-2 rounded-lg">
+                              <Car className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{item.model}</p>
+                              <p className="text-sm text-gray-600">Quantité en attente</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge className="bg-orange-500 text-white text-lg px-4 py-1">
+                              {item.qteEnAttente}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={isSaving}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleDiffuserAuxCommerciaux}
+                disabled={isSaving || modelsEnAttente.length === 0}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Diffusion en cours...
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-4 w-4 mr-2" />
+                    Diffuser aux commerciaux
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

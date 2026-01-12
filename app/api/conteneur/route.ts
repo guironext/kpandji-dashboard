@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { EtapeConteneur, EtapeCommandeGroupee } from '@/lib/generated/prisma'
+import { EtapeConteneur, EtapeCommandeGroupee, EtapeCommande } from '@/lib/generated/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +15,15 @@ export async function POST(request: NextRequest) {
       dateEmbarquement, 
       dateArriveProbable,
       commandeIds,
-      updateToTransite 
+      updateToTransite,
+      etapeCommande,
+      etapeConteneur
     } = body
 
     // Validate required fields
-    if (!conteneurNumber || !sealNumber) {
+    if (!conteneurNumber) {
       return NextResponse.json(
-        { error: 'Le numéro de conteneur et le numéro de scellé sont requis' },
+        { error: 'Le numéro de conteneur est requis' },
         { status: 400 }
       )
     }
@@ -73,19 +75,26 @@ export async function POST(request: NextRequest) {
         stuffingMap,
         dateEmbarquement: dateEmbarquement ? new Date(dateEmbarquement) : null,
         dateArriveProbable: dateArriveProbable ? new Date(dateArriveProbable) : null,
-        etapeConteneur: EtapeConteneur.CHARGE,
+        etapeConteneur: etapeConteneur ? (etapeConteneur as EtapeConteneur) : EtapeConteneur.CHARGE,
       },
     })
 
-    // Update commandes to link them to the conteneur and optionally set to TRANSITE
+    // Update commandes to link them to the conteneur and set etapeCommande if provided
+    const updateData: { conteneurId: string; etapeCommande?: EtapeCommande } = {
+      conteneurId: conteneur.id,
+    }
+    
+    if (etapeCommande) {
+      updateData.etapeCommande = etapeCommande as EtapeCommande
+    } else if (updateToTransite) {
+      updateData.etapeCommande = EtapeCommande.TRANSITE
+    }
+
     await prisma.commande.updateMany({
       where: {
         id: { in: commandeIds },
       },
-      data: {
-        conteneurId: conteneur.id,
-        ...(updateToTransite && { etapeCommande: 'TRANSITE' }),
-      },
+      data: updateData,
     })
 
     // Group commandes by commandeGroupeeId to track which ones need to be updated

@@ -13,7 +13,7 @@ npx prisma init
 |!!npx prisma dev
 ||| npx prisma migrate dev
 |||| 
-npx prisma migrate reset
+npx prisma migrate reset   ////All data will be lost.
 |||| npx prisma db push
 npm i @prisma/client
 npm i --save-dev prisma@latest                       │
@@ -51,3 +51,8 @@ we want to activate this button at line 241 so that when we click it open a html
 +++++++++++++++++++++++++++++++++
 in this page we want to dispolay all commande with etapeCommande===valide and groupe them by voitureModel.  we want you to help us defined "Groupe Commande" that will be the minimum quantity of vehicule to order. for exemple if voiture model is equal to "KPANDJI DJETRAN BVA DIESEL" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur. if voiture model is equal to "KPANDJI DJETRAN BVM DIESEL" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur.  if voiture model is equal to "KPANDJI DJETRAN BVM ESSENCE" we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur. if  voiture model is aqual to "KPANDJI DJETRAN BVA ESSENCE", we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneur.
 if voiture model is equal to KPANDJI CAVALLY, we need 8 cars to have a minimun order and this minimum order equivallent to 3 conteneurs.
+if voiture model is equal to KPANDJI LATHAYE, we need 3 cars to have a minimun order and this minimum order equivallent to 1 conteneurs.
+if voiture model is equal to KPANDJI BANCO, we need 11 cars to have a minimun order and this minimum order equivallent to 2 conteneurs.
+if voiture model is equal to KPANDJI DJETRAN PLUS, we need 2 cars to have a minimun order and this minimum order equivallent to 1 conteneurs.
+++++++++++++++++++++++++
+can you add to the function  const printContent, this code below as it is @page.tsx (777-779) 

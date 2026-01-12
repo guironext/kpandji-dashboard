@@ -69,21 +69,31 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 
 // Handle connection errors and reconnect
 (prisma.$on as (event: 'error' | 'warn', callback: (e: unknown) => void) => void)('error', (e: unknown) => {
-  const error = e as { message?: string; code?: string };
-  // Only log connection errors in development, suppress in production to reduce noise
+  const error = e as { message?: string; code?: string; kind?: string };
+  
+  // Check if this is a connection closed error (these are normal and Prisma handles them automatically)
+  const errorString = JSON.stringify(e);
+  const isConnectionClosedError = 
+    (error.message && (
+      error.message.includes('Closed') || 
+      error.message.includes('connection') && error.message.includes('Closed')
+    )) ||
+    (errorString && errorString.includes('kind: Closed')) ||
+    (errorString && errorString.includes('"kind":"Closed"'));
+  
+  // Suppress connection closed errors - Prisma will automatically reconnect on next query
+  if (isConnectionClosedError) {
+    // These are normal connection pool lifecycle events, no action needed
+    // Prisma Client manages connections automatically
+    return;
+  }
+  
+  // Log other errors
   if (process.env.NODE_ENV === 'development') {
     console.error('Prisma Client Error:', e);
   } else {
-    // In production, only log critical errors (not connection closed errors)
-    if (error.message && !error.message.includes('Closed')) {
-      console.error('Prisma Client Error:', e);
-    }
-  }
-  
-  // Attempt to reconnect on connection errors
-  if (error.message && error.message.includes('connection')) {
-    // Prisma will automatically reconnect on next query
-    // No manual reconnection needed
+    // In production, log all non-connection-closed errors
+    console.error('Prisma Client Error:', e);
   }
 });
 
@@ -118,11 +128,18 @@ export async function executeWithRetry<T>(
       lastError = error;
       
       // Check if it's a connection error
+      const errorString = typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error);
       const isConnectionError = 
         (error instanceof Error && (
           error.message.includes('connection') ||
           error.message.includes('ConnectionReset') ||
-          error.message.includes('closed by the remote host')
+          error.message.includes('closed by the remote host') ||
+          error.message.includes('Closed')
+        )) ||
+        (errorString && (
+          errorString.includes('kind: Closed') ||
+          errorString.includes('"kind":"Closed"') ||
+          errorString.includes('Closed')
         )) ||
         (typeof error === 'object' && error !== null && 'code' in error && 
          (error.code === 'P1001' || error.code === 'P1017' || error.code === 'P1008'));

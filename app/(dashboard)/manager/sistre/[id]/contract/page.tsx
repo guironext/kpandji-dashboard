@@ -86,7 +86,7 @@ export default function SalesContractPage() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return `${year}/${day}/${month}`;
+    return `${year}/${month}/${day}`;
   };
 
   const formatCurrency = (amount: number) => {
@@ -178,8 +178,6 @@ export default function SalesContractPage() {
     ).trim();
   };
 
- 
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -263,13 +261,26 @@ export default function SalesContractPage() {
     .page {
       width: 21cm;
       min-height: 29.7cm;
-      padding: 2cm;
+      padding: 1.5cm;
       margin: 0 auto;
       background: white;
       page-break-after: always;
       position: relative;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       counter-increment: page;
+    }
+
+    .header-title-sistre {
+     display: flex-end;
+     text-align: right;
+     font-style: italic;
+      width: 100%;
+      font-size: 18pt;
+      font-weight: bold;
+      margin-bottom: 0.5cm;
+      text-transform: uppercase;
+      border-bottom: 2px solid #000;
+      
     }
     
     .page:last-child {
@@ -290,9 +301,9 @@ export default function SalesContractPage() {
     
     h1 {
       text-align: center;
-      font-size: 18pt;
+      font-size: 18pt; 
       font-weight: bold;
-      margin-bottom: 1.5cm;
+      margin-bottom: 0.5cm;
       text-transform: uppercase;
     }
     
@@ -300,7 +311,7 @@ export default function SalesContractPage() {
       display: flex;
       justify-content: space-between;
       font-size: 10pt;
-      margin-bottom: 1cm;
+      margin-bottom: 0.5cm;
     }
     
     .parties {
@@ -400,6 +411,9 @@ export default function SalesContractPage() {
 </head>
 <body>
   <div class="page">
+  <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>      
     <h1>SALES CONTRACT</h1>
     
     <div class="header-info">
@@ -443,30 +457,45 @@ export default function SalesContractPage() {
           </tr>
         </thead>
         <tbody>
-          ${invoice.lineItems.map((item, index) => `
+          ${invoice.lineItems
+            .map(
+              (item, index) => `
             <tr>
               <td>${index + 1}</td>
               <td>Brand Name : ${item.description}</td>
               <td class="text-center">${item.quantity}</td>
               <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-              <td class="text-right">${formatCurrency(item.unitPrice * item.quantity)}</td>
+              <td class="text-right">${formatCurrency(
+                item.unitPrice * item.quantity
+              )}</td>
             </tr>
-          `).join("")}
+          `
+            )
+            .join("")}
           <tr>
             <td></td>
             <td></td>
-            <td class="text-center">${invoice.lineItems.reduce((sum, item) => sum + item.quantity, 0)}</td>
+            <td class="text-center">${invoice.lineItems.reduce(
+              (sum, item) => sum + item.quantity,
+              0
+            )}</td>
             <td></td>
-            <td class="text-right"><strong>${formatCurrency(totalAmount)}</strong></td>
+            <td class="text-right"><strong>${formatCurrency(
+              totalAmount
+            )}</strong></td>
           </tr>
         </tbody>
       </table>
       <p style="margin-top: 0.5cm;">
-        TOTAL FOB SHANGHAI, China : USD $${formatCurrency(totalAmount)} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY)
+        TOTAL FOB Qingdao, China : USD $${formatCurrency(
+          totalAmount
+        )} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY)
       </p>
     </div>
     <div class="section">
-      <p class="section-title">2. TOTAL CONTRACT VALUE : $${formatCurrency(totalAmount)} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY).</p>
+      <p class="section-title">2. TOTAL CONTRACT VALUE : $${formatCurrency(
+        totalAmount
+      )} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY).</p>
     </div>
     
     <div class="section">
@@ -493,9 +522,14 @@ export default function SalesContractPage() {
     
     
     <div class="section">
+      <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>   
       <p class="section-title">7. TERMS OF PAYMENT :</p>
       <p class="section-content">
-        Buyer shall pay Seller the deposit by T/T within 15 days after signing the Sale Contract by two parties, which is USD $${formatCurrency(totalAmount)} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY) shall be paid by T/T within 15 days after receiving the notification of commodity production completion from Seller.
+        Buyer shall pay Seller the deposit by T/T within 15 days after signing the Sale Contract by two parties, which is USD $${formatCurrency(
+          totalAmount
+        )} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY) shall be paid by T/T within 15 days after receiving the notification of commodity production completion from Seller.
       </p>
       <p class="section-content">
         Any bank charges incurred in P.R.China (excluding Hong Kong, Macao and Taiwan) shall be borne by the Seller.
@@ -559,6 +593,9 @@ export default function SalesContractPage() {
   
   <div class="page">
     
+  <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>  
     
     <div class="section">
       <p class="section-title">13. PORT OF DESTINATION : Abidjan PORT, Cote D'lvoire</p>
@@ -600,6 +637,9 @@ export default function SalesContractPage() {
   </div>
   
   <div class="page">
+  <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>  
     <div class="section">
       <p class="section-title">17. AFTER-SALES SERVICE :</p>
       <p class="section-content">
@@ -617,7 +657,7 @@ export default function SalesContractPage() {
         18.1 The Seller shall only accept claims from the Buyer in accordance with this sales contract and shall not accept claims from any third parties and/or vehicle users; pursuant to this sales contract, claimable amount by the Buyer from the Seller shall not exceed the non-conformity quality of commodity parts and spare parts total value supplied by The Seller; The Seller shall not be liable for the Buyer's investment funds, equipment, personnel direct and/or indirect losses and the Buyer's expected losses on vehicle assembling and selling during the performance of this Sales Contract.
       </p>
       <p class="section-content">
-        18.2 The Buyer warrants that it has complete and comprehensive understandings and has behaved and/or carried out its operations in strict accordance with the laws and regulations in the Ghana. Before selling, the Buyer shall establish its own whole vehicle quality standard, whole vehicle inspection and acceptance standards and assemble vehicles according to such standards and make necessary and enough adaptability tests to make sure that the assembled vehicles meet the requirements of the local laws, regulations and quality standard. The quality of the vehicles assembled by the Buyer and the quality defects of the commodity parts caused in welding and assembling should be bear by the Buyer.
+        18.2 The Buyer warrants that it has complete and comprehensive understandings and has behaved and/or carried out its operations in strict accordance with the laws and regulations in Cote D'Ivoire. Before selling, the Buyer shall establish its own whole vehicle quality standard, whole vehicle inspection and acceptance standards and assemble vehicles according to such standards and make necessary and enough adaptability tests to make sure that the assembled vehicles meet the requirements of the local laws, regulations and quality standard. The quality of the vehicles assembled by the Buyer and the quality defects of the commodity parts caused in welding and assembling should be bear by the Buyer.
       </p>
     </div>
     
@@ -640,7 +680,9 @@ export default function SalesContractPage() {
   
   <div class="page">
     
-    
+    <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>  
     <div class="section">
       <p class="section-title">21. DEFAULT CLAUSE :</p>
       <p class="section-content">
@@ -662,6 +704,9 @@ export default function SalesContractPage() {
   </div>
   
   <div class="page">
+    <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>   
     <div class="section">
       <p class="section-title">23. ARBITRATE CLAUSE :</p>
       <p class="section-content">
@@ -693,6 +738,9 @@ export default function SalesContractPage() {
   </div>
   
   <div class="page">
+  <div class="header-title-sistre"> 
+    SISTRE GLOBAL SOURCING PTE LTD
+  </div>  
     <div class="section">
       <p class="section-title">27. OTHER PROVISIONS :</p>
       <p class="section-content">
@@ -715,20 +763,24 @@ export default function SalesContractPage() {
         </div>
         <div class="signature-line"></div>
         <p>Seal and signature:</p>
-        <p style="margin-top: 0.5cm;">Date: ${formatDateShort(invoice.invoiceDate)}</p>
+        <p style="margin-top: 0.5cm;">Date: ${formatDateShort(
+          invoice.invoiceDate
+        )}</p>
       </div>
       
       <div class="signature-block">
         <p><strong>BUYER:</strong></p>
         <p><strong>KPANDJI AUTOMOBILES</strong></p>
         <p>Name of the authorized representative:</p>
-        <p style="margin-bottom: 0.5cm;">KOUAME NDA NGORAN BERNARD</p>
+        <p style="margin-bottom: 1.4cm;">KOUAME NDA NGORAN BERNARD</p>
         <div style="display: flex; gap: 1cm; margin-bottom: 0.5cm;">
           <img src="${baseUrl}/sistre4.png" alt="Buyer signature" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
         </div>
         <div class="signature-line"></div>
         <p>Seal and signature:</p>
-        <p style="margin-top: 0.5cm;">Date: ${formatDateShort(invoice.invoiceDate)}</p>
+        <p style="margin-top: 1.5cm;">Date: ${formatDateShort(
+          invoice.invoiceDate
+        )}</p>
       </div>
     </div>
     
@@ -740,7 +792,7 @@ export default function SalesContractPage() {
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     // Wait for content to load, then trigger print dialog
     setTimeout(() => {
       printWindow.focus();
@@ -774,6 +826,9 @@ export default function SalesContractPage() {
         >
           {/* Header */}
           <div className="text-center mb-8">
+            <div className="text-2xl pb-2 text-right mb-2 font-medium border-b-2 border-black w-full italic">
+              SISTRE GLOBAL SOURCING PTE LTD
+            </div>
             <h1 className="text-2xl font-bold mb-8">SALES CONTRACT</h1>
             <div className="flex justify-between items-start text-sm mb-6">
               <div>
@@ -789,7 +844,6 @@ export default function SalesContractPage() {
 
           {/* Seller and Buyer Info */}
           <div className="flex w-full justify-between mb-8 text-sm">
-
             <div>
               <p className="font-semibold mb-2">
                 SELLER: SISTRE GLOBAL SOURCING PTE LTD
@@ -870,7 +924,7 @@ export default function SalesContractPage() {
               </tbody>
             </table>
             <p className="text-sm mb-4">
-              TOTAL FOB SHANGHAI, China : USD ${formatCurrency(totalAmount)}{" "}
+              TOTAL FOB Qingdao, China : USD ${formatCurrency(totalAmount)}{" "}
               (SAY US DOLLAR {totalInWords.toUpperCase()} ONLY)
             </p>
           </div>
@@ -1139,7 +1193,7 @@ export default function SalesContractPage() {
             <p className="ml-4 mt-2">
               18.2 The Buyer warrants that it has complete and comprehensive
               understandings and has behaved and/or carried out its operations
-              in strict accordance with the laws and regulations in the Ghana.
+              in strict accordance with the laws and regulations in Cote D&apos;Ivoire.
               Before selling, the Buyer shall establish its own whole vehicle
               quality standard, whole vehicle inspection and acceptance
               standards and assemble vehicles according to such standards and
@@ -1335,15 +1389,14 @@ export default function SalesContractPage() {
               <p className="font-semibold mb-4">KPANDJI AUTOMOBILES</p>
               <p className="mb-2">Name of the authorized representative:</p>
               <p className="mb-8 font-bold">KOUAME NDA NGORAN BERNARD</p>
-              <div className="mb-4 flex items-center gap-4">
+              <div className="mb-1 flex items-center gap-4">
                 <Image
                   src="/sistre4.png"
                   alt="Seller signature"
-                  width={100}
+                  width={180}
                   height={100}
                   className="object-contain"
                 />
-               
               </div>
               <div className="border-t border-black w-48 mb-2"></div>
               <p>Seal and signature:</p>

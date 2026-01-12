@@ -89,12 +89,14 @@ const ChargerConteneurClient = ({ commandes, model, conteneursNeeded }: Props) =
     })
   }
 
-  const handleSave = async () => {
+
+
+  const handleSave2 = async () => {
     // Validate all conteneurs
     for (let i = 0; i < conteneurs.length; i++) {
       const conteneur = conteneurs[i]
-      if (!conteneur.conteneurNumber || !conteneur.sealNumber) {
-        toast.error(`Le numéro de conteneur et le numéro de scellé sont requis pour le conteneur ${i + 1}`)
+      if (!conteneur.conteneurNumber) {
+        toast.error(`Le numéro de conteneur est requis pour le conteneur ${i + 1}`)
         return
       }
     }
@@ -133,7 +135,8 @@ const ChargerConteneurClient = ({ commandes, model, conteneursNeeded }: Props) =
             dateEmbarquement: conteneur.dateEmbarquement ? conteneur.dateEmbarquement.toISOString() : undefined,
             dateArriveProbable: conteneur.dateArriveProbable ? conteneur.dateArriveProbable.toISOString() : undefined,
             commandeIds,
-            updateToTransite: true // Flag to update commandes to TRANSITE
+            etapeCommande: 'CHARGE', // Set etapeCommande to CHARGE
+            etapeConteneur: 'CHARGE' // Set etapeConteneur to CHARGE
           })
         })
 
@@ -143,7 +146,7 @@ const ChargerConteneurClient = ({ commandes, model, conteneursNeeded }: Props) =
         }
       }
 
-      toast.success(`${conteneurs.length} conteneur(s) créé(s) avec succès! ${commandes.length} commande(s) mise(s) en transit`)
+      toast.success(`${conteneurs.length} conteneur(s) créé(s) avec succès! ${commandes.length} commande(s) mise(s) à jour`)
       router.push('/manager/tableau-commandes')
     } catch (error) {
       console.error('Error creating conteneurs:', error)
@@ -232,7 +235,7 @@ const ChargerConteneurClient = ({ commandes, model, conteneursNeeded }: Props) =
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`sealNumber-${index}`}>Numéro de scellé *</Label>
+                      <Label htmlFor={`sealNumber-${index}`}>Numéro de scellé </Label>
                       <Input
                         id={`sealNumber-${index}`}
                         value={conteneur.sealNumber}
@@ -326,7 +329,7 @@ const ChargerConteneurClient = ({ commandes, model, conteneursNeeded }: Props) =
             Annuler
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={handleSave2}
             disabled={isSaving || conteneursNeeded === 0}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
           >

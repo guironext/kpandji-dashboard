@@ -224,8 +224,23 @@ export async function getCommandesValides() {
     // Check if it's a connection error
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorCode = (error as { code?: string })?.code;
+    const errorString = String(error).toLowerCase();
     
-    if (errorCode === 'P1001' || errorMessage.includes('connection') || errorMessage.includes('Closed')) {
+    // Check for various connection error patterns
+    const isConnectionError = 
+      errorCode === 'P1001' || 
+      errorMessage.includes('connection') || 
+      errorMessage.includes('connexion') ||
+      errorMessage.includes('Closed') ||
+      errorMessage.includes('closed') ||
+      errorMessage.includes('reset') ||
+      errorMessage.includes('Reset') ||
+      errorString.includes('kind: closed') ||
+      errorString.includes('kind: connectionreset') ||
+      errorString.includes('connectionreset') ||
+      errorString.includes('connection closed')
+    
+    if (isConnectionError) {
       // Try to reconnect
       try {
         await prisma.$disconnect();
@@ -253,11 +268,24 @@ export async function getCommandesValides() {
         return { success: true, data: serializedCommandes };
       } catch (retryError) {
         console.error("Retry failed:", retryError);
-        return { success: false, error: "Database connection failed. Please check your database server." };
+        const retryErrorString = String(retryError).toLowerCase();
+        
+        // Provide more specific error message
+        if (retryErrorString.includes('kind: closed') || retryErrorString.includes('connection closed')) {
+          return { success: false, error: "La connexion à la base de données a été fermée. Veuillez vérifier que le serveur de base de données est en cours d'exécution." };
+        }
+        
+        return { success: false, error: "Échec de la connexion à la base de données. Veuillez vérifier votre serveur de base de données et réessayer." };
       }
     }
     
-    return { success: false, error: "Failed to fetch commandes valides" };
+    // Provide more specific error message for non-connection errors
+    // Reuse errorString already defined above
+    if (errorString.includes('kind: closed') || errorString.includes('connection closed')) {
+      return { success: false, error: "La connexion à la base de données a été fermée. Veuillez réessayer." };
+    }
+    
+    return { success: false, error: "Échec du chargement des commandes validées. Veuillez réessayer." };
   }
 }
 
