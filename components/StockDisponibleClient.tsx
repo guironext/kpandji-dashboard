@@ -71,7 +71,7 @@ type Commande = {
   conteneur: {
     id: string
     conteneurNumber: string
-    sealNumber: string
+    sealNumber: string | null
     etapeConteneur: string
     dateEmbarquement: string | null
     dateArriveProbable: string | null
