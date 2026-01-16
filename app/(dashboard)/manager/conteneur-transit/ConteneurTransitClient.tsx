@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +21,9 @@ import {
   Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { markConteneurAsArrive } from "@/lib/actions/conteneur";
+import { useRouter } from "next/navigation";
 
 type CommandeType = {
   id: string;
@@ -70,6 +73,51 @@ const ConteneurTransitClient: React.FC<Props> = ({
   conteneursNonRenseigne,
   conteneursDejaRenseigne,
 }) => {
+  const router = useRouter();
+  const [loadingConteneurId, setLoadingConteneurId] = useState<string | null>(null);
+
+  const handleDispatchArrive = async (conteneur: ConteneurType) => {
+    // Check if all commandes have the same etapeCommande
+    const allCommandesNonRenseigne = conteneur.commandes.every(
+      (cmd) => cmd.etapeCommande === "TRANSITE_NON_RENSEIGNE"
+    );
+    const allCommandesDejaRenseigne = conteneur.commandes.every(
+      (cmd) => cmd.etapeCommande === "TRANSITE_DEJA_RENSEIGNE"
+    );
+
+    // Check if conteneur is TRANSITE_NON_RENSEIGNE and all commandes are TRANSITE_NON_RENSEIGNE
+    if (
+      conteneur.etapeConteneur === "TRANSITE_NON_RENSEIGNE" &&
+      allCommandesNonRenseigne
+    ) {
+      toast.error(
+        "Ce conteneur n'est pas encore renseigné. Veuillez donner la liste des pièces au magasinier pour renseignement."
+      );
+      return;
+    }
+
+    // Check if conteneur is TRANSITE_DEJA_RENSEIGNE and all commandes are TRANSITE_DEJA_RENSEIGNE
+    if (
+      conteneur.etapeConteneur === "TRANSITE_DEJA_RENSEIGNE" &&
+      allCommandesDejaRenseigne
+    ) {
+      setLoadingConteneurId(conteneur.id);
+      try {
+        const result = await markConteneurAsArrive(conteneur.id);
+        if (result.success) {
+          toast.success("Conteneur marqué comme arrivé avec succès");
+          router.refresh();
+        } else {
+          toast.error(result.error || "Erreur lors de la mise à jour");
+        }
+      } catch (error) {
+        toast.error("Erreur lors de la mise à jour du conteneur");
+        console.error(error);
+      } finally {
+        setLoadingConteneurId(null);
+      }
+    }
+  };
   const statsNonRenseigne = useMemo(() => {
     const totalCommandes = conteneursNonRenseigne.reduce(
       (sum, c) => sum + c.commandes.length,
@@ -148,7 +196,10 @@ const ConteneurTransitClient: React.FC<Props> = ({
         className={`group relative overflow-hidden bg-gradient-to-br from-white via-purple-50/30 to-blue-50/20 border-2 ${borderColor} p-6 md:p-8 rounded-3xl transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 backdrop-blur-sm`}
         style={{
           animationDelay: `${index * 100}ms`,
-          animation: "fadeInUp 0.6s ease-out forwards",
+          animationName: "fadeInUp",
+          animationDuration: "0.6s",
+          animationTimingFunction: "ease-out",
+          animationFillMode: "forwards",
         }}
       >
         {/* Decorative gradient overlay */}
@@ -287,16 +338,20 @@ const ConteneurTransitClient: React.FC<Props> = ({
                   </div>
                   
                   <Button
+                    onClick={() => handleDispatchArrive(conteneur)}
+                    disabled={loadingConteneurId === conteneur.id}
                     className={`group/btn relative overflow-hidden bg-gradient-to-r ${
                       isNonRenseigne
                         ? "from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:via-orange-600 hover:to-red-600"
                         : "from-amber-500 via-amber-500 to-orange-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600"
-                    } text-white shadow-lg hover:shadow-xl px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 hover:scale-105 border-0`}
+                    } text-white shadow-lg hover:shadow-xl px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 hover:scale-105 border-0 disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative flex items-center gap-2">
                       <Edit className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
-                      <span className="text-lg md:text-xl  px-2 py-3">Dispatchez Arrivé</span>
+                      <span className="text-lg md:text-xl  px-2 py-3">
+                        {loadingConteneurId === conteneur.id ? "Traitement..." : "Dispatch Arrivé"}
+                      </span>
                     </div>
                   </Button>
                 </div>

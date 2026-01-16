@@ -1,6 +1,8 @@
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
+import { prisma } from '@/lib/prisma'
+import { UserRole } from '@/lib/generated/prisma'
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET
@@ -52,8 +54,42 @@ export async function POST(req: Request) {
 
 
   if (eventType === "user.created") {
-    console.log("User is trying to sign up")
-    console.log(evt.data)
+    try {
+      const userData = evt.data;
+      const clerkId = userData.id;
+      const email = userData.email_addresses?.[0]?.email_address;
+      const firstName = userData.first_name || "Unknown";
+      const lastName = userData.last_name || "User";
+
+      if (!email) {
+        console.error("No email found for user:", clerkId);
+        return new Response('Webhook received but no email found', { status: 200 });
+      }
+
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { clerkId },
+      });
+
+      if (!existingUser) {
+        // Create user in database with default role
+        await prisma.user.create({
+          data: {
+            clerkId,
+            email,
+            firstName,
+            lastName,
+            role: UserRole.EMPLOYEE, // Default role, can be updated during onboarding
+          },
+        });
+        console.log(`User created in database: ${email}`);
+      } else {
+        console.log(`User already exists: ${email}`);
+      }
+    } catch (error) {
+      console.error("Error creating user from webhook:", error);
+      // Don't fail the webhook, just log the error
+    }
   }
 
   console.log(`Received webhook with ID ${id} and event type of ${eventType}`)

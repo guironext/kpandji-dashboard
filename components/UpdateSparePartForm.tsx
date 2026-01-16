@@ -163,7 +163,7 @@ export function UpdateSparePartForm({ sparePart, voitures }: UpdateSparePartForm
               <SelectContent>
                 {voitures.map((voiture) => (
                   <SelectItem key={voiture.id} value={voiture.id}>
-                    {voiture.voitureModel?.model || "Modèle inconnu"} - {voiture.couleur}
+                    {voiture.voitureModel?.model || "Modèle inconnu"}
                   </SelectItem>
                 ))}
               </SelectContent>

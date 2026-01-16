@@ -239,6 +239,7 @@ model Voiture {
   spareParts         SparePart[]
   tableaux_chute     Tableau_chute[]
   testes             Teste[]
+  ordreMontages      OrdreMontage[]
   clientEntreprise   Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id])
   client             Client?             @relation(fields: [clientId], references: [id])
   commande           Commande?           @relation(fields: [commandeId], references: [id])
@@ -422,6 +423,7 @@ model Commande {
   fournisseurs       Fournisseur[]      @relation("CommandeToFournisseur")
   commandeEnAttente  CommandeEnAttente?
   courrieAvantages   CourrieAvantage[]
+  ordreMontages      OrdreMontage[]
 }
 
 model CommandeEnAttente {
@@ -448,6 +450,28 @@ model CommandeGroupee {
   commandes            Commande[]
 }
 
+model NumeroChassis {
+  id              String         @id @default(uuid())
+  chassisNumber   String         @unique
+  motorisation    Motorisation
+  numeroConteneur String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  ordreMontages   OrdreMontage[]
+}
+
+model OrdreMontage {
+  id              String        @id @default(uuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  commandeId      String
+  commande        Commande      @relation(fields: [commandeId], references: [id])
+  voitureId       String
+  voiture         Voiture       @relation(fields: [voitureId], references: [id])
+  numeroChassisId String
+  numeroChassis   NumeroChassis @relation(fields: [numeroChassisId], references: [id])
+}
+
 model Conteneur {
   id                 String                  @id @default(uuid())
   conteneurNumber    String                  @unique
@@ -456,6 +480,7 @@ model Conteneur {
   grossWeight        String?
   netWeight          String?
   stuffingMap        String?
+  isVerified         Boolean                 @default(false)
   dateEmbarquement   DateTime?
   dateArriveProbable DateTime?
   createdAt          DateTime                @default(now())
@@ -486,6 +511,7 @@ model CourrieAvantage {
 model Subcase {
   id            String      @id @default(uuid())
   subcaseNumber String
+  isVerified    Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   conteneurId   String
@@ -529,6 +555,7 @@ model SparePart {
   partCode                     String
   partName                     String
   partNameFrench               String?
+  verificationName             String?
   quantity                     Int
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
@@ -638,11 +665,11 @@ model VerificationConteneur {
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   conteneurId         String
+  conteneur           Conteneur             @relation(fields: [conteneurId], references: [id])
   PieceComplement     PieceComplement[]
   rapportVerification RapportVerification[]
   spares              SparePart[]
   tools               Tool[]
-  conteneur           Conteneur             @relation(fields: [conteneurId], references: [id])
 }
 
 model RapportVerification {
@@ -899,6 +926,7 @@ enum EtapeCommande {
   TRANSITE_DEJA_RENSEIGNE
   RENSEIGNEE
   ARRIVE
+  DEPOTAGE_EN_COURS
   VERIFIER
   MONTAGE
   TESTE
@@ -922,15 +950,15 @@ enum EtapeConteneur {
   TRANSITE_NON_RENSEIGNE
   TRANSITE_DEJA_RENSEIGNE
   ARRIVE
-  DECHARGE
-  VERIFIE
+  DEPOTAGE_EN_COURS
+  VERIFIER
 }
 
 enum EtapeTool {
   TRANSITE
   RENSEIGNE
   ARRIVE
-  VERIFIE
+  VERIFIER
   ATTRIBUE
   CONSOMME
   RETOUR
@@ -943,7 +971,8 @@ enum EtapeSparePart {
   TRANSITE_DEJA_RENSEIGNE
   RENSEIGNE
   ARRIVE
-  VERIFIE
+  DEPOTAGE_EN_COURS
+  VERIFIER
   ATTRIBUE
   CONSOMME
   RETOUR

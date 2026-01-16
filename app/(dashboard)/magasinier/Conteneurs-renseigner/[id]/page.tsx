@@ -53,6 +53,7 @@ type Conteneur = {
       partCode: string;
       partName: string;
       partNameFrench: string | null;
+      verificationName: string | null;
       quantity: number;
     }>;
   }>;
@@ -90,6 +91,7 @@ export default function ConteneurRenseignerDetailPage() {
     partCode: string;
     partName: string;
     partNameFrench: string | null;
+    verificationName: string | null;
     quantity: number;
     subcaseId: string;
   } | null>(null);
@@ -136,6 +138,7 @@ export default function ConteneurRenseignerDetailPage() {
       partCode: string;
       partName: string;
       partNameFrench: string | null;
+      verificationName: string | null;
       quantity: number;
     },
     subcaseId: string
@@ -145,6 +148,7 @@ export default function ConteneurRenseignerDetailPage() {
       partCode: sparePart.partCode,
       partName: sparePart.partName,
       partNameFrench: sparePart.partNameFrench,
+      verificationName: sparePart.verificationName,
       quantity: sparePart.quantity,
       subcaseId,
     });
@@ -176,7 +180,7 @@ export default function ConteneurRenseignerDetailPage() {
 
 
 
-  const handleCloseConteneur = useCallback(async () => {
+  const handleCloseConteneur1 = useCallback(async () => {
     if (!conteneurId) {
       toast.error("ID du conteneur manquant");
       return;
@@ -197,15 +201,16 @@ export default function ConteneurRenseignerDetailPage() {
           duration: 3000,
         });
         setTimeout(() => {
-          router.back();
+          router.push("/magasinier/Conteneurs-renseigner");
         }, 1500);
       } else {
+        console.error("Update failed:", result.error);
         toast.error(result.error || "Erreur lors de la clôture du conteneur");
       }
     } catch (error) {
       console.error("Error closing conteneur:", error);
       toast.dismiss("updating-conteneur");
-      toast.error("Une erreur est survenue lors de la clôture du conteneur");
+      toast.error(`Une erreur est survenue lors de la clôture du conteneur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     } finally {
       setIsClosingConteneur(false);
     }
@@ -297,41 +302,61 @@ export default function ConteneurRenseignerDetailPage() {
       </div>
 
       {/* Fixed Action Button - Mobile Only (Floating Action Button) */}
-      <div className="fixed bottom-6 right-6 z-50 lg:hidden">
+      <div className="fixed bottom-6 right-6 z-[200] lg:hidden">
         <div className="relative group">
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <Button
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+          <button
             type="button"
-            onClick={handleCloseConteneur}
+            onClick={handleCloseConteneur1}
             disabled={isClosingConteneur}
-            size="lg"
-            className="relative bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-bold shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 px-6 py-5 rounded-2xl flex items-center gap-2 text-base hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-sm font-semibold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isClosingConteneur ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="hidden sm:inline">Mise à jour...</span>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Mise à jour...
               </>
             ) : (
               <>
-                <ClipboardCheck className="w-5 h-5" />
-                <span className="hidden sm:inline">Fermer</span>
+                <ClipboardCheck className="w-4 h-4 mr-2" />
+                Fermer
               </>
             )}
-          </Button>
+          </button>
         </div>
+      </div>
+
+      {/* Fixed Close Button - Desktop Only */}
+      <div className="hidden lg:block fixed top-24 right-8 z-[200]">
+        <button
+          type="button"
+          onClick={handleCloseConteneur1}
+          disabled={isClosingConteneur}
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 h-10 px-6 py-2"
+        >
+          {isClosingConteneur ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Mise à jour...
+            </>
+          ) : (
+            <>
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              Fermer le conteneur
+            </>
+          )}
+        </button>
       </div>
 
       <div className="relative z-10 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
         {/* Enhanced Header */}
-        <Card className="bg-white/95 backdrop-blur-xl border-0 shadow-2xl ring-1 ring-purple-100/50 hover:ring-purple-200/70 transition-all duration-300 overflow-hidden">
+        <Card className="bg-white/95 backdrop-blur-xl border-0 shadow-2xl ring-1 ring-purple-100/50 hover:ring-purple-200/70 transition-all duration-300 overflow-hidden relative">
           {/* Decorative gradient overlay */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-200/30 to-indigo-200/30 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
           <CardContent className="p-6 md:p-8 relative z-10">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative">
               {/* Left Section - Back Button & Title */}
               <div className="flex items-start gap-4 flex-1">
                 <Button
@@ -376,29 +401,6 @@ export default function ConteneurRenseignerDetailPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Right Section - Quick Action Button (Desktop) */}
-              <div className="hidden lg:flex items-center gap-3 shrink-0">
-                <Button
-                  type="button"
-                  onClick={handleCloseConteneur}
-                  disabled={isClosingConteneur}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {isClosingConteneur ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Mise à jour...
-                    </>
-                  ) : (
-                    <>
-                      <ClipboardCheck className="w-4 h-4 mr-2" />
-                      Fermer le conteneur
-                    </>
-                  )}
-                </Button>
               </div>
             </div>
           </CardContent>
@@ -810,10 +812,7 @@ export default function ConteneurRenseignerDetailPage() {
           open={!!sparePartDialogOpen}
           onOpenChange={(open) => !open && setSparePartDialogOpen(null)}
           subcaseId={sparePartDialogOpen}
-          subcaseNumber={
-            conteneur.subcases.find((s) => s.id === sparePartDialogOpen)
-              ?.subcaseNumber || ""
-          }
+          conteneurId={conteneur.id}
           onSuccess={handleSparePartSuccess}
         />
       )}
@@ -827,6 +826,7 @@ export default function ConteneurRenseignerDetailPage() {
             partCode: editingSparePart.partCode,
             partName: editingSparePart.partName,
             partNameFrench: editingSparePart.partNameFrench,
+            verificationName: editingSparePart.verificationName,
             quantity: editingSparePart.quantity,
             etapeSparePart: "RENSEIGNE",
             createdAt: new Date(),

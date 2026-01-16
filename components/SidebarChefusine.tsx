@@ -8,7 +8,6 @@ import {
   BarChart3,
   RotateCcw,
   Warehouse,
-  ClipboardCheck,
   Truck,
   Users,
   FileText
@@ -19,7 +18,6 @@ import { usePathname } from "next/navigation";
 
 // Organized navigation items with better icons and logical grouping
 const navItems = [
-
   {
     id: 1,
     icon: <Home className="w-5 h-5" />,
@@ -27,42 +25,40 @@ const navItems = [
     href: "/chefusine",
     category: "main"
   },
-  
   {
     id: 2,
+    icon: <ContainerIcon className="w-5 h-5" />,
+    label: "Dépotage",
+    href: "/chefusine/depotage",
+    category: "operations"
+  },
+  {
+    id: 3,
     icon: <ContainerIcon className="w-5 h-5" />,
     label: "Opérations Montage",
     href: "/chefusine/montage",
     category: "operations"
   },
   {
-    id: 3,
+    id: 4,
     icon: <Users className="w-5 h-5" />,
     label: "Création Equipe",
     href: "/chefusine/equipe",
     category: "operations"
   },
   {
-    id: 4,
+    id: 5,
     icon: <RotateCcw className="w-5 h-5" />,
     label: "Opérations Correction",
     href: "/chefusine/correction",
     category: "operations"
   },
   {
-    id: 5,
+    id: 6,
     icon: <Truck className="w-5 h-5" />,
     label: "Retour pièces",
     href: "/chefusine/Retourstock",
     category: "operations"
-  },
- 
-  {
-    id: 6,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Commandes en Transit",
-    href: "/chefusine/piecesencoursenvoies",
-    category: "inventory"
   },
   {
     id: 7,
@@ -92,7 +88,6 @@ const navItems = [
     href: "/chefusine/rapportverification",
     category: "reports"
   },
-  
 ];
 
 const SidebarChefusine = ({ isOpen }: { isOpen: boolean }) => {

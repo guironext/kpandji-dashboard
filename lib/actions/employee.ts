@@ -2,6 +2,7 @@
 
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
+import { getOrCreateUser } from "./user";
 
 export async function createEmployee(data: {
   nom: string;
@@ -14,18 +15,16 @@ export async function createEmployee(data: {
   try {
     console.log("Creating employee with data:", data);
     
-    const user = await prisma.user.findUnique({
-      where: {
-        clerkId: data.userId,
-      },
-    });
+    // Get or create user if it doesn't exist
+    const userResult = await getOrCreateUser(data.userId);
     
-    if (!user) {
-      console.log("User not found for clerkId:", data.userId);
-      return { success: false, error: "User not found" };
+    if (!userResult.success || !userResult.data) {
+      console.log("Failed to get or create user for clerkId:", data.userId);
+      return { success: false, error: userResult.error || "User not found" };
     }
     
-    console.log("Found user:", user.id);
+    const user = userResult.data;
+    console.log("Found/created user:", user.id);
     
     const employeeData = {
       nom: data.nom,

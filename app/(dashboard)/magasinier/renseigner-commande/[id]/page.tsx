@@ -603,9 +603,7 @@ export default function RenseignerCommandeDetailPage() {
           open={!!sparePartDialogOpen}
           onOpenChange={(open) => !open && setSparePartDialogOpen(null)}
           subcaseId={sparePartDialogOpen}
-          subcaseNumber={
-            conteneur.subcases.find((s) => s.id === sparePartDialogOpen)?.subcaseNumber || ""
-          }
+          conteneurId={conteneur.id}
           onSuccess={handleSparePartSuccess}
         />
       )}

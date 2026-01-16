@@ -123,7 +123,31 @@ export async function getSubcase(id: string) {
       return { success: false, error: "Subcase not found" };
     }
     
-    return { success: true, data: subcase };
+    // Serialize Date objects
+    const serializedSubcase = {
+      ...subcase,
+      createdAt: subcase.createdAt.toISOString(),
+      updatedAt: subcase.updatedAt.toISOString(),
+      conteneur: subcase.conteneur ? {
+        ...subcase.conteneur,
+        createdAt: subcase.conteneur.createdAt.toISOString(),
+        updatedAt: subcase.conteneur.updatedAt.toISOString(),
+        dateEmbarquement: subcase.conteneur.dateEmbarquement?.toISOString() || null,
+        dateArriveProbable: subcase.conteneur.dateArriveProbable?.toISOString() || null,
+      } : null,
+      spareParts: subcase.spareParts.map((sparePart) => ({
+        ...sparePart,
+        createdAt: sparePart.createdAt.toISOString(),
+        updatedAt: sparePart.updatedAt.toISOString(),
+      })),
+      tools: subcase.tools.map((tool) => ({
+        ...tool,
+        createdAt: tool.createdAt.toISOString(),
+        updatedAt: tool.updatedAt.toISOString(),
+      })),
+    };
+    
+    return { success: true, data: serializedSubcase };
   } catch (error) {
     console.error("Error fetching subcase:", error);
     return { success: false, error: "Failed to fetch subcase" };
@@ -132,6 +156,7 @@ export async function getSubcase(id: string) {
 
 export async function updateSubcase(id: string, data: {
   subcaseNumber?: string;
+  isVerified?: boolean;
 }) {
   try {
     const subcase = await prisma.subcase.update({
@@ -145,6 +170,8 @@ export async function updateSubcase(id: string, data: {
     });
     
     revalidatePath("/magasinier/piecesencoursenvoies");
+    revalidatePath("/magasinier/verification");
+    revalidatePath(`/magasinier/verification/${id}/verify`);
     return { success: true, data: subcase };
   } catch (error) {
     console.error("Error updating subcase:", error);
@@ -235,6 +262,88 @@ export async function getCommandesWithModelsForSubcase(subcaseId: string) {
   }
 }
 
+export async function getVoitureModelsForConteneur(conteneurId: string) {
+  try {
+    const conteneur = await prisma.conteneur.findUnique({
+      where: { id: conteneurId },
+      include: {
+        commandes: {
+          include: {
+            voitureModel: true
+          }
+        }
+      }
+    });
+    
+    if (!conteneur) {
+      return { success: false, error: "Conteneur not found" };
+    }
+    
+    // Get unique voiture models from commandes
+    const modelMap = new Map<string, { id: string; model: string }>();
+    
+    conteneur.commandes.forEach((commande) => {
+      if (commande.voitureModel && !modelMap.has(commande.voitureModel.id)) {
+        modelMap.set(commande.voitureModel.id, {
+          id: commande.voitureModel.id,
+          model: commande.voitureModel.model,
+        });
+      }
+    });
+    
+    const uniqueModels = Array.from(modelMap.values());
+    
+    return { success: true, data: uniqueModels };
+  } catch (error) {
+    console.error("Error fetching voiture models for conteneur:", error);
+    return { success: false, error: "Failed to fetch voiture models" };
+  }
+}
+
+export async function createSparePart(data: {
+  partCode: string;
+  partName: string;
+  partNameFrench?: string;
+  verificationName?: string;
+  quantity: number;
+  subcaseId?: string;
+  commandeId?: string;
+  voitureId?: string;
+  commandeLocalId?: string;
+  verificationConteneurId?: string;
+  storageId?: string;
+}) {
+  try {
+    const sparePart = await prisma.sparePart.create({
+      data: {
+        partCode: data.partCode,
+        partName: data.partName,
+        partNameFrench: data.partNameFrench,
+        verificationName: data.verificationName,
+        quantity: data.quantity,
+        subcaseId: data.subcaseId,
+        commandeId: data.commandeId,
+        voitureId: data.voitureId,
+        commandeLocalId: data.commandeLocalId,
+        verificationConteneurId: data.verificationConteneurId,
+        storageId: data.storageId,
+      }
+    });
+    
+    // Revalidate relevant paths
+    if (data.subcaseId) {
+      revalidatePath(`/magasinier/subcase/${data.subcaseId}`);
+    }
+    revalidatePath('/magasinier');
+    
+    return { success: true, data: sparePart };
+  } catch (error) {
+    console.error("Error creating spare part:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to create spare part";
+    return { success: false, error: errorMessage };
+  }
+}
+
 export async function addSparePartToSubcase(subcaseId: string, data: {
   partCode: string;
   partName: string;
@@ -269,6 +378,7 @@ export async function updateSparePart(sparePartId: string, data: {
   partCode?: string;
   partName?: string;
   partNameFrench?: string;
+  verificationName?: string;
   quantity?: number;
   statusVerification?: 'EN_ATTENTE' | 'RETROUVE' | 'MODIFIE' | 'NON_RETROUVE';
 }) {
@@ -279,10 +389,31 @@ export async function updateSparePart(sparePartId: string, data: {
     });
     
     revalidatePath(`/magasinier/subcase/${sparePart.subcaseId}`);
-    return { success: true, data: sparePart };
+    revalidatePath(`/magasinier/verification`);
+    if (sparePart.subcaseId) {
+      revalidatePath(`/magasinier/verification/${sparePart.subcaseId}/verify`);
+    }
+    
+    // Serialize the response to ensure it's JSON-serializable
+    return { 
+      success: true, 
+      data: {
+        id: sparePart.id,
+        partCode: sparePart.partCode,
+        partName: sparePart.partName,
+        partNameFrench: sparePart.partNameFrench,
+        quantity: sparePart.quantity,
+        etapeSparePart: sparePart.etapeSparePart,
+        statusVerification: sparePart.statusVerification,
+        subcaseId: sparePart.subcaseId,
+        createdAt: sparePart.createdAt.toISOString(),
+        updatedAt: sparePart.updatedAt.toISOString(),
+      }
+    };
   } catch (error) {
     console.error("Error updating spare part:", error);
-    return { success: false, error: "Failed to update spare part" };
+    const errorMessage = error instanceof Error ? error.message : "Failed to update spare part";
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -406,6 +537,10 @@ export async function updateSparePartVerificationStatus(sparePartId: string, sta
     });
     
     revalidatePath(`/magasinier/subcase/${sparePart.subcaseId}`);
+    revalidatePath(`/magasinier/verification`);
+    if (sparePart.subcaseId) {
+      revalidatePath(`/magasinier/verification/${sparePart.subcaseId}/verify`);
+    }
     return { success: true, data: sparePart };
   } catch (error) {
     console.error("Error updating spare part verification status:", error);

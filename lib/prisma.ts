@@ -76,10 +76,16 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   const isConnectionClosedError = 
     (error.message && (
       error.message.includes('Closed') || 
-      error.message.includes('connection') && error.message.includes('Closed')
+      (error.message.includes('connection') && error.message.includes('Closed')) ||
+      error.message.includes('ConnectionReset') ||
+      error.message.includes('Une connexion existante a dû être fermée par l’hôte distant')
     )) ||
-    (errorString && errorString.includes('kind: Closed')) ||
-    (errorString && errorString.includes('"kind":"Closed"'));
+    (errorString && (
+      errorString.includes('kind: Closed') ||
+      errorString.includes('"kind":"Closed"') ||
+      errorString.includes('ConnectionReset') ||
+      errorString.includes('Une connexion existante a dû être fermée par l’hôte distant')
+    ));
   
   // Suppress connection closed errors - Prisma will automatically reconnect on next query
   if (isConnectionClosedError) {
@@ -88,12 +94,19 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
     return;
   }
   
-  // Log other errors
+  // Log other errors with better error details
+  const errorDetails = {
+    message: e instanceof Error ? e.message : String(e),
+    name: e instanceof Error ? e.name : typeof e,
+    stack: e instanceof Error ? e.stack : undefined,
+    ...(typeof e === 'object' && e !== null ? e : {}),
+  };
+  
   if (process.env.NODE_ENV === 'development') {
-    console.error('Prisma Client Error:', e);
+    console.error('Prisma Client Error:', errorDetails);
   } else {
     // In production, log all non-connection-closed errors
-    console.error('Prisma Client Error:', e);
+    console.error('Prisma Client Error:', errorDetails);
   }
 });
 

@@ -1,46 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import React, { useState, useEffect, useRef } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { addSparePartToSubcase, getCommandesWithModelsForSubcase } from '@/lib/actions/subcase'
-import { Package, Loader2, Hash, FileText, Globe, ShoppingCart, X, CheckCircle2, AlertCircle, Sparkles, Info } from 'lucide-react'
+import { createSparePart, getVoitureModelsForConteneur } from '@/lib/actions/subcase'
+import { Package, Save, Loader2, Globe, CheckCircle2, AlertCircle, Hash, FileText, ShoppingCart, Info, X, Sparkles, Languages, Zap, Pencil, Car } from 'lucide-react'
 import { toast } from 'sonner'
-import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { translateToFrench } from '@/lib/utils'
-
-interface Commande {
-  id: string;
-  couleur?: string;
-  motorisation?: string;
-  nbr_portes?: string;
-  transmission?: string;
-  voitureModel?: {
-    id: string;
-    model: string;
-    [key: string]: unknown;
-  } | null;
-  [key: string]: unknown;
-}
+import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface AddSparePartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  subcaseId: string;
-  subcaseNumber: string;
-  onSuccess: () => void;
+  subcaseId?: string;
+  conteneurId?: string;
+  onSuccess?: () => void;
 }
 
 const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
   open,
   onOpenChange,
   subcaseId,
-  subcaseNumber,
+  conteneurId,
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
@@ -48,73 +33,106 @@ const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
     partName: '',
     partNameFrench: '',
     quantity: '',
-    commandeId: ''
+    verificationName: '',
+    voitureModelId: ''
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [commandes, setCommandes] = useState<Commande[]>([])
-  const [loadingCommandes, setLoadingCommandes] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
-  const [isManualFrenchEdit, setIsManualFrenchEdit] = useState(true)
+  const [isManualFrenchEdit, setIsManualFrenchEdit] = useState(false)
+  const [autoTranslateEnabled, setAutoTranslateEnabled] = useState(true)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [voitureModels, setVoitureModels] = useState<Array<{ id: string; model: string }>>([])
+  const [loadingModels, setLoadingModels] = useState(false)
+  const isTranslationUpdate = useRef(false)
 
-  const fetchCommandes = useCallback(async () => {
-    if (!subcaseId) return
-    setLoadingCommandes(true)
-    try {
-      const result = await getCommandesWithModelsForSubcase(subcaseId)
-      if (result.success && result.data) {
-        setCommandes(result.data as unknown as Commande[])
-      }
-    } catch (error) {
-      console.error('Error fetching commandes:', error)
-      toast.error('Erreur lors du chargement des commandes')
-    } finally {
-      setLoadingCommandes(false)
-    }
-  }, [subcaseId])
-
+  // Fetch voiture models when dialog opens
   useEffect(() => {
-    if (open && subcaseId) {
-      fetchCommandes()
-      // Reset form when dialog opens
+    if (open && conteneurId) {
+      const fetchModels = async () => {
+        setLoadingModels(true)
+        try {
+          const result = await getVoitureModelsForConteneur(conteneurId)
+          if (result.success && result.data) {
+            setVoitureModels(result.data)
+          } else {
+            console.error('Error fetching voiture models:', result.error)
+          }
+        } catch (error) {
+          console.error('Error fetching voiture models:', error)
+        } finally {
+          setLoadingModels(false)
+        }
+      }
+      fetchModels()
+    }
+  }, [open, conteneurId])
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
       setFormData({
         partCode: '',
         partName: '',
         partNameFrench: '',
         quantity: '',
-        commandeId: ''
+        verificationName: '',
+        voitureModelId: ''
       })
+      setIsManualFrenchEdit(false)
+      setAutoTranslateEnabled(true)
       setErrors({})
-      setIsManualFrenchEdit(true)
+      isTranslationUpdate.current = false
     }
-  }, [open, subcaseId, fetchCommandes])
+  }, [open])
 
-  // Auto-translate partName to French when partName changes
+  // Auto-translate partName to French immediately when partName changes
   useEffect(() => {
-    // Only auto-translate if:
-    // 1. partName has content
-    // 2. User hasn't manually edited the French field
-    // 3. French field is empty or matches a previous translation
-    if (formData.partName.trim() && !isManualFrenchEdit && open) {
+    if (formData.partName.trim() && !isManualFrenchEdit && autoTranslateEnabled && open) {
       const translatePartName = async () => {
         setIsTranslating(true)
+        isTranslationUpdate.current = true
         try {
           const translated = await translateToFrench(formData.partName.trim())
           if (translated && translated !== formData.partName) {
             setFormData(prev => ({ ...prev, partNameFrench: translated }))
+            toast.success('Traduction automatique effectuée', {
+              icon: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+              duration: 2000,
+            })
           }
         } catch (error) {
           console.error('Translation error:', error)
+          toast.error('Erreur lors de la traduction automatique', {
+            icon: <AlertCircle className="w-4 h-4 text-red-600" />,
+            duration: 3000,
+          })
         } finally {
           setIsTranslating(false)
+          setTimeout(() => {
+            isTranslationUpdate.current = false
+          }, 300)
         }
       }
 
-      // Debounce translation to avoid too many API calls
-      const timeoutId = setTimeout(translatePartName, 800)
+      const timeoutId = setTimeout(translatePartName, 100)
       return () => clearTimeout(timeoutId)
+    } else if (!formData.partName.trim() && open) {
+      setFormData(prev => ({ ...prev, partNameFrench: '' }))
     }
-  }, [formData.partName, isManualFrenchEdit, open])
+  }, [formData.partName, isManualFrenchEdit, autoTranslateEnabled, open])
+
+  // Auto-update verificationName to be partCode + partName
+  useEffect(() => {
+    if (open) {
+      const verificationName = `${formData.partCode.trim()}${formData.partName.trim()}`
+      setFormData(prev => {
+        if (prev.verificationName !== verificationName) {
+          return { ...prev, verificationName }
+        }
+        return prev
+      })
+    }
+  }, [formData.partCode, formData.partName, open])
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -154,40 +172,42 @@ const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
       return
     }
 
-    const quantity = parseInt(formData.quantity)
-
     setIsSubmitting(true)
     try {
-      const result = await addSparePartToSubcase(subcaseId, {
+      const result = await createSparePart({
         partCode: formData.partCode.trim(),
         partName: formData.partName.trim(),
         partNameFrench: formData.partNameFrench.trim() || undefined,
-        quantity: quantity,
-        commandeId: formData.commandeId || undefined,
+        verificationName: formData.verificationName.trim() || undefined,
+        quantity: parseInt(formData.quantity),
+        subcaseId: subcaseId,
       })
       
       if (result.success) {
-        toast.success('Pièce de rechange ajoutée avec succès!', {
+        toast.success('Pièce de rechange enregistrée avec succès!', {
           icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
         })
+        // Reset form
         setFormData({
           partCode: '',
           partName: '',
           partNameFrench: '',
           quantity: '',
-          commandeId: ''
+          verificationName: '',
+          voitureModelId: ''
         })
         setErrors({})
-        onSuccess()
+        setIsManualFrenchEdit(false)
+        onSuccess?.()
         onOpenChange(false)
       } else {
-        toast.error(result.error || 'Erreur lors de l\'ajout de la pièce de rechange', {
+        toast.error(result.error || 'Erreur lors de l\'enregistrement', {
           icon: <AlertCircle className="w-5 h-5 text-red-600" />,
         })
       }
     } catch (error) {
-      console.error('Error adding spare part:', error)
-      toast.error('Erreur lors de l\'ajout de la pièce de rechange', {
+      console.error('Error creating spare part:', error)
+      toast.error('Erreur lors de l\'enregistrement', {
         icon: <AlertCircle className="w-5 h-5 text-red-600" />,
       })
     } finally {
@@ -197,191 +217,436 @@ const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      isTranslationUpdate.current = false
+      setIsManualFrenchEdit(false)
       setFormData({
         partCode: '',
         partName: '',
         partNameFrench: '',
         quantity: '',
-        commandeId: ''
+        verificationName: '',
+        voitureModelId: ''
       })
       setErrors({})
       onOpenChange(false)
     }
   }
 
-  const selectedCommande = commandes.find(c => c.id === formData.commandeId)
+  // Custom Switch Component for Auto-Translate
+  const Switch = ({ checked, onCheckedChange, disabled }: { checked: boolean; onCheckedChange: (checked: boolean) => void; disabled?: boolean }) => {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => !disabled && onCheckedChange(!checked)}
+        className={`
+          relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent 
+          transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 
+          focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white
+          disabled:cursor-not-allowed disabled:opacity-50
+          ${checked 
+            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/50' 
+            : 'bg-gray-300 dark:bg-gray-600'
+          }
+        `}
+      >
+        <span
+          className={`
+            pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 
+            transition duration-200 ease-in-out
+            ${checked ? 'translate-x-7' : 'translate-x-0.5'}
+          `}
+        />
+        {checked && (
+          <Zap className="absolute left-1.5 h-3.5 w-3.5 text-indigo-600 animate-pulse" />
+        )}
+      </button>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
-        {/* Enhanced Header */}
-        <DialogHeader className="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white px-6 py-5 relative overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[96vh] overflow-hidden flex flex-col p-0 gap-0 shadow-2xl">
+        {/* Header */}
+        <DialogHeader className="px-8 py-6 relative overflow-hidden bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMjAiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-          <div className="relative flex items-center gap-4">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-xl border border-white/30">
-              <Package className="w-7 h-7 text-white" />
+          <div className="relative flex items-center gap-5">
+            <div className="p-4 bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl border border-white/30 transform hover:scale-105 transition-transform duration-200">
+              <Package className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold text-white mb-1.5 flex items-center gap-2">
-                Ajouter une Pièce de Rechange
-                <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+              <DialogTitle className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                Enregistrer une Pièce de Rechange
+                <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
               </DialogTitle>
-              <DialogDescription className="text-purple-100 text-sm flex items-center gap-2">
-                <Badge variant="outline" className="bg-white/10 border-white/30 text-white font-medium">
-                  Sub Case: {subcaseNumber}
-                </Badge>
+              <DialogDescription className="text-purple-100 text-base">
+                Remplissez le formulaire pour enregistrer une nouvelle pièce de rechange
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Form Content with Sections */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 space-y-6 bg-gradient-to-b from-gray-50 to-white">
+        {/* Auto-Translate Toggle Card */}
+        <Card className="mx-6 mt-6 mb-4 border-2 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <div className={`p-2.5 rounded-xl transition-all duration-200 ${
+                  autoTranslateEnabled 
+                    ? 'bg-gradient-to-br from-indigo-100 to-purple-100' 
+                    : 'bg-gray-100'
+                }`}>
+                  <Languages className={`w-5 h-5 transition-colors duration-200 ${
+                    autoTranslateEnabled ? 'text-indigo-600' : 'text-gray-500'
+                  }`} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-bold text-gray-900 text-base">
+                      Traduction Automatique
+                    </h4>
+                    {isTranslating && (
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {autoTranslateEnabled 
+                      ? 'La traduction française sera générée automatiquement depuis l\'anglais'
+                      : 'Mode manuel activé - Saisissez la traduction manuellement'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-medium transition-colors duration-200 ${
+                  autoTranslateEnabled ? 'text-gray-500' : 'text-gray-900'
+                }`}>
+                  Manuel
+                </span>
+                <Switch 
+                  checked={autoTranslateEnabled}
+                  onCheckedChange={(checked) => {
+                    setAutoTranslateEnabled(checked)
+                    setIsManualFrenchEdit(false)
+                    if (checked && formData.partName.trim()) {
+                      setIsTranslating(true)
+                      isTranslationUpdate.current = true
+                      translateToFrench(formData.partName.trim())
+                        .then(translated => {
+                          if (translated && translated !== formData.partName) {
+                            setFormData(prev => ({ ...prev, partNameFrench: translated }))
+                            toast.success('Traduction automatique activée et effectuée', {
+                              icon: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+                              duration: 2000,
+                            })
+                          }
+                        })
+                        .catch(error => {
+                          console.error('Translation error:', error)
+                          toast.error('Erreur lors de la traduction automatique', {
+                            icon: <AlertCircle className="w-4 h-4 text-red-600" />,
+                            duration: 3000,
+                          })
+                        })
+                        .finally(() => {
+                          setIsTranslating(false)
+                          setTimeout(() => {
+                            isTranslationUpdate.current = false
+                          }, 300)
+                        })
+                    } else if (!checked) {
+                      toast.info('Mode manuel activé - Vous pouvez modifier le champ français', {
+                        icon: <Pencil className="w-4 h-4 text-amber-600" />,
+                        duration: 2000,
+                      })
+                    }
+                  }}
+                  disabled={isTranslating}
+                />
+                <span className={`text-sm font-medium transition-colors duration-200 ${
+                  autoTranslateEnabled ? 'text-indigo-600 font-semibold' : 'text-gray-500'
+                }`}>
+                  Auto
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 space-y-6 bg-gradient-to-b from-gray-50 via-white to-gray-50">
           {/* Section 1: Basic Information */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 mb-5">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
-              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-full border border-purple-200">
                 <Info className="w-4 h-4 text-purple-600" />
-                Informations de Base
-              </h3>
+                <h3 className="text-sm font-bold text-purple-700 uppercase tracking-wider">
+                  Informations de Base
+                </h3>
+              </div>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
             </div>
 
             {/* Part Code */}
-            <div className="space-y-2">
-              <Label htmlFor="partCode" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <Hash className="w-3.5 h-3.5 text-purple-600" />
+            <div className="space-y-2.5">
+              <Label htmlFor="partCode" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                <div className="p-2 bg-purple-100 rounded-lg shadow-sm">
+                  <Hash className="w-4 h-4 text-purple-600" />
                 </div>
-                Code de la Pièce <span className="text-red-500 font-bold">*</span>
+                <span>Code de la Pièce</span>
+                <span className="text-red-500 font-bold text-base">*</span>
               </Label>
               <Input
                 id="partCode"
                 value={formData.partCode}
                 onChange={(e) => {
-                  setFormData({ ...formData, partCode: e.target.value })
+                  setFormData(prev => ({ ...prev, partCode: e.target.value }))
                   if (errors.partCode) setErrors({ ...errors, partCode: '' })
                 }}
                 placeholder="Ex: PR-001, ABC123, XYZ-2024"
-                className={`h-12 text-base transition-all duration-200 ${
+                className={`h-12 text-base transition-all duration-200 shadow-sm ${
                   errors.partCode 
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
-                    : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200 hover:border-gray-400'
+                    ? 'border-2 border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
+                    : 'border-2 border-gray-300 focus:border-purple-500 focus:ring-purple-200 hover:border-purple-400 bg-white'
                 }`}
                 required
               />
               {errors.partCode ? (
-                <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
                   <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-red-700">{errors.partCode}</p>
+                  <p className="text-xs text-red-700 font-medium">{errors.partCode}</p>
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 ml-1">Identifiant unique de la pièce de rechange</p>
+                <p className="text-xs text-gray-500 ml-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Identifiant unique de la pièce de rechange
+                </p>
               )}
             </div>
 
             {/* Part Name (English) */}
-            <div className="space-y-2">
-              <Label htmlFor="partName" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+            <div className="space-y-2.5">
+              <Label htmlFor="partName" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                <div className="p-2 bg-blue-100 rounded-lg shadow-sm">
+                  <FileText className="w-4 h-4 text-blue-600" />
                 </div>
-                Nom de la Pièce (Anglais) <span className="text-red-500 font-bold">*</span>
+                <span>Nom de la Pièce (Anglais)</span>
+                <span className="text-red-500 font-bold text-base">*</span>
               </Label>
               <Input
                 id="partName"
                 value={formData.partName}
                 onChange={(e) => {
-                  setFormData({ ...formData, partName: e.target.value })
+                  setFormData(prev => ({ ...prev, partName: e.target.value }))
                   if (errors.partName) setErrors({ ...errors, partName: '' })
                 }}
                 placeholder="Ex: Brake Pad, Engine Oil Filter, Spark Plug"
-                className={`h-12 text-base transition-all duration-200 ${
+                className={`h-12 text-base transition-all duration-200 shadow-sm ${
                   errors.partName 
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200 hover:border-gray-400'
+                    ? 'border-2 border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
+                    : 'border-2 border-gray-300 focus:border-blue-500 focus:ring-blue-200 hover:border-blue-400 bg-white'
                 }`}
                 required
               />
               {errors.partName ? (
-                <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
                   <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-red-700">{errors.partName}</p>
+                  <p className="text-xs text-red-700 font-medium">{errors.partName}</p>
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 ml-1">Nom de la pièce en anglais</p>
+                <p className="text-xs text-gray-500 ml-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Nom de la pièce en anglais
+                </p>
               )}
             </div>
 
             {/* Part Name (French) */}
-            <div className="space-y-2">
-              <Label htmlFor="partNameFrench" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-md">
-                  <Globe className="w-3.5 h-3.5 text-indigo-600" />
-                </div>
-                Nom de la Pièce (Français)
-                {isTranslating && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600 ml-1" />
-                )}
-              </Label>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="partNameFrench" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                  <div className={`p-2 rounded-lg shadow-sm transition-all duration-200 ${
+                    autoTranslateEnabled && !isManualFrenchEdit
+                      ? 'bg-gradient-to-br from-indigo-100 to-purple-100'
+                      : isManualFrenchEdit
+                      ? 'bg-amber-100'
+                      : 'bg-indigo-100'
+                  }`}>
+                    <Globe className={`w-4 h-4 transition-colors duration-200 ${
+                      autoTranslateEnabled && !isManualFrenchEdit
+                        ? 'text-indigo-600'
+                        : isManualFrenchEdit
+                        ? 'text-amber-600'
+                        : 'text-indigo-500'
+                    }`} />
+                  </div>
+                  <span>Nom de la Pièce (Français)</span>
+                  {isTranslating && (
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-600 ml-1" />
+                  )}
+                </Label>
+              </div>
               <div className="relative">
                 <Input
                   id="partNameFrench"
                   value={formData.partNameFrench}
                   onChange={(e) => {
-                    setIsManualFrenchEdit(true)
-                    setFormData({ ...formData, partNameFrench: e.target.value })
+                    const newValue = e.target.value
+                    if (!isTranslationUpdate.current) {
+                      setIsManualFrenchEdit(true)
+                    }
+                    setFormData(prev => ({ ...prev, partNameFrench: newValue }))
                   }}
-                  onFocus={() => setIsManualFrenchEdit(true)}
                   placeholder="Ex: Plaquette de frein, Filtre à huile moteur, Bougie d'allumage"
-                  className="h-12 text-base border-gray-300 focus:border-indigo-500 focus:ring-indigo-200 hover:border-gray-400 transition-all duration-200 pr-10"
+                  className={`h-12 text-base border-2 transition-all duration-200 shadow-sm pr-12 ${
+                    isManualFrenchEdit
+                      ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-200 hover:border-amber-400 bg-amber-50/30'
+                      : autoTranslateEnabled && !isManualFrenchEdit
+                      ? 'border-indigo-300 focus:border-indigo-500 focus:ring-indigo-200 hover:border-indigo-400 bg-indigo-50/30'
+                      : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-200 hover:border-gray-400 bg-white'
+                  }`}
                 />
                 {isTranslating && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
                     <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
                   </div>
                 )}
+                {!isTranslating && isManualFrenchEdit && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2" title="Mode édition manuelle">
+                    <Pencil className="w-5 h-5 text-amber-600" />
+                  </div>
+                )}
+                {!isTranslating && !isManualFrenchEdit && autoTranslateEnabled && formData.partNameFrench && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2" title="Traduit automatiquement">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
               </div>
-              <div className={`flex items-start gap-2 p-2 rounded-md ${
-                isManualFrenchEdit 
-                  ? 'bg-amber-50 border border-amber-200' 
-                  : 'bg-indigo-50 border border-indigo-200'
+              <div className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-all duration-200 ${
+                !autoTranslateEnabled || isManualFrenchEdit
+                  ? 'bg-amber-50 border-amber-200 shadow-sm' 
+                  : 'bg-indigo-50 border-indigo-200 shadow-sm'
               }`}>
                 <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                  isManualFrenchEdit ? 'text-amber-600' : 'text-indigo-600'
+                  !autoTranslateEnabled || isManualFrenchEdit ? 'text-amber-600' : 'text-indigo-600'
                 }`} />
-                <p className={`text-xs ${
-                  isManualFrenchEdit ? 'text-amber-700' : 'text-indigo-700'
-                }`}>
-                  {isManualFrenchEdit 
-                    ? "Traduction automatique désactivée (modification manuelle)" 
-                    : "Traduit automatiquement depuis l'anglais (optionnel)"}
-                </p>
+                <div className="flex-1">
+                  <p className={`text-xs font-medium ${
+                    !autoTranslateEnabled || isManualFrenchEdit ? 'text-amber-800' : 'text-indigo-800'
+                  }`}>
+                    {!autoTranslateEnabled
+                      ? "Traduction automatique désactivée - Mode manuel activé"
+                      : isManualFrenchEdit
+                      ? "✓ Mode édition manuelle activé - Vous pouvez modifier librement le champ français" 
+                      : isTranslating
+                      ? "⏳ Traduction en cours..."
+                      : formData.partNameFrench
+                      ? "✓ Traduit automatiquement depuis l'anglais - La traduction se met à jour automatiquement quand vous modifiez le champ anglais"
+                      : "⏳ En attente de traduction - Saisissez le nom en anglais pour traduire automatiquement"}
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Verification Name */}
+            <div className="space-y-2.5">
+              <Label htmlFor="verificationName" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                <div className="p-2 bg-green-100 rounded-lg shadow-sm">
+                  <FileText className="w-4 h-4 text-green-600" />
+                </div>
+                <span>Nom de la vérification</span>
+              </Label>
+              <Input
+                id="verificationName"
+                value={formData.verificationName}
+                readOnly
+                placeholder="Généré automatiquement"
+                className="h-12 text-base transition-all duration-200 shadow-sm bg-gray-50 border-2 border-gray-300 text-gray-700 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 ml-1 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                Généré automatiquement à partir du code et du nom de la pièce
+              </p>
+            </div>
+
+            {/* Voiture Model */}
+            {conteneurId && (
+              <div className="space-y-2.5">
+                <Label htmlFor="voitureModelId" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                  <div className="p-2 bg-orange-100 rounded-lg shadow-sm">
+                    <Car className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <span>Modèle de Voiture</span>
+                </Label>
+                <Select
+                  value={formData.voitureModelId}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, voitureModelId: value }))
+                    if (errors.voitureModelId) setErrors({ ...errors, voitureModelId: '' })
+                  }}
+                  disabled={loadingModels}
+                >
+                  <SelectTrigger className={`h-12 text-base transition-all duration-200 shadow-sm w-full ${
+                    errors.voitureModelId 
+                      ? 'border-2 border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
+                      : 'border-2 border-gray-300 focus:border-orange-500 focus:ring-orange-200 hover:border-orange-400 bg-white'
+                  }`}>
+                    <SelectValue placeholder={loadingModels ? "Chargement..." : "Sélectionner un modèle"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {voitureModels.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        Aucun modèle disponible
+                      </div>
+                    ) : (
+                      voitureModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.model}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {errors.voitureModelId ? (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
+                    <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-700 font-medium">{errors.voitureModelId}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 ml-1 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Modèles disponibles pour ce conteneur
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator className="my-7 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
 
-          {/* Section 2: Quantity & Association */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
+          {/* Section 2: Quantity */}
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 mb-5">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-300 to-transparent"></div>
-              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full border border-green-200">
                 <ShoppingCart className="w-4 h-4 text-green-600" />
-                Quantité & Association
-              </h3>
+                <h3 className="text-sm font-bold text-green-700 uppercase tracking-wider">
+                  Quantité
+                </h3>
+              </div>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-300 to-transparent"></div>
             </div>
 
             {/* Quantity */}
-            <div className="space-y-2">
-              <Label htmlFor="quantity" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <div className="p-1.5 bg-green-100 rounded-md">
-                  <ShoppingCart className="w-3.5 h-3.5 text-green-600" />
+            <div className="space-y-2.5">
+              <Label htmlFor="quantity" className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                <div className="p-2 bg-green-100 rounded-lg shadow-sm">
+                  <ShoppingCart className="w-4 h-4 text-green-600" />
                 </div>
-                Quantité <span className="text-red-500 font-bold">*</span>
+                <span>Quantité</span>
+                <span className="text-red-500 font-bold text-base">*</span>
               </Label>
               <Input
                 id="quantity"
@@ -390,156 +655,63 @@ const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
                 max="10000"
                 value={formData.quantity}
                 onChange={(e) => {
-                  setFormData({ ...formData, quantity: e.target.value })
+                  setFormData(prev => ({ ...prev, quantity: e.target.value }))
                   if (errors.quantity) setErrors({ ...errors, quantity: '' })
                 }}
                 placeholder="Ex: 1, 2, 10, 50"
-                className={`h-12 text-base transition-all duration-200 ${
+                className={`h-12 text-base transition-all duration-200 shadow-sm ${
                   errors.quantity 
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
-                    : 'border-gray-300 focus:border-green-500 focus:ring-green-200 hover:border-gray-400'
+                    ? 'border-2 border-red-400 focus:border-red-500 focus:ring-red-200 bg-red-50/50' 
+                    : 'border-2 border-gray-300 focus:border-green-500 focus:ring-green-200 hover:border-green-400 bg-white'
                 }`}
                 required
               />
               {errors.quantity ? (
-                <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
                   <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-red-700">{errors.quantity}</p>
+                  <p className="text-xs text-red-700 font-medium">{errors.quantity}</p>
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 ml-1">Nombre d&apos;unités de cette pièce</p>
+                <p className="text-xs text-gray-500 ml-1 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Nombre d&apos;unités de cette pièce
+                </p>
               )}
-            </div>
-
-            {/* Commande Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="commandeId" className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <FileText className="w-3.5 h-3.5 text-purple-600" />
-                </div>
-                Modèle de Voiture Associé
-              </Label>
-              {loadingCommandes ? (
-                <Card className="border-2 border-dashed border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
-                  <CardContent className="p-5 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
-                    <span className="text-sm font-medium text-gray-700">Chargement des commandes...</span>
-                  </CardContent>
-                </Card>
-              ) : commandes.length > 0 ? (
-                <>
-                  <Select
-                    value={formData.commandeId || undefined}
-                    onValueChange={(value) => {
-                      if (value === "none") {
-                        setFormData({ ...formData, commandeId: '' })
-                      } else {
-                        setFormData({ ...formData, commandeId: value })
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-12 text-base border-gray-300 hover:border-purple-400 focus:border-purple-500 transition-all duration-200">
-                      <SelectValue placeholder="Sélectionner une commande (optionnel)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-gray-500 italic">Aucune commande</span>
-                      </SelectItem>
-                      {commandes.map((commande) => (
-                        <SelectItem key={commande.id} value={commande.id}>
-                          <div className="flex items-center gap-2 py-1">
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                              #{commande.id.slice(0, 8)}
-                            </Badge>
-                            {commande.voitureModel?.model && (
-                              <span className="font-medium text-gray-700">{commande.voitureModel.model}</span>
-                            )}
-                            {commande.couleur && (
-                              <Badge variant="secondary" className="text-xs">
-                                {commande.couleur}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedCommande && (
-                    <Card className="mt-3 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-sm">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-blue-900 mb-1">
-                              Commande sélectionnée
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline" className="bg-white text-blue-700 border-blue-300">
-                                #{selectedCommande.id.slice(0, 8)}
-                              </Badge>
-                              {selectedCommande.voitureModel?.model && (
-                                <span className="text-sm text-blue-800 font-medium">
-                                  {selectedCommande.voitureModel.model}
-                                </span>
-                              )}
-                              {selectedCommande.couleur && (
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                  {selectedCommande.couleur}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              ) : (
-                <Card className="border-2 border-dashed border-gray-300 bg-gray-50/50">
-                  <CardContent className="p-5 text-center">
-                    <Info className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 font-medium">Aucune commande disponible pour ce conteneur</p>
-                  </CardContent>
-                </Card>
-              )}
-              <p className="text-xs text-gray-500 ml-1">Lier cette pièce à une commande spécifique (optionnel)</p>
             </div>
           </div>
         </form>
 
-        {/* Enhanced Footer */}
-        <DialogFooter className="bg-gradient-to-r from-gray-50 to-gray-100 border-t-2 border-gray-200 px-6 py-4 flex items-center justify-between gap-4">
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 border-t-2 border-gray-200 px-8 py-5 flex items-center justify-between gap-4 shadow-lg">
           <Button 
             type="button"
             variant="outline"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 font-medium px-6 h-11 transition-all duration-200"
+            className="border-2 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 font-semibold px-8 h-12 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            <X className="w-4 h-4 mr-2" />
+            <X className="w-5 h-5 mr-2" />
             Annuler
           </Button>
           <Button 
             type="submit"
             onClick={handleSubmit}
             disabled={isSubmitting || !formData.partCode.trim() || !formData.partName.trim() || !formData.quantity}
-            className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 px-8 h-11 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
+            className="font-bold shadow-lg hover:shadow-xl transition-all duration-300 px-10 h-12 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg text-base bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Ajout en cours...
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Enregistrement...
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Ajouter la Pièce
+                <Save className="w-5 h-5 mr-2" />
+                Enregistrer
               </>
             )}
           </Button>
-        </DialogFooter>
+    </div>
       </DialogContent>
     </Dialog>
   )

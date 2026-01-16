@@ -76,13 +76,7 @@ const navItems = [
     href: "/manager/conteneur-arrives",
     category: "commandes"
   },
-  {
-    id: 8,
-    icon: <CheckSquare className="w-5 h-5" />,
-    label: "Dépotage & Vérification",
-    href: "/manager/depotage",
-    category: "commandes"
-  },
+  
   {
     id: 9,
     icon: <AlertTriangle className="w-5 h-5" />,
@@ -94,7 +88,7 @@ const navItems = [
     id: 10,
     icon: <Wrench className="w-5 h-5" />,
     label: "Ordre Montage",
-    href: "/manager/montage",
+    href: "/manager/ordre-montage",
     category: "operations"
   },
   {

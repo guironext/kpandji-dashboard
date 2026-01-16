@@ -1000,7 +1000,7 @@ export async function markConteneurAsArrive(conteneurId: string) {
         }
       },
       data: {
-        etapeSparePart: 'RENSEIGNE'
+        etapeSparePart: 'ARRIVE'
       }
     });
 
@@ -1023,6 +1023,7 @@ export async function markConteneurAsArrive(conteneurId: string) {
     });
     
     revalidatePath("/manager/commandes-transites-renseignees");
+    revalidatePath("/manager/conteneur-transit");
     return { success: true };
   } catch (error) {
     console.error("Error marking conteneur as arrive:", error);
@@ -1055,6 +1056,392 @@ export async function getConteneursArrives() {
   } catch (error) {
     console.error("Error fetching conteneurs arrives:", error);
     return { success: false, error: "Failed to fetch conteneurs arrives" };
+  }
+}
+
+export async function getConteneursArrivesWithAllArriveStatuses() {
+  try {
+    const conteneurs = await prisma.conteneur.findMany({
+      where: {
+        etapeConteneur: "ARRIVE",
+        commandes: {
+          some: {
+            etapeCommande: "ARRIVE"
+          }
+        }
+      },
+      include: {
+        commandes: {
+          where: {
+            etapeCommande: "ARRIVE"
+          },
+          include: {
+            client: true,
+            voitureModel: true,
+            clientEntreprise: true,
+            fournisseurs: true,
+            spareParts: {
+              where: {
+                etapeSparePart: "ARRIVE"
+              }
+            }
+          }
+        },
+        subcases: {
+          include: {
+            spareParts: {
+              where: {
+                etapeSparePart: "ARRIVE"
+              }
+            },
+            tools: true
+          }
+        },
+        verifications: true,
+        voitures: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    // Filter to only include conteneurs that have at least one commande with ARRIVE status
+    // and filter commandes to only show those with ARRIVE status
+    // Also filter spareParts to only show those with ARRIVE status
+    const filteredConteneurs = conteneurs
+      .map((conteneur) => ({
+        ...conteneur,
+        commandes: conteneur.commandes
+          .filter((commande) => commande.etapeCommande === "ARRIVE")
+          .map((commande) => ({
+            ...commande,
+            prix_unitaire: commande.prix_unitaire ? decimalToNumber(commande.prix_unitaire) : null,
+            spareParts: commande.spareParts.filter((sp) => sp.etapeSparePart === "ARRIVE")
+          })),
+        subcases: conteneur.subcases.map((subcase) => ({
+          ...subcase,
+          spareParts: subcase.spareParts.filter((sp) => sp.etapeSparePart === "ARRIVE")
+        }))
+      }))
+      .filter((conteneur) => conteneur.commandes.length > 0);
+    
+    // Serialize Date objects
+    const serializedConteneurs = filteredConteneurs.map((conteneur) => ({
+      ...conteneur,
+      createdAt: conteneur.createdAt.toISOString(),
+      updatedAt: conteneur.updatedAt.toISOString(),
+      dateEmbarquement: conteneur.dateEmbarquement?.toISOString() || null,
+      dateArriveProbable: conteneur.dateArriveProbable?.toISOString() || null,
+      commandes: conteneur.commandes.map((commande) => ({
+        ...commande,
+        date_livraison: commande.date_livraison.toISOString(),
+        createdAt: commande.createdAt.toISOString(),
+        updatedAt: commande.updatedAt.toISOString(),
+      }))
+    }));
+    
+    return { success: true, data: serializedConteneurs };
+  } catch (error) {
+    console.error("Error fetching conteneurs arrives with all ARRIVE statuses:", error);
+    return { success: false, error: "Failed to fetch conteneurs arrives with all ARRIVE statuses" };
+  }
+}
+
+export async function orderDepotageForConteneur(conteneurId: string) {
+  try {
+    // Update all spare parts in subcases of this conteneur from ARRIVE to DEPOTAGE_EN_COURS
+    await prisma.sparePart.updateMany({
+      where: {
+        subcase: {
+          conteneurId: conteneurId
+        },
+        etapeSparePart: "ARRIVE"
+      },
+      data: {
+        etapeSparePart: 'DEPOTAGE_EN_COURS'
+      }
+    });
+
+    // Update all spare parts in commandes of this conteneur from ARRIVE to DEPOTAGE_EN_COURS
+    await prisma.sparePart.updateMany({
+      where: {
+        commande: {
+          conteneurId: conteneurId,
+          etapeCommande: "ARRIVE"
+        },
+        etapeSparePart: "ARRIVE"
+      },
+      data: {
+        etapeSparePart: 'DEPOTAGE_EN_COURS'
+      }
+    });
+
+    // Update conteneur from ARRIVE to DEPOTAGE_EN_COURS
+    const conteneurUpdateResult = await prisma.conteneur.updateMany({
+      where: {
+        id: conteneurId,
+        etapeConteneur: "ARRIVE"
+      },
+      data: {
+        etapeConteneur: 'DEPOTAGE_EN_COURS'
+      }
+    });
+
+    // Check if conteneur was updated (if not, it might not be in ARRIVE status)
+    if (conteneurUpdateResult.count === 0) {
+      // Verify conteneur exists
+      const conteneur = await prisma.conteneur.findUnique({
+        where: { id: conteneurId },
+        select: { id: true, etapeConteneur: true }
+      });
+      
+      if (!conteneur) {
+        return { success: false, error: "Conteneur introuvable" };
+      }
+      
+      if (conteneur.etapeConteneur !== "ARRIVE") {
+        return { 
+          success: false, 
+          error: `Le conteneur n'est pas en statut ARRIVE (statut actuel: ${conteneur.etapeConteneur})` 
+        };
+      }
+    }
+
+    // Update all commandes with ARRIVE status to DEPOTAGE_EN_COURS
+    await prisma.commande.updateMany({
+      where: {
+        conteneurId: conteneurId,
+        etapeCommande: "ARRIVE"
+      },
+      data: {
+        etapeCommande: 'DEPOTAGE_EN_COURS'
+      }
+    });
+    
+    revalidatePath("/manager/conteneur-arrives");
+    return { success: true, message: "Dépotage ordonné avec succès" };
+  } catch (error) {
+    console.error("Error ordering depotage for conteneur:", error);
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+    return { 
+      success: false, 
+      error: `Échec de l'ordonnancement du dépotage: ${errorMessage}` 
+    };
+  }
+}
+
+export async function getConteneursDepotageEnCours() {
+  try {
+    // Add timeout wrapper for the query
+    const queryPromise = prisma.conteneur.findMany({
+      where: {
+        etapeConteneur: "DEPOTAGE_EN_COURS",
+        commandes: {
+          some: {
+            etapeCommande: "DEPOTAGE_EN_COURS"
+          }
+        }
+      },
+      include: {
+        commandes: {
+          where: {
+            etapeCommande: "DEPOTAGE_EN_COURS"
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                nom: true,
+                email: true,
+                telephone: true,
+              }
+            },
+            voitureModel: {
+              select: {
+                id: true,
+                model: true,
+              }
+            },
+            clientEntreprise: {
+              select: {
+                id: true,
+                nom_entreprise: true,
+                email: true,
+                telephone: true,
+              }
+            },
+            fournisseurs: {
+              select: {
+                id: true,
+                nom: true,
+                email: true,
+              }
+            },
+            spareParts: {
+              where: {
+                etapeSparePart: "DEPOTAGE_EN_COURS"
+              },
+              select: {
+                id: true,
+                partCode: true,
+                partName: true,
+                partNameFrench: true,
+                verificationName: true,
+                quantity: true,
+                etapeSparePart: true,
+                statusVerification: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            }
+          }
+        },
+        subcases: {
+          include: {
+            spareParts: {
+              where: {
+                etapeSparePart: "DEPOTAGE_EN_COURS"
+              },
+              select: {
+                id: true,
+                partCode: true,
+                partName: true,
+                partNameFrench: true,
+                verificationName: true,
+                quantity: true,
+                etapeSparePart: true,
+                statusVerification: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            },
+            tools: {
+              select: {
+                id: true,
+                toolCode: true,
+                toolName: true,
+                quantity: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            }
+          }
+        },
+        verifications: {
+          select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        },
+        voitures: {
+          select: {
+            id: true,
+            nbr_portes: true,
+            transmission: true,
+            motorisation: true,
+            couleur: true,
+            createdAt: true,
+            updatedAt: true,
+            voitureModel: {
+              select: {
+                id: true,
+                model: true,
+              }
+            }
+          }
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100, // Limit results to prevent timeout
+    });
+
+    // Add timeout (30 seconds)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout: getConteneursDepotageEnCours took longer than 30 seconds')), 30000);
+    });
+
+    const conteneurs = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>;
+    
+    // Filter to only include conteneurs that have at least one commande with DEPOTAGE_EN_COURS status
+    // and filter commandes to only show those with DEPOTAGE_EN_COURS status
+    // Also filter spareParts to only show those with DEPOTAGE_EN_COURS status
+    const filteredConteneurs = conteneurs
+      .map((conteneur) => ({
+        ...conteneur,
+        commandes: conteneur.commandes
+          .filter((commande) => commande.etapeCommande === "DEPOTAGE_EN_COURS")
+          .map((commande) => ({
+            ...commande,
+            prix_unitaire: commande.prix_unitaire ? decimalToNumber(commande.prix_unitaire) : null,
+            spareParts: commande.spareParts.filter((sp) => sp.etapeSparePart === "DEPOTAGE_EN_COURS")
+          })),
+        subcases: conteneur.subcases.map((subcase) => ({
+          ...subcase,
+          spareParts: subcase.spareParts.filter((sp) => sp.etapeSparePart === "DEPOTAGE_EN_COURS")
+        }))
+      }))
+      .filter((conteneur) => conteneur.commandes.length > 0);
+    
+    // Serialize Date objects
+    const serializedConteneurs = filteredConteneurs.map((conteneur) => ({
+      ...conteneur,
+      createdAt: conteneur.createdAt?.toISOString() || null,
+      updatedAt: conteneur.updatedAt?.toISOString() || null,
+      dateEmbarquement: conteneur.dateEmbarquement?.toISOString() || null,
+      dateArriveProbable: conteneur.dateArriveProbable?.toISOString() || null,
+      commandes: conteneur.commandes.map((commande) => ({
+        ...commande,
+        prix_unitaire: commande.prix_unitaire !== undefined ? (typeof commande.prix_unitaire === 'number' ? commande.prix_unitaire : decimalToNumber(commande.prix_unitaire)) : null,
+        date_livraison: commande.date_livraison?.toISOString() || null,
+        createdAt: commande.createdAt?.toISOString() || null,
+        updatedAt: commande.updatedAt?.toISOString() || null,
+        spareParts: commande.spareParts.map((sp) => ({
+          ...sp,
+          createdAt: sp.createdAt?.toISOString() || null,
+          updatedAt: sp.updatedAt?.toISOString() || null,
+        })),
+      })),
+      subcases: conteneur.subcases.map((subcase) => ({
+        ...subcase,
+        createdAt: subcase.createdAt?.toISOString() || null,
+        updatedAt: subcase.updatedAt?.toISOString() || null,
+        spareParts: subcase.spareParts.map((sp) => ({
+          ...sp,
+          createdAt: sp.createdAt?.toISOString() || null,
+          updatedAt: sp.updatedAt?.toISOString() || null,
+        })),
+        tools: subcase.tools.map((tool) => ({
+          ...tool,
+          createdAt: tool.createdAt?.toISOString() || null,
+          updatedAt: tool.updatedAt?.toISOString() || null,
+        })),
+      })),
+    }));
+    
+    return { success: true, data: serializedConteneurs };
+  } catch (error) {
+    console.error("Error fetching conteneurs depotage en cours:", error);
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : typeof error === 'string' 
+        ? error 
+        : JSON.stringify(error);
+    
+    // Check if it's a timeout error
+    const isTimeoutError = errorMessage.includes('timeout') || errorMessage.includes('Timeout');
+    
+    console.error("Error details:", {
+      message: errorMessage,
+      errorType: error?.constructor?.name,
+      isTimeout: isTimeoutError,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    
+    return { 
+      success: false, 
+      error: isTimeoutError 
+        ? "La requête a pris trop de temps. Veuillez réessayer ou contacter l'administrateur."
+        : `Failed to fetch conteneurs depotage en cours: ${errorMessage}` 
+    };
   }
 }
 
@@ -1118,16 +1505,48 @@ export async function getConteneursDecharge() {
 
 export async function markConteneurAsVerifie(conteneurId: string) {
   try {
+    // Create VerificationConteneur first
+    const verificationConteneur = await prisma.verificationConteneur.create({
+      data: {
+        conteneurId: conteneurId,
+      },
+    });
+
+    // Create RapportVerification linked to VerificationConteneur
+    await prisma.rapportVerification.create({
+      data: {
+        verificationConteneurId: verificationConteneur.id,
+      },
+    });
+
+    // Update all spare parts from subcases
     await prisma.sparePart.updateMany({
       where: { subcase: { conteneurId } },
-      data: { etapeSparePart: 'VERIFIE' }
+      data: { 
+        etapeSparePart: 'VERIFIER',
+        verificationConteneurId: verificationConteneur.id
+      }
     });
 
+    // Update all spare parts from commandes
+    await prisma.sparePart.updateMany({
+      where: { commande: { conteneurId } },
+      data: { 
+        etapeSparePart: 'VERIFIER',
+        verificationConteneurId: verificationConteneur.id
+      }
+    });
+
+    // Update conteneur
     await prisma.conteneur.update({
       where: { id: conteneurId },
-      data: { etapeConteneur: 'VERIFIE' }
+      data: { 
+        etapeConteneur: 'VERIFIER',
+        isVerified: true
+      }
     });
 
+    // Update all commandes in the conteneur
     await prisma.commande.updateMany({
       where: { conteneurId },
       data: { etapeCommande: 'VERIFIER' }
@@ -1138,6 +1557,222 @@ export async function markConteneurAsVerifie(conteneurId: string) {
   } catch (error) {
     console.error("Error marking conteneur as verifie:", error);
     return { success: false, error: "Failed to mark conteneur as verifie" };
+  }
+}
+
+export async function getRapportVerifications() {
+  try {
+    const rapports = await prisma.rapportVerification.findMany({
+      include: {
+        verificationConteneur: {
+          include: {
+            conteneur: true,
+            _count: {
+              select: {
+                PieceComplement: true,
+                spares: true,
+                tools: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serializedRapports = rapports.map((rapport) => ({
+      id: rapport.id,
+      createdAt: rapport.createdAt.toISOString(),
+      updatedAt: rapport.updatedAt.toISOString(),
+      verificationConteneur: {
+        id: rapport.verificationConteneur.id,
+        createdAt: rapport.verificationConteneur.createdAt.toISOString(),
+        updatedAt: rapport.verificationConteneur.updatedAt.toISOString(),
+        conteneur: {
+          id: rapport.verificationConteneur.conteneur.id,
+          conteneurNumber: rapport.verificationConteneur.conteneur.conteneurNumber,
+          sealNumber: rapport.verificationConteneur.conteneur.sealNumber,
+          totalPackages: rapport.verificationConteneur.conteneur.totalPackages,
+          grossWeight: rapport.verificationConteneur.conteneur.grossWeight,
+          netWeight: rapport.verificationConteneur.conteneur.netWeight,
+          stuffingMap: rapport.verificationConteneur.conteneur.stuffingMap,
+          isVerified: rapport.verificationConteneur.conteneur.isVerified,
+          etapeConteneur: rapport.verificationConteneur.conteneur.etapeConteneur,
+          createdAt: rapport.verificationConteneur.conteneur.createdAt.toISOString(),
+          updatedAt: rapport.verificationConteneur.conteneur.updatedAt.toISOString(),
+          dateEmbarquement: rapport.verificationConteneur.conteneur.dateEmbarquement?.toISOString() || null,
+          dateArriveProbable: rapport.verificationConteneur.conteneur.dateArriveProbable?.toISOString() || null,
+        },
+        counts: {
+          pieceComplements: rapport.verificationConteneur._count.PieceComplement,
+          spares: rapport.verificationConteneur._count.spares,
+          tools: rapport.verificationConteneur._count.tools,
+        },
+      },
+    }));
+
+    return { success: true, data: serializedRapports };
+  } catch (error) {
+    console.error("Error fetching rapport verifications:", error);
+    return { success: false, error: "Failed to fetch rapport verifications" };
+  }
+}
+
+export async function getRapportVerificationDetails(rapportId: string) {
+  try {
+    const rapport = await prisma.rapportVerification.findUnique({
+      where: { id: rapportId },
+      include: {
+        verificationConteneur: {
+          include: {
+            conteneur: true,
+            spares: {
+              include: {
+                commande: true,
+                subcase: true,
+              },
+              orderBy: { createdAt: "asc" },
+            },
+            tools: {
+              orderBy: { createdAt: "asc" },
+            },
+            PieceComplement: {
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!rapport) {
+      return { success: false, error: "Rapport verification not found" };
+    }
+
+    const serializedRapport = {
+      id: rapport.id,
+      createdAt: rapport.createdAt.toISOString(),
+      updatedAt: rapport.updatedAt.toISOString(),
+      verificationConteneur: {
+        id: rapport.verificationConteneur.id,
+        createdAt: rapport.verificationConteneur.createdAt.toISOString(),
+        updatedAt: rapport.verificationConteneur.updatedAt.toISOString(),
+        conteneur: {
+          id: rapport.verificationConteneur.conteneur.id,
+          conteneurNumber: rapport.verificationConteneur.conteneur.conteneurNumber,
+          sealNumber: rapport.verificationConteneur.conteneur.sealNumber,
+          totalPackages: rapport.verificationConteneur.conteneur.totalPackages,
+          grossWeight: rapport.verificationConteneur.conteneur.grossWeight,
+          netWeight: rapport.verificationConteneur.conteneur.netWeight,
+          stuffingMap: rapport.verificationConteneur.conteneur.stuffingMap,
+          isVerified: rapport.verificationConteneur.conteneur.isVerified,
+          etapeConteneur: rapport.verificationConteneur.conteneur.etapeConteneur,
+          createdAt: rapport.verificationConteneur.conteneur.createdAt.toISOString(),
+          updatedAt: rapport.verificationConteneur.conteneur.updatedAt.toISOString(),
+          dateEmbarquement: rapport.verificationConteneur.conteneur.dateEmbarquement?.toISOString() || null,
+          dateArriveProbable: rapport.verificationConteneur.conteneur.dateArriveProbable?.toISOString() || null,
+        },
+        spares: rapport.verificationConteneur.spares.map((spare) => ({
+          id: spare.id,
+          partCode: spare.partCode,
+          partName: spare.partName,
+          partNameFrench: spare.partNameFrench,
+          verificationName: spare.verificationName,
+          quantity: spare.quantity,
+          etapeSparePart: spare.etapeSparePart,
+          statusVerification: spare.statusVerification,
+          createdAt: spare.createdAt.toISOString(),
+          updatedAt: spare.updatedAt.toISOString(),
+          commandeId: spare.commandeId,
+          subcaseId: spare.subcaseId,
+          subcaseNumber: spare.subcase?.subcaseNumber || null,
+        })),
+        tools: rapport.verificationConteneur.tools.map((tool) => ({
+          id: tool.id,
+          toolCode: tool.toolCode,
+          toolName: tool.toolName,
+          quantity: tool.quantity,
+          check: tool.check,
+          etapeTool: tool.etapeTool,
+          createdAt: tool.createdAt.toISOString(),
+          updatedAt: tool.updatedAt.toISOString(),
+          commandeId: tool.commandeId,
+          subcaseId: tool.subcaseId,
+        })),
+        pieceComplements: rapport.verificationConteneur.PieceComplement.map((piece) => ({
+          id: piece.id,
+          partCode: piece.partCode,
+          partName: piece.partName,
+          partNameFrench: piece.partNameFrench,
+          vehicleModel: piece.vehicleModel,
+          quantity: piece.quantity,
+          createdAt: piece.createdAt.toISOString(),
+          updatedAt: piece.updatedAt.toISOString(),
+          commandeLocalId: piece.commandeLocalId,
+        })),
+      },
+    };
+
+    return { success: true, data: serializedRapport };
+  } catch (error) {
+    console.error("Error fetching rapport verification details:", error);
+    return { success: false, error: "Failed to fetch rapport verification details" };
+  }
+}
+
+export async function getVerificationSparesByConteneur() {
+  try {
+    const verificationConteneurs = await prisma.verificationConteneur.findMany({
+      include: {
+        conteneur: true,
+        spares: {
+          where: {
+            etapeSparePart: "VERIFIER",
+          },
+          include: {
+            subcase: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serialized = verificationConteneurs.map((verification) => ({
+      id: verification.id,
+      createdAt: verification.createdAt.toISOString(),
+      updatedAt: verification.updatedAt.toISOString(),
+      conteneur: {
+        id: verification.conteneur.id,
+        conteneurNumber: verification.conteneur.conteneurNumber,
+        sealNumber: verification.conteneur.sealNumber,
+        etapeConteneur: verification.conteneur.etapeConteneur,
+        isVerified: verification.conteneur.isVerified,
+        createdAt: verification.conteneur.createdAt.toISOString(),
+        updatedAt: verification.conteneur.updatedAt.toISOString(),
+        dateEmbarquement: verification.conteneur.dateEmbarquement?.toISOString() || null,
+        dateArriveProbable: verification.conteneur.dateArriveProbable?.toISOString() || null,
+      },
+      spares: verification.spares.map((spare) => ({
+        id: spare.id,
+        partCode: spare.partCode,
+        partName: spare.partName,
+        partNameFrench: spare.partNameFrench,
+        verificationName: spare.verificationName,
+        quantity: spare.quantity,
+        etapeSparePart: spare.etapeSparePart,
+        statusVerification: spare.statusVerification,
+        createdAt: spare.createdAt.toISOString(),
+        updatedAt: spare.updatedAt.toISOString(),
+        commandeId: spare.commandeId,
+        subcaseId: spare.subcaseId,
+        subcaseNumber: spare.subcase?.subcaseNumber || null,
+      })),
+    }));
+
+    return { success: true, data: serialized };
+  } catch (error) {
+    console.error("Error fetching verification spares by conteneur:", error);
+    return { success: false, error: "Failed to fetch verification spares by conteneur" };
   }
 }
 
