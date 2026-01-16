@@ -152,7 +152,7 @@ export default function AjouterModelePage() {
               </div>
               <div className="flex flex-col gap-3">
                 <Badge 
-                  onClick={() => window.open('/commercial/ajouter-modele/print-all', '_blank')}
+                  onClick={() => window.open('/commercial/ajouter-modele/print', '_blank')}
                   className="text-xl px-8 py-4 shadow-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 border-0 cursor-pointer transition-all"
                 >
                   <Car className="w-5 h-5 mr-2" />
