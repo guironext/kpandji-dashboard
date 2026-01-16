@@ -17,7 +17,6 @@ import {
   FileEdit,
   Database,
   Ship,
-  CheckSquare,
   Building2
 } from "lucide-react";
 import Link from "next/link";

@@ -3,6 +3,15 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const prismaClient = prisma as typeof prisma & {
+      ordreMontage: {
+        create: (args: unknown) => Promise<{
+          id: string
+          createdAt: Date
+          updatedAt: Date
+        }>
+      }
+    }
     const body = await request.json()
     const { commandeId, voitureId, numeroChassisId } = body
 
@@ -13,7 +22,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const ordreMontage = await (prisma as any).ordreMontage.create({
+    const ordreMontage = await prismaClient.ordreMontage.create({
       data: {
         commandeId,
         voitureId,
