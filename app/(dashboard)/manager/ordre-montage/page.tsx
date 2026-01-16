@@ -34,9 +34,10 @@ const serializeCommande = (commande: CommandeWithRelations) => ({
 })
 
 export default async function OrdreMontagePage() {
+  const prismaClient = prisma as typeof prisma & { ordreMontage: typeof prisma.commande }
   const [ordreMontages, commandes, voitures] = await Promise.all([
     executeWithRetry(() =>
-      prisma.ordreMontage.findMany({
+      prismaClient.ordreMontage.findMany({
         include: {
           numeroChassis: true,
           commande: {
