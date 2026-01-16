@@ -36,7 +36,7 @@ type ConteneurType = {
 type CommandeType = {
   id: string;
   motorisation: string;
-  date_livraison: string;
+  date_livraison: string | null;
   etapeCommande: string;
   voitureModel: {
     model: string;
@@ -278,7 +278,7 @@ const NouveauCourrierClient: React.FC<Props> = ({ conteneurs: initialConteneurs,
           moteurs.push(commandeLine.motorisation);
 
           // Set first date_livraison if not set
-          if (!firstDateLivraison) {
+          if (!firstDateLivraison && commande.date_livraison) {
             firstDateLivraison = new Date(commande.date_livraison);
             firstCommandeId = commandeLine.commandeId;
           }
