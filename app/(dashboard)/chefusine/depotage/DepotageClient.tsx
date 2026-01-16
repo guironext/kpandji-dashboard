@@ -590,7 +590,7 @@ const DepotageClient: React.FC<Props> = ({ conteneurs }) => {
               Aucun conteneur en dépotage
             </h3>
             <p className="text-gray-600 font-medium text-lg">
-              Tous les conteneurs ont été traités ou aucun n'est actuellement en cours de dépotage
+              Tous les conteneurs ont été traités ou aucun n&apos;est actuellement en cours de dépotage
             </p>
           </div>
         )}
