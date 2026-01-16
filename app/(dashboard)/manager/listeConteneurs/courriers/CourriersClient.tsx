@@ -23,7 +23,7 @@ import {
 
 type CourrierType = {
   id: string;
-  date_livraison: string;
+  date_livraison: string | null;
   reference: string;
   numero_conteneur: string;
   vin: string;

@@ -106,11 +106,11 @@ const NouveauCourrierClient: React.FC<Props> = ({ conteneurs: initialConteneurs,
     // Fetch commandes for this conteneur
     const commandesResult = await getCommandesForCourrier(conteneurId);
     if (commandesResult.success && commandesResult.data && Array.isArray(commandesResult.data)) {
-      const newCommandesData = commandesResult.data;
+      const newCommandesData = commandesResult.data as CommandeType[];
       setCommandes((prev) => {
         const existingIds = new Set(prev.map((c) => c.id));
         const newCommandes = newCommandesData.filter(
-          (c: CommandeType) => !existingIds.has(c.id)
+          (c) => !existingIds.has(c.id)
         );
         return [...prev, ...newCommandes];
       });
