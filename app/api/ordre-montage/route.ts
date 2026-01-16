@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const ordreMontage = await prisma.ordreMontage.create({
+    const ordreMontage = await (prisma as any).ordreMontage.create({
       data: {
         commandeId,
         voitureId,

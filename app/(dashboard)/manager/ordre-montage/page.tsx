@@ -28,14 +28,48 @@ type CommandeWithRelations = {
   clientEntreprise: { nom_entreprise: string } | null
 }
 
+type OrdreMontageRecord = {
+  id: string
+  createdAt: Date
+  numeroChassis: {
+    id: string
+    chassisNumber: string
+    motorisation: string
+    numeroConteneur: string
+    createdAt: Date
+  }
+  commande: CommandeWithRelations
+  voiture: {
+    id: string
+    couleur: string | null
+    motorisation: string | null
+    transmission: string | null
+    nbr_portes: string | null
+    voitureModel: { model: string } | null
+  }
+}
+
+type VoitureRecord = {
+  id: string
+  couleur: string | null
+  motorisation: string | null
+  transmission: string | null
+  nbr_portes: string | null
+  voitureModel: { model: string } | null
+}
+
 const serializeCommande = (commande: CommandeWithRelations) => ({
   ...commande,
   prix_unitaire: commande.prix_unitaire ? commande.prix_unitaire.toNumber() : null,
 })
 
 export default async function OrdreMontagePage() {
-  const prismaClient = prisma as typeof prisma & { ordreMontage: typeof prisma.commande }
-  const [ordreMontages, commandes, voitures] = await Promise.all([
+  const prismaClient = prisma as typeof prisma & {
+    ordreMontage: {
+      findMany: (args: unknown) => Promise<OrdreMontageRecord[]>
+    }
+  }
+  const [ordreMontages, commandes, voitures] = (await Promise.all([
     executeWithRetry(() =>
       prismaClient.ordreMontage.findMany({
         include: {
@@ -74,7 +108,7 @@ export default async function OrdreMontagePage() {
         orderBy: { createdAt: 'desc' },
       })
     ),
-  ])
+  ])) as [OrdreMontageRecord[], CommandeWithRelations[], VoitureRecord[]]
 
   const serializedCommandes = (commandes as CommandeWithRelations[]).map(serializeCommande)
   const serializedOrdres = ordreMontages.map((ordre) => ({
