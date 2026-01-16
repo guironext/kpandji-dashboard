@@ -689,7 +689,7 @@ export default function Page() {
                 <p className="text-black font-semibold">
                   DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS
                 </p>
-                <p className="text-black">SOLDE à la livraison</p>
+                <p className="text-black">SOLDE avant livraison</p>
               </div>
               <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black ">
                 <p className=" font-thin text-center">

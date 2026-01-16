@@ -205,7 +205,7 @@ export async function getValideCommandesGroupees() {
       commandes: cg.commandes.map((cmd) => ({
         ...cmd,
         prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-        date_livraison: cmd.date_livraison.toISOString(),
+        date_livraison: cmd.date_livraison ? cmd.date_livraison.toISOString() : null,
         createdAt: cmd.createdAt.toISOString(),
         updatedAt: cmd.updatedAt.toISOString(),
       })),

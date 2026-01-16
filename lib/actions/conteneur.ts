@@ -281,7 +281,7 @@ export async function getAllConteneurs() {
       commandes: conteneur.commandes.map((commande) => ({
         ...commande,
         prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
-        date_livraison: commande.date_livraison.toISOString(),
+        date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
         createdAt: commande.createdAt.toISOString(),
         updatedAt: commande.updatedAt.toISOString(),
       })),
@@ -389,7 +389,7 @@ export async function getAllConteneursWithTransiteCommandes() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           voitureModel: commande.voitureModel ? {
@@ -514,7 +514,7 @@ export async function getConteneursChargeWithTransiteCommandes() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           voitureModel: commande.voitureModel ? {
@@ -631,7 +631,7 @@ export async function getAllConteneursCharge() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           voitureModel: commande.voitureModel ? {
@@ -859,7 +859,7 @@ export async function getConteneursRenseignes() {
         const commandeObj = {
           id: String(commande.id),
           etapeCommande: String(commande.etapeCommande),
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           clientId: commande.clientId ? String(commande.clientId) : null,
@@ -1132,7 +1132,7 @@ export async function getConteneursArrivesWithAllArriveStatuses() {
       dateArriveProbable: conteneur.dateArriveProbable?.toISOString() || null,
       commandes: conteneur.commandes.map((commande) => ({
         ...commande,
-        date_livraison: commande.date_livraison.toISOString(),
+        date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
         createdAt: commande.createdAt.toISOString(),
         updatedAt: commande.updatedAt.toISOString(),
       }))
@@ -1880,7 +1880,7 @@ export async function getConteneursTransite() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           clientEntreprise: commande.clientEntreprise,
@@ -2091,7 +2091,7 @@ export async function getConteneursTransiteNonRenseigne() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           voitureModel: commande.voitureModel ? {
@@ -2201,7 +2201,7 @@ export async function getConteneursTransiteDejaRenseigne() {
         return {
           ...commande,
           prix_unitaire: prixUnitaireFinal,
-          date_livraison: commande.date_livraison.toISOString(),
+          date_livraison: commande.date_livraison ? commande.date_livraison.toISOString() : null,
           createdAt: commande.createdAt.toISOString(),
           updatedAt: commande.updatedAt.toISOString(),
           voitureModel: commande.voitureModel ? {

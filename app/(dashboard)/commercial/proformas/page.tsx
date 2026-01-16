@@ -64,6 +64,18 @@ const numberToFrench = (num: number): string => {
   return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
 };
 
+const escapeHtml = (value?: string | null) => {
+  if (!value) return "";
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
+const escapeAttr = (value?: string | null) => escapeHtml(value);
+
 type Facture = {
   id: string;
   date_facture: string;
@@ -244,12 +256,14 @@ export default function Page() {
 
     // Generate table rows for vehicles
     const vehicleRows = lignes.map((ligne, index) => {
+      const vehicleModelName = escapeHtml(ligne.voitureModel?.model || "N/A");
+      const vehicleDescription = escapeHtml(ligne.voitureModel?.description || "N/A");
       const vehicleImage = ligne.voitureModel?.image 
-        ? `<img src="${ligne.voitureModel.image}" alt="${ligne.voitureModel.model || 'Vehicle'}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
+        ? `<img src="${escapeAttr(ligne.voitureModel.image)}" alt="${vehicleModelName}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
         : "N/A";
       
       const colorInfo = ligne.couleur 
-        ? `<div style="font-size: 8px; color: #92400e;">Couleur: ${ligne.couleur}${ligne.transmission ? ` Transmission: ${ligne.transmission}` : ''}${ligne.motorisation ? ` Motorisation: ${ligne.motorisation}` : ''}</div>`
+        ? `<div style="font-size: 8px; color: #92400e;">Couleur: ${escapeHtml(ligne.couleur)}${ligne.transmission ? ` Transmission: ${escapeHtml(ligne.transmission)}` : ''}${ligne.motorisation ? ` Motorisation: ${escapeHtml(ligne.motorisation)}` : ''}</div>`
         : '';
 
       return `
@@ -257,8 +271,8 @@ export default function Page() {
           <td style="padding: 5px; text-align: center; font-weight: 600;">${index + 1}</td>
           <td style="padding: 5px;">${vehicleImage}</td>
           <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${ligne.voitureModel?.model || "N/A"}</div>
-            <div style="font-size: 8px; margin-top: 4px;">${ligne.voitureModel?.description || "N/A"}</div>
+            <div style="font-size: 13px; font-weight: 600;">${vehicleModelName}</div>
+            <div style="font-size: 8px; margin-top: 4px;">${vehicleDescription}</div>
             ${colorInfo}
           </td>
           <td style="padding: 5px; text-align: center; font-size: 13px;">${ligne.nbr_voiture}</td>
@@ -273,8 +287,10 @@ export default function Page() {
     if (currentFacture.accessoires && currentFacture.accessoires.length > 0) {
       accessoryRows = currentFacture.accessoires.map((accessoire, accIndex) => {
         const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
+        const accessoireName = escapeHtml(accessoire.nom);
+        const accessoireDescription = escapeHtml(accessoire.description);
         const accessoryImage = accessoire.image 
-          ? `<img src="${accessoire.image}" alt="${accessoire.nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
+          ? `<img src="${escapeAttr(accessoire.image)}" alt="${accessoireName}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
           : '<div style="font-size: 13px; color: #9ca3af;">Pas d\'image</div>';
         
         return `
@@ -282,8 +298,8 @@ export default function Page() {
             <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + accIndex + 1}</td>
             <td style="padding: 5px;">${accessoryImage}</td>
             <td style="padding: 5px;">
-              <div style="font-size: 13px; font-weight: 600;">${accessoire.nom}</div>
-              ${accessoire.description ? `<div style="font-size: 8px; margin-top: 4px; max-width: 320px;">${accessoire.description}</div>` : ''}
+              <div style="font-size: 13px; font-weight: 600;">${accessoireName}</div>
+              ${accessoire.description ? `<div style="font-size: 8px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
             </td>
             <td style="padding: 5px; text-align: center; font-size: 13px;">${accessoire.quantity || 1}</td>
             <td style="padding: 5px; text-align: right; font-size: 13px;">${formatNumberWithSpaces(accessoirePrix)}</td>
@@ -293,8 +309,10 @@ export default function Page() {
       }).join('');
     } else if (currentFacture.accessoire_nom) {
       const imagePath = getAccessoireImage(currentFacture.accessoire_nom, accessoires);
+      const accessoireNom = escapeHtml(currentFacture.accessoire_nom);
+      const accessoireDescription = escapeHtml(currentFacture.accessoire_description);
       const accessoryImage = imagePath 
-        ? `<img src="${imagePath}" alt="${currentFacture.accessoire_nom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
+        ? `<img src="${escapeAttr(imagePath)}" alt="${accessoireNom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
         : '<div style="font-size: 13px; color: #6b7280;">Pas d\'image</div>';
       
       accessoryRows = `
@@ -302,8 +320,8 @@ export default function Page() {
           <td style="padding: 5px; text-align: center; font-weight: 600;">${lignes.length + 1}</td>
           <td style="padding: 5px;">${accessoryImage}</td>
           <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${currentFacture.accessoire_nom}</div>
-            ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${currentFacture.accessoire_description}</div>` : ''}
+            <div style="font-size: 13px; font-weight: 600;">${accessoireNom}</div>
+            ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
           </td>
           <td style="padding: 5px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
           <td style="padding: 5px; text-align: right; font-size: 14px;">${((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</td>
@@ -314,14 +332,36 @@ export default function Page() {
 
     // Signature image
     const signatureHtml = showSignature && signatureImage 
-      ? `<img src="${signatureImage}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
+      ? `<img src="${escapeAttr(signatureImage)}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
       : '';
+
+    const factureId = escapeHtml(currentFacture.id.slice(-7));
+    const factureStatus = escapeHtml(currentFacture.status_facture);
+    const factureDate = escapeHtml(new Date(currentFacture.date_facture).toLocaleDateString());
+    const createdByName = escapeHtml(
+      `${currentFacture.user?.firstName || ''} ${currentFacture.user?.lastName || ''}`.trim()
+    ) || "N/A";
+    const createdByEmail = escapeHtml(currentFacture.user?.email || "N/A");
+    const createdByTelephone = escapeHtml(currentFacture.user?.telephone || "N/A");
+    const clientName = escapeHtml(
+      currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise || "N/A"
+    );
+    const clientEntrepriseName = currentFacture.client?.entreprise
+      ? escapeHtml(currentFacture.client.entreprise)
+      : "";
+    const clientTelephone = escapeHtml(
+      currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || "N/A"
+    );
+    const clientLocalisation = escapeHtml(
+      currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || "N/A"
+    );
+    const dateEcheance = escapeHtml(new Date(currentFacture.date_echeance).toLocaleDateString());
 
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Proforma - ${currentFacture.id.slice(-7)}</title>
+          <title>Proforma - ${factureId}</title>
           <meta charset="UTF-8">
           <meta name="color-scheme" content="light">
           <style>
@@ -693,7 +733,7 @@ export default function Page() {
             <div class="content-wrapper">
               <div class="header">
                 <div class="header-left">
-                  <img src="${window.location.origin}/logo.png" alt="Logo" />
+                  <img src="${escapeAttr(window.location.origin)}/logo.png" alt="Logo" />
                 </div>
                 <div class="header-right">
                   <h1>KPANDJI AUTOMOBILES</h1>
@@ -704,51 +744,51 @@ export default function Page() {
               <div class="date-section">
                 <div style="display: flex; gap: 8px;">
                   <span>Date:</span>
-                  <span>${new Date(currentFacture.date_facture).toLocaleDateString()}</span>
+                  <span>${factureDate}</span>
                 </div>
               </div>
 
               <div class="title-section">
-                <h1>FACTURE ${currentFacture.status_facture}</h1>
+                <h1>FACTURE ${factureStatus}</h1>
               </div>
 
               <div class="info-section">
                 <div class="info-left">
                   <div class="info-item">
                     <span class="info-label">Numéro de Proforma:</span>
-                    <span class="info-value" style="text-transform: uppercase;">${currentFacture.id.slice(-7)}</span>
+                    <span class="info-value" style="text-transform: uppercase;">${factureId}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">Créé par:</span>
-                    <span class="info-value">${currentFacture.user?.firstName} ${currentFacture.user?.lastName}</span>
+                    <span class="info-value">${createdByName}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">Contact:</span>
-                    <span class="info-value">${currentFacture.user?.email}</span>
+                    <span class="info-value">${createdByEmail}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${currentFacture.user?.telephone || 'N/A'}</span>
+                    <span class="info-value">${createdByTelephone}</span>
                   </div>
                 </div>
                 <div class="info-right">
                   <div class="info-item">
                     <span class="info-label">Client:</span>
-                    <span class="info-value">${currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise}</span>
+                    <span class="info-value">${clientName}</span>
                   </div>
                   ${currentFacture.client?.entreprise ? `
                   <div class="info-item">
                     <span class="info-label">Entreprise:</span>
-                    <span class="info-value">${currentFacture.client.entreprise}</span>
+                    <span class="info-value">${clientEntrepriseName}</span>
                   </div>
                   ` : ''}
                   <div class="info-item">
                     <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || 'N/A'}</span>
+                    <span class="info-value">${clientTelephone}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">Localisation:</span>
-                    <span class="info-value">${currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || 'N/A'}</span>
+                    <span class="info-value">${clientLocalisation}</span>
                   </div>
                 </div>
               </div>
@@ -802,7 +842,7 @@ export default function Page() {
               <div class="amount-text">
                 Arrêter la présente facture à la somme de <span>${(() => {
                   const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(currentFacture.total_ttc || 0));
-                  return amountText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                  return escapeHtml(amountText);
                 })()} francs CFA</span>
               </div>
 
@@ -816,7 +856,7 @@ export default function Page() {
 
               <div class="notes-section">
                 <p class="notes-title">Notes</p>
-                <p style="font-weight: 500;">date d'échéance: ${new Date(currentFacture.date_echeance).toLocaleDateString()}</p>
+                <p style="font-weight: 500;">date d'échéance: ${dateEcheance}</p>
               </div>
             </div>
 

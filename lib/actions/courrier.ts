@@ -41,7 +41,7 @@ export async function getAllCourriers() {
     // Serialize Date objects and Decimal values
     const serializedCourriers = courriers.map((courrier) => ({
       id: courrier.id,
-      date_livraison: courrier.date_livraison.toISOString(),
+      date_livraison: courrier.date_livraison ? courrier.date_livraison.toISOString() : null,
       reference: courrier.reference,
       numero_conteneur: courrier.numero_conteneur,
       vin: courrier.vin,
@@ -54,7 +54,7 @@ export async function getAllCourriers() {
       commande: courrier.commande ? {
         id: courrier.commande.id,
         etapeCommande: courrier.commande.etapeCommande,
-        date_livraison: courrier.commande.date_livraison.toISOString(),
+        date_livraison: courrier.commande.date_livraison ? courrier.commande.date_livraison.toISOString() : null,
         createdAt: courrier.commande.createdAt.toISOString(),
         updatedAt: courrier.commande.updatedAt.toISOString(),
         clientId: courrier.commande.clientId,
@@ -199,7 +199,7 @@ export async function getCommandesForCourrier(conteneurId?: string) {
     const serializedCommandes = commandes.map((cmd) => ({
       ...cmd,
       prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-      date_livraison: cmd.date_livraison.toISOString(),
+      date_livraison: cmd.date_livraison ? cmd.date_livraison.toISOString() : null,
       createdAt: cmd.createdAt.toISOString(),
       updatedAt: cmd.updatedAt.toISOString(),
     }));
