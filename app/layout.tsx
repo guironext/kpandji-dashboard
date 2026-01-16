@@ -29,6 +29,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  if (!clerkPublishableKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. Add it to .env.local and restart the dev server."
+    );
+  }
+
   return (
     <ClerkProvider
       publishableKey={clerkPublishableKey}
