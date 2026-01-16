@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { updateTool } from '@/lib/actions/subcase'
+import { EtapeTool } from '@/lib/generated/prisma'
 import { Wrench, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -16,7 +17,7 @@ interface Tool {
   toolCode: string;
   toolName: string;
   quantity: number;
-  etapeTool: string;
+  etapeTool: EtapeTool;
   check: boolean;
   createdAt: Date;
 }
@@ -38,18 +39,18 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
     toolCode: '',
     toolName: '',
     quantity: '',
-    etapeTool: '',
+    etapeTool: '' as EtapeTool | '',
     check: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const etapeOptions = [
-    { value: 'TRANSITE', label: 'En transit' },
-    { value: 'RENSEIGNE', label: 'Renseigné' },
-    { value: 'ARRIVE', label: 'Arrivé' },
-    { value: 'VERIFIE', label: 'Vérifié' },
-    { value: 'ATTRIBUE', label: 'Attribué' },
-    { value: 'CONSOMME', label: 'Consommé' }
+    { value: EtapeTool.TRANSITE, label: 'En transit' },
+    { value: EtapeTool.RENSEIGNE, label: 'Renseigné' },
+    { value: EtapeTool.ARRIVE, label: 'Arrivé' },
+    { value: EtapeTool.VERIFIER, label: 'Vérifié' },
+    { value: EtapeTool.ATTRIBUE, label: 'Attribué' },
+    { value: EtapeTool.CONSOMME, label: 'Consommé' }
   ]
 
   useEffect(() => {
@@ -79,7 +80,7 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
         toolCode: formData.toolCode.trim(),
         toolName: formData.toolName.trim(),
         quantity: parseInt(formData.quantity),
-        etapeTool: formData.etapeTool as 'TRANSITE' | 'RENSEIGNE' | 'ARRIVE' | 'VERIFIE' | 'ATTRIBUE' | 'CONSOMME',
+        etapeTool: formData.etapeTool || undefined,
         check: formData.check
       })
       
@@ -157,7 +158,9 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             <Label htmlFor="etapeTool">Étape</Label>
             <Select
               value={formData.etapeTool}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, etapeTool: value }))}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, etapeTool: value as EtapeTool }))
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner une étape" />

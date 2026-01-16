@@ -2,6 +2,7 @@
 
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
+import { EtapeTool } from "../generated/prisma";
 
 // Type guard for objects with toNumber method
 interface HasToNumber {
@@ -446,7 +447,7 @@ export async function updateTool(toolId: string, data: {
   toolCode?: string;
   toolName?: string;
   quantity?: number;
-  etapeTool?: 'TRANSITE' | 'RENSEIGNE' | 'ARRIVE' | 'VERIFIE' | 'ATTRIBUE' | 'CONSOMME';
+  etapeTool?: EtapeTool;
   check?: boolean;
 }) {
   try {

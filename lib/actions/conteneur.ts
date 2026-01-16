@@ -143,7 +143,7 @@ export async function createConteneur(data: {
   grossWeight?: string;
   netWeight?: string;
   stuffingMap?: string;
-  etapeConteneur?: "EN_ATTENTE" | "CHARGE" | "TRANSITE" | "RENSEIGNE" | "ARRIVE" | "DECHARGE" | "VERIFIE";
+  etapeConteneur?: EtapeConteneur;
   dateEmbarquement?: Date;
   dateArriveProbable?: Date;
 }) {
@@ -156,7 +156,7 @@ export async function createConteneur(data: {
         grossWeight: data.grossWeight,
         netWeight: data.netWeight,
         stuffingMap: data.stuffingMap,
-        etapeConteneur: data.etapeConteneur || "EN_ATTENTE",
+        etapeConteneur: data.etapeConteneur ?? EtapeConteneur.EN_ATTENTE,
         dateEmbarquement: data.dateEmbarquement,
         dateArriveProbable: data.dateArriveProbable,
       },
@@ -685,7 +685,7 @@ export async function updateConteneur(id: string, data: {
   grossWeight?: string;
   netWeight?: string;
   stuffingMap?: string;
-  etapeConteneur?: "EN_ATTENTE" | "CHARGE" | "TRANSITE" | "RENSEIGNE" | "ARRIVE" | "DECHARGE" | "VERIFIE";
+  etapeConteneur?: EtapeConteneur;
   dateEmbarquement?: Date;
   dateArriveProbable?: Date;
 }) {
@@ -1454,7 +1454,7 @@ export async function markConteneurAsDecharge(conteneurId: string) {
 
     await prisma.conteneur.update({
       where: { id: conteneurId },
-      data: { etapeConteneur: 'DECHARGE' }
+      data: { etapeConteneur: EtapeConteneur.DEPOTAGE_EN_COURS }
     });
 
     await prisma.commande.updateMany({
@@ -1474,7 +1474,7 @@ export async function getConteneursDecharge() {
   try {
     const conteneurs = await prisma.conteneur.findMany({
       where: {
-        etapeConteneur: "DECHARGE"
+        etapeConteneur: EtapeConteneur.DEPOTAGE_EN_COURS
       },
       include: {
         commandes: {
@@ -1780,7 +1780,7 @@ export async function getConteneursVerifies() {
   try {
     const conteneurs = await prisma.conteneur.findMany({
       where: {
-        etapeConteneur: "VERIFIE"
+        etapeConteneur: EtapeConteneur.VERIFIER
       },
       include: {
         commandes: {
