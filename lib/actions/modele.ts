@@ -34,6 +34,7 @@ export async function createModel(
     createModelSchema.parse(data);
     
     const isProduction = process.env.NODE_ENV === 'production';
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     let imagePath = "";
     let ficheTechniquePath = "";
     
@@ -51,6 +52,11 @@ export async function createModel(
       let uploadedPath: string;
       
       if (isProduction) {
+        if (!blobToken) {
+          throw new Error(
+            "Vercel Blob: No token found. Configurez la variable d'environnement BLOB_READ_WRITE_TOKEN."
+          );
+        }
         // Use Vercel Blob in production
         const timestamp = Date.now();
         const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -58,6 +64,7 @@ export async function createModel(
         
         const blob = await put(filename, file, {
           access: 'public',
+          token: blobToken,
         });
         
         uploadedPath = blob.url;
@@ -259,6 +266,7 @@ export async function updateModele(
     createModelSchema.partial().parse(data);
     
     const isProduction = process.env.NODE_ENV === 'production';
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     let imagePath: string | undefined;
     let ficheTechniquePath: string | undefined;
     
@@ -275,6 +283,11 @@ export async function updateModele(
         let uploadedPath: string;
         
         if (isProduction) {
+          if (!blobToken) {
+            throw new Error(
+              "Vercel Blob: No token found. Configurez la variable d'environnement BLOB_READ_WRITE_TOKEN."
+            );
+          }
           // Use Vercel Blob in production
           const timestamp = Date.now();
           const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -282,6 +295,7 @@ export async function updateModele(
           
           const blob = await put(filename, file, {
             access: 'public',
+            token: blobToken,
           });
           
           uploadedPath = blob.url;
