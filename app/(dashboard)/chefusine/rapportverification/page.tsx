@@ -171,7 +171,12 @@ export default async function RapportVerificationChefUsinePage() {
                                 <TableCell>
                                   {spare.partNameFrench || spare.partName}
                                 </TableCell>
-                                <TableCell>{(spare as { quantity?: number }).quantity ?? "-"}</TableCell>
+                                <TableCell>
+                                  {((): React.ReactNode => {
+                                    const q = (spare as { quantity?: number }).quantity;
+                                    return q != null ? q : "-";
+                                  })()}
+                                </TableCell>
                                 <TableCell>
                                   {spare.subcaseNumber
                                     ? `Subcase ${spare.subcaseNumber}`
