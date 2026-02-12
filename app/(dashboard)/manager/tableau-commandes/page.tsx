@@ -44,7 +44,7 @@ export default async function TableauCommandesPage() {
 
   return (
     <TableauCommandesClient 
-      commandes={commandes} 
+      commandes={commandes as React.ComponentProps<typeof TableauCommandesClient>['commandes']} 
       error={error}
       isLoading={false}
     />
