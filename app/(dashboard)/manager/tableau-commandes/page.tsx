@@ -41,10 +41,11 @@ export default async function TableauCommandesPage() {
   }
   
   const commandes = commandesResult?.success ? commandesResult.data || [] : []
+  const commandesTyped = commandes as unknown as React.ComponentProps<typeof TableauCommandesClient>['commandes']
 
   return (
     <TableauCommandesClient 
-      commandes={commandes as unknown as React.ComponentProps<typeof TableauCommandesClient>['commandes']} 
+      commandes={commandesTyped} 
       error={error}
       isLoading={false}
     />
