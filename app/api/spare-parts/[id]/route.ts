@@ -4,12 +4,13 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const sparePart = await prisma.sparePart.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         etapeSparePart: true,

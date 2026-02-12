@@ -51,7 +51,7 @@ const page = async () => {
 
   const data: DataType =
     result.success && result.data
-      ? (result.data as DataType)
+      ? (result.data as unknown as DataType)
       : { conteneurs: [], commandes: [] };
 
   return <ChefusineConteneurArriveClient data={data} />;

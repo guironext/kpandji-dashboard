@@ -81,7 +81,7 @@ type SparePartType = {
   } | null;
 };
 
-const page = async ({ params }: { params: { id: string } }) => {
+const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
 
   // Fetch equipe
@@ -283,7 +283,7 @@ const page = async ({ params }: { params: { id: string } }) => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-3 bg-white/50 rounded-lg">
-              <p className="text-sm text-gray-500">Chef d'équipe</p>
+              <p className="text-sm text-gray-500">Chef d&apos;équipe</p>
               <p className="font-semibold">
                 {equipe.chefEquipe
                   ? `${equipe.chefEquipe.nom} ${equipe.chefEquipe.prenoms}`

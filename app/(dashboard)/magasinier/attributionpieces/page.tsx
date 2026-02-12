@@ -37,8 +37,8 @@ const page = async () => {
                 Attribution des Pièces aux Équipes
               </CardTitle>
               <CardDescription className="text-lg text-gray-600 mt-1">
-                Gérez l'attribution des pièces de rechange aux équipes de
-                montage en cours d'exécution
+                Gérez l&apos;attribution des pièces de rechange aux équipes de
+                montage en cours d&apos;exécution
               </CardDescription>
             </div>
           </div>

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+interface MembreInput {
+  employeeId: string
+  isChef?: boolean
+  fonction?: string
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -54,7 +60,7 @@ export async function POST(request: NextRequest) {
         activite: activite || 'montage',
         montageId,
         membres: {
-          create: membres.map((membre: any) => ({
+          create: (membres as MembreInput[]).map((membre) => ({
             employeeId: membre.employeeId,
             qualite: membre.isChef ? 'CHEF_EQUIPE' : 'MEMBRE_EQUIPE',
             fonction: membre.fonction || ''

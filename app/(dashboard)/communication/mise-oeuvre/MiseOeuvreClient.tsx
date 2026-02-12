@@ -72,7 +72,7 @@ export default function MiseOeuvreClient({
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [hasUnsavedCompleted, setHasUnsavedCompleted] = useState(false);
+  const [, setHasUnsavedCompleted] = useState(false);
   const [savingCompleted, setSavingCompleted] = useState(false);
   const [saveCompletedDone, setSaveCompletedDone] = useState(false);
   const [form, setForm] = useState({

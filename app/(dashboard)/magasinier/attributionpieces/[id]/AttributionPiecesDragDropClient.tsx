@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -364,7 +364,7 @@ const AttributionPiecesDragDropClient = ({ equipe, spareParts }: Props) => {
           className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold"
         >
           <Save className="h-4 w-4 mr-2" />
-          Enregistrer l'Attribution ({totalQuantity} pièces)
+          Enregistrer l&apos;Attribution ({totalQuantity} pièces)
         </Button>
       </div>
     </div>

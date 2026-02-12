@@ -24,7 +24,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { createNumeroCourrier, getNumeroCourrierById } from "@/lib/actions/courrier";
 import { toast } from "sonner";
 import { Loader2, FileText, Download, Mail, Calendar, CheckCircle2, Sparkles } from "lucide-react";

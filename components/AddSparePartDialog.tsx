@@ -403,7 +403,7 @@ const AddSparePartDialog: React.FC<AddSparePartDialogProps> = ({
                       // For now, I'll assume it's a function that needs to be called.
                       // If translateText is not available, this part will need adjustment.
                       // For the purpose of fixing the brace, I'm including it as is.
-                      // @ts-ignore - Ignoring potential 'translateText' not defined error for now
+                      // @ts-expect-error - translateText may not be defined in scope
                       translateText(formData.partName.trim())
                         .then((result) => {
                           if (

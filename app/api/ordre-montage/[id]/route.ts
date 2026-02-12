@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { ordreMontageFlag } = await request.json()
 
     if (!ordreMontageFlag) {
@@ -16,7 +17,7 @@ export async function PUT(
     }
 
     const ordreMontage = await prisma.ordreMontage.update({
-      where: { id: params.id },
+      where: { id },
       data: { ordreMontageFlag },
       include: {
         numeroChassis: true,

@@ -8,10 +8,6 @@ import {
   CalendarDays,
   TrendingDown,
   ClipboardCheck,
-  Receipt,
-  Store,
-  ShoppingCart,
-  Truck
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";

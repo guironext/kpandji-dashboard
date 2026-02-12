@@ -6,7 +6,6 @@ import {
   BarChart3,
   Warehouse,
   FileText,
-  Receipt,
   ClipboardList,
   Calculator,
   BookOpen,

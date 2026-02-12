@@ -11,7 +11,6 @@ import {
   Weight,
   Hash,
   MapPin,
-  Clock,
   Layers,
   Sparkles,
   TrendingUp,
@@ -99,7 +98,7 @@ const ChefusineConteneurArriveClient = ({ data }: Props) => {
     };
   }, [conteneurs, commandes]);
 
-  const renderConteneur = (conteneur: ConteneurType, index: number) => {
+  const renderConteneur = (conteneur: ConteneurType) => {
     return (
       <div
         key={conteneur.id}
@@ -265,7 +264,7 @@ const ChefusineConteneurArriveClient = ({ data }: Props) => {
     );
   };
 
-  const renderStandaloneCommande = (commande: CommandeType, index: number) => {
+  const renderStandaloneCommande = (commande: CommandeType) => {
     return (
       <div key={commande.id} className="bg-gradient-to-br from-white via-teal-50/40 to-cyan-50/30 rounded-2xl p-5 border-2 border-teal-100/60">
         <div className="flex justify-between items-start mb-3">
@@ -394,7 +393,7 @@ const ChefusineConteneurArriveClient = ({ data }: Props) => {
                   </div>
                   <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">Conteneurs Arrivés</h2>
                 </div>
-                {conteneurs.map((conteneur, index) => renderConteneur(conteneur, index))}
+                {conteneurs.map((conteneur) => renderConteneur(conteneur))}
               </div>
             )}
 
@@ -407,7 +406,7 @@ const ChefusineConteneurArriveClient = ({ data }: Props) => {
                   <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">Commandes Singles Arrivées</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {commandes.map((commande, index) => renderStandaloneCommande(commande, index))}
+                  {commandes.map((commande) => renderStandaloneCommande(commande))}
                 </div>
               </div>
             )}

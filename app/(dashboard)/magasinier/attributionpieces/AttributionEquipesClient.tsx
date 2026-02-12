@@ -113,7 +113,7 @@ const AttributionEquipesClient = ({ montages }: Props) => {
           Aucune donnée à afficher
         </p>
         <p className="text-gray-400 text-lg">
-          Aucun montage en cours d'exécution avec équipe active
+          Aucun montage en cours d&apos;exécution avec équipe active
         </p>
       </div>
     );

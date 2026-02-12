@@ -303,7 +303,6 @@ async function generateNumeroCourrier(): Promise<string> {
   const yearSuffix = currentYear.toString().slice(-2); // Last 2 digits of year
 
   // Find the highest numero_courrier for this year
-  const yearPrefix = currentYear.toString().slice(0, 2); // First 2 digits of year
   const allCourriers = await prisma.numeroCourrier.findMany({
     where: {
       numero_courrier: {

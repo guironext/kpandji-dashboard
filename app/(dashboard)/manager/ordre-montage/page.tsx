@@ -134,29 +134,6 @@ const OrdreMontagePage = () => {
     }
   }, [])
 
-  const handleDispatch = async (ordreMontageId: string) => {
-    try {
-      const response = await fetch(`/api/ordre-montage/${ordreMontageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ordreMontageFlag: 'EXECUTION' }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour')
-      }
-
-      toast.success('Ordre de montage mis à jour avec succès')
-      // Refresh the data
-      fetchNumeroChassis()
-    } catch (error) {
-      console.error('Error updating ordre montage:', error)
-      toast.error('Erreur lors de la mise à jour de l\'ordre de montage')
-    }
-  }
-
   const handleCreateMontage = async (ordreMontageId: string) => {
     try {
       const response = await fetch('/api/montage', {

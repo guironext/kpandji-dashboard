@@ -2893,6 +2893,7 @@ export async function getVerificationSparesByConteneur() {
           ...spare,
           createdAt: spare.createdAt.toISOString(),
           updatedAt: spare.updatedAt.toISOString(),
+          statusVerification: spare.statusVerification ?? undefined,
           subcaseNumber: spare.Subcase?.subcaseNumber || null,
         })),
       };

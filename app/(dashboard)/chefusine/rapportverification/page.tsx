@@ -27,6 +27,22 @@ const formatDateTime = (value: string) =>
     minute: "2-digit",
   });
 
+type VerificationSpare = {
+  id: string;
+  partCode: string;
+  partName: string;
+  partNameFrench?: string | null;
+  statusVerification?: string;
+};
+
+type VerificationItem = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  conteneur: { conteneurNumber: string; sealNumber: string | null };
+  spares: VerificationSpare[];
+};
+
 const statusVariant = (status: string) => {
   switch (status) {
     case "RETROUVE":
@@ -43,7 +59,7 @@ const statusVariant = (status: string) => {
 
 export default async function RapportVerificationChefUsinePage() {
   const result = await getVerificationSparesByConteneur();
-  const conteneurs = result.success && Array.isArray(result.data) ? result.data : [];
+  const conteneurs: VerificationItem[] = result.success && Array.isArray(result.data) ? (result.data as unknown as VerificationItem[]) : [];
   const conteneursWithSpares = conteneurs.filter((conteneur) => conteneur.spares.length > 0);
   const totalSpares = conteneursWithSpares.reduce(
     (sum, conteneur) => sum + conteneur.spares.length,

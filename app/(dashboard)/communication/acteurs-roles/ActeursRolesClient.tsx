@@ -29,7 +29,6 @@ import {
   Loader2,
   UserPlus,
   Sparkles,
-  CheckCircle2,
   FolderKanban,
   XCircle,
 } from "lucide-react";

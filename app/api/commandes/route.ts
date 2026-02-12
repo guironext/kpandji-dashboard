@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+interface WithCreatedUpdated {
+  createdAt: Date;
+  updatedAt: Date;
+  [key: string]: unknown;
+}
+
+interface CommandeWithRelations extends Record<string, unknown> {
+  Client?: WithCreatedUpdated | null;
+  Client_entreprise?: WithCreatedUpdated | null;
+  VoitureModel?: WithCreatedUpdated | null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,12 +35,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const serializedCommandes = (commandes as unknown[]).map((cmd: any) => {
-      const item = cmd as Record<string, any> & {
-        Client?: any;
-        Client_entreprise?: any;
-        VoitureModel?: any;
-      };
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as CommandeWithRelations;
       return {
         ...item,
         prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
@@ -103,7 +111,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the commande
-    // @ts-expect-error - bypassing Prisma type mismatch with introspected schema
     const commande = await prisma.commande.create({
       data: {
         id: crypto.randomUUID(),
@@ -127,11 +134,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const item = commande as Record<string, any> & {
-      Client?: any;
-      Client_entreprise?: any;
-      VoitureModel?: any;
-    };
+    const item = commande as CommandeWithRelations;
     const serializedCommande = {
       ...item,
       prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
