@@ -41,9 +41,26 @@ const statusVariant = (status: string) => {
   }
 };
 
+type VerificationSpare = {
+  id: string;
+  partCode: string;
+  partName: string;
+  partNameFrench?: string | null;
+  quantity?: number;
+  subcaseNumber?: string | null;
+  statusVerification?: string;
+};
+
+type VerificationItem = {
+  id: string;
+  createdAt: string;
+  conteneur: { conteneurNumber: string; sealNumber: string | null };
+  spares: VerificationSpare[];
+};
+
 export default async function RapportVerificationManagerPage() {
   const result = await getVerificationSparesByConteneur();
-  const conteneurs = result.success && Array.isArray(result.data) ? result.data : [];
+  const conteneurs = (result.success && Array.isArray(result.data) ? result.data : []) as unknown as VerificationItem[];
   const conteneursWithSpares = conteneurs.filter((conteneur) => conteneur.spares.length > 0);
   const totalSpares = conteneursWithSpares.reduce(
     (sum, conteneur) => sum + conteneur.spares.length,
@@ -92,12 +109,12 @@ export default async function RapportVerificationManagerPage() {
           conteneursWithSpares.map((verification) => {
             const grouped = verification.spares.reduce<Record<string, typeof verification.spares>>(
               (acc, spare) => {
-                const key = spare.statusVerification || "EN_ATTENTE";
+                const key = (spare as { statusVerification?: string }).statusVerification || "EN_ATTENTE";
                 if (!acc[key]) acc[key] = [];
                 acc[key].push(spare);
                 return acc;
               },
-              {}
+              {} as Record<string, typeof verification.spares>
             );
 
             return (
@@ -160,8 +177,8 @@ export default async function RapportVerificationManagerPage() {
                                     : "Commande"}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant={statusVariant(spare.statusVerification)}>
-                                    {spare.statusVerification}
+                                  <Badge variant={statusVariant(spare.statusVerification ?? "EN_ATTENTE")}>
+                                    {spare.statusVerification ?? "EN_ATTENTE"}
                                   </Badge>
                                 </TableCell>
                               </TableRow>

@@ -65,7 +65,7 @@ export default async function ConteneurArrivesPage() {
   const result = await getConteneursArrivesWithAllArriveStatuses()
   
   const conteneurs: ConteneurType[] = result.success && Array.isArray(result.data) 
-    ? (result.data as ConteneurType[])
+    ? (result.data as unknown as ConteneurType[])
     : []
 
   return (

@@ -75,7 +75,7 @@ export default function ConteneurDetailPage() {
         const result = await getConteneur(conteneurId);
 
         if (result.success && result.data) {
-          setConteneur(result.data as ConteneurType);
+          setConteneur(result.data as unknown as ConteneurType);
         } else {
           toast.error(result.error || "Erreur lors du chargement du conteneur");
           router.push("/manager/listeConteneurs");

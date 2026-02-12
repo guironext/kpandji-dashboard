@@ -45,7 +45,7 @@ export default async function ConteneursRenseignerPage() {
   const result = await getConteneursTransiteNonRenseigne()
   
   const conteneurs: ConteneurType[] = result.success && Array.isArray(result.data) 
-    ? (result.data as ConteneurType[])
+    ? (result.data as unknown as ConteneurType[])
     : []
 
   return (

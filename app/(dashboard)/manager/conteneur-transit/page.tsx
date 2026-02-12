@@ -48,11 +48,11 @@ export default async function ConteneurTransitPage() {
   ])
   
   const conteneursNonRenseigne: ConteneurType[] = nonRenseigneResult.success && Array.isArray(nonRenseigneResult.data) 
-    ? (nonRenseigneResult.data as ConteneurType[])
+    ? (nonRenseigneResult.data as unknown as ConteneurType[])
     : []
 
   const conteneursDejaRenseigne: ConteneurType[] = dejaRenseigneResult.success && Array.isArray(dejaRenseigneResult.data) 
-    ? (dejaRenseigneResult.data as ConteneurType[])
+    ? (dejaRenseigneResult.data as unknown as ConteneurType[])
     : []
 
   return (

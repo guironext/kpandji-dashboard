@@ -29,12 +29,13 @@ export default async function ChargerConteneurPage({
 
   // Fetch the commandes
   const commandesResult = await getCommandesValides()
-  const allCommandes = commandesResult.success ? commandesResult.data || [] : []
+  type CommandeWithId = { id: string; [key: string]: unknown };
+  const allCommandes = (commandesResult.success ? commandesResult.data || [] : []) as unknown as CommandeWithId[]
   const selectedCommandes = allCommandes.filter(c => commandeIds.includes(c.id))
 
   return (
     <ChargerConteneurClient
-      commandes={selectedCommandes}
+      commandes={selectedCommandes as unknown as Parameters<typeof ChargerConteneurClient>[0]['commandes']}
       model={model}
       conteneursNeeded={conteneursNeeded}
     />

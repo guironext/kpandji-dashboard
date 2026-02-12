@@ -165,13 +165,13 @@ export default async function RapportVerificationChefUsinePage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {spares.map((spare) => (
+                            {spares.map((spare: VerificationSpare) => (
                               <TableRow key={spare.id} className="hover:bg-indigo-50/60">
                                 <TableCell className="font-medium">{spare.partCode}</TableCell>
                                 <TableCell>
                                   {spare.partNameFrench || spare.partName}
                                 </TableCell>
-                                <TableCell>{spare.quantity}</TableCell>
+                                <TableCell>{(spare as { quantity?: number }).quantity ?? "-"}</TableCell>
                                 <TableCell>
                                   {spare.subcaseNumber
                                     ? `Subcase ${spare.subcaseNumber}`

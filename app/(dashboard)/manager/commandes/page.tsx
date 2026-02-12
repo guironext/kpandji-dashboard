@@ -15,9 +15,9 @@ export default async function CommandesPage() {
   ])
 
   const commandes = (commandesResult.success ? commandesResult.data || [] : []) as unknown as Parameters<typeof CommandesPageClient>[0]['commandes']
-  const clients = (clientsResult.success ? clientsResult.data || [] : []) as Array<{ id: string; nom: string; telephone: string }>
-  const clientsEntreprise = (clientsEntrepriseResult.success ? clientsEntrepriseResult.data || [] : []) as Array<{ id: string; nom_entreprise: string; telephone: string }>
-  const voitureModels = (modelesResult.success ? modelesResult.data || [] : []) as Array<{ id: string; model: string }>
+  const clients = (clientsResult.success ? clientsResult.data || [] : []) as unknown as Array<{ id: string; nom: string; telephone: string }>
+  const clientsEntreprise = (clientsEntrepriseResult.success ? clientsEntrepriseResult.data || [] : []) as unknown as Array<{ id: string; nom_entreprise: string; telephone: string }>
+  const voitureModels = (modelesResult.success ? modelesResult.data || [] : []) as unknown as Array<{ id: string; model: string }>
 
   return (
     <CommandesPageClient
