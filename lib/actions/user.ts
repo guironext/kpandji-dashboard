@@ -2,7 +2,7 @@
 
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "../prisma";
-import { UserRole } from "../generated/prisma";
+import { UserRole } from "@prisma/client";
 
 /**
  * Get or create a user in the database from Clerk
@@ -12,7 +12,7 @@ export async function getOrCreateUser(clerkId?: string) {
   try {
     // Get clerkId from parameter or current user
     let targetClerkId = clerkId;
-    
+
     if (!targetClerkId) {
       const user = await currentUser();
       if (!user) {
@@ -28,8 +28,10 @@ export async function getOrCreateUser(clerkId?: string) {
 
     // If user doesn't exist, create it from Clerk data
     if (!dbUser) {
-      const clerkUser = await (await clerkClient()).users.getUser(targetClerkId);
-      
+      const clerkUser = await (
+        await clerkClient()
+      ).users.getUser(targetClerkId);
+
       if (!clerkUser) {
         return { success: false, error: "User not found in Clerk" };
       }
@@ -41,7 +43,8 @@ export async function getOrCreateUser(clerkId?: string) {
       }
 
       // Get role from metadata or default to EMPLOYEE
-      const role = (clerkUser.publicMetadata?.role as UserRole) || UserRole.EMPLOYEE;
+      const role =
+        (clerkUser.publicMetadata?.role as UserRole) || UserRole.EMPLOYEE;
 
       // Create user in database
       dbUser = await prisma.user.create({
@@ -51,7 +54,9 @@ export async function getOrCreateUser(clerkId?: string) {
           firstName: clerkUser.firstName || "Unknown",
           lastName: clerkUser.lastName || "User",
           role: role,
-          department: clerkUser.publicMetadata?.department as string | undefined,
+          department: clerkUser.publicMetadata?.department as
+            | string
+            | undefined,
           telephone: clerkUser.publicMetadata?.telephone as string | undefined,
         },
       });
@@ -60,7 +65,8 @@ export async function getOrCreateUser(clerkId?: string) {
     return { success: true, data: dbUser };
   } catch (error) {
     console.error("Error getting or creating user:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to get or create user";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to get or create user";
     return { success: false, error: errorMessage };
   }
 }

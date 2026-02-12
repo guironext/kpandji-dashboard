@@ -29,8 +29,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { completeUserOnboarding } from "@/lib/actions/onboarding";
 //import { UserRole } from "@/generated/prisma";
-import { UserRole } from "../lib/generated/prisma";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { UserRole } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 const employeeSchema = z.object({
   firstName: z.string().min(1, "Prénoms obligatoire").max(55),
@@ -54,9 +60,10 @@ const OnboardingForm = ({
   firstName,
   lastName,
 }: OnboardingFormProps) => {
-  
   const { user, isLoaded } = useUser();
-  const [accountType, setAccountType] = useState<"admin" | "employee">("employee");
+  const [accountType, setAccountType] = useState<"admin" | "employee">(
+    "employee",
+  );
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +94,7 @@ const OnboardingForm = ({
         data.department || undefined,
         user.id,
         data.role as UserRole,
-        data.telephone || undefined
+        data.telephone || undefined,
       );
 
       console.log(response);
@@ -99,7 +106,9 @@ const OnboardingForm = ({
     } catch (error: unknown) {
       console.error(`Error creating employee: ${error}`);
       setError(
-        error instanceof Error ? error.message : "Failed to complete onboarding"
+        error instanceof Error
+          ? error.message
+          : "Failed to complete onboarding",
       );
     } finally {
       setIsSubmitting(false);
@@ -132,7 +141,7 @@ const OnboardingForm = ({
         <div className="relative overflow-hidden rounded-3xl bg-white/95 backdrop-blur-xl border border-orange-200/50 shadow-2xl">
           {/* Subtle background pattern */}
           <div className="absolute inset-0 bg-gradient-to-r from-orange-100/30 to-yellow-100/30" />
-          
+
           <div className="relative z-10 p-8">
             <Card className="border-0 shadow-none bg-transparent">
               <CardHeader className="text-center space-y-4">
@@ -145,15 +154,17 @@ const OnboardingForm = ({
                     KPANDJI MANAGEMENT BOARD
                   </span>
                 </CardTitle>
-                
+
                 <CardDescription className="text-lg text-gray-600">
                   Complétez ce formulaire pour créer votre compte
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <Label className="text-base font-semibold text-gray-700">Type de compte</Label>
+                  <Label className="text-base font-semibold text-gray-700">
+                    Type de compte
+                  </Label>
                   <RadioGroup
                     defaultValue="employee"
                     value={accountType}
@@ -173,7 +184,7 @@ const OnboardingForm = ({
                         className={cn(
                           "flex items-center justify-center rounded-xl border-2 border-orange-200 bg-orange-50 p-4 hover:bg-orange-100 hover:border-orange-300 transition-all duration-200 cursor-pointer",
                           accountType === "employee" &&
-                            "bg-orange-100 border-orange-400 text-orange-800 shadow-md"
+                            "bg-orange-100 border-orange-400 text-orange-800 shadow-md",
                         )}
                       >
                         <span className="font-medium">Employé</span>
@@ -181,7 +192,7 @@ const OnboardingForm = ({
                     </div>
                   </RadioGroup>
                 </div>
-                
+
                 <Separator className="bg-orange-200" />
 
                 {accountType === "employee" && (
@@ -196,12 +207,14 @@ const OnboardingForm = ({
                           name="firstName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 font-medium">Prénoms</FormLabel>
+                              <FormLabel className="text-gray-700 font-medium">
+                                Prénoms
+                              </FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  disabled 
-                                  className="bg-gray-50 border-gray-200 text-gray-600" 
+                                <Input
+                                  {...field}
+                                  disabled
+                                  className="bg-gray-50 border-gray-200 text-gray-600"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -213,12 +226,14 @@ const OnboardingForm = ({
                           name="lastName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 font-medium">Nom</FormLabel>
+                              <FormLabel className="text-gray-700 font-medium">
+                                Nom
+                              </FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
-                                  disabled 
-                                  className="bg-gray-50 border-gray-200 text-gray-600" 
+                                <Input
+                                  {...field}
+                                  disabled
+                                  className="bg-gray-50 border-gray-200 text-gray-600"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -226,18 +241,20 @@ const OnboardingForm = ({
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={employeeForm.control}
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-700 font-medium">Email</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">
+                              Email
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                disabled 
-                                className="bg-gray-50 border-gray-200 text-gray-600" 
+                              <Input
+                                {...field}
+                                disabled
+                                className="bg-gray-50 border-gray-200 text-gray-600"
                               />
                             </FormControl>
                             <FormMessage />
@@ -251,7 +268,9 @@ const OnboardingForm = ({
                           name="department"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 font-medium">Département (optionnel)</FormLabel>
+                              <FormLabel className="text-gray-700 font-medium">
+                                Département (optionnel)
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
@@ -269,8 +288,13 @@ const OnboardingForm = ({
                           name="role"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-gray-700 font-medium">Rôle</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormLabel className="text-gray-700 font-medium">
+                                Rôle
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger className="bg-white border-gray-200 focus:border-orange-400 focus:ring-orange-400">
                                     <SelectValue placeholder="Sélectionnez un rôle" />
@@ -278,22 +302,53 @@ const OnboardingForm = ({
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="ADMIN">Admin</SelectItem>
-                                  <SelectItem value="MAGASINIER">Magasinier</SelectItem>
-                                  <SelectItem value="MANAGER">Manager</SelectItem>
-                                  <SelectItem value="SUPERVISEUR">Superviseur</SelectItem>
-                                  <SelectItem value="CHEFUSINE">Chef Usine</SelectItem>
-                                  <SelectItem value="EMPLOYEE">Employé</SelectItem>
-                                  <SelectItem value="CHEFEQUIPE">Chef Équipe</SelectItem>
-                                  <SelectItem value="CHEFQUALITE">Chef Qualité</SelectItem>
-                                  <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                                  <SelectItem value="MAGASINIER">
+                                    Magasinier
+                                  </SelectItem>
+                                  <SelectItem value="MANAGER">
+                                    Manager
+                                  </SelectItem>
+                                  <SelectItem value="SUPERVISEUR">
+                                    Superviseur
+                                  </SelectItem>
+                                  <SelectItem value="CHEFUSINE">
+                                    Chef Usine
+                                  </SelectItem>
+                                  <SelectItem value="EMPLOYEE">
+                                    Employé
+                                  </SelectItem>
+                                  <SelectItem value="CHEFEQUIPE">
+                                    Chef Équipe
+                                  </SelectItem>
+                                  <SelectItem value="CHEFQUALITE">
+                                    Chef Qualité
+                                  </SelectItem>
+                                  <SelectItem value="COMMERCIAL">
+                                    Commercial
+                                  </SelectItem>
                                   <SelectItem value="RH">RH</SelectItem>
                                   <SelectItem value="SAV">SAV</SelectItem>
-                                  <SelectItem value="LOGISTIQUE">Logistique</SelectItem>
-                                  <SelectItem value="FINANCE">Finance</SelectItem>
-                                  <SelectItem value="DIRECTEUR_GENERAL">Directeur Général</SelectItem>
-                                  <SelectItem value="CLIENTELLE">Clientèle</SelectItem>
-                                  <SelectItem value="COMPTABLE">Comptable</SelectItem>
-                                  <SelectItem value="CONCESSIONAIRE">Concessionnaire</SelectItem>
+                                  <SelectItem value="LOGISTIQUE">
+                                    Logistique
+                                  </SelectItem>
+                                  <SelectItem value="FINANCE">
+                                    Finance
+                                  </SelectItem>
+                                  <SelectItem value="DIRECTEUR_GENERAL">
+                                    Directeur Général
+                                  </SelectItem>
+                                  <SelectItem value="CLIENTELLE">
+                                    Clientèle
+                                  </SelectItem>
+                                  <SelectItem value="COMPTABLE">
+                                    Comptable
+                                  </SelectItem>
+                                  <SelectItem value="CONCESSIONAIRE">
+                                    Concessionnaire
+                                  </SelectItem>
+                                  <SelectItem value="COMMUNICATION">
+                                    Communication
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -307,7 +362,9 @@ const OnboardingForm = ({
                         name="telephone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-700 font-medium">Téléphone (optionnel)</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">
+                              Téléphone (optionnel)
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
@@ -321,11 +378,16 @@ const OnboardingForm = ({
                       />
 
                       {error && (
-                        <Alert variant="destructive" className="border-red-200 bg-red-50">
-                          <AlertDescription className="text-red-800">{error}</AlertDescription>
+                        <Alert
+                          variant="destructive"
+                          className="border-red-200 bg-red-50"
+                        >
+                          <AlertDescription className="text-red-800">
+                            {error}
+                          </AlertDescription>
                         </Alert>
                       )}
-                      
+
                       <Button
                         type="submit"
                         className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold py-3 text-lg"

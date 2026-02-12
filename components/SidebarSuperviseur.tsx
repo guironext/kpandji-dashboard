@@ -50,16 +50,15 @@ const navItems = [
   {
     id: 4,
     icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Suivi Bon Commande",
-    href: "/superviseur/suivi-bon-commande",
+    label: "Clients avec Commande",
+    href: "/superviseur/Client-avec-commande",
     category: "operations"
   },
-
   {
     id: 5,
-    icon: <Receipt className="w-5 h-5" />,
-    label: "Suivi Bon Pour Acquis",
-    href: "/superviseur/suivi-bon-pour-acquis",
+    icon: <ClipboardCheck className="w-5 h-5" />,
+    label: "Commandes Fournisseur",
+    href: "/superviseur/commandes-sans-client",
     category: "operations"
   },
 
@@ -70,27 +69,7 @@ const navItems = [
     href: "/superviseur/suivi-commandes",
     category: "commandes"
   },
-  {
-    id: 9,
-    icon: <Store className="w-5 h-5" />,
-    label: "Stock disponible",
-    href: "/superviseur/stock-disponible",
-    category: "commandes"
-  },
-  {
-    id: 10,
-    icon: <Truck className="w-5 h-5" />,
-    label: "Bon Commande Locaux",
-    href: "/superviseur/bon-commande-locaux",
-    category: "commandes"
-  },
-  {
-    id: 11,
-    icon: <ShoppingCart className="w-5 h-5" />,
-    label: "Commandes Locaux",
-    href: "/superviseur/commandes-locaux",
-    category: "commandes"
-  },
+ 
  
 ];
 

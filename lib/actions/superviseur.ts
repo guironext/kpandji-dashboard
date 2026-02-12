@@ -79,23 +79,23 @@ interface RapportRendezVousData {
 }
 
 // Helper function to serialize facture Decimal fields
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function serializeFacture(facture: any) {
+function serializeFacture(facture: unknown) {
+  const f = facture as Record<string, unknown>;
   return {
-    ...facture,
-    prix_unitaire: facture.prix_unitaire ? Number(facture.prix_unitaire) : 0,
-    montant_ht: facture.montant_ht ? Number(facture.montant_ht) : 0,
-    total_ht: facture.total_ht ? Number(facture.total_ht) : 0,
-    remise: facture.remise ? Number(facture.remise) : 0,
-    montant_remise: facture.montant_remise ? Number(facture.montant_remise) : 0,
-    montant_net_ht: facture.montant_net_ht ? Number(facture.montant_net_ht) : 0,
-    tva: facture.tva ? Number(facture.tva) : 0,
-    montant_tva: facture.montant_tva ? Number(facture.montant_tva) : 0,
-    total_ttc: facture.total_ttc ? Number(facture.total_ttc) : 0,
-    avance_payee: facture.avance_payee ? Number(facture.avance_payee) : 0,
-    reste_payer: facture.reste_payer ? Number(facture.reste_payer) : 0,
-    accessoire_prix: facture.accessoire_prix ? Number(facture.accessoire_prix) : null,
-    accessoire_subtotal: facture.accessoire_subtotal ? Number(facture.accessoire_subtotal) : null,
+    ...f,
+    prix_unitaire: f.prix_unitaire ? Number(f.prix_unitaire) : 0,
+    montant_ht: f.montant_ht ? Number(f.montant_ht) : 0,
+    total_ht: f.total_ht ? Number(f.total_ht) : 0,
+    remise: f.remise ? Number(f.remise) : 0,
+    montant_remise: f.montant_remise ? Number(f.montant_remise) : 0,
+    montant_net_ht: f.montant_net_ht ? Number(f.montant_net_ht) : 0,
+    tva: f.tva ? Number(f.tva) : 0,
+    montant_tva: f.montant_tva ? Number(f.montant_tva) : 0,
+    total_ttc: f.total_ttc ? Number(f.total_ttc) : 0,
+    avance_payee: f.avance_payee ? Number(f.avance_payee) : 0,
+    reste_payer: f.reste_payer ? Number(f.reste_payer) : 0,
+    accessoire_prix: f.accessoire_prix ? Number(f.accessoire_prix) : null,
+    accessoire_subtotal: f.accessoire_subtotal ? Number(f.accessoire_subtotal) : null,
   };
 }
 
@@ -137,22 +137,22 @@ export async function getCommercialActivitiesStats() {
         role: "COMMERCIAL",
       },
       include: {
-        clients: {
+        Client: {
           include: {
-            rendez_vous: true,
-            commandes: true,
-            factures: true,
+            rendezVous: true,
+            Commande: true,
+            Facture: true,
           },
         },
-        client_entreprises: {
+        Client_entreprise: {
           include: {
-            rendez_vous: true,
-            commandes: true,
-            factures: true,
+            RendezVous: true,
+            Commande: true,
+            Facture: true,
           },
         },
-        factures: true,
-        paiements: true,
+        Facture: true,
+        Paiement: true,
       },
     });
 
@@ -168,45 +168,50 @@ export async function getCommercialActivitiesStats() {
       commercialPerformance: [] as CommercialPerformance[],
     };
 
-    commercials.forEach(commercial => {
-      const clients = commercial.clients.length + commercial.client_entreprises.length;
-      const prospects = [
-        ...commercial.clients.filter(c => c.status_client === 'PROSPECT'),
-        ...commercial.client_entreprises.filter(c => c.status_client === 'PROSPECT')
-      ].length;
-      
-      const rendezVous = [
-        ...commercial.clients.flatMap(c => c.rendez_vous),
-        ...commercial.client_entreprises.flatMap(c => c.rendez_vous)
-      ].length;
-      
-      const commandes = [
-        ...commercial.clients.flatMap(c => c.commandes),
-        ...commercial.client_entreprises.flatMap(c => c.commandes)
-      ].length;
-      
-      const factures = commercial.factures.length;
-      const revenue = commercial.factures.reduce((sum, f) => sum + Number(f.total_ttc), 0);
+    (commercials as unknown[]).forEach((comm: unknown) => {
+      const commercial = comm as Record<string, unknown>;
+      const clientsList = (commercial.Client || []) as Record<string, unknown>[];
+      const clientEntreprisesList = (commercial.Client_entreprise || []) as Record<string, unknown>[];
+      const facturesList = (commercial.Facture || []) as Record<string, unknown>[];
 
-      stats.totalClients += clients;
-      stats.totalProspects += prospects;
-      stats.totalRendezVous += rendezVous;
-      stats.totalCommandes += commandes;
-      stats.totalFactures += factures;
+      const clientsCount = clientsList.length + clientEntreprisesList.length;
+      const prospectsCount = [
+        ...clientsList.filter((c: Record<string, unknown>) => c.status_client === 'PROSPECT'),
+        ...clientEntreprisesList.filter((c: Record<string, unknown>) => c.status_client === 'PROSPECT')
+      ].length;
+      
+      const rendezVousCount = [
+        ...clientsList.flatMap((c: Record<string, unknown>) => (c.rendezVous || []) as unknown[]),
+        ...clientEntreprisesList.flatMap((c: Record<string, unknown>) => (c.RendezVous || []) as unknown[])
+      ].length;
+      
+      const commandesCount = [
+        ...clientsList.flatMap((c: Record<string, unknown>) => (c.Commande || []) as unknown[]),
+        ...clientEntreprisesList.flatMap((c: Record<string, unknown>) => (c.Commande || []) as unknown[])
+      ].length;
+      
+      const facturesCount = facturesList.length;
+      const revenue = facturesList.reduce((sum: number, f: Record<string, unknown>) => sum + Number(f.total_ttc), 0);
+
+      stats.totalClients += clientsCount;
+      stats.totalProspects += prospectsCount;
+      stats.totalRendezVous += rendezVousCount;
+      stats.totalCommandes += commandesCount;
+      stats.totalFactures += facturesCount;
       stats.totalRevenue += revenue;
 
       stats.commercialPerformance.push({
-        id: commercial.id,
-        name: `${commercial.firstName} ${commercial.lastName}`,
-        email: commercial.email,
-        telephone: commercial.telephone || '',
-        clients,
-        prospects,
-        rendezVous,
-        commandes,
-        factures,
+        id: commercial.id as string,
+        name: `${commercial.firstName as string} ${commercial.lastName as string}`,
+        email: commercial.email as string,
+        telephone: (commercial.telephone as string) || '',
+        clients: clientsCount,
+        prospects: prospectsCount,
+        rendezVous: rendezVousCount,
+        commandes: commandesCount,
+        factures: facturesCount,
         revenue,
-        conversionRate: prospects > 0 ? ((clients - prospects) / prospects * 100).toFixed(2) : 0,
+        conversionRate: prospectsCount > 0 ? ((clientsCount - prospectsCount) / prospectsCount * 100).toFixed(2) : 0,
       });
     });
 
@@ -224,12 +229,12 @@ export async function getRecentCommercialActivities(limit: number = 10) {
       // Recent clients
       prisma.client.findMany({
         where: {
-          user: {
+          User: {
             role: "COMMERCIAL",
           },
         },
         include: {
-          user: {
+          User: {
             select: {
               firstName: true,
               lastName: true,
@@ -246,14 +251,14 @@ export async function getRecentCommercialActivities(limit: number = 10) {
           OR: [
             {
               client: {
-                user: {
+                User: {
                   role: "COMMERCIAL",
                 },
               },
             },
             {
-              clientEntreprise: {
-                user: {
+              Client_entreprise: {
+                User: {
                   role: "COMMERCIAL",
                 },
               },
@@ -263,7 +268,7 @@ export async function getRecentCommercialActivities(limit: number = 10) {
         include: {
           client: {
             include: {
-              user: {
+              User: {
                 select: {
                   firstName: true,
                   lastName: true,
@@ -271,9 +276,9 @@ export async function getRecentCommercialActivities(limit: number = 10) {
               },
             },
           },
-          clientEntreprise: {
+          Client_entreprise: {
             include: {
-              user: {
+              User: {
                 select: {
                   firstName: true,
                   lastName: true,
@@ -291,15 +296,15 @@ export async function getRecentCommercialActivities(limit: number = 10) {
         where: {
           OR: [
             {
-              client: {
-                user: {
+              Client: {
+                User: {
                   role: "COMMERCIAL",
                 },
               },
             },
             {
-              clientEntreprise: {
-                user: {
+              Client_entreprise: {
+                User: {
                   role: "COMMERCIAL",
                 },
               },
@@ -307,9 +312,9 @@ export async function getRecentCommercialActivities(limit: number = 10) {
           ],
         },
         include: {
-          client: {
+          Client: {
             include: {
-              user: {
+              User: {
                 select: {
                   firstName: true,
                   lastName: true,
@@ -317,9 +322,9 @@ export async function getRecentCommercialActivities(limit: number = 10) {
               },
             },
           },
-          clientEntreprise: {
+          Client_entreprise: {
             include: {
-              user: {
+              User: {
                 select: {
                   firstName: true,
                   lastName: true,
@@ -327,7 +332,7 @@ export async function getRecentCommercialActivities(limit: number = 10) {
               },
             },
           },
-          voitureModel: true,
+          VoitureModel: true,
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -336,34 +341,70 @@ export async function getRecentCommercialActivities(limit: number = 10) {
       // Recent factures
       prisma.facture.findMany({
         where: {
-          user: {
+          User: {
             role: "COMMERCIAL",
           },
         },
         include: {
-          user: {
+          User: {
             select: {
               firstName: true,
               lastName: true,
             },
           },
-          client: true,
-          clientEntreprise: true,
+          Client: true,
+          Client_entreprise: true,
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
       }),
     ]);
 
-    // Serialize factures to convert Decimal fields to numbers
-    const serializedFactures = recentFactures.map(serializeFacture);
+    // Serialize factures to convert Decimal fields to numbers and remap User to user
+    const serializedFactures = (recentFactures as unknown[]).map((f: unknown) => {
+      const facture = serializeFacture(f);
+      const factureRecord = facture as Record<string, unknown>;
+      return {
+        ...factureRecord,
+        user: factureRecord.User,
+      };
+    });
+
+    // Remap for frontend compatibility
+    const serializedClients = (recentClients as unknown[]).map((c: unknown) => {
+      const client = c as Record<string, unknown>;
+      return {
+        ...client,
+        user: client.User,
+      };
+    });
+
+    const serializedRendezVous = (recentRendezVous as unknown[]).map((r: unknown) => {
+      const rv = r as Record<string, unknown> & { client?: Record<string, unknown> & { User?: unknown }; Client_entreprise?: Record<string, unknown> & { User?: unknown } };
+      return {
+        ...rv,
+        client: rv.client ? { ...rv.client, user: rv.client.User } : null,
+        clientEntreprise: rv.Client_entreprise ? { ...rv.Client_entreprise, user: rv.Client_entreprise.User } : null,
+      };
+    });
+
+    const serializedCommandes = (recentCommandes as unknown[]).map((c: unknown) => {
+      const cmd = c as Record<string, unknown> & { Client?: Record<string, unknown> & { User?: unknown }; Client_entreprise?: Record<string, unknown> & { User?: unknown }; VoitureModel?: unknown; prix_unitaire?: unknown };
+      return {
+        ...cmd,
+        client: cmd.Client ? { ...cmd.Client, user: cmd.Client.User } : null,
+        clientEntreprise: cmd.Client_entreprise ? { ...cmd.Client_entreprise, user: cmd.Client_entreprise.User } : null,
+        voitureModel: cmd.VoitureModel,
+        prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+      };
+    });
 
     return { 
       success: true, 
       data: {
-        recentClients,
-        recentRendezVous,
-        recentCommandes,
+        recentClients: serializedClients,
+        recentRendezVous: serializedRendezVous,
+        recentCommandes: serializedCommandes,
         recentFactures: serializedFactures,
       }
     };
@@ -382,28 +423,28 @@ export async function getCommercialPerformanceDetail(userId: string) {
         role: "COMMERCIAL",
       },
       include: {
-        clients: {
+        Client: {
           include: {
-            rendez_vous: true,
-            commandes: true,
-            factures: true,
-            paiements: true,
+            rendezVous: true,
+            Commande: true,
+            Facture: true,
+            Paiement: true,
           },
         },
-        client_entreprises: {
+        Client_entreprise: {
           include: {
-            rendez_vous: true,
-            commandes: true,
-            factures: true,
-            paiements: true,
+            RendezVous: true,
+            Commande: true,
+            Facture: true,
+            Paiement: true,
           },
         },
-        factures: {
+        Facture: {
           include: {
-            paiements: true,
+            Paiement: true,
           },
         },
-        paiements: true,
+        Paiement: true,
       },
     });
 
@@ -411,18 +452,32 @@ export async function getCommercialPerformanceDetail(userId: string) {
       return { success: false, error: "Commercial not found" };
     }
 
-    // Serialize factures in the commercial data
+    // Remap for frontend compatibility
+    const comm = commercial as Record<string, unknown>;
     const serializedCommercial = {
-      ...commercial,
-      factures: commercial.factures.map(serializeFacture),
-      clients: commercial.clients.map(client => ({
-        ...client,
-        factures: client.factures.map(serializeFacture),
-      })),
-      client_entreprises: commercial.client_entreprises.map(clientEntreprise => ({
-        ...clientEntreprise,
-        factures: clientEntreprise.factures.map(serializeFacture),
-      })),
+      ...comm,
+      factures: ((comm.Facture || []) as unknown[]).map(serializeFacture),
+      clients: ((comm.Client || []) as unknown[]).map((client: unknown) => {
+        const c = client as Record<string, unknown> & { rendezVous?: unknown; Commande?: unknown; Facture?: unknown[]; Paiement?: unknown };
+        return {
+          ...c,
+          rendez_vous: c.rendezVous,
+          commandes: c.Commande,
+          factures: (c.Facture || []).map(serializeFacture),
+          paiements: c.Paiement,
+        };
+      }),
+      client_entreprises: ((comm.Client_entreprise || []) as unknown[]).map((clientEntreprise: unknown) => {
+        const c = clientEntreprise as Record<string, unknown> & { RendezVous?: unknown; Commande?: unknown; Facture?: unknown[]; Paiement?: unknown };
+        return {
+          ...c,
+          rendez_vous: c.RendezVous,
+          commandes: c.Commande,
+          factures: (c.Facture || []).map(serializeFacture),
+          paiements: c.Paiement,
+        };
+      }),
+      paiements: comm.Paiement,
     };
 
     return { success: true, data: serializedCommercial };
@@ -440,13 +495,19 @@ export async function getMonthlyPerformanceTrends() {
         role: "COMMERCIAL",
       },
       include: {
-        clients: {
+        Client: {
           select: {
             createdAt: true,
             status_client: true,
           },
         },
-        factures: {
+        Client_entreprise: {
+          select: {
+            createdAt: true,
+            status_client: true,
+          },
+        },
+        Facture: {
           select: {
             createdAt: true,
             total_ttc: true,
@@ -471,22 +532,28 @@ export async function getMonthlyPerformanceTrends() {
       let newClients = 0;
       let revenue = 0;
 
-      commercials.forEach(commercial => {
+      (commercials as unknown[]).forEach((comm: unknown) => {
+        const commercial = comm as Record<string, unknown>;
+        const clientsList = (commercial.Client || []) as Record<string, unknown>[];
+        const clientEntreprisesList = (commercial.Client_entreprise || []) as Record<string, unknown>[];
+        const facturesList = (commercial.Facture || []) as Record<string, unknown>[];
+
         // Count new clients in this month
-        newClients += commercial.clients.filter(c => {
-          const clientDate = new Date(c.createdAt);
+        const allClients = [...clientsList, ...clientEntreprisesList];
+        newClients += allClients.filter((c: Record<string, unknown>) => {
+          const clientDate = new Date(c.createdAt as string);
           return clientDate.getMonth() === period.monthNumber && 
                  clientDate.getFullYear() === period.year;
         }).length;
 
         // Sum revenue from factures in this month
-        revenue += commercial.factures
-          .filter(f => {
-            const factureDate = new Date(f.createdAt);
+        revenue += facturesList
+          .filter((f: Record<string, unknown>) => {
+            const factureDate = new Date(f.createdAt as string);
             return factureDate.getMonth() === period.monthNumber && 
                    factureDate.getFullYear() === period.year;
           })
-          .reduce((sum, f) => sum + Number(f.total_ttc), 0);
+          .reduce((sum: number, f: Record<string, unknown>) => sum + Number(f.total_ttc), 0);
       });
 
       return {
@@ -511,9 +578,9 @@ export async function getAllRendezVousByUser() {
         role: "COMMERCIAL",
       },
       include: {
-        clients: {
+        Client: {
           include: {
-            rendez_vous: {
+            rendezVous: {
               include: {
                 client: {
                   select: {
@@ -529,11 +596,11 @@ export async function getAllRendezVousByUser() {
             },
           },
         },
-        client_entreprises: {
+        Client_entreprise: {
           include: {
-            rendez_vous: {
+            RendezVous: {
               include: {
-                clientEntreprise: {
+                Client_entreprise: {
                   select: {
                     nom_entreprise: true,
                     telephone: true,
@@ -553,32 +620,40 @@ export async function getAllRendezVousByUser() {
       },
     });
 
-    const rendezVousByUser = commercials.map(commercial => {
+    const rendezVousByUser = (commercials as unknown[]).map((comm: unknown) => {
+      const commercial = comm as Record<string, unknown>;
+      const clientsList = (commercial.Client || []) as Record<string, unknown>[];
+      const clientEntreprisesList = (commercial.Client_entreprise || []) as Record<string, unknown>[];
+
       // Combine rendez-vous from both clients and client_entreprises
       const allRendezVous = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...commercial.clients.flatMap((c: any) => c.rendez_vous.map((rdv: any) => ({
-          ...rdv,
-          clientName: c.nom,
-          clientType: 'PARTICULIER' as const,
-          clientPhone: rdv.client?.telephone || c.telephone,
-          clientEmail: rdv.client?.email || c.email,
-        }))),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...commercial.client_entreprises.flatMap((c: any) => c.rendez_vous.map((rdv: any) => ({
-          ...rdv,
-          clientName: rdv.clientEntreprise?.nom_entreprise || c.nom_entreprise,
-          clientType: 'ENTREPRISE' as const,
-          clientPhone: rdv.clientEntreprise?.telephone || c.telephone,
-          clientEmail: rdv.clientEntreprise?.email || c.email,
-        }))),
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        ...clientsList.flatMap((c: Record<string, unknown>) => ((c.rendezVous || []) as unknown[]).map((rdv: unknown) => {
+          const r = rdv as Record<string, unknown> & { client?: { telephone?: string; email?: string } };
+          return {
+            ...r,
+            clientName: c.nom,
+            clientType: 'PARTICULIER' as const,
+            clientPhone: r.client?.telephone || c.telephone,
+            clientEmail: r.client?.email || c.email,
+          };
+        })),
+        ...clientEntreprisesList.flatMap((c: Record<string, unknown>) => ((c.RendezVous || []) as unknown[]).map((rdv: unknown) => {
+          const r = rdv as Record<string, unknown> & { clientEntreprise?: { nom_entreprise?: string; telephone?: string; email?: string } };
+          return {
+            ...r,
+            clientName: r.clientEntreprise?.nom_entreprise || c.nom_entreprise,
+            clientType: 'ENTREPRISE' as const,
+            clientPhone: r.clientEntreprise?.telephone || c.telephone,
+            clientEmail: r.clientEntreprise?.email || c.email,
+          };
+        })),
+      ].sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.date as string).getTime() - new Date(a.date as string).getTime());
 
       return {
-        userId: commercial.id,
-        userName: `${commercial.firstName} ${commercial.lastName}`,
-        userEmail: commercial.email,
-        userPhone: commercial.telephone,
+        userId: commercial.id as string,
+        userName: `${String(commercial.firstName)} ${String(commercial.lastName)}`,
+        userEmail: (commercial.email ?? "") as string,
+        userPhone: (commercial.telephone ?? null) as string | null,
         totalRendezVous: allRendezVous.length,
         rendezVous: allRendezVous,
       };
@@ -597,7 +672,7 @@ export async function getAllRapportRendezVousByUser() {
     // Fetch all meeting reports with related data
     const allReports = await prisma.rapportRendezVous.findMany({
       include: {
-        client: {
+        Client: {
           select: {
             id: true,
             nom: true,
@@ -605,7 +680,7 @@ export async function getAllRapportRendezVousByUser() {
             email: true,
           },
         },
-        clientEntreprise: {
+        Client_entreprise: {
           select: {
             id: true,
             nom_entreprise: true,
@@ -613,7 +688,7 @@ export async function getAllRapportRendezVousByUser() {
             email: true,
           },
         },
-        rendezVous: {
+        RendezVous: {
           select: {
             id: true,
             date: true,
@@ -621,13 +696,13 @@ export async function getAllRapportRendezVousByUser() {
             resume_rendez_vous: true,
           },
         },
-        voiture: {
+        Voiture: {
           select: {
             id: true,
             couleur: true,
             motorisation: true,
             transmission: true,
-            voitureModel: {
+            VoitureModel: {
               select: {
                 model: true,
               },
@@ -643,7 +718,51 @@ export async function getAllRapportRendezVousByUser() {
     // Group reports by conseiller_commercial (commercial advisor)
     const reportsByUser = new Map<string, RapportRendezVousData[]>();
 
-    allReports.forEach(report => {
+    (allReports as unknown[]).forEach((rep: unknown) => {
+      const report = rep as Record<string, unknown> & {
+        conseiller_commercial: string;
+        date_rendez_vous: string;
+        heure_rendez_vous: string;
+        lieu_rendez_vous: string;
+        lieu_autre: string | null;
+        duree_rendez_vous: string;
+        nom_prenom_client: string;
+        telephone_client: string;
+        email_client: string | null;
+        profession_societe: string | null;
+        type_client: string;
+        presentation_gamme: boolean;
+        essai_vehicule: boolean;
+        negociation_commerciale: boolean;
+        livraison_vehicule: boolean;
+        service_apres_vente: boolean;
+        objet_autre: string | null;
+        modeles_discutes: unknown;
+        motivations_achat: string | null;
+        points_positifs: string | null;
+        objections_freins: string | null;
+        degre_interet: string | null;
+        decision_attendue: string | null;
+        devis_offre_remise: boolean;
+        reference_offre: string | null;
+        financement_propose: unknown;
+        assurance_entretien: unknown;
+        reprise_ancien_vehicule: unknown;
+        actions_suivi: unknown;
+        commentaire_global: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        Client: unknown;
+        Client_entreprise: unknown;
+        RendezVous: unknown;
+        Voiture: Record<string, unknown> & {
+          id: string;
+          couleur: string;
+          motorisation: string;
+          transmission: string;
+          VoitureModel: { model: string } | null;
+        } | null;
+      };
       const commercialName = report.conseiller_commercial;
       
       if (!reportsByUser.has(commercialName)) {
@@ -651,47 +770,47 @@ export async function getAllRapportRendezVousByUser() {
       }
       
       reportsByUser.get(commercialName)?.push({
-        id: report.id,
-        date_rendez_vous: report.date_rendez_vous,
-        heure_rendez_vous: report.heure_rendez_vous,
-        lieu_rendez_vous: report.lieu_rendez_vous,
-        lieu_autre: report.lieu_autre,
-        duree_rendez_vous: report.duree_rendez_vous,
-        nom_prenom_client: report.nom_prenom_client,
-        telephone_client: report.telephone_client,
-        email_client: report.email_client,
-        profession_societe: report.profession_societe,
-        type_client: report.type_client,
-        presentation_gamme: report.presentation_gamme,
-        essai_vehicule: report.essai_vehicule,
-        negociation_commerciale: report.negociation_commerciale,
-        livraison_vehicule: report.livraison_vehicule,
-        service_apres_vente: report.service_apres_vente,
-        objet_autre: report.objet_autre,
+        id: report.id as string,
+        date_rendez_vous: new Date(report.date_rendez_vous as string),
+        heure_rendez_vous: report.heure_rendez_vous as string,
+        lieu_rendez_vous: report.lieu_rendez_vous as string,
+        lieu_autre: report.lieu_autre as string | null,
+        duree_rendez_vous: report.duree_rendez_vous as string,
+        nom_prenom_client: report.nom_prenom_client as string,
+        telephone_client: report.telephone_client as string,
+        email_client: report.email_client as string | null,
+        profession_societe: report.profession_societe as string | null,
+        type_client: report.type_client as string,
+        presentation_gamme: report.presentation_gamme as boolean,
+        essai_vehicule: report.essai_vehicule as boolean,
+        negociation_commerciale: report.negociation_commerciale as boolean,
+        livraison_vehicule: report.livraison_vehicule as boolean,
+        service_apres_vente: report.service_apres_vente as boolean,
+        objet_autre: report.objet_autre as string | null,
         modeles_discutes: typeof report.modeles_discutes === 'string' ? report.modeles_discutes : null,
-        motivations_achat: report.motivations_achat,
-        points_positifs: report.points_positifs,
-        objections_freins: report.objections_freins,
-        degre_interet: report.degre_interet,
-        decision_attendue: report.decision_attendue,
-        devis_offre_remise: report.devis_offre_remise,
-        reference_offre: report.reference_offre,
+        motivations_achat: report.motivations_achat as string | null,
+        points_positifs: report.points_positifs as string | null,
+        objections_freins: report.objections_freins as string | null,
+        degre_interet: report.degre_interet as string | null,
+        decision_attendue: report.decision_attendue as string | null,
+        devis_offre_remise: report.devis_offre_remise as boolean,
+        reference_offre: report.reference_offre as string | null,
         financement_propose: typeof report.financement_propose === 'string' ? report.financement_propose : null,
         assurance_entretien: typeof report.assurance_entretien === 'string' ? report.assurance_entretien : null,
         reprise_ancien_vehicule: typeof report.reprise_ancien_vehicule === 'string' ? report.reprise_ancien_vehicule : null,
         actions_suivi: typeof report.actions_suivi === 'string' ? report.actions_suivi : null,
-        commentaire_global: report.commentaire_global,
-        createdAt: report.createdAt,
-        updatedAt: report.updatedAt,
-        client: report.client,
-        clientEntreprise: report.clientEntreprise,
-        rendezVous: report.rendezVous,
-        voiture: report.voiture ? {
-          id: report.voiture.id,
-          couleur: report.voiture.couleur,
-          motorisation: report.voiture.motorisation as string,
-          transmission: report.voiture.transmission as string,
-          voitureModel: report.voiture.voitureModel || undefined,
+        commentaire_global: report.commentaire_global as string | null,
+        createdAt: report.createdAt as Date,
+        updatedAt: report.updatedAt as Date,
+        client: report.Client as RapportRendezVousData['client'],
+        clientEntreprise: report.Client_entreprise as RapportRendezVousData['clientEntreprise'],
+        rendezVous: report.RendezVous as RapportRendezVousData['rendezVous'],
+        voiture: report.Voiture ? {
+          id: report.Voiture.id as string,
+          couleur: report.Voiture.couleur as string,
+          motorisation: report.Voiture.motorisation as string,
+          transmission: report.Voiture.transmission as string,
+          voitureModel: report.Voiture.VoitureModel || undefined,
         } : null,
       });
     });

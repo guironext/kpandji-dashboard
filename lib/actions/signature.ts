@@ -32,7 +32,7 @@ export async function uploadSignature(
     // Find user in database
     const dbUser = await prisma.user.findUnique({
       where: { clerkId: user.id },
-      include: { signatures: true },
+      include: { Signature: true },
     });
 
     if (!dbUser) {
@@ -41,6 +41,9 @@ export async function uploadSignature(
         message: "Utilisateur non trouvé dans la base de données",
       };
     }
+
+    // Remap for internal logic
+    const signatures = (dbUser as Record<string, unknown>).Signature;
 
     // Validate file
     fileUploadSchema.parse({
@@ -82,18 +85,23 @@ export async function uploadSignature(
 
     // Update or create signature
     let signature;
-    if (dbUser.signatures) {
+    if (signatures) {
       // Update existing signature
       signature = await prisma.signature.update({
         where: { userId: dbUser.id },
-        data: { image: imagePath },
+        data: { 
+          image: imagePath,
+          updatedAt: new Date(),
+        },
       });
     } else {
       // Create new signature
       signature = await prisma.signature.create({
         data: {
+          id: crypto.randomUUID(),
           image: imagePath,
           userId: dbUser.id,
+          updatedAt: new Date(),
         },
       });
     }
@@ -140,7 +148,7 @@ export async function getUserSignature(): Promise<{
 
     const dbUser = await prisma.user.findUnique({
       where: { clerkId: user.id },
-      include: { signatures: true },
+      include: { Signature: true },
     });
 
     if (!dbUser) {
@@ -150,9 +158,16 @@ export async function getUserSignature(): Promise<{
       };
     }
 
+    const signatures = (dbUser as Record<string, unknown>).Signature as Record<string, unknown> | null;
+
     return {
       success: true,
-      data: dbUser.signatures,
+      data: signatures ? {
+        id: signatures.id as string,
+        image: signatures.image as string,
+        createdAt: (signatures.createdAt as Date).toISOString(),
+        updatedAt: (signatures.updatedAt as Date).toISOString(),
+      } as unknown as { id: string; image: string; createdAt: Date; updatedAt: Date } : null,
       message: "Signature récupérée avec succès",
     };
   } catch (error) {
@@ -179,10 +194,12 @@ export async function deleteSignature(): Promise<{
 
     const dbUser = await prisma.user.findUnique({
       where: { clerkId: user.id },
-      include: { signatures: true },
+      include: { Signature: true },
     });
 
-    if (!dbUser || !dbUser.signatures) {
+    const signatures = dbUser ? (dbUser as Record<string, unknown>).Signature as Record<string, unknown> | null : null;
+
+    if (!dbUser || !signatures) {
       return {
         success: false,
         message: "Aucune signature à supprimer",
@@ -190,7 +207,7 @@ export async function deleteSignature(): Promise<{
     }
 
     await prisma.signature.delete({
-      where: { id: dbUser.signatures.id },
+      where: { id: signatures.id as string },
     });
 
     revalidatePath("/commercial/signature");

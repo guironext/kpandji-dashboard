@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useMemo, useState, useEffect } from "react";
+///import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,7 @@ const statusBadgeStyles: Record<string, string> = {
 };
 
 export default function StockageClient({ spareParts }: Props) {
-  const router = useRouter();
+  
   const [selectedSparePart, setSelectedSparePart] = useState<SparePart | null>(
     spareParts[0] || null
   );
@@ -70,6 +70,14 @@ export default function StockageClient({ spareParts }: Props) {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "RETROUVE" | "MODIFIE">(
     "ALL"
   );
+  const [disabledButtons, setDisabledButtons] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const stored = localStorage.getItem('disabledButtons');
+    if (stored) {
+      setDisabledButtons(new Set(JSON.parse(stored)));
+    }
+  }, []);
 
   const sparePartsCount = spareParts.length;
 
@@ -363,6 +371,7 @@ export default function StockageClient({ spareParts }: Props) {
                           <Button
                             size="sm"
                             onClick={() => openDialogFor(sparePart)}
+                            disabled={disabledButtons.has(sparePart.id)}
                           >
                             Ranger
                           </Button>
@@ -398,8 +407,15 @@ export default function StockageClient({ spareParts }: Props) {
               }
             : null
         }
-        onSuccess={() => {
-          router.refresh();
+        onSuccess={async () => {
+          if (selectedSparePart) {
+            setDisabledButtons(prev => {
+              const newSet = new Set(prev);
+              newSet.add(selectedSparePart.id);
+              localStorage.setItem('disabledButtons', JSON.stringify([...newSet]));
+              return newSet;
+            });
+          }
         }}
       />
     </div>

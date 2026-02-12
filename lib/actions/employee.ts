@@ -8,35 +8,42 @@ export async function createEmployee(data: {
   nom: string;
   prenoms: string;
   contact: string;
-  bloodType: string;
-  specialite?: string;
+  adresse?: string | null;
+  image?: string | null;
+  bloodType?: string | null;
+  specialite: string;
+  email?: string | null;
   userId: string;
 }) {
   try {
     console.log("Creating employee with data:", data);
-    
+
     // Get or create user if it doesn't exist
     const userResult = await getOrCreateUser(data.userId);
-    
+
     if (!userResult.success || !userResult.data) {
       console.log("Failed to get or create user for clerkId:", data.userId);
       return { success: false, error: userResult.error || "User not found" };
     }
-    
+
     const user = userResult.data;
     console.log("Found/created user:", user.id);
-    
+
     const employeeData = {
+      id: crypto.randomUUID(),
       nom: data.nom,
       prenoms: data.prenoms,
       contact: data.contact,
-      bloodType: data.bloodType,
-      specialite: data.specialite || null,
+      adresse: data.adresse || null,
+      image: data.image || null,
+      bloodType: data.bloodType ?? null,
+      specialite: data.specialite,
+      email: data.email || null,
       userId: user.id,
     };
-    
+
     console.log("Creating employee with data:", employeeData);
-    
+
     const employee = await prisma.employee.create({
       data: employeeData,
     });
@@ -57,14 +64,20 @@ export async function getEmployee(id: string) {
   try {
     const employee = await prisma.employee.findUnique({
       where: { id },
-      include: { user: true }
+      include: { User: true }
     });
     
     if (!employee) {
       return { success: false, error: "Employee not found" };
     }
     
-    return { success: true, data: employee };
+    // Remap User to user for frontend compatibility
+    const serializedEmployee = {
+      ...employee,
+      user: (employee as Record<string, unknown>).User
+    };
+    
+    return { success: true, data: serializedEmployee };
   } catch (error) {
     console.error("Error fetching employee:", error);
     return { success: false, error: "Failed to fetch employee" };
@@ -74,11 +87,20 @@ export async function getEmployee(id: string) {
 export async function getAllEmployees() {
   try {
     const employees = await prisma.employee.findMany({
-      include: { user: true },
+      include: { User: true },
       orderBy: { nom: 'asc' }
     });
     
-    return { success: true, data: employees };
+    // Remap User to user for frontend compatibility
+    const serializedEmployees = (employees as unknown[]).map((emp: unknown) => {
+      const e = emp as Record<string, unknown> & { User?: unknown };
+      return {
+        ...e,
+        user: e.User
+      };
+    });
+    
+    return { success: true, data: serializedEmployees };
   } catch (error) {
     console.error("Error fetching employees:", error);
     return { success: false, error: "Failed to fetch employees" };
@@ -89,8 +111,11 @@ export async function updateEmployee(id: string, data: {
   nom?: string;
   prenoms?: string;
   contact?: string;
-  bloodType?: string;
+  adresse?: string | null;
+  image?: string | null;
+  bloodType?: string | null;
   specialite?: string;
+  email?: string | null;
 }) {
   try {
     const employee = await prisma.employee.update({

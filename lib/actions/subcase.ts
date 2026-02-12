@@ -2,7 +2,7 @@
 
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
-import { EtapeTool } from "../generated/prisma";
+import { EtapeTool } from "@prisma/client";
 
 // Type guard for objects with toNumber method
 interface HasToNumber {
@@ -17,12 +17,17 @@ interface HasToString {
 // Helper function to safely convert Decimal to number
 function decimalToNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') return parseFloat(value);
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return parseFloat(value);
   // Handle Prisma Decimal object - check for Decimal instance
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     // Check if it's a Decimal object by checking for toString method and constructor name
-    if ('constructor' in value && value.constructor && typeof value.constructor === 'function' && value.constructor.name === 'Decimal') {
+    if (
+      "constructor" in value &&
+      value.constructor &&
+      typeof value.constructor === "function" &&
+      value.constructor.name === "Decimal"
+    ) {
       try {
         const str = String(value);
         return parseFloat(str);
@@ -31,7 +36,10 @@ function decimalToNumber(value: unknown): number | null {
       }
     }
     // Also check for Prisma Decimal by checking if it has a toNumber method
-    if ('toNumber' in value && typeof (value as HasToNumber).toNumber === 'function') {
+    if (
+      "toNumber" in value &&
+      typeof (value as HasToNumber).toNumber === "function"
+    ) {
       try {
         return (value as HasToNumber).toNumber();
       } catch {
@@ -39,7 +47,10 @@ function decimalToNumber(value: unknown): number | null {
       }
     }
     // Fallback: try toString method
-    if ('toString' in value && typeof (value as HasToString).toString === 'function') {
+    if (
+      "toString" in value &&
+      typeof (value as HasToString).toString === "function"
+    ) {
       try {
         const str = (value as HasToString).toString();
         return parseFloat(str);
@@ -58,18 +69,28 @@ export async function createSubcase(data: {
   try {
     const subcase = await prisma.subcase.create({
       data: {
+        id: crypto.randomUUID(),
         subcaseNumber: data.subcaseNumber,
         conteneurId: data.conteneurId,
+        updatedAt: new Date(),
       },
       include: {
-        conteneur: true,
-        spareParts: true,
-        tools: true,
-      }
+        Conteneur: true,
+        SparePart: true,
+        Tool: true,
+      },
     });
-    
+
+    // Remap for frontend compatibility
+    const serializedSubcase = {
+      ...subcase,
+      conteneur: subcase.Conteneur,
+      spareParts: subcase.SparePart,
+      tools: subcase.Tool,
+    };
+
     revalidatePath("/magasinier/piecesencoursenvoies");
-    return { success: true, data: subcase };
+    return { success: true, data: serializedSubcase };
   } catch (error) {
     console.error("Error creating subcase:", error);
     return { success: false, error: "Failed to create subcase" };
@@ -81,27 +102,47 @@ export async function getSubcasesByConteneur(conteneurId: string) {
     const subcases = await prisma.subcase.findMany({
       where: { conteneurId },
       include: {
-        conteneur: true,
-        spareParts: true,
-        tools: true,
+        Conteneur: true,
+        SparePart: true,
+        Tool: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Date objects in subcases and nested conteneur
-    const serializedSubcases = subcases.map((subcase) => ({
-      ...subcase,
-      createdAt: subcase.createdAt.toISOString(),
-      updatedAt: subcase.updatedAt.toISOString(),
-      conteneur: subcase.conteneur ? {
-        ...subcase.conteneur,
-        createdAt: subcase.conteneur.createdAt.toISOString(),
-        updatedAt: subcase.conteneur.updatedAt.toISOString(),
-        dateEmbarquement: subcase.conteneur.dateEmbarquement?.toISOString() || null,
-        dateArriveProbable: subcase.conteneur.dateArriveProbable?.toISOString() || null,
-      } : null,
-    }));
-    
+    const serializedSubcases = (subcases as unknown[]).map((subcase: unknown) => {
+      const s = subcase as Record<string, unknown> & {
+        createdAt: Date;
+        updatedAt: Date;
+        Conteneur?: Record<string, unknown> & {
+          createdAt: Date;
+          updatedAt: Date;
+          dateEmbarquement: Date | null;
+          dateArriveProbable: Date | null;
+        };
+        SparePart?: unknown[];
+        Tool?: unknown[];
+      };
+      return {
+        ...s,
+        createdAt: (s.createdAt as Date).toISOString(),
+        updatedAt: (s.updatedAt as Date).toISOString(),
+        conteneur: s.Conteneur
+          ? {
+              ...s.Conteneur,
+              createdAt: (s.Conteneur.createdAt as Date).toISOString(),
+              updatedAt: (s.Conteneur.updatedAt as Date).toISOString(),
+              dateEmbarquement:
+                (s.Conteneur.dateEmbarquement as Date | null)?.toISOString() || null,
+              dateArriveProbable:
+                (s.Conteneur.dateArriveProbable as Date | null)?.toISOString() || null,
+            }
+          : null,
+        spareParts: s.SparePart,
+        tools: s.Tool,
+      };
+    });
+
     return { success: true, data: serializedSubcases };
   } catch (error) {
     console.error("Error fetching subcases:", error);
@@ -114,40 +155,56 @@ export async function getSubcase(id: string) {
     const subcase = await prisma.subcase.findUnique({
       where: { id },
       include: {
-        conteneur: true,
-        spareParts: true,
-        tools: true,
-      }
+        Conteneur: true,
+        SparePart: true,
+        Tool: true,
+      },
     });
-    
+
     if (!subcase) {
       return { success: false, error: "Subcase not found" };
     }
-    
+
     // Serialize Date objects
     const serializedSubcase = {
       ...subcase,
-      createdAt: subcase.createdAt.toISOString(),
-      updatedAt: subcase.updatedAt.toISOString(),
-      conteneur: subcase.conteneur ? {
-        ...subcase.conteneur,
-        createdAt: subcase.conteneur.createdAt.toISOString(),
-        updatedAt: subcase.conteneur.updatedAt.toISOString(),
-        dateEmbarquement: subcase.conteneur.dateEmbarquement?.toISOString() || null,
-        dateArriveProbable: subcase.conteneur.dateArriveProbable?.toISOString() || null,
-      } : null,
-      spareParts: subcase.spareParts.map((sparePart) => ({
-        ...sparePart,
-        createdAt: sparePart.createdAt.toISOString(),
-        updatedAt: sparePart.updatedAt.toISOString(),
-      })),
-      tools: subcase.tools.map((tool) => ({
-        ...tool,
-        createdAt: tool.createdAt.toISOString(),
-        updatedAt: tool.updatedAt.toISOString(),
-      })),
+      createdAt: (subcase.createdAt as Date).toISOString(),
+      updatedAt: (subcase.updatedAt as Date).toISOString(),
+      conteneur: subcase.Conteneur
+        ? {
+            ...subcase.Conteneur,
+            createdAt: (subcase.Conteneur.createdAt as Date).toISOString(),
+            updatedAt: (subcase.Conteneur.updatedAt as Date).toISOString(),
+            dateEmbarquement:
+              (subcase.Conteneur.dateEmbarquement as Date | null)?.toISOString() || null,
+            dateArriveProbable:
+              (subcase.Conteneur.dateArriveProbable as Date | null)?.toISOString() || null,
+          }
+        : null,
+      spareParts: ((subcase as Record<string, unknown>).SparePart as unknown[] || []).map((sparePart: unknown) => {
+        const sp = sparePart as Record<string, unknown> & {
+          createdAt: Date;
+          updatedAt: Date;
+        };
+        return {
+          ...sp,
+          createdAt: (sp.createdAt as Date).toISOString(),
+          updatedAt: (sp.updatedAt as Date).toISOString(),
+        };
+      }),
+      tools: ((subcase as Record<string, unknown>).Tool as unknown[] || []).map((tool: unknown) => {
+        const t = tool as Record<string, unknown> & {
+          createdAt: Date;
+          updatedAt: Date;
+        };
+        return {
+          ...t,
+          createdAt: (t.createdAt as Date).toISOString(),
+          updatedAt: (t.updatedAt as Date).toISOString(),
+        };
+      }),
     };
-    
+
     return { success: true, data: serializedSubcase };
   } catch (error) {
     console.error("Error fetching subcase:", error);
@@ -155,21 +212,27 @@ export async function getSubcase(id: string) {
   }
 }
 
-export async function updateSubcase(id: string, data: {
-  subcaseNumber?: string;
-  isVerified?: boolean;
-}) {
+export async function updateSubcase(
+  id: string,
+  data: {
+    subcaseNumber?: string;
+    isVerified?: boolean;
+  },
+) {
   try {
     const subcase = await prisma.subcase.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
       include: {
-        conteneur: true,
-        spareParts: true,
-        tools: true,
-      }
+        Conteneur: true,
+        SparePart: true,
+        Tool: true,
+      },
     });
-    
+
     revalidatePath("/magasinier/piecesencoursenvoies");
     revalidatePath("/magasinier/verification");
     revalidatePath(`/magasinier/verification/${id}/verify`);
@@ -183,9 +246,9 @@ export async function updateSubcase(id: string, data: {
 export async function deleteSubcase(id: string) {
   try {
     await prisma.subcase.delete({
-      where: { id }
+      where: { id },
     });
-    
+
     revalidatePath("/magasinier/piecesencoursenvoies");
     return { success: true };
   } catch (error) {
@@ -194,21 +257,26 @@ export async function deleteSubcase(id: string) {
   }
 }
 
-export async function addToolToSubcase(subcaseId: string, data: {
-  toolCode: string;
-  toolName: string;
-  quantity: number;
-}) {
+export async function addToolToSubcase(
+  subcaseId: string,
+  data: {
+    toolCode: string;
+    toolName: string;
+    quantity: number;
+  },
+) {
   try {
     const tool = await prisma.tool.create({
       data: {
+        id: crypto.randomUUID(),
         toolCode: data.toolCode,
         toolName: data.toolName,
         quantity: data.quantity,
         subcaseId: subcaseId,
-      }
+        updatedAt: new Date(),
+      },
     });
-    
+
     revalidatePath(`/magasinier/subcase/${subcaseId}`);
     return { success: true, data: tool };
   } catch (error) {
@@ -222,40 +290,63 @@ export async function getCommandesWithModelsForSubcase(subcaseId: string) {
     const subcase = await prisma.subcase.findUnique({
       where: { id: subcaseId },
       include: {
-        conteneur: {
+        Conteneur: {
           include: {
-            commandes: {
+            Commande: {
               include: {
-                voitureModel: true
-              }
-            }
-          }
-        }
-      }
+                VoitureModel: true,
+              },
+            },
+          },
+        },
+      },
     });
-    
+
     if (!subcase) {
       return { success: false, error: "Subcase not found" };
     }
-    
+
+    // Remap for internal logic
+    const conteneur = (subcase as Record<string, unknown>).Conteneur as Record<string, unknown>;
+    const commandes = (conteneur?.Commande || []) as unknown[];
+
     // Serialize Decimal values and Date objects
-    const serializedCommandes = subcase.conteneur.commandes.map((commande) => {
-      const { prix_unitaire, createdAt, updatedAt, date_livraison, ...rest } = commande;
+    const serializedCommandes = commandes.map((commande: unknown) => {
+      const cmd = commande as Record<string, unknown> & {
+        prix_unitaire: unknown;
+        createdAt: Date;
+        updatedAt: Date;
+        date_livraison: Date | null;
+        VoitureModel?: Record<string, unknown> & {
+          createdAt: Date | string;
+          updatedAt: Date | string;
+        };
+      };
+      const { prix_unitaire, createdAt, updatedAt, date_livraison, ...rest } =
+        cmd;
       return {
         ...rest,
         prix_unitaire: decimalToNumber(prix_unitaire),
-        createdAt: createdAt.toISOString(),
-        updatedAt: updatedAt.toISOString(),
-        date_livraison: date_livraison?.toISOString() || null,
+        createdAt: (createdAt as Date).toISOString(),
+        updatedAt: (updatedAt as Date).toISOString(),
+        date_livraison: (date_livraison as Date | null)?.toISOString() || null,
         // Ensure nested objects are plain objects
-        voitureModel: commande.voitureModel ? {
-          ...commande.voitureModel,
-          createdAt: commande.voitureModel.createdAt instanceof Date ? commande.voitureModel.createdAt.toISOString() : commande.voitureModel.createdAt,
-          updatedAt: commande.voitureModel.updatedAt instanceof Date ? commande.voitureModel.updatedAt.toISOString() : commande.voitureModel.updatedAt,
-        } : null,
+        voitureModel: cmd.VoitureModel
+          ? {
+              ...cmd.VoitureModel,
+              createdAt:
+                cmd.VoitureModel.createdAt instanceof Date
+                  ? (cmd.VoitureModel.createdAt as Date).toISOString()
+                  : cmd.VoitureModel.createdAt,
+              updatedAt:
+                cmd.VoitureModel.updatedAt instanceof Date
+                  ? (cmd.VoitureModel.updatedAt as Date).toISOString()
+                  : cmd.VoitureModel.updatedAt,
+            }
+          : null,
       };
     });
-    
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes with models:", error);
@@ -268,32 +359,36 @@ export async function getVoitureModelsForConteneur(conteneurId: string) {
     const conteneur = await prisma.conteneur.findUnique({
       where: { id: conteneurId },
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true
-          }
-        }
-      }
+            VoitureModel: true,
+          },
+        },
+      },
     });
-    
+
     if (!conteneur) {
       return { success: false, error: "Conteneur not found" };
     }
-    
+
+    // Remap for internal logic
+    const commandes = ((conteneur as unknown) as { Commande: unknown[] }).Commande || [];
+
     // Get unique voiture models from commandes
     const modelMap = new Map<string, { id: string; model: string }>();
-    
-    conteneur.commandes.forEach((commande) => {
-      if (commande.voitureModel && !modelMap.has(commande.voitureModel.id)) {
-        modelMap.set(commande.voitureModel.id, {
-          id: commande.voitureModel.id,
-          model: commande.voitureModel.model,
+
+    commandes.forEach((commande: unknown) => {
+      const cmd = commande as { VoitureModel?: { id: string; model: string } };
+      if (cmd.VoitureModel && !modelMap.has(cmd.VoitureModel.id)) {
+        modelMap.set(cmd.VoitureModel.id, {
+          id: cmd.VoitureModel.id,
+          model: cmd.VoitureModel.model,
         });
       }
     });
-    
+
     const uniqueModels = Array.from(modelMap.values());
-    
+
     return { success: true, data: uniqueModels };
   } catch (error) {
     console.error("Error fetching voiture models for conteneur:", error);
@@ -317,6 +412,7 @@ export async function createSparePart(data: {
   try {
     const sparePart = await prisma.sparePart.create({
       data: {
+        id: crypto.randomUUID(),
         partCode: data.partCode,
         partName: data.partName,
         partNameFrench: data.partNameFrench,
@@ -328,42 +424,49 @@ export async function createSparePart(data: {
         commandeLocalId: data.commandeLocalId,
         verificationConteneurId: data.verificationConteneurId,
         storageId: data.storageId,
-      }
+        updatedAt: new Date(),
+      },
     });
-    
+
     // Revalidate relevant paths
     if (data.subcaseId) {
       revalidatePath(`/magasinier/subcase/${data.subcaseId}`);
     }
-    revalidatePath('/magasinier');
-    
+    revalidatePath("/magasinier");
+
     return { success: true, data: sparePart };
   } catch (error) {
     console.error("Error creating spare part:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to create spare part";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to create spare part";
     return { success: false, error: errorMessage };
   }
 }
 
-export async function addSparePartToSubcase(subcaseId: string, data: {
-  partCode: string;
-  partName: string;
-  partNameFrench?: string;
-  quantity: number;
-  commandeId?: string;
-}) {
+export async function addSparePartToSubcase(
+  subcaseId: string,
+  data: {
+    partCode: string;
+    partName: string;
+    partNameFrench?: string;
+    quantity: number;
+    commandeId?: string;
+  },
+) {
   try {
     const sparePart = await prisma.sparePart.create({
       data: {
+        id: crypto.randomUUID(),
         partCode: data.partCode,
         partName: data.partName,
         partNameFrench: data.partNameFrench,
         quantity: data.quantity,
         subcaseId: subcaseId,
         commandeId: data.commandeId,
-      }
+        updatedAt: new Date(),
+      },
     });
-    
+
     revalidatePath(`/magasinier/subcase/${subcaseId}`);
     return { success: true, data: sparePart };
   } catch (error) {
@@ -372,32 +475,34 @@ export async function addSparePartToSubcase(subcaseId: string, data: {
   }
 }
 
-
 // ... existing code ...
 
-export async function updateSparePart(sparePartId: string, data: {
-  partCode?: string;
-  partName?: string;
-  partNameFrench?: string;
-  verificationName?: string;
-  quantity?: number;
-  statusVerification?: 'EN_ATTENTE' | 'RETROUVE' | 'MODIFIE' | 'NON_RETROUVE';
-}) {
+export async function updateSparePart(
+  sparePartId: string,
+  data: {
+    partCode?: string;
+    partName?: string;
+    partNameFrench?: string;
+    verificationName?: string;
+    quantity?: number;
+    statusVerification?: "EN_ATTENTE" | "RETROUVE" | "MODIFIE" | "NON_RETROUVE";
+  },
+) {
   try {
     const sparePart = await prisma.sparePart.update({
       where: { id: sparePartId },
-      data
+      data,
     });
-    
+
     revalidatePath(`/magasinier/subcase/${sparePart.subcaseId}`);
     revalidatePath(`/magasinier/verification`);
     if (sparePart.subcaseId) {
       revalidatePath(`/magasinier/verification/${sparePart.subcaseId}/verify`);
     }
-    
+
     // Serialize the response to ensure it's JSON-serializable
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         id: sparePart.id,
         partCode: sparePart.partCode,
@@ -409,11 +514,12 @@ export async function updateSparePart(sparePartId: string, data: {
         subcaseId: sparePart.subcaseId,
         createdAt: sparePart.createdAt.toISOString(),
         updatedAt: sparePart.updatedAt.toISOString(),
-      }
+      },
     };
   } catch (error) {
     console.error("Error updating spare part:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to update spare part";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update spare part";
     return { success: false, error: errorMessage };
   }
 }
@@ -422,17 +528,17 @@ export async function deleteSparePart(sparePartId: string) {
   try {
     const sparePart = await prisma.sparePart.findUnique({
       where: { id: sparePartId },
-      select: { subcaseId: true }
+      select: { subcaseId: true },
     });
-    
+
     if (!sparePart) {
       return { success: false, error: "Spare part not found" };
     }
-    
+
     await prisma.sparePart.delete({
-      where: { id: sparePartId }
+      where: { id: sparePartId },
     });
-    
+
     revalidatePath(`/magasinier/subcase/${sparePart.subcaseId}`);
     return { success: true };
   } catch (error) {
@@ -443,19 +549,22 @@ export async function deleteSparePart(sparePartId: string) {
 
 // ... existing code ...
 
-export async function updateTool(toolId: string, data: {
-  toolCode?: string;
-  toolName?: string;
-  quantity?: number;
-  etapeTool?: EtapeTool;
-  check?: boolean;
-}) {
+export async function updateTool(
+  toolId: string,
+  data: {
+    toolCode?: string;
+    toolName?: string;
+    quantity?: number;
+    etapeTool?: EtapeTool;
+    check?: boolean;
+  },
+) {
   try {
     const tool = await prisma.tool.update({
       where: { id: toolId },
-      data
+      data,
     });
-    
+
     revalidatePath(`/magasinier/subcase/${tool.subcaseId}`);
     return { success: true, data: tool };
   } catch (error) {
@@ -468,17 +577,17 @@ export async function deleteTool(toolId: string) {
   try {
     const tool = await prisma.tool.findUnique({
       where: { id: toolId },
-      select: { subcaseId: true }
+      select: { subcaseId: true },
     });
-    
+
     if (!tool) {
       return { success: false, error: "Tool not found" };
     }
-    
+
     await prisma.tool.delete({
-      where: { id: toolId }
+      where: { id: toolId },
     });
-    
+
     revalidatePath(`/magasinier/subcase/${tool.subcaseId}`);
     return { success: true };
   } catch (error) {
@@ -487,7 +596,6 @@ export async function deleteTool(toolId: string) {
   }
 }
 
-
 // ... existing code ...
 
 export async function validateConteneur(conteneurId: string) {
@@ -495,33 +603,36 @@ export async function validateConteneur(conteneurId: string) {
     // Update all spare parts in subcases of this conteneur
     await prisma.sparePart.updateMany({
       where: {
-        subcase: {
-          conteneurId: conteneurId
-        }
+        Subcase: {
+          conteneurId: conteneurId,
+        },
       },
       data: {
-        etapeSparePart: 'RENSEIGNE'
-      }
+        etapeSparePart: "RENSEIGNE",
+        updatedAt: new Date(),
+      },
     });
 
     // Update conteneur status
     await prisma.conteneur.update({
       where: { id: conteneurId },
       data: {
-        etapeConteneur: 'RENSEIGNE'
-      }
+        etapeConteneur: "RENSEIGNE",
+        updatedAt: new Date(),
+      },
     });
 
     // Update all commandes in this conteneur
     await prisma.commande.updateMany({
       where: {
-        conteneurId: conteneurId
+        conteneurId: conteneurId,
       },
       data: {
-        etapeCommande: 'RENSEIGNEE'
-      }
+        etapeCommande: "RENSEIGNEE",
+        updatedAt: new Date(),
+      },
     });
-    
+
     revalidatePath("/magasinier/piecesencoursenvoies");
     return { success: true };
   } catch (error) {
@@ -530,13 +641,19 @@ export async function validateConteneur(conteneurId: string) {
   }
 }
 
-export async function updateSparePartVerificationStatus(sparePartId: string, statusVerification: 'RETROUVE' | 'MODIFIE' | 'NON_RETROUVE') {
+export async function updateSparePartVerificationStatus(
+  sparePartId: string,
+  statusVerification: "RETROUVE" | "MODIFIE" | "NON_RETROUVE",
+) {
   try {
     const sparePart = await prisma.sparePart.update({
       where: { id: sparePartId },
-      data: { statusVerification }
+      data: { 
+        statusVerification,
+        updatedAt: new Date(),
+      },
     });
-    
+
     revalidatePath(`/magasinier/subcase/${sparePart.subcaseId}`);
     revalidatePath(`/magasinier/verification`);
     if (sparePart.subcaseId) {

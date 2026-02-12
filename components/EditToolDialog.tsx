@@ -1,16 +1,28 @@
 "use client";
 
-import React, { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { updateTool } from '@/lib/actions/subcase'
-import { EtapeTool } from '@/lib/generated/prisma'
-import { Wrench, Save } from 'lucide-react'
-import { toast } from 'sonner'
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { updateTool } from "@/lib/actions/subcase";
+import { EtapeTool } from "@prisma/client";
+import { Wrench, Save } from "lucide-react";
+import { toast } from "sonner";
 
 interface Tool {
   id: string;
@@ -33,25 +45,25 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
   open,
   onOpenChange,
   tool,
-  onSuccess
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState({
-    toolCode: '',
-    toolName: '',
-    quantity: '',
-    etapeTool: '' as EtapeTool | '',
-    check: false
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+    toolCode: "",
+    toolName: "",
+    quantity: "",
+    etapeTool: "" as EtapeTool | "",
+    check: false,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const etapeOptions = [
-    { value: EtapeTool.TRANSITE, label: 'En transit' },
-    { value: EtapeTool.RENSEIGNE, label: 'Renseigné' },
-    { value: EtapeTool.ARRIVE, label: 'Arrivé' },
-    { value: EtapeTool.VERIFIER, label: 'Vérifié' },
-    { value: EtapeTool.ATTRIBUE, label: 'Attribué' },
-    { value: EtapeTool.CONSOMME, label: 'Consommé' }
-  ]
+    { value: EtapeTool.TRANSITE, label: "En transit" },
+    { value: EtapeTool.RENSEIGNE, label: "Renseigné" },
+    { value: EtapeTool.ARRIVE, label: "Arrivé" },
+    { value: EtapeTool.VERIFIER, label: "Vérifié" },
+    { value: EtapeTool.ATTRIBUE, label: "Attribué" },
+    { value: EtapeTool.CONSOMME, label: "Consommé" },
+  ];
 
   useEffect(() => {
     if (tool && open) {
@@ -60,49 +72,53 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
         toolName: tool.toolName,
         quantity: tool.quantity.toString(),
         etapeTool: tool.etapeTool,
-        check: tool.check
-      })
+        check: tool.check,
+      });
     }
-  }, [tool, open])
+  }, [tool, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.toolCode.trim() || !formData.toolName.trim() || !formData.quantity) {
-      toast.error('Veuillez remplir tous les champs obligatoires')
-      return
+    e.preventDefault();
+    if (
+      !formData.toolCode.trim() ||
+      !formData.toolName.trim() ||
+      !formData.quantity
+    ) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
     }
 
-    if (!tool) return
+    if (!tool) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       const result = await updateTool(tool.id, {
         toolCode: formData.toolCode.trim(),
         toolName: formData.toolName.trim(),
         quantity: parseInt(formData.quantity),
         etapeTool: formData.etapeTool || undefined,
-        check: formData.check
-      })
-      
+        check: formData.check,
+      });
+
       if (result.success) {
-        onSuccess()
-        onOpenChange(false)
+        onSuccess();
+        onOpenChange(false);
       } else {
-        toast.error(result.error || 'Erreur lors de la mise à jour')
+        toast.error(result.error || "Erreur lors de la mise à jour");
       }
     } catch (error) {
-      console.error('Error updating tool:', error)
-      toast.error('Erreur lors de la mise à jour')
+      console.error("Error updating tool:", error);
+      toast.error("Erreur lors de la mise à jour");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleClose = () => {
     if (!isSubmitting) {
-      onOpenChange(false)
+      onOpenChange(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -125,7 +141,9 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             <Input
               id="toolCode"
               value={formData.toolCode}
-              onChange={(e) => setFormData(prev => ({ ...prev, toolCode: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, toolCode: e.target.value }))
+              }
               placeholder="Ex: T001, T-2024-001"
               required
             />
@@ -135,7 +153,9 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             <Input
               id="toolName"
               value={formData.toolName}
-              onChange={(e) => setFormData(prev => ({ ...prev, toolName: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, toolName: e.target.value }))
+              }
               placeholder="Ex: Clé dynamométrique, Tournevis cruciforme"
               required
             />
@@ -148,7 +168,9 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
               type="number"
               min="1"
               value={formData.quantity}
-              onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, quantity: e.target.value }))
+              }
               placeholder="Ex: 1, 2, 5"
               required
             />
@@ -159,7 +181,10 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             <Select
               value={formData.etapeTool}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, etapeTool: value as EtapeTool }))
+                setFormData((prev) => ({
+                  ...prev,
+                  etapeTool: value as EtapeTool,
+                }))
               }
             >
               <SelectTrigger>
@@ -179,7 +204,9 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             <Checkbox
               id="check"
               checked={formData.check}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, check: checked as boolean }))}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, check: checked as boolean }))
+              }
             />
             <Label htmlFor="check">Vérifié</Label>
           </div>
@@ -194,19 +221,24 @@ const EditToolDialog: React.FC<EditToolDialogProps> = ({
             >
               Annuler
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || !formData.toolCode.trim() || !formData.toolName.trim() || !formData.quantity}
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !formData.toolCode.trim() ||
+                !formData.toolName.trim() ||
+                !formData.quantity
+              }
               className="flex-1 gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSubmitting ? 'Mise à jour...' : 'Mettre à jour'}
+              {isSubmitting ? "Mise à jour..." : "Mettre à jour"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
 
-export default EditToolDialog
+export default EditToolDialog;

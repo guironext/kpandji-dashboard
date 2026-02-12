@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateUser } from "@/lib/actions/user";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,18 +10,28 @@ export async function GET(
 ) {
   try {
     const { clerkId } = await params;
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true }  
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    
+    // Try to get or create user using the server action
+    const result = await getOrCreateUser(clerkId);
+    
+    if (!result.success || !result.data) {
+      return NextResponse.json(
+        { error: result.error || "User not found" }, 
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json({
+      id: result.data.id,
+      firstName: result.data.firstName,
+      lastName: result.data.lastName,
+      email: result.data.email
+    });
   } catch (error) {
     console.error("Error fetching user:", error);
-    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch user" }, 
+      { status: 500 }
+    );
   }
 }

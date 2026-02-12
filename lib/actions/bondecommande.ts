@@ -42,11 +42,14 @@ export async function generateNextNumero(factureId: string) {
     const fullNumero = `BC - ${day}${month}${year}${nextNumero}`;
 
     // Create new BonDeCommande with the generated numero
+
     const bonDeCommande = await prisma.bonDeCommande.create({
       data: {
+        id: crypto.randomUUID(),
         numero: fullNumero,
         prefix_numero: 'BC',
-        factureId: factureId
+        factureId: factureId,
+        updatedAt: new Date()
       }
     });
 
@@ -85,24 +88,25 @@ export async function getBonDeCommandeByFactureId(factureId: string) {
 export async function getAllBonDeCommandeGroupedByUser() {
   try {
     // Get all BonDeCommande with their related Factures
+
     const bonDeCommandes = await prisma.bonDeCommande.findMany({
       include: {
-        facture: {
+        Facture: {
           include: {
-            client: true,
-            clientEntreprise: true,
-            user: true,
-            voiture: {
+            Client: true,
+            Client_entreprise: true,
+            User: true,
+            Voiture: {
               include: {
-                voitureModel: true
+                VoitureModel: true
               }
             },
-            lignes: {
+            FactureLigne: {
               include: {
-                voitureModel: true
+                VoitureModel: true
               }
             },
-            accessoires: true
+            Accessoire: true
           }
         }
       },
@@ -110,8 +114,8 @@ export async function getAllBonDeCommandeGroupedByUser() {
     });
 
     // Keep all bon de commandes (not filtering by status)
-    const allBonDeCommandes = bonDeCommandes.filter(
-      (bdc) => bdc.facture
+    const allBonDeCommandes = (bonDeCommandes as unknown[]).filter(
+      (bdc: unknown) => (bdc as { Facture?: unknown }).Facture
     );
 
     // Group by user
@@ -166,23 +170,45 @@ export async function getAllBonDeCommandeGroupedByUser() {
       }>;
     }> = {};
 
-    allBonDeCommandes.forEach((bdc) => {
-      if (bdc.facture && bdc.facture.userId) {
-        const userId = bdc.facture.userId;
+    allBonDeCommandes.forEach((bdc: unknown) => {
+      const b = bdc as { 
+        id: string; 
+        numero: string; 
+        createdAt: Date; 
+        updatedAt: Date; 
+        Facture: { 
+          userId: string; 
+          User: UserData;
+          Client?: unknown;
+          Client_entreprise?: unknown;
+          Voiture?: unknown;
+          FactureLigne?: unknown[];
+          Accessoire?: unknown[];
+        } 
+      };
+      if (b.Facture && b.Facture.userId) {
+        const userId = b.Facture.userId;
         if (!groupedByUser[userId]) {
           groupedByUser[userId] = {
-            user: bdc.facture.user as UserData,
+            user: b.Facture.User as UserData,
             bonDeCommandes: []
           };
         }
         groupedByUser[userId].bonDeCommandes.push({
           bonDeCommande: {
-            id: bdc.id,
-            numero: bdc.numero,
-            createdAt: bdc.createdAt,
-            updatedAt: bdc.updatedAt,
+            id: b.id,
+            numero: b.numero,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt
           },
-          facture: bdc.facture as unknown as FactureData
+          facture: {
+            ...b.Facture,
+            client: b.Facture.Client,
+            clientEntreprise: b.Facture.Client_entreprise,
+            voiture: b.Facture.Voiture,
+            lignes: b.Facture.FactureLigne,
+            accessoires: b.Facture.Accessoire
+          } as unknown as FactureData
         });
       }
     });
@@ -248,24 +274,25 @@ export async function getAllBonDeCommandeGroupedByUser() {
 export async function getAllBonDeCommandeWithProformasByUser() {
   try {
     // Get all BonDeCommande with their related Factures
+  
     const bonDeCommandes = await prisma.bonDeCommande.findMany({
       include: {
-        facture: {
+        Facture: {
           include: {
-            client: true,
-            clientEntreprise: true,
-            user: true,
-            voiture: {
+            Client: true,
+            Client_entreprise: true,
+            User: true,
+            Voiture: {
               include: {
-                voitureModel: true
+                VoitureModel: true
               }
             },
-            lignes: {
+            FactureLigne: {
               include: {
-                voitureModel: true
+                VoitureModel: true
               }
             },
-            accessoires: true
+            Accessoire: true
           }
         }
       },
@@ -273,8 +300,11 @@ export async function getAllBonDeCommandeWithProformasByUser() {
     });
 
     // Filter out bon de commandes that don't have proformas
-    const bonDeCommandesWithProformas = bonDeCommandes.filter(
-      (bdc) => bdc.facture && bdc.facture.status_facture === "PROFORMA"
+    const bonDeCommandesWithProformas = (bonDeCommandes as unknown[]).filter(
+      (bdc: unknown) => {
+        const b = bdc as { Facture?: { status_facture: string } };
+        return b.Facture && b.Facture.status_facture === "PROFORMA";
+      }
     );
 
     // Group by user
@@ -318,20 +348,41 @@ export async function getAllBonDeCommandeWithProformasByUser() {
       proforma: ProformaData;
     }>> = {};
 
-    bonDeCommandesWithProformas.forEach((bdc) => {
-      if (bdc.facture && bdc.facture.userId) {
-        const userId = bdc.facture.userId;
+    bonDeCommandesWithProformas.forEach((bdc: unknown) => {
+      const b = bdc as {
+        id: string;
+        numero: string;
+        createdAt: Date;
+        updatedAt: Date;
+        Facture: {
+          userId: string;
+          Client?: unknown;
+          Client_entreprise?: unknown;
+          Voiture?: unknown;
+          FactureLigne?: unknown[];
+          Accessoire?: unknown[];
+        }
+      };
+      if (b.Facture && b.Facture.userId) {
+        const userId = b.Facture.userId;
         if (!groupedByUser[userId]) {
           groupedByUser[userId] = [];
         }
         groupedByUser[userId].push({
           bonDeCommande: {
-            id: bdc.id,
-            numero: bdc.numero,
-            createdAt: bdc.createdAt,
-            updatedAt: bdc.updatedAt,
+            id: b.id,
+            numero: b.numero,
+            createdAt: b.createdAt,
+            updatedAt: b.updatedAt
           },
-          proforma: bdc.facture as unknown as ProformaData
+          proforma: {
+            ...b.Facture,
+            client: b.Facture.Client,
+            clientEntreprise: b.Facture.Client_entreprise,
+            voiture: b.Facture.Voiture,
+            lignes: b.Facture.FactureLigne,
+            accessoires: b.Facture.Accessoire
+          } as unknown as ProformaData
         });
       }
     });
@@ -411,7 +462,7 @@ export async function getAllBonDeCommandeWithProformasByUser() {
           }),
           userId: item.proforma.userId,
         },
-        user: (item.proforma as unknown as Record<string, unknown>).user
+        user: (item.proforma as unknown as Record<string, unknown>).User
       }));
     });
 

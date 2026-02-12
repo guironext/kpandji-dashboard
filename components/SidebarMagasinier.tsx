@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Organized navigation items with corrected IDs and better icons
 const navItems = [
@@ -42,13 +43,20 @@ const navItems = [
   {
     id: 4,
     icon: <Package className="w-5 h-5" />,
-    label: "Stockage",
+    label: "Rangeons Pièces",
     href: "/magasinier/stockage",
+    category: "inventory"
+  },
+    {
+    id: 5,
+    icon: <Package className="w-5 h-5" />,
+    label: "Stockage Diponible",
+    href: "/magasinier/stockdisponible",
     category: "inventory"
   },
  
   {
-    id: 6,
+    id: 6,        
     icon: <Settings className="w-5 h-5" />,
     label: "Attribution pièces",
     href: "/magasinier/attributionpieces",
@@ -93,6 +101,15 @@ const navItems = [
 
 const SidebarMagasinier = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   // Responsive width calculation
   const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";

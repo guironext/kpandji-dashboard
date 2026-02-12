@@ -8,7 +8,6 @@ import {
   Users,
   ShoppingCart,
   Calendar,
-  FileText,
   CreditCard,
   BarChart3,
   AlertTriangle,
@@ -44,12 +43,11 @@ const Page = () => {
       gradient: "from-blue-500 via-indigo-500 to-purple-600",
       bgPattern: "bg-blue-50",
       activities: [
-        { name: "Nouveau Client", icon: Plus, path: "/manager/ajouter-client", color: "from-blue-500 to-blue-600", description: "Ajouter un nouveau client" },
-        { name: "Nouvelle Commande", icon: ShoppingCart, path: "/manager/ajouter-commande", color: "from-green-500 to-green-600", description: "Créer une commande" },
-        { name: "Programmer RDV", icon: Calendar, path: "/commercial/rendez-vous", color: "from-purple-500 to-purple-600", description: "Planifier rendez-vous" },
-        { name: "Générer Proforma", icon: FileText, path: "/commercial/proformas", color: "from-orange-500 to-orange-600", description: "Créer proforma" },
-        { name: "Voir Rapports", icon: BarChart3, path: "/commercial/rapport-rendez-vous", color: "from-cyan-500 to-cyan-600", description: "Rapports de performance" },
-        { name: "Suivi Commandes", icon: Eye, path: "/commercial/suivi-commandes", color: "from-indigo-500 to-indigo-600", description: "Suivre les commandes" },
+        { name: "Prospects & Proformas", icon: Plus, path: "/manager/departements/prospects-proformas", color: "from-blue-500 to-blue-600", description: "Liste des prospects et proformas" },
+        { name: "Clients & factures", icon: ShoppingCart, path: "/manager/departements/clients-factures", color: "from-green-500 to-green-600", description: "Liste des clients et factures" },
+        { name: "Liste des RDV", icon: Calendar, path: "/manager/departements/rendez-vous", color:  "from-purple-500 to-purple-600", description: "Planifier rendez-vous" },
+        { name: "Rapports des RDV", icon: Calendar, path: "/manager/departements/rapports-rendez-vous", color: "from-purple-500 to-purple-600", description: "Planifier rendez-vous" },
+
       ]
     },
     comptable: {
@@ -145,14 +143,7 @@ const Page = () => {
                     Accès rapide à toutes les fonctionnalités par département
                   </p>
                 </div>
-                <div className="lg:text-right">
-                  <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                    SISTRE GLOBAL SOURCING PTE-LTD
-                  </div>
-                  <p className="text-slate-500 text-sm md:text-base mt-1">
-                    Solutions intégrées de gestion
-                  </p>
-                </div>
+               
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 px-3 py-1.5 shadow-lg shadow-emerald-500/20">

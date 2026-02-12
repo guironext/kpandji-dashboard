@@ -7,8 +7,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { downloadExcelForAll, downloadExcelForUser } from "@/lib/exportRapportExcel";
 
 interface Report {
   id: string;
@@ -110,6 +114,10 @@ export const ExportReports = ({ reportsByUser }: ExportReportsProps) => {
     document.body.removeChild(link);
   };
 
+  const exportAllToExcel = () => {
+    downloadExcelForAll(reportsByUser);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -121,7 +129,30 @@ export const ExportReports = ({ reportsByUser }: ExportReportsProps) => {
           Exporter
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={exportAllToExcel} className="gap-2 cursor-pointer">
+          <FileSpreadsheet className="h-4 w-4 text-green-600" />
+          <span>Exporter tout en Excel</span>
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+            <FileSpreadsheet className="h-4 w-4 text-green-600" />
+            <span>Exporter par conseiller (Excel)</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-[320px] overflow-y-auto">
+            {reportsByUser.map((userGroup) => (
+              <DropdownMenuItem
+                key={userGroup.conseiller_commercial}
+                onClick={() => downloadExcelForUser(userGroup)}
+                className="gap-2 cursor-pointer"
+              >
+                <span className="truncate">
+                  {userGroup.conseiller_commercial} ({userGroup.reports.length})
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuItem onClick={exportToCSV} className="gap-2 cursor-pointer">
           <FileSpreadsheet className="h-4 w-4 text-green-600" />
           <span>Exporter en CSV</span>

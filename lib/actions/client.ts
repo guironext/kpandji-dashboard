@@ -30,6 +30,7 @@ export async function createClient(data: {
     console.log("Found/created user:", user.id);
     
     const clientData = {
+      id: crypto.randomUUID(),
       nom: data.nom,
       email: data.email || null,
       telephone: data.telephone,
@@ -39,9 +40,11 @@ export async function createClient(data: {
       commercial: data.commercial || null,
       status_client: data.status_client || "PROSPECT", // Add status with default
       userId: user.id,
+      updatedAt: new Date(),
     };
     
     console.log("Creating client with data:", clientData);
+    
     
     const client = await prisma.client.create({
       data: clientData,
@@ -61,16 +64,23 @@ export async function createClient(data: {
 
 export async function getClient(id: string) {
   try {
+    
     const client = await prisma.client.findUnique({
       where: { id },
-      include: { user: true }
+      include: { User: true }
     });
     
     if (!client) {
       return { success: false, error: "Client not found" };
     }
     
-    return { success: true, data: client };
+    return { 
+      success: true, 
+      data: {
+        ...client,
+        user: (client as { User?: unknown }).User
+      } 
+    };
   } catch (error) {
     console.error("Error fetching client:", error);
     return { success: false, error: "Failed to fetch client" };
@@ -79,12 +89,22 @@ export async function getClient(id: string) {
 
 export async function getAllClients() {
   try {
+    
     const clients = await prisma.client.findMany({
-      include: { user: true },
+      include: { User: true },
       orderBy: { nom: 'asc' }
     });
     
-    return { success: true, data: clients };
+    return { 
+      success: true, 
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User
+        };
+      })
+    };
   } catch (error) {
     console.error("Error fetching clients:", error);
     return { success: false, error: "Failed to fetch clients" };
@@ -93,15 +113,25 @@ export async function getAllClients() {
 
 export async function getClientsByStatus(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
   try {
+    
     const clients = await prisma.client.findMany({
       where: {
         status_client: status,
       },
-      include: { user: true },
+      include: { User: true },
       orderBy: { nom: 'asc' }
     });
     
-    return { success: true, data: clients };
+    return { 
+      success: true, 
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User
+        };
+      })
+    };
   } catch (error) {
     console.error("Error fetching clients by status:", error);
     return { success: false, error: "Failed to fetch clients" };
@@ -123,9 +153,10 @@ export async function updateClient(id: string, data: {
     console.log("Update data:", data);
     
     // First, check if the client exists and has a valid user relationship
+    
     const existingClient = await prisma.client.findUnique({
       where: { id },
-      include: { user: true }
+      include: { User: true }
     });
     
     if (!existingClient) {
@@ -135,7 +166,7 @@ export async function updateClient(id: string, data: {
     console.log("Existing client found:", existingClient.nom, "User ID:", existingClient.userId);
     
     // Verify that the associated user exists (this prevents foreign key constraint violations)
-    if (!existingClient.user) {
+    if (!(existingClient as { User?: unknown }).User) {
       console.error("Client exists but associated user is null:", existingClient.userId);
       return { success: false, error: "Associated user not found. Please contact support." };
     }
@@ -210,16 +241,26 @@ export async function getClientsByUserAndStatus(userId: string, status: "CLIENT"
       return { success: false, error: "User not found" };
     }
     
+    
     const clients = await prisma.client.findMany({
       where: {
         userId: user.id,
         status_client: status,
       },
-      include: { user: true },
+      include: { User: true },
       orderBy: { nom: 'asc' }
     });
     
-    return { success: true, data: clients };
+    return { 
+      success: true, 
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User
+        };
+      })
+    };
   } catch (error) {
     console.error("Error fetching clients by user and status:", error);
     return { success: false, error: "Failed to fetch clients" };
@@ -228,16 +269,26 @@ export async function getClientsByUserAndStatus(userId: string, status: "CLIENT"
 
 export async function getProspectsByCommercial(commercialName: string) {
   try {
+    
     const clients = await prisma.client.findMany({
       where: {
         commercial: commercialName,
         status_client: "PROSPECT",
       },
-      include: { user: true },
+      include: { User: true },
       orderBy: { nom: 'asc' }
     });
     
-    return { success: true, data: clients };
+    return { 
+      success: true, 
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User
+        };
+      })
+    };
   } catch (error) {
     console.error("Error fetching prospects by commercial:", error);
     return { success: false, error: "Failed to fetch prospects" };
@@ -256,22 +307,39 @@ export async function getClientsByUser(userId: string) {
       return { success: false, error: "User not found" };
     }
     
+    
     const clients = await prisma.client.findMany({
       where: {
         userId: user.id,
       },
       include: { 
-        user: true,
-        voitures: {
+        User: true,
+        Voiture: {
           include: {
-            voitureModel: true
+            VoitureModel: true
           }
         }
       },
       orderBy: { createdAt: 'desc' }  // Newest to oldest
     });
     
-    return { success: true, data: clients };
+    return { 
+      success: true, 
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown; Voiture?: unknown[] };
+        return {
+          ...item,
+          user: item.User,
+          voitures: item.Voiture?.map((v: unknown) => {
+            const voiture = v as Record<string, unknown> & { VoitureModel?: unknown };
+            return {
+              ...voiture,
+              voitureModel: voiture.VoitureModel
+            };
+          })
+        };
+      })
+    };
   } catch (error) {
     console.error("Error fetching clients by user:", error);
     return { success: false, error: "Failed to fetch clients" };

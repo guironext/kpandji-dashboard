@@ -1,7 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { EtapeCommande, EtapeConteneur, EtapeCommandeGroupee } from "@/lib/generated/prisma";
+import {
+  EtapeCommande,
+  EtapeConteneur,
+  EtapeCommandeGroupee,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 // Fetch all validated commandes
@@ -13,21 +17,32 @@ export async function getValidatedCommandes() {
         conteneurId: null,
       },
       include: {
-        voitureModel: true,
-        client: true,
-        clientEntreprise: true,
+        VoitureModel: true,
+        Client: true,
+        Client_entreprise: true,
       },
       orderBy: {
         createdAt: "desc",
       },
     });
-    
+
     // Serialize Decimal values
-    const serializedCommandes = commandes.map((commande) => ({
-      ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((commande: unknown) => {
+      const cmd = commande as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        VoitureModel?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+      };
+      return {
+        ...cmd,
+        prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+        voitureModel: cmd.VoitureModel,
+        client: cmd.Client,
+        clientEntreprise: cmd.Client_entreprise,
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching validated commandes:", error);
@@ -45,11 +60,11 @@ export async function getAllConteneurs() {
         },
       },
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true,
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true,
           },
         },
       },
@@ -57,16 +72,30 @@ export async function getAllConteneurs() {
         createdAt: "desc",
       },
     });
-    
+
     // Serialize Decimal values in commandes
-    const serializedConteneurs = conteneurs.map((conteneur) => ({
-      ...conteneur,
-      commandes: conteneur.commandes.map((commande) => ({
-        ...commande,
-        prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
-      })),
-    }));
-    
+    const serializedConteneurs = (conteneurs as unknown[]).map((conteneur: unknown) => {
+      const c = conteneur as Record<string, unknown> & { Commande?: unknown[] };
+      return {
+        ...c,
+        commandes: (c.Commande || []).map((commande: unknown) => {
+          const cmd = commande as Record<string, unknown> & {
+            prix_unitaire?: unknown;
+            VoitureModel?: unknown;
+            Client?: unknown;
+            Client_entreprise?: unknown;
+          };
+          return {
+            ...cmd,
+            prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+            voitureModel: cmd.VoitureModel,
+            client: cmd.Client,
+            clientEntreprise: cmd.Client_entreprise,
+          };
+        }),
+      };
+    });
+
     return { success: true, data: serializedConteneurs };
   } catch (error) {
     console.error("Error fetching conteneurs:", error);
@@ -103,7 +132,7 @@ export async function createConteneur(data: {
 // Assign commande to conteneur
 export async function assignCommandeToConteneur(
   commandeId: string,
-  conteneurId: string
+  conteneurId: string,
 ) {
   try {
     // Update the commande with conteneurId
@@ -183,11 +212,11 @@ export async function getValideCommandesGroupees() {
         etapeCommandeGroupee: EtapeCommandeGroupee.VALIDE,
       },
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true,
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true,
           },
         },
       },
@@ -197,19 +226,43 @@ export async function getValideCommandesGroupees() {
     });
 
     // Serialize Decimal values and dates
-    const serialized = commandesGroupees.map((cg) => ({
-      ...cg,
-      date_validation: cg.date_validation.toISOString(),
-      createdAt: cg.createdAt.toISOString(),
-      updatedAt: cg.updatedAt.toISOString(),
-      commandes: cg.commandes.map((cmd) => ({
-        ...cmd,
-        prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-        date_livraison: cmd.date_livraison ? cmd.date_livraison.toISOString() : null,
-        createdAt: cmd.createdAt.toISOString(),
-        updatedAt: cmd.updatedAt.toISOString(),
-      })),
-    }));
+    const serialized = (commandesGroupees as unknown[]).map((cg: unknown) => {
+      const group = cg as Record<string, unknown> & {
+        date_validation: Date;
+        createdAt: Date;
+        updatedAt: Date;
+        Commande?: unknown[];
+      };
+      return {
+        ...group,
+        date_validation: (group.date_validation as Date).toISOString(),
+        createdAt: (group.createdAt as Date).toISOString(),
+        updatedAt: (group.updatedAt as Date).toISOString(),
+        commandes: (group.Commande || []).map((cmd: unknown) => {
+          const c = cmd as Record<string, unknown> & {
+            prix_unitaire?: unknown;
+            date_livraison?: Date;
+            createdAt: Date;
+            updatedAt: Date;
+            VoitureModel?: unknown;
+            Client?: unknown;
+            Client_entreprise?: unknown;
+          };
+          return {
+            ...c,
+            prix_unitaire: c.prix_unitaire ? Number(c.prix_unitaire) : null,
+            date_livraison: c.date_livraison
+              ? (c.date_livraison as Date).toISOString()
+              : null,
+            createdAt: (c.createdAt as Date).toISOString(),
+            updatedAt: (c.updatedAt as Date).toISOString(),
+            voitureModel: c.VoitureModel,
+            client: c.Client,
+            clientEntreprise: c.Client_entreprise,
+          };
+        }),
+      };
+    });
 
     return { success: true, data: serialized };
   } catch (error) {
@@ -219,13 +272,15 @@ export async function getValideCommandesGroupees() {
 }
 
 // Update commandeGroupee and its commandes to TRANSITE when empty
-export async function updateCommandeGroupeeToTransite(commandeGroupeeId: string) {
+export async function updateCommandeGroupeeToTransite(
+  commandeGroupeeId: string,
+) {
   try {
     // Check if commandeGroupee has any commandes left
     const commandeGroupee = await prisma.commandeGroupee.findUnique({
       where: { id: commandeGroupeeId },
       include: {
-        commandes: true,
+        Commande: true,
       },
     });
 
@@ -234,7 +289,7 @@ export async function updateCommandeGroupeeToTransite(commandeGroupeeId: string)
     }
 
     // If there are no commandes left, update to TRANSITE
-    if (commandeGroupee.commandes.length === 0) {
+    if (((commandeGroupee as unknown) as { Commande: unknown[] }).Commande.length === 0) {
       await prisma.commandeGroupee.update({
         where: { id: commandeGroupeeId },
         data: {
@@ -250,4 +305,3 @@ export async function updateCommandeGroupeeToTransite(commandeGroupeeId: string)
     return { success: false, error: "Failed to update commande groupée" };
   }
 }
-

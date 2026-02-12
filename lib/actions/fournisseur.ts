@@ -15,6 +15,7 @@ export async function createFournisseur(data: {
   try {
     const fournisseur = await prisma.fournisseur.create({
       data: {
+        id: crypto.randomUUID(),
         nom: data.nom,
         email: data.email,
         telephone: data.telephone,
@@ -23,14 +24,27 @@ export async function createFournisseur(data: {
         code_postal: data.code_postal,
         pays: data.pays,
         type_Activite: data.type_Activite,
+        updatedAt: new Date(),
       },
     });
     
-    return { success: true, data: fournisseur };
+    return { success: true, data: serializeFournisseur(fournisseur) };
   } catch (error) {
     console.error("Error creating fournisseur:", error);
     return { success: false, error: "Failed to create fournisseur" };
   }
+}
+
+function serializeFournisseur(fournisseur: unknown) {
+  const f = fournisseur as Record<string, unknown> & {
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  return {
+    ...f,
+    createdAt: (f.createdAt as Date).toISOString(),
+    updatedAt: (f.updatedAt as Date).toISOString(),
+  };
 }
 
 export async function getFournisseur(id: string) {
@@ -38,7 +52,10 @@ export async function getFournisseur(id: string) {
     const fournisseur = await prisma.fournisseur.findUnique({
       where: { id },
     });
-    return { success: true, data: fournisseur };
+    if (!fournisseur) {
+      return { success: false, error: "Fournisseur not found" };
+    }
+    return { success: true, data: serializeFournisseur(fournisseur) };
   } catch (error) {
     console.error("Error fetching fournisseur:", error);
     return { success: false, error: "Failed to fetch fournisseur" };
@@ -50,7 +67,8 @@ export async function getAllFournisseurs() {
     const fournisseurs = await prisma.fournisseur.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return { success: true, data: fournisseurs };
+    const serialized = (fournisseurs as unknown[]).map(serializeFournisseur);
+    return { success: true, data: serialized };
   } catch (error) {
     console.error("Error fetching fournisseurs:", error);
     return { success: false, error: "Failed to fetch fournisseurs" };
@@ -70,9 +88,12 @@ export async function updateFournisseur(id: string, data: {
   try {
     const fournisseur = await prisma.fournisseur.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
     });
-    return { success: true, data: fournisseur };
+    return { success: true, data: serializeFournisseur(fournisseur) };
   } catch (error) {
     console.error("Error updating fournisseur:", error);
     return { success: false, error: "Failed to update fournisseur" };

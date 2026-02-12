@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "../prisma";
-import { Decimal } from "../generated/prisma/runtime/library";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export type SistreInvoiceLineItem = {
   id: string;
@@ -23,22 +23,23 @@ export type SistreInvoice = {
 };
 
 // Helper function to serialize Decimal values
-function serializeInvoice(invoice: {
-  id: string;
-  invoiceNumber: string;
-  invoiceDate: Date;
-  total: Decimal;
-  createdAt: Date;
-  updatedAt: Date;
-  items: Array<{
+function serializeInvoice(invoice: unknown): SistreInvoice {
+  const f = invoice as Record<string, unknown> & {
     id: string;
-    description: string;
-    quantity: number;
-    unitPrice: Decimal;
-    amount: Decimal;
-  }>;
-}): SistreInvoice {
-  const lineItems = invoice.items.map((item) => ({
+    invoiceNumber: string;
+    invoiceDate: Date;
+    total: Decimal;
+    createdAt: Date;
+    updatedAt: Date;
+    SistreInvoiceItem?: Array<{
+      id: string;
+      description: string;
+      quantity: number;
+      unitPrice: Decimal;
+      amount: Decimal;
+    }>;
+  };
+  const lineItems = (f.SistreInvoiceItem || []).map((item) => ({
     id: item.id,
     description: item.description,
     quantity: item.quantity,
@@ -47,18 +48,18 @@ function serializeInvoice(invoice: {
 
   const subtotal = lineItems.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
-    0
+    0,
   );
 
   return {
-    id: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    invoiceDate: invoice.invoiceDate.toISOString(),
+    id: f.id,
+    invoiceNumber: f.invoiceNumber,
+    invoiceDate: f.invoiceDate.toISOString(),
     lineItems,
     subtotal,
-    total: Number(invoice.total),
-    createdAt: invoice.createdAt.toISOString(),
-    updatedAt: invoice.updatedAt.toISOString(),
+    total: Number(f.total),
+    createdAt: f.createdAt.toISOString(),
+    updatedAt: f.updatedAt.toISOString(),
   };
 }
 
@@ -71,41 +72,49 @@ export async function createSistreInvoice(data: {
     // Calculate total
     const total = data.lineItems.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
-      0
+      0,
     );
 
     // Create invoice with items in a transaction
     const invoice = await prisma.sistreInvoice.create({
       data: {
+        id: crypto.randomUUID(),
         invoiceNumber: data.invoiceNumber,
         invoiceDate: new Date(data.invoiceDate),
         total: new Decimal(total),
-        items: {
+        updatedAt: new Date(),
+        SistreInvoiceItem: {
           create: data.lineItems.map((item) => ({
+            id: crypto.randomUUID(),
             description: item.description,
             quantity: item.quantity,
             unitPrice: new Decimal(item.unitPrice),
             amount: new Decimal(item.unitPrice * item.quantity),
+            updatedAt: new Date(),
           })),
         },
       },
       include: {
-        items: true,
+        SistreInvoiceItem: true,
       },
     });
 
     revalidatePath("/manager/sistre");
-    
+
     return { success: true, data: serializeInvoice(invoice) };
   } catch (error) {
     console.error("Error creating SISTRE invoice:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to create invoice";
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to create invoice";
+
     // Handle unique constraint violation
-    if (errorMessage.includes("Unique constraint") || errorMessage.includes("invoiceNumber")) {
+    if (
+      errorMessage.includes("Unique constraint") ||
+      errorMessage.includes("invoiceNumber")
+    ) {
       return { success: false, error: "Ce numéro de facture existe déjà" };
     }
-    
+
     return { success: false, error: errorMessage };
   }
 }
@@ -114,13 +123,13 @@ export async function getAllSistreInvoices() {
   try {
     const invoices = await prisma.sistreInvoice.findMany({
       include: {
-        items: true,
+        SistreInvoiceItem: true,
       },
       orderBy: {
         createdAt: "desc",
       },
     });
-    
+
     return { success: true, data: invoices.map(serializeInvoice) };
   } catch (error) {
     console.error("Error fetching SISTRE invoices:", error);
@@ -133,14 +142,14 @@ export async function getSistreInvoice(id: string) {
     const invoice = await prisma.sistreInvoice.findUnique({
       where: { id },
       include: {
-        items: true,
+        SistreInvoiceItem: true,
       },
     });
-    
+
     if (!invoice) {
       return { success: false, error: "Invoice not found" };
     }
-    
+
     return { success: true, data: serializeInvoice(invoice) };
   } catch (error) {
     console.error("Error fetching SISTRE invoice:", error);
@@ -154,13 +163,14 @@ export async function deleteSistreInvoice(id: string) {
     await prisma.sistreInvoice.delete({
       where: { id },
     });
-    
+
     revalidatePath("/manager/sistre");
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting SISTRE invoice:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to delete invoice";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to delete invoice";
     return { success: false, error: errorMessage };
   }
 }
@@ -175,13 +185,12 @@ export async function deleteSistreInvoices(ids: string[]) {
         },
       },
     });
-    
+
     revalidatePath("/manager/sistre");
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting SISTRE invoices:", error);
     return { success: false, error: "Failed to delete invoices" };
   }
 }
-

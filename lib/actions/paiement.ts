@@ -2,7 +2,7 @@
 
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
-import { Decimal } from "../generated/prisma/runtime/library";
+import { Decimal } from "@prisma/client/runtime/library";
 import { currentUser } from "@clerk/nextjs/server";
 
 export async function createPaiement(data: {
@@ -32,7 +32,7 @@ export async function createPaiement(data: {
     const facture = await prisma.facture.findUnique({
       where: { id: data.factureId },
       include: {
-        paiements: true,
+        Paiement: true,
       },
     });
 
@@ -41,9 +41,9 @@ export async function createPaiement(data: {
     }
 
     // Calculate total paid so far
-    const totalPaidSoFar = facture.paiements.reduce(
+    const totalPaidSoFar = (facture.Paiement || []).reduce(
       (sum, paiement) => sum + Number(paiement.avance_payee),
-      0
+      0,
     );
 
     // Calculate remaining amount
@@ -54,6 +54,7 @@ export async function createPaiement(data: {
     // Create the paiement
     const paiement = await prisma.paiement.create({
       data: {
+        id: crypto.randomUUID(),
         factureId: data.factureId,
         clientId: data.clientId || undefined,
         clientEntrepriseId: data.clientEntrepriseId || undefined,
@@ -63,6 +64,7 @@ export async function createPaiement(data: {
         date_paiement: data.date_paiement,
         mode_paiement: data.mode_paiement,
         status_paiement: data.status_paiement || "EN_ATTENTE",
+        updatedAt: new Date(),
       },
     });
 
@@ -90,7 +92,9 @@ export async function createPaiement(data: {
   } catch (error) {
     console.error("Error creating paiement:", error);
     const errorMessage =
-      error instanceof Error ? error.message : "Erreur lors de la création du paiement";
+      error instanceof Error
+        ? error.message
+        : "Erreur lors de la création du paiement";
     return { success: false, error: errorMessage };
   }
 }
@@ -100,7 +104,7 @@ export async function getPaiementsByFactureId(factureId: string) {
     const paiements = await prisma.paiement.findMany({
       where: { factureId },
       include: {
-        user: {
+        User: {
           select: {
             firstName: true,
             lastName: true,
@@ -115,15 +119,27 @@ export async function getPaiementsByFactureId(factureId: string) {
 
     return {
       success: true,
-      data: paiements.map((paiement) => ({
-        ...paiement,
-        avance_payee: Number(paiement.avance_payee),
-        reste_payer: Number(paiement.reste_payer),
-      })),
+      data: (paiements as unknown[]).map((paiement: unknown) => {
+        const p = paiement as Record<string, unknown> & {
+          avance_payee: Decimal | number;
+          reste_payer: Decimal | number;
+          User?: unknown;
+        };
+        return {
+          ...p,
+          avance_payee: Number(p.avance_payee),
+          reste_payer: Number(p.reste_payer),
+          user: p.User,
+        };
+      }),
     };
   } catch (error) {
     console.error("Error fetching paiements:", error);
-    return { success: false, error: "Erreur lors de la récupération des paiements", data: [] };
+    return {
+      success: false,
+      error: "Erreur lors de la récupération des paiements",
+      data: [],
+    };
   }
 }
 
@@ -132,7 +148,7 @@ export async function getFactureWithPaiements(factureId: string) {
     const facture = await prisma.facture.findUnique({
       where: { id: factureId },
       include: {
-        client: {
+        Client: {
           select: {
             id: true,
             nom: true,
@@ -143,7 +159,7 @@ export async function getFactureWithPaiements(factureId: string) {
             commercial: true,
           },
         },
-        clientEntreprise: {
+        Client_entreprise: {
           select: {
             id: true,
             nom_entreprise: true,
@@ -153,16 +169,16 @@ export async function getFactureWithPaiements(factureId: string) {
             commercial: true,
           },
         },
-        paiements: {
+        Paiement: {
           include: {
-            user: {
+            User: {
               select: {
                 firstName: true,
                 lastName: true,
                 email: true,
               },
             },
-            numeroEntreeCaisse: true,
+            NumeroEntreeCaisse: true,
           },
           orderBy: {
             createdAt: "desc",
@@ -176,9 +192,9 @@ export async function getFactureWithPaiements(factureId: string) {
     }
 
     // Calculate total paid
-    const totalPaid = facture.paiements.reduce(
+    const totalPaid = (facture.Paiement || []).reduce(
       (sum, paiement) => sum + Number(paiement.avance_payee),
-      0
+      0,
     );
 
     // Serialize all Decimal fields to numbers
@@ -210,33 +226,39 @@ export async function getFactureWithPaiements(factureId: string) {
         accessoire_description: facture.accessoire_description,
         accessoire_nbr: facture.accessoire_nbr,
         accessoire_nom: facture.accessoire_nom,
-        accessoire_prix: facture.accessoire_prix ? Number(facture.accessoire_prix) : null,
-        accessoire_subtotal: facture.accessoire_subtotal ? Number(facture.accessoire_subtotal) : null,
+        accessoire_prix: facture.accessoire_prix
+          ? Number(facture.accessoire_prix)
+          : null,
+        accessoire_subtotal: facture.accessoire_subtotal
+          ? Number(facture.accessoire_subtotal)
+          : null,
         bon_pour_acquis: facture.bon_pour_acquis,
-        client: facture.client,
-        clientEntreprise: facture.clientEntreprise,
+        client: facture.Client,
+        clientEntreprise: facture.Client_entreprise,
         totalPaid,
-        paiements: facture.paiements.map((p) => ({
-          id: p.id,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-          factureId: p.factureId,
-          clientId: p.clientId,
-          clientEntrepriseId: p.clientEntrepriseId,
-          userId: p.userId,
-          avance_payee: Number(p.avance_payee),
-          reste_payer: Number(p.reste_payer),
-          date_paiement: p.date_paiement,
-          mode_paiement: p.mode_paiement,
-          status_paiement: p.status_paiement,
-          user: p.user,
-          numeroEntreeCaisse: p.numeroEntreeCaisse,
-        })),
+        paiements: (facture.Paiement || []).map((p: unknown) => {
+          const paiement = p as Record<string, unknown> & {
+            avance_payee: Decimal | number;
+            reste_payer: Decimal | number;
+            User?: unknown;
+            NumeroEntreeCaisse?: unknown;
+          };
+          return {
+            ...paiement,
+            avance_payee: Number(paiement.avance_payee),
+            reste_payer: Number(paiement.reste_payer),
+            user: paiement.User,
+            numeroEntreeCaisse: paiement.NumeroEntreeCaisse,
+          };
+        }),
       },
     };
   } catch (error) {
     console.error("Error fetching facture:", error);
-    return { success: false, error: "Erreur lors de la récupération de la facture" };
+    return {
+      success: false,
+      error: "Erreur lors de la récupération de la facture",
+    };
   }
 }
 
@@ -244,7 +266,7 @@ export async function getAllPaiementsGroupedByClient() {
   try {
     const paiements = await prisma.paiement.findMany({
       include: {
-        client: {
+        Client: {
           select: {
             id: true,
             nom: true,
@@ -255,7 +277,7 @@ export async function getAllPaiementsGroupedByClient() {
             commercial: true,
           },
         },
-        clientEntreprise: {
+        Client_entreprise: {
           select: {
             id: true,
             nom_entreprise: true,
@@ -266,21 +288,21 @@ export async function getAllPaiementsGroupedByClient() {
             commercial: true,
           },
         },
-        facture: {
+        Facture: {
           select: {
             id: true,
             date_facture: true,
             total_ttc: true,
           },
         },
-        user: {
+        User: {
           select: {
             firstName: true,
             lastName: true,
             email: true,
           },
         },
-        numeroEntreeCaisse: true,
+        NumeroEntreeCaisse: true,
       },
       orderBy: {
         date_paiement: "desc",
@@ -288,84 +310,104 @@ export async function getAllPaiementsGroupedByClient() {
     });
 
     // Group payments by client/clientEntreprise
-    const groupedByClient: Record<string, typeof paiements> = {};
-    const groupedByClientEntreprise: Record<string, typeof paiements> = {};
+    const groupedByClient: Record<string, unknown[]> = {};
+    const groupedByClientEntreprise: Record<string, unknown[]> = {};
 
-    paiements.forEach((paiement) => {
-      if (paiement.clientId && paiement.client) {
-        const clientId = paiement.clientId;
+    (paiements as unknown[]).forEach((paiement: unknown) => {
+      const p = paiement as Record<string, unknown> & {
+        clientId?: string;
+        clientEntrepriseId?: string;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+      };
+      if (p.clientId && p.Client) {
+        const clientId = p.clientId;
         if (!groupedByClient[clientId]) {
           groupedByClient[clientId] = [];
         }
-        groupedByClient[clientId].push(paiement);
-      } else if (paiement.clientEntrepriseId && paiement.clientEntreprise) {
-        const clientEntrepriseId = paiement.clientEntrepriseId;
+        groupedByClient[clientId].push(p);
+      } else if (p.clientEntrepriseId && p.Client_entreprise) {
+        const clientEntrepriseId = p.clientEntrepriseId;
         if (!groupedByClientEntreprise[clientEntrepriseId]) {
           groupedByClientEntreprise[clientEntrepriseId] = [];
         }
-        groupedByClientEntreprise[clientEntrepriseId].push(paiement);
+        groupedByClientEntreprise[clientEntrepriseId].push(p);
       }
     });
 
     // Transform the data
-    const clientsData = Object.entries(groupedByClient).map(([clientId, paiements]) => {
-      const client = paiements[0].client!;
-      const totalAmount = paiements.reduce(
-        (sum, p) => sum + Number(p.avance_payee),
-        0
-      );
-      return {
-        clientId,
-        client,
-        paiements: paiements.map((p) => ({
-          id: p.id,
-          avance_payee: Number(p.avance_payee),
-          reste_payer: Number(p.reste_payer),
-          date_paiement: p.date_paiement,
-          mode_paiement: p.mode_paiement,
-          status_paiement: p.status_paiement,
-          createdAt: p.createdAt,
-          facture: {
-            id: p.facture.id,
-            date_facture: p.facture.date_facture,
-            total_ttc: Number(p.facture.total_ttc),
-          },
-          user: p.user,
-          numeroEntreeCaisse: p.numeroEntreeCaisse,
-        })),
-        totalAmount,
-      };
-    });
+    const clientsData = Object.entries(groupedByClient).map(
+      ([clientId, paiements]) => {
+        const firstP = paiements[0] as Record<string, unknown> & { Client: unknown };
+        const client = firstP.Client!;
+        const totalAmount = (paiements as Array<{ avance_payee: Decimal | number }>).reduce(
+          (sum, p) => sum + Number(p.avance_payee),
+          0,
+        );
+        return {
+          clientId,
+          client,
+          paiements: paiements.map((p: unknown) => {
+            const paiement = p as Record<string, unknown> & {
+              avance_payee: Decimal | number;
+              reste_payer: Decimal | number;
+              Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
+              User?: unknown;
+              NumeroEntreeCaisse?: unknown;
+            };
+            return {
+              ...paiement,
+              avance_payee: Number(paiement.avance_payee),
+              reste_payer: Number(paiement.reste_payer),
+              facture: {
+                id: paiement.Facture.id,
+                date_facture: paiement.Facture.date_facture,
+                total_ttc: Number(paiement.Facture.total_ttc),
+              },
+              user: paiement.User,
+              numeroEntreeCaisse: paiement.NumeroEntreeCaisse,
+            };
+          }),
+          totalAmount,
+        };
+      },
+    );
 
     const clientEntreprisesData = Object.entries(groupedByClientEntreprise).map(
       ([clientEntrepriseId, paiements]) => {
-        const clientEntreprise = paiements[0].clientEntreprise!;
-        const totalAmount = paiements.reduce(
+        const firstP = paiements[0] as Record<string, unknown> & { Client_entreprise: unknown };
+        const clientEntreprise = firstP.Client_entreprise!;
+        const totalAmount = (paiements as Array<{ avance_payee: Decimal | number }>).reduce(
           (sum, p) => sum + Number(p.avance_payee),
-          0
+          0,
         );
         return {
           clientEntrepriseId,
           clientEntreprise,
-          paiements: paiements.map((p) => ({
-            id: p.id,
-            avance_payee: Number(p.avance_payee),
-            reste_payer: Number(p.reste_payer),
-            date_paiement: p.date_paiement,
-            mode_paiement: p.mode_paiement,
-            status_paiement: p.status_paiement,
-            createdAt: p.createdAt,
-            facture: {
-              id: p.facture.id,
-              date_facture: p.facture.date_facture,
-              total_ttc: Number(p.facture.total_ttc),
-            },
-            user: p.user,
-            numeroEntreeCaisse: p.numeroEntreeCaisse,
-          })),
+          paiements: paiements.map((p: unknown) => {
+            const paiement = p as Record<string, unknown> & {
+              avance_payee: Decimal | number;
+              reste_payer: Decimal | number;
+              Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
+              User?: unknown;
+              NumeroEntreeCaisse?: unknown;
+            };
+            return {
+              ...paiement,
+              avance_payee: Number(paiement.avance_payee),
+              reste_payer: Number(paiement.reste_payer),
+              facture: {
+                id: paiement.Facture.id,
+                date_facture: paiement.Facture.date_facture,
+                total_ttc: Number(paiement.Facture.total_ttc),
+              },
+              user: paiement.User,
+              numeroEntreeCaisse: paiement.NumeroEntreeCaisse,
+            };
+          }),
           totalAmount,
         };
-      }
+      },
     );
 
     return {
@@ -430,9 +472,11 @@ export async function generateNumeroEntreeCaisse(paiementId: string) {
     // Create the NumeroEntreeCaisse
     const numeroEntreeCaisse = await prisma.numeroEntreeCaisse.create({
       data: {
+        id: crypto.randomUUID(),
         numero,
         prefix_numero,
         paiementId,
+        updatedAt: new Date(),
       },
     });
 
@@ -455,4 +499,3 @@ export async function generateNumeroEntreeCaisse(paiementId: string) {
     return { success: false, error: errorMessage };
   }
 }
-

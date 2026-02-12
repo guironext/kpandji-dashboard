@@ -1,50 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { EtapeConteneur, EtapeCommandeGroupee, EtapeCommande } from '@/lib/generated/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import {
+  EtapeConteneur,
+  EtapeCommandeGroupee,
+  EtapeCommande,
+} from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { 
-      conteneurNumber, 
-      sealNumber, 
-      totalPackages, 
-      grossWeight, 
-      netWeight, 
-      stuffingMap, 
-      dateEmbarquement, 
+    const body = await request.json();
+    const {
+      conteneurNumber,
+      sealNumber,
+      totalPackages,
+      grossWeight,
+      netWeight,
+      stuffingMap,
+      dateEmbarquement,
       dateArriveProbable,
       commandeIds,
       updateToTransite,
       etapeCommande,
-      etapeConteneur
-    } = body
+      etapeConteneur,
+    } = body;
 
     // Validate required fields
     if (!conteneurNumber) {
       return NextResponse.json(
-        { error: 'Le numéro de conteneur est requis' },
-        { status: 400 }
-      )
+        { error: "Le numéro de conteneur est requis" },
+        { status: 400 },
+      );
     }
 
-    if (!commandeIds || !Array.isArray(commandeIds) || commandeIds.length === 0) {
+    if (
+      !commandeIds ||
+      !Array.isArray(commandeIds) ||
+      commandeIds.length === 0
+    ) {
       return NextResponse.json(
-        { error: 'Au moins une commande doit être fournie' },
-        { status: 400 }
-      )
+        { error: "Au moins une commande doit être fournie" },
+        { status: 400 },
+      );
     }
 
     // Check if conteneurNumber already exists
     const existingConteneur = await prisma.conteneur.findUnique({
       where: { conteneurNumber },
-    })
+    });
 
     if (existingConteneur) {
       return NextResponse.json(
-        { error: 'Un conteneur avec ce numéro existe déjà' },
-        { status: 400 }
-      )
+        { error: "Un conteneur avec ce numéro existe déjà" },
+        { status: 400 },
+      );
     }
 
     // Fetch commandes to get their commandeGroupeeId
@@ -55,13 +63,13 @@ export async function POST(request: NextRequest) {
       include: {
         commandeGroupee: true,
       },
-    })
+    });
 
     if (commandes.length === 0) {
       return NextResponse.json(
-        { error: 'Aucune commande trouvée' },
-        { status: 404 }
-      )
+        { error: "Aucune commande trouvée" },
+        { status: 404 },
+      );
     }
 
     // Create the conteneur
@@ -74,20 +82,24 @@ export async function POST(request: NextRequest) {
         netWeight,
         stuffingMap,
         dateEmbarquement: dateEmbarquement ? new Date(dateEmbarquement) : null,
-        dateArriveProbable: dateArriveProbable ? new Date(dateArriveProbable) : null,
-        etapeConteneur: etapeConteneur ? (etapeConteneur as EtapeConteneur) : EtapeConteneur.CHARGE,
+        dateArriveProbable: dateArriveProbable
+          ? new Date(dateArriveProbable)
+          : null,
+        etapeConteneur: etapeConteneur
+          ? (etapeConteneur as EtapeConteneur)
+          : EtapeConteneur.CHARGE,
       },
-    })
+    });
 
     // Update commandes to link them to the conteneur and set etapeCommande if provided
     const updateData: { conteneurId: string; etapeCommande?: EtapeCommande } = {
       conteneurId: conteneur.id,
-    }
-    
+    };
+
     if (etapeCommande) {
-      updateData.etapeCommande = etapeCommande as EtapeCommande
+      updateData.etapeCommande = etapeCommande as EtapeCommande;
     } else if (updateToTransite) {
-      updateData.etapeCommande = EtapeCommande.TRANSITE
+      updateData.etapeCommande = EtapeCommande.TRANSITE;
     }
 
     await prisma.commande.updateMany({
@@ -95,22 +107,25 @@ export async function POST(request: NextRequest) {
         id: { in: commandeIds },
       },
       data: updateData,
-    })
+    });
 
     // Group commandes by commandeGroupeeId to track which ones need to be updated
-    const commandeGroupeeMap = new Map<string, string[]>()
-    
+    const commandeGroupeeMap = new Map<string, string[]>();
+
     commandes.forEach((cmd) => {
       if (cmd.commandeGroupeeId) {
         if (!commandeGroupeeMap.has(cmd.commandeGroupeeId)) {
-          commandeGroupeeMap.set(cmd.commandeGroupeeId, [])
+          commandeGroupeeMap.set(cmd.commandeGroupeeId, []);
         }
-        commandeGroupeeMap.get(cmd.commandeGroupeeId)!.push(cmd.id)
+        commandeGroupeeMap.get(cmd.commandeGroupeeId)!.push(cmd.id);
       }
-    })
+    });
 
     // Remove commandes from their commandeGroupee and check if empty
-    for (const [commandeGroupeeId, removedCommandeIds] of commandeGroupeeMap.entries()) {
+    for (const [
+      commandeGroupeeId,
+      removedCommandeIds,
+    ] of commandeGroupeeMap.entries()) {
       // Remove commandeGroupeeId from commandes
       await prisma.commande.updateMany({
         where: {
@@ -119,14 +134,14 @@ export async function POST(request: NextRequest) {
         data: {
           commandeGroupeeId: null,
         },
-      })
+      });
 
       // Check if commandeGroupee has any remaining commandes
       const remainingCommandes = await prisma.commande.count({
         where: {
           commandeGroupeeId: commandeGroupeeId,
         },
-      })
+      });
 
       // If no commandes left, update commandeGroupee and its remaining commandes to TRANSITE
       if (remainingCommandes === 0) {
@@ -135,7 +150,7 @@ export async function POST(request: NextRequest) {
           data: {
             etapeCommandeGroupee: EtapeCommandeGroupee.TRANSITE,
           },
-        })
+        });
       }
     }
 
@@ -151,15 +166,14 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    })
+    });
 
-    return NextResponse.json(createdConteneur, { status: 201 })
+    return NextResponse.json(createdConteneur, { status: 201 });
   } catch (error) {
-    console.error('Error creating conteneur:', error)
+    console.error("Error creating conteneur:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de la création du conteneur' },
-      { status: 500 }
-    )
+      { error: "Erreur lors de la création du conteneur" },
+      { status: 500 },
+    );
   }
 }
-

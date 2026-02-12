@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/(.*)"]);
+const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/(.*)", "/api/numero-chassis"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
@@ -21,6 +21,7 @@ const isClientelleRoute = createRouteMatcher(["/clientelle", "/clientelle/(.*)"]
 const isComptableRoute = createRouteMatcher(["/comptable", "/comptable/(.*)"]);
 const isConcessionnaireRoute = createRouteMatcher(["/concessionnaire", "/concessionnaire/(.*)"]);
 const isSuperviseurRoute = createRouteMatcher(["/superviseur", "/superviseur/(.*)"]);
+const isCommunicationRoute = createRouteMatcher(["/communication", "/communication/(.*)"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
@@ -68,8 +69,11 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
       case "CHEFQUALITE":
         redirectUrl = "/chefqualite";
         break;
-      case "COMMERCIAL":
-        redirectUrl = "/commercial";
+        case "COMMERCIAL":
+          redirectUrl = "/commercial";
+          break;
+      case "COMMUNICATION":
+        redirectUrl = "/communication";
         break;
       case "RH":
         redirectUrl = "/rh";
@@ -150,6 +154,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
       case "COMMERCIAL":
         redirectUrl = "/commercial";
         break;
+      case "COMMUNICATION":
+        redirectUrl = "/communication";
+        break;
       case "RH":
         redirectUrl = "/rh";
         break;
@@ -218,6 +225,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
           break;
         case "COMMERCIAL":
           redirectUrl = "/commercial";
+          break;
+        case "COMMUNICATION":
+          redirectUrl = "/communication";
           break;
         case "RH":
           redirectUrl = "/rh";
@@ -332,6 +342,14 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   if (isCommercialRoute(req)) {
     if (sessionClaims?.metadata?.role === "COMMERCIAL") {
+      return NextResponse.next();
+    } else {
+      const homepageUrl = new URL("/", req.url);
+      return NextResponse.redirect(homepageUrl);
+    }
+  }
+  if (isCommunicationRoute(req)) {
+    if (sessionClaims?.metadata?.role === "COMMUNICATION") {
       return NextResponse.next();
     } else {
       const homepageUrl = new URL("/", req.url);

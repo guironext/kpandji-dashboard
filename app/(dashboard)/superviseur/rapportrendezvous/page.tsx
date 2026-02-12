@@ -23,7 +23,7 @@ import {
   Activity,
 } from "lucide-react";
 import { RapportAccordion } from "@/components/RapportAccordion";
-import { ExportReports } from "@/components/ExportReports";
+import { ExportReportsWrapper } from "@/components/ExportReportsWrapper";
 
 const RapportRendezVousPage = async () => {
   const result = await getAllRapportRendezVousByUser();
@@ -227,7 +227,7 @@ const RapportRendezVousPage = async () => {
                   Consultez et analysez les rapports de rendez-vous organisés par conseiller
                 </CardDescription>
               </div>
-              <ExportReports reportsByUser={reportsByUser} />
+              <ExportReportsWrapper reportsByUser={reportsByUser} />
             </div>
           </CardHeader>
           <CardContent className="p-6">

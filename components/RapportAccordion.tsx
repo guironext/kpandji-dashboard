@@ -41,7 +41,9 @@ import {
   DollarSign,
   ArrowUpRight,
   Package,
+  FileSpreadsheet,
 } from "lucide-react";
+import { downloadExcelForUser } from "@/lib/exportRapportExcel";
 
 interface Report {
   id: string;
@@ -205,12 +207,29 @@ export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {
                     </p>
                   </div>
                 </div>
-                <Badge 
-                  variant="secondary" 
-                  className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1"
-                >
-                  {userGroup.reports.length} rapport{userGroup.reports.length > 1 ? "s" : ""}
-                </Badge>
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-green-200 bg-background px-3 py-1.5 text-sm font-medium text-green-700 ring-offset-background transition-colors hover:bg-green-50 hover:border-green-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shrink-0 cursor-pointer"
+                    onClick={() => downloadExcelForUser(userGroup)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        downloadExcelForUser(userGroup);
+                      }
+                    }}
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Exporter Excel
+                  </span>
+                  <Badge 
+                    variant="secondary" 
+                    className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1"
+                  >
+                    {userGroup.reports.length} rapport{userGroup.reports.length > 1 ? "s" : ""}
+                  </Badge>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6">

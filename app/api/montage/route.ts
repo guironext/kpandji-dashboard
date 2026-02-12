@@ -4,66 +4,107 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const montages = await prisma.montage.findMany({
-      include: {
-        commande: {
-          include: {
-            client: true,
-            voitureModel: true
+      select: {
+        etapeMontage: true,
+        no_chassis: true,
+        Commande_Montage_commandeIdToCommande: {
+          select: {
+            date_livraison: true,
+            couleur: true,
+            motorisation: true,
+            transmission: true,
+            VoitureModel: {
+              select: {
+                model: true
+              }
+            },
+            Client: {
+              select: {
+                nom: true
+              }
+            },
+            Client_entreprise: {
+              select: {
+                nom_entreprise: true
+              }
+            }
           }
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        etapeMontage: 'asc'
       }
     })
 
     return NextResponse.json(montages)
   } catch (error) {
     console.error('Error fetching montages:', error)
-    return NextResponse.json({ error: 'Failed to fetch montages' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Erreur lors de la récupération des montages' },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { commandeId, no_chassis } = await request.json()
+    const { ordreMontageId } = await request.json()
 
-    if (!commandeId || !no_chassis) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!ordreMontageId) {
+      return NextResponse.json(
+        { error: 'ordreMontageId is required' },
+        { status: 400 }
+      )
     }
 
-    // Verify the commande exists and has etapeCommande === 'VERIFIER'
-    const commande = await prisma.commande.findFirst({
-      where: {
-        id: commandeId,
-        etapeCommande: 'VERIFIER'
-      }
-    })
-
-    if (!commande) {
-      return NextResponse.json({ error: 'Commande not found or not verified' }, { status: 404 })
-    }
-
-    // Create the montage
-    const montage = await prisma.montage.create({
-      data: {
-        commandeId,
-        no_chassis,
-        etapeMontage: 'CREATION'
-      },
+    // Get the ordre montage with related data
+    const ordreMontage = await prisma.ordreMontage.findUnique({
+      where: { id: ordreMontageId },
       include: {
-        commande: {
-          include: {
-            client: true,
-            voitureModel: true
-          }
-        }
+        commande: true,
+        numeroChassis: true
       }
     })
 
-    return NextResponse.json(montage, { status: 201 })
+    if (!ordreMontage) {
+      return NextResponse.json(
+        { error: 'Ordre montage not found' },
+        { status: 404 }
+      )
+    }
+
+    // Create the montage and update related records in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create new montage
+      const montage = await tx.montage.create({
+        data: {
+          commandeId: ordreMontage.commandeId,
+          no_chassis: ordreMontage.id,
+          etapeMontage: 'VALIDE'
+        }
+      })
+
+      // Update ordre montage flag
+      await tx.ordreMontage.update({
+        where: { id: ordreMontageId },
+        data: { ordreMontageFlag: 'VALIDE' }
+      })
+
+      // Update commande etape
+      await tx.commande.update({
+        where: { id: ordreMontage.commandeId },
+        data: { etapeCommande: 'MONTAGE' }
+      })
+
+      return montage
+    })
+
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
     console.error('Error creating montage:', error)
-    return NextResponse.json({ error: 'Failed to create montage' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to create montage' },
+      { status: 500 }
+    )
   }
 }

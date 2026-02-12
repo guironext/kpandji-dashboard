@@ -28,61 +28,82 @@ const navItems = [
   {
     id: 2,
     icon: <ContainerIcon className="w-5 h-5" />,
+    label: "Conteneur à Renseigner",
+    href: "/chefusine/conteneur-renseigner",
+    category: "operations"
+  },
+    {
+    id: 3,
+    icon: <ContainerIcon className="w-5 h-5" />,
+    label: "Conteneur Arrivés",
+    href: "/chefusine/conteneur-arrive",
+    category: "operations"
+  },
+  {
+    id:  4,
+    icon: <ContainerIcon className="w-5 h-5" />,
     label: "Dépotage",
     href: "/chefusine/depotage",
     category: "operations"
   },
   {
-    id: 3,
+    id: 5,
     icon: <ContainerIcon className="w-5 h-5" />,
-    label: "Opérations Montage",
+    label: "Créer Montage",
     href: "/chefusine/montage",
     category: "operations"
   },
   {
-    id: 4,
+    id:6,
     icon: <Users className="w-5 h-5" />,
-    label: "Création Equipe",
+    label: "Créer Equipe",
     href: "/chefusine/equipe",
     category: "operations"
   },
   {
-    id: 5,
+    id: 7,
+    icon: <Users className="w-5 h-5" />,
+    label: "Opération Montage",
+    href: "/chefusine/operation-montage",
+    category: "operations"
+  },
+  {
+    id: 8,    
     icon: <RotateCcw className="w-5 h-5" />,
     label: "Opérations Correction",
     href: "/chefusine/correction",
     category: "operations"
   },
   {
-    id: 6,
+    id: 9,
     icon: <Truck className="w-5 h-5" />,
     label: "Retour pièces",
     href: "/chefusine/Retourstock",
     category: "operations"
   },
   {
-    id: 7,
+    id: 10,
     icon: <DrumIcon className="w-5 h-5" />,
     label: "Pièces vérifiées",
     href: "/chefusine/verification",
     category: "inventory"
   },
   {
-    id: 8,
+    id: 11,
     icon: <Package className="w-5 h-5" />,
     label: "Stockage",
     href: "/chefusine/stockage",
     category: "inventory"
   },
   {
-    id: 9,
+    id: 12,
     icon: <BarChart3 className="w-5 h-5" />,
     label: "Rapport Montages",
     href: "/chefusine/rapportmontage",
     category: "reports"
   },
   {
-    id: 10,
+    id: 13, 
     icon: <FileText className="w-5 h-5" />,
     label: "Rapport Vérification",
     href: "/chefusine/rapportverification",

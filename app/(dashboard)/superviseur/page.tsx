@@ -446,7 +446,7 @@ const SuperviseurDashboard = () => {
                   <div>
                     <p className="font-medium text-slate-900">{client.nom}</p>
                     <p className="text-xs text-slate-500">
-                      Par {client.user.firstName} {client.user.lastName}
+                      Par {client.user?.firstName || ''} {client.user?.lastName || ''}
                     </p>
                   </div>
                   <div className="text-right">
@@ -577,7 +577,7 @@ const SuperviseurDashboard = () => {
                       {facture.client?.nom || facture.clientEntreprise?.nom_entreprise}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {facture.user.firstName} {facture.user.lastName}
+                      {facture.user?.firstName || ''} {facture.user?.lastName || ''}
                     </p>
                   </div>
                   <div className="text-right">

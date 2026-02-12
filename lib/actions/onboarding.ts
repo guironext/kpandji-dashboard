@@ -2,7 +2,7 @@
 
 import { clerkClient } from "@clerk/nextjs/server";
 //import { prisma } from "../prisma";
-import { UserRole } from "../generated/prisma";
+import { UserRole } from "@prisma/client";
 import { prisma } from "../prisma";
 //import { UserRole } from "@/generated/prisma";
 //import { UserRole } from "@prisma/client";
@@ -10,7 +10,7 @@ import { prisma } from "../prisma";
 export async function createEmployee(
   department: string | undefined,
   clerkId: string,
-  role: UserRole
+  role: UserRole,
 ) {
   try {
     const user = await (await clerkClient()).users.getUser(clerkId);
@@ -54,7 +54,7 @@ export async function completeUserOnboarding(
   department: string | undefined,
   clerkId: string,
   role: UserRole,
-  telephone?: string
+  telephone?: string,
 ) {
   try {
     const user = await (await clerkClient()).users.getUser(clerkId);
@@ -91,7 +91,10 @@ export async function completeUserOnboarding(
     console.error(error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to complete onboarding",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to complete onboarding",
     };
   }
 }

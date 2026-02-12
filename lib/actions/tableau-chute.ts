@@ -34,7 +34,7 @@ export async function createTableauChute(data: {
         where: { id: data.rendezVousId },
         include: {
           client: true,
-          clientEntreprise: true,
+          Client_entreprise: true,
         }
       });
 
@@ -42,21 +42,24 @@ export async function createTableauChute(data: {
         return { success: false, error: "Rendez-vous not found" };
       }
 
+      const rv = rendezVous as Record<string, unknown> & { client?: Record<string, unknown> & { nom?: string; telephone?: string }; Client_entreprise?: Record<string, unknown> & { nom_entreprise?: string; telephone?: string }; clientId?: string; clientEntrepriseId?: string; date: Date };
       rapportRendezVous = await prisma.rapportRendezVous.create({
         data: {
+          id: crypto.randomUUID(),
+          updatedAt: new Date(),
           rendezVousId: data.rendezVousId,
-          clientId: rendezVous.clientId,
-          clientEntrepriseId: rendezVous.clientEntrepriseId,
+          clientId: rv.clientId,
+          clientEntrepriseId: rv.clientEntrepriseId,
           voitureId: data.voitureId,
           // Add required fields with default values
-          date_rendez_vous: rendezVous.date,
+          date_rendez_vous: rv.date,
           heure_rendez_vous: "00:00",
           lieu_rendez_vous: "Showroom",
           conseiller_commercial: "Commercial",
           duree_rendez_vous: "1h",
-          nom_prenom_client: rendezVous.client?.nom || rendezVous.clientEntreprise?.nom_entreprise || "Client",
-          telephone_client: rendezVous.client?.telephone || rendezVous.clientEntreprise?.telephone || "",
-          type_client: rendezVous.client ? "Particulier" : "Professionnel",
+          nom_prenom_client: rv.client?.nom || rv.Client_entreprise?.nom_entreprise || "Client",
+          telephone_client: rv.client?.telephone || rv.Client_entreprise?.telephone || "",
+          type_client: rv.client ? "Particulier" : "Professionnel",
           presentation_gamme: false,
           essai_vehicule: false,
           negociation_commerciale: false,
@@ -72,6 +75,8 @@ export async function createTableauChute(data: {
     // Create Tableau_chute
     const tableauChute = await prisma.tableau_chute.create({
       data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         mois_chute: data.mois_chute,
         rapportRendezVousId: rapportRendezVous.id,
         clientId: data.clientId,
@@ -104,15 +109,15 @@ export async function getTableauChuteByUser(clerkUserId: string) {
         userId: user.id,
       },
       include: {
-        client: true,
-        voiture: {
+        Client: true,
+        Voiture: {
           include: {
-            voitureModel: true,
+            VoitureModel: true,
           },
         },
-        rapportRendezVous: {
+        RapportRendezVous: {
           include: {
-            rendezVous: true,
+            RendezVous: true,
           },
         },
       },
@@ -121,7 +126,24 @@ export async function getTableauChuteByUser(clerkUserId: string) {
       },
     });
 
-    return { success: true, data: tableauxChute };
+    // Remap for frontend compatibility
+    const serializedTableauxChute = (tableauxChute as unknown[]).map((tc: unknown) => {
+      const t = tc as Record<string, unknown> & { Client?: unknown; Voiture?: Record<string, unknown> & { VoitureModel?: unknown }; RapportRendezVous?: Record<string, unknown> & { RendezVous?: unknown } };
+      return {
+        ...t,
+        client: t.Client,
+        voiture: t.Voiture ? {
+          ...t.Voiture,
+          voitureModel: t.Voiture.VoitureModel
+        } : null,
+        rapportRendezVous: t.RapportRendezVous ? {
+          ...t.RapportRendezVous,
+          rendezVous: t.RapportRendezVous.RendezVous
+        } : null,
+      };
+    });
+
+    return { success: true, data: serializedTableauxChute };
   } catch (error) {
     console.error("Error fetching tableau chute:", error);
     return { success: false, error: "Failed to fetch tableau chute" };
@@ -138,9 +160,9 @@ export async function deferTableauChute(data: {
     const tableauChute = await prisma.tableau_chute.findUnique({
       where: { id: data.tableauChuteId },
       include: {
-        rapportRendezVous: {
+        RapportRendezVous: {
           include: {
-            rendezVous: true,
+            RendezVous: true,
           },
         },
       },
@@ -150,9 +172,10 @@ export async function deferTableauChute(data: {
       return { success: false, error: "Tableau chute not found" };
     }
 
+    const tc = tableauChute as Record<string, unknown> & { RapportRendezVous: { RendezVous: { id: string } } };
     // Update the rendezvous date
     await prisma.rendezVous.update({
-      where: { id: tableauChute.rapportRendezVous.rendezVous.id },
+      where: { id: tc.RapportRendezVous.RendezVous.id },
       data: { date: data.newDate },
     });
 
@@ -183,7 +206,7 @@ export async function getAllTableauChute() {
         clientId: true,
         clientEntrepriseId: true,
         voitureId: true,
-        user: {
+        User: {
           select: {
             id: true,
             firstName: true,
@@ -191,7 +214,7 @@ export async function getAllTableauChute() {
             email: true,
           },
         },
-        client: {
+        Client: {
           select: {
             id: true,
             nom: true,
@@ -202,9 +225,9 @@ export async function getAllTableauChute() {
             localisation: true,
           },
         },
-        voiture: {
+        Voiture: {
           include: {
-            voitureModel: {
+            VoitureModel: {
               select: {
                 model: true,
                 image: true,
@@ -212,9 +235,9 @@ export async function getAllTableauChute() {
             },
           },
         },
-        rapportRendezVous: {
+        RapportRendezVous: {
           include: {
-            rendezVous: {
+            RendezVous: {
               select: {
                 date: true,
                 statut: true,
@@ -228,7 +251,25 @@ export async function getAllTableauChute() {
       },
     });
 
-    return { success: true, data: tableauxChute };
+    // Remap for frontend compatibility
+    const serializedTableauxChute = (tableauxChute as unknown[]).map((tc: unknown) => {
+      const t = tc as Record<string, unknown> & { User?: unknown; Client?: unknown; Voiture?: Record<string, unknown> & { VoitureModel?: unknown }; RapportRendezVous?: Record<string, unknown> & { RendezVous?: unknown } };
+      return {
+        ...t,
+        user: t.User,
+        client: t.Client,
+        voiture: t.Voiture ? {
+          ...t.Voiture,
+          voitureModel: t.Voiture.VoitureModel
+        } : null,
+        rapportRendezVous: t.RapportRendezVous ? {
+          ...t.RapportRendezVous,
+          rendezVous: t.RapportRendezVous.RendezVous
+        } : null,
+      };
+    });
+
+    return { success: true, data: serializedTableauxChute };
   } catch (error) {
     console.error("Error fetching all tableau chute:", error);
     return { success: false, error: "Failed to fetch tableau chute" };
@@ -254,6 +295,8 @@ export async function createTableauChuteRendezVous(data: {
     // Create Tableau_chute_rendez_vous
     const tableauChuteRendezVous = await prisma.tableau_chute_rendez_vous.create({
       data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         mois_chute: data.mois_chute,
         modeles_discutes: data.modeles_discutes as never,
         rapportRendezVousId: data.rapportRendezVousId,
@@ -284,11 +327,11 @@ export async function getTableauChuteRendezVousByUser(clerkUserId: string) {
         userId: user.id,
       },
       include: {
-        rapportRendezVous: {
+        RapportRendezVous: {
           include: {
-            client: true,
-            clientEntreprise: true,
-            rendezVous: true,
+            Client: true,
+            Client_entreprise: true,
+            RendezVous: true,
           },
         },
       },
@@ -297,7 +340,21 @@ export async function getTableauChuteRendezVousByUser(clerkUserId: string) {
       },
     });
 
-    return { success: true, data: tableauxChuteRendezVous };
+    // Remap for frontend compatibility
+    const serializedTableauxChuteRendezVous = (tableauxChuteRendezVous as unknown[]).map((tcrv: unknown) => {
+      const t = tcrv as Record<string, unknown> & { RapportRendezVous?: Record<string, unknown> & { Client?: unknown; Client_entreprise?: unknown; RendezVous?: unknown } };
+      return {
+        ...t,
+        rapportRendezVous: t.RapportRendezVous ? {
+          ...t.RapportRendezVous,
+          client: t.RapportRendezVous.Client,
+          clientEntreprise: t.RapportRendezVous.Client_entreprise,
+          rendezVous: t.RapportRendezVous.RendezVous
+        } : null,
+      };
+    });
+
+    return { success: true, data: serializedTableauxChuteRendezVous };
   } catch (error) {
     console.error("Error fetching tableau chute rendez-vous:", error);
     return { success: false, error: "Failed to fetch tableau chute rendez-vous" };
@@ -308,7 +365,7 @@ export async function getAllTableauChuteRendezVous() {
   try {
     const tableauxChuteRendezVous = await prisma.tableau_chute_rendez_vous.findMany({
       include: {
-        user: {
+        User: {
           select: {
             id: true,
             firstName: true,
@@ -316,11 +373,11 @@ export async function getAllTableauChuteRendezVous() {
             email: true,
           },
         },
-        rapportRendezVous: {
+        RapportRendezVous: {
           include: {
-            client: true,
-            clientEntreprise: true,
-            rendezVous: true,
+            Client: true,
+            Client_entreprise: true,
+            RendezVous: true,
           },
         },
       },
@@ -329,7 +386,22 @@ export async function getAllTableauChuteRendezVous() {
       },
     });
 
-    return { success: true, data: tableauxChuteRendezVous };
+    // Remap for frontend compatibility
+    const serializedTableauxChuteRendezVous = (tableauxChuteRendezVous as unknown[]).map((tcrv: unknown) => {
+      const t = tcrv as Record<string, unknown> & { User?: unknown; RapportRendezVous?: Record<string, unknown> & { Client?: unknown; Client_entreprise?: unknown; RendezVous?: unknown } };
+      return {
+        ...t,
+        user: t.User,
+        rapportRendezVous: t.RapportRendezVous ? {
+          ...t.RapportRendezVous,
+          client: t.RapportRendezVous.Client,
+          clientEntreprise: t.RapportRendezVous.Client_entreprise,
+          rendezVous: t.RapportRendezVous.RendezVous
+        } : null,
+      };
+    });
+
+    return { success: true, data: serializedTableauxChuteRendezVous };
   } catch (error) {
     console.error("Error fetching all tableau chute rendez-vous:", error);
     return { success: false, error: "Failed to fetch tableau chute rendez-vous" };

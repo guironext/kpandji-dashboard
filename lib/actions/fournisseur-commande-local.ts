@@ -21,6 +21,7 @@ export async function createFournisseurCommandeLocal(data: {
 
     const fournisseurCommandeLocal = await prisma.fournisseurCommandeLocal.create({
       data: {
+        id: crypto.randomUUID(),
         nom: data.nom.trim(),
         email: data.email || null,
         telephone: data.telephone || null,
@@ -30,6 +31,7 @@ export async function createFournisseurCommandeLocal(data: {
         pays: data.pays || null,
         type_Activite: data.type_Activite || null,
         commandeLocalId: data.commandeLocalId || null,
+        updatedAt: new Date(),
       },
     });
 
@@ -50,7 +52,19 @@ export async function getAllFournisseurCommandeLocal() {
       },
     });
 
-    return { success: true, data: fournisseurs };
+    const serialized = (fournisseurs as unknown[]).map((f: unknown) => {
+      const fournisseur = f as Record<string, unknown> & {
+        createdAt: Date;
+        updatedAt: Date;
+      };
+      return {
+        ...fournisseur,
+        createdAt: (fournisseur.createdAt as Date).toISOString(),
+        updatedAt: (fournisseur.updatedAt as Date).toISOString(),
+      };
+    });
+
+    return { success: true, data: serialized };
   } catch (error) {
     console.error("Error fetching fournisseurs:", error);
     return { success: false, error: "Erreur lors de la récupération des fournisseurs" };
@@ -67,7 +81,13 @@ export async function getFournisseurCommandeLocalById(id: string) {
       return { success: false, error: "Fournisseur non trouvé" };
     }
 
-    return { success: true, data: fournisseur };
+    const serialized = {
+      ...fournisseur,
+      createdAt: (fournisseur.createdAt as Date).toISOString(),
+      updatedAt: (fournisseur.updatedAt as Date).toISOString(),
+    };
+
+    return { success: true, data: serialized };
   } catch (error) {
     console.error("Error fetching fournisseur:", error);
     return { success: false, error: "Erreur lors de la récupération du fournisseur" };
@@ -99,6 +119,7 @@ export async function updateFournisseurCommandeLocal(
         ...(data.code_postal !== undefined && { code_postal: data.code_postal || null }),
         ...(data.pays !== undefined && { pays: data.pays || null }),
         ...(data.type_Activite !== undefined && { type_Activite: data.type_Activite || null }),
+        updatedAt: new Date(),
       },
     });
 
@@ -132,11 +153,23 @@ export async function getAllCommandeLocaux() {
       },
     });
 
-    const serialized = commandeLocaux.map((c) => ({
-      ...c,
-      price: Number(c.price),
-      total: Number(c.total),
-    }));
+    const serialized = (commandeLocaux as unknown[]).map((commande: unknown) => {
+      const c = commande as Record<string, unknown> & {
+        price: unknown;
+        total: unknown;
+        date_livraison: Date;
+        createdAt: Date;
+        updatedAt: Date;
+      };
+      return {
+        ...c,
+        price: Number(c.price),
+        total: Number(c.total),
+        date_livraison: (c.date_livraison as Date).toISOString(),
+        createdAt: (c.createdAt as Date).toISOString(),
+        updatedAt: (c.updatedAt as Date).toISOString(),
+      };
+    });
 
     return { success: true, data: serialized };
   } catch (error) {
@@ -153,7 +186,19 @@ export async function getAllFournisseurs() {
       },
     });
 
-    return { success: true, data: fournisseurs };
+    const serialized = (fournisseurs as unknown[]).map((f: unknown) => {
+      const fournisseur = f as Record<string, unknown> & {
+        createdAt: Date;
+        updatedAt: Date;
+      };
+      return {
+        ...fournisseur,
+        createdAt: (fournisseur.createdAt as Date).toISOString(),
+        updatedAt: (fournisseur.updatedAt as Date).toISOString(),
+      };
+    });
+
+    return { success: true, data: serialized };
   } catch (error) {
     console.error("Error fetching fournisseurs:", error);
     return { success: false, error: "Erreur lors de la récupération des fournisseurs" };

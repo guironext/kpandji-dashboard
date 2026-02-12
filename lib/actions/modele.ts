@@ -97,10 +97,12 @@ export async function createModel(
     // Save model to database with file paths
     const modele = await prisma.voitureModel.create({
       data: {
+        id: crypto.randomUUID(),
         model: data.model,
         fiche_technique: ficheTechniquePath || data.fiche_technique || null,
         description: data.description,
         image: imagePath || null,
+        updatedAt: new Date(),
       },
     });
     
@@ -176,10 +178,10 @@ type ModeleData = {
   id: string;
   model: string;
   fiche_technique: string | null;
-  description?: string | null;  // Add this
-  image?: string | null;         // Add this
-  createdAt: Date;
-  updatedAt: Date;
+  description?: string | null;
+  image?: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // Get a single model by ID from database
@@ -200,10 +202,10 @@ export async function getModele(modelId: string): Promise<{ success: boolean; da
       id: modele.id,
       model: modele.model,
       fiche_technique: modele.fiche_technique,
-      description: modele.description,  // Add this
-      image: modele.image,              // Add this
-      createdAt: modele.createdAt,
-      updatedAt: modele.updatedAt,
+      description: modele.description,
+      image: modele.image,
+      createdAt: modele.createdAt.toISOString(),
+      updatedAt: modele.updatedAt.toISOString(),
     };
     
     return {
@@ -235,10 +237,10 @@ export async function getAllModele(): Promise<{ success: boolean; data?: ModeleD
       id: modele.id,
       model: modele.model,
       fiche_technique: modele.fiche_technique,
-      description: modele.description,  // Add this
-      image: modele.image,              // Add this
-      createdAt: modele.createdAt,
-      updatedAt: modele.updatedAt,
+      description: modele.description,
+      image: modele.image,
+      createdAt: modele.createdAt.toISOString(),
+      updatedAt: modele.updatedAt.toISOString(),
     }));
     
     return {
@@ -338,7 +340,10 @@ export async function updateModele(
 
     await prisma.voitureModel.update({
       where: { id: modelId },
-      data: updateData,
+      data: {
+        ...updateData,
+        updatedAt: new Date(),
+      },
     });
     
     revalidatePath("/manager/ajouter-modele");

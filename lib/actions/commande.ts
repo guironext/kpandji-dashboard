@@ -6,7 +6,19 @@ import { revalidatePath } from "next/cache";
 export async function createCommande(data: {
   nbr_portes: string;
   transmission: "AUTOMATIQUE" | "MANUEL";
-  etapeCommande: "PROPOSITION" | "VALIDE" | "TRANSITE" | "RENSEIGNEE" | "ARRIVE" | "VERIFIER" | "MONTAGE" | "TESTE" | "PARKING" | "CORRECTION" | "VENTE" | "DECHARGE";
+  etapeCommande:
+    | "PROPOSITION"
+    | "VALIDE"
+    | "TRANSITE"
+    | "RENSEIGNEE"
+    | "ARRIVE"
+    | "VERIFIER"
+    | "MONTAGE"
+    | "TESTE"
+    | "PARKING"
+    | "CORRECTION"
+    | "VENTE"
+    | "DECHARGE";
   motorisation: "ELECTRIQUE" | "ESSENCE" | "DIESEL" | "HYBRIDE";
   couleur: string;
   date_livraison: Date;
@@ -29,43 +41,59 @@ export async function createCommande(data: {
     }
 
     if (!data.clientId && !data.clientEntrepriseId) {
-      return { success: false, error: "Un client ou une entreprise cliente est requis" };
+      return {
+        success: false,
+        error: "Un client ou une entreprise cliente est requis",
+      };
     }
 
+    
     const commande = await prisma.commande.create({
       data: {
+        id: crypto.randomUUID(),
         nbr_portes: data.nbr_portes,
         transmission: data.transmission,
         etapeCommande: data.etapeCommande,
         motorisation: data.motorisation,
         couleur: data.couleur.trim(),
         date_livraison: data.date_livraison,
+        updatedAt: new Date(),
         ...(data.clientId && { clientId: data.clientId }),
-        ...(data.clientEntrepriseId && { clientEntrepriseId: data.clientEntrepriseId }),
+        ...(data.clientEntrepriseId && {
+          clientEntrepriseId: data.clientEntrepriseId,
+        }),
         ...(data.voitureModelId && { voitureModelId: data.voitureModelId }),
         ...(data.factureId && { factureId: data.factureId }),
         ...(data.prix_unitaire && { prix_unitaire: data.prix_unitaire }),
-        ...(data.fournisseurIds && data.fournisseurIds.length > 0 && {
-          fournisseurs: {
-            connect: data.fournisseurIds.map(id => ({ id }))
-          }
-        }),
+        ...(data.fournisseurIds &&
+          data.fournisseurIds.length > 0 && {
+            CommandeToFournisseur: {
+              create: data.fournisseurIds.map((id) => ({
+                B: id,
+              })),
+            },
+          }),
       },
     });
 
     // Link accessories after commande is created (if accessoires exist in schema)
     if (data.accessoireIds && data.accessoireIds.length > 0) {
       try {
+        
         await prisma.commande.update({
           where: { id: commande.id },
           data: {
-            accessoires: {
-              connect: data.accessoireIds.map(id => ({ id }))
-            }
-          }
+            Accessoire: {
+              connect: data.accessoireIds.map((id) => ({ id })),
+            },
+            updatedAt: new Date(),
+          },
         });
       } catch (accessoireError) {
-        console.log("Accessoires not yet available in schema, skipping:", accessoireError);
+        console.log(
+          "Accessoires not yet available in schema, skipping:",
+          accessoireError,
+        );
       }
     }
 
@@ -73,17 +101,22 @@ export async function createCommande(data: {
     revalidatePath("/comptable");
     revalidatePath("/comptable/facture");
     revalidatePath("/comptable/commandes");
-    
+
     // Convert Decimal to number for serialization
     const serializedCommande = {
       ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+      prix_unitaire: commande.prix_unitaire
+        ? Number(commande.prix_unitaire)
+        : null,
     };
-    
+
     return { success: true, data: serializedCommande };
   } catch (error: unknown) {
     console.error("Error creating commande:", error);
-    const errorMessage = error instanceof Error ? error.message : "Erreur lors de la création de la commande";
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Erreur lors de la création de la commande";
     return { success: false, error: errorMessage };
   }
 }
@@ -92,20 +125,72 @@ export async function getAllCommandes() {
   try {
     const commandes = await prisma.commande.findMany({
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: { createdAt: Date; updatedAt: Date } & Record<string, unknown>;
+        Client_entreprise?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        VoitureModel?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        CommandeToFournisseur?: Array<{
+          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >;
+        }>;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client
+          ? {
+              ...item.Client,
+              createdAt: item.Client.createdAt.toISOString(),
+              updatedAt: item.Client.updatedAt.toISOString(),
+            }
+          : null,
+        clientEntreprise: item.Client_entreprise
+          ? {
+              ...item.Client_entreprise,
+              createdAt: item.Client_entreprise.createdAt.toISOString(),
+              updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+            }
+          : null,
+        voitureModel: item.VoitureModel
+          ? {
+              ...item.VoitureModel,
+              createdAt: item.VoitureModel.createdAt.toISOString(),
+              updatedAt: item.VoitureModel.updatedAt.toISOString(),
+            }
+          : null,
+        fournisseurs: item.CommandeToFournisseur
+          ? item.CommandeToFournisseur.map((ctf) => ({
+              ...ctf.Fournisseur,
+              createdAt: ctf.Fournisseur.createdAt.toISOString(),
+              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            }))
+          : [],
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes:", error);
@@ -118,39 +203,118 @@ export async function getCommandesProposees() {
     const commandes = await prisma.commande.findMany({
       where: {
         etapeCommande: "PROPOSITION",
-        commandeFlag: "DISPONIBLE"
+        commandeFlag: "DISPONIBLE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Try to fetch accessories for each commande (will work once Prisma client is regenerated)
     const commandesWithAccessoires = await Promise.all(
-      commandes.map(async (cmd) => {
+      (commandes as unknown[]).map(async (cmd: unknown) => {
+        const item = cmd as Record<string, unknown> & {
+          id: string;
+          prix_unitaire?: unknown;
+          Client?: { createdAt: Date; updatedAt: Date } & Record<string, unknown>;
+          Client_entreprise?: { createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >;
+          VoitureModel?: { createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >;
+          CommandeToFournisseur?: Array<{
+            Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
+              string,
+              unknown
+            >;
+          }>;
+        };
         try {
           const accessoires = await prisma.accessoire.findMany({
-            where: { commandeId: cmd.id }
+            where: { commandeId: item.id },
           });
           return {
-            ...cmd,
+            ...item,
             accessoires,
-            prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+            prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+            client: item.Client
+              ? {
+                  ...item.Client,
+                  createdAt: item.Client.createdAt.toISOString(),
+                  updatedAt: item.Client.updatedAt.toISOString(),
+                }
+              : null,
+            clientEntreprise: item.Client_entreprise
+              ? {
+                  ...item.Client_entreprise,
+                  createdAt: item.Client_entreprise.createdAt.toISOString(),
+                  updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+                }
+              : null,
+            voitureModel: item.VoitureModel
+              ? {
+                  ...item.VoitureModel,
+                  createdAt: item.VoitureModel.createdAt.toISOString(),
+                  updatedAt: item.VoitureModel.updatedAt.toISOString(),
+                }
+              : null,
+            fournisseurs: item.CommandeToFournisseur
+              ? item.CommandeToFournisseur.map((ctf) => ({
+                  ...ctf.Fournisseur,
+                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
+                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+                }))
+              : [],
           };
         } catch {
           return {
-            ...cmd,
+            ...item,
             accessoires: [],
-            prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
+            prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+            client: item.Client
+              ? {
+                  ...item.Client,
+                  createdAt: item.Client.createdAt.toISOString(),
+                  updatedAt: item.Client.updatedAt.toISOString(),
+                }
+              : null,
+            clientEntreprise: item.Client_entreprise
+              ? {
+                  ...item.Client_entreprise,
+                  createdAt: item.Client_entreprise.createdAt.toISOString(),
+                  updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+                }
+              : null,
+            voitureModel: item.VoitureModel
+              ? {
+                  ...item.VoitureModel,
+                  createdAt: item.VoitureModel.createdAt.toISOString(),
+                  updatedAt: item.VoitureModel.updatedAt.toISOString(),
+                }
+              : null,
+            fournisseurs: item.CommandeToFournisseur
+              ? item.CommandeToFournisseur.map((ctf) => ({
+                  ...ctf.Fournisseur,
+                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
+                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+                }))
+              : [],
           };
         }
-      })
+      }),
     );
-    
+
     return { success: true, data: commandesWithAccessoires };
   } catch (error) {
     console.error("Error fetching commandes proposees:", error);
@@ -158,27 +322,49 @@ export async function getCommandesProposees() {
   }
 }
 
-export async function updateCommandeStatus(commandeId: string, fournisseurIds: string[]) {
+export async function updateCommandeStatus(
+  commandeId: string,
+  fournisseurIds: string[],
+) {
   try {
+    
     const commande = await prisma.commande.update({
       where: { id: commandeId },
       data: {
         etapeCommande: "VALIDE",
-        fournisseurs: {
-          set: fournisseurIds.map(id => ({ id }))
-        }
+        updatedAt: new Date(),
+        CommandeToFournisseur: {
+          deleteMany: {},
+          create: fournisseurIds.map((id) => ({
+            B: id,
+          })),
+        },
       },
       include: {
-        client: true,
-        voitureModel: true,
-        fournisseurs: true,
-      }
+        Client: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+      },
     });
 
     // Serialize Decimal fields
     const serializedCommande = {
       ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+      prix_unitaire: commande.prix_unitaire
+        ? Number(commande.prix_unitaire)
+        : null,
+      client: (commande as Record<string, unknown>).Client,
+      voitureModel: (commande as Record<string, unknown>).VoitureModel,
+      fournisseurs:
+        (
+          commande as Record<string, unknown> & {
+            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+          }
+        ).CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
     };
 
     revalidatePath("/manager/commandes-proposees");
@@ -200,46 +386,101 @@ export async function getCommandesValides() {
 
     const commandes = await prisma.commande.findMany({
       where: {
-        etapeCommande: "VALIDE"
+        etapeCommande: "VALIDE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: { createdAt: Date; updatedAt: Date } & Record<string, unknown>;
+        Client_entreprise?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        VoitureModel?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        CommandeToFournisseur?: Array<{
+          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >;
+        }>;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        date_livraison: (item.date_livraison as Date).toISOString(),
+        createdAt: (item.createdAt as Date).toISOString(),
+        updatedAt: (item.updatedAt as Date).toISOString(),
+        client: item.Client
+          ? {
+              ...item.Client,
+              createdAt: item.Client.createdAt.toISOString(),
+              updatedAt: item.Client.updatedAt.toISOString(),
+            }
+          : null,
+        clientEntreprise: item.Client_entreprise
+          ? {
+              ...item.Client_entreprise,
+              createdAt: item.Client_entreprise.createdAt.toISOString(),
+              updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+            }
+          : null,
+        voitureModel: item.VoitureModel
+          ? {
+              ...item.VoitureModel,
+              createdAt: item.VoitureModel.createdAt.toISOString(),
+              updatedAt: item.VoitureModel.updatedAt.toISOString(),
+            }
+          : null,
+        fournisseurs: item.CommandeToFournisseur
+          ? item.CommandeToFournisseur.map((ctf) => ({
+              ...ctf.Fournisseur,
+              createdAt: ctf.Fournisseur.createdAt.toISOString(),
+              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            }))
+          : [],
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error: unknown) {
     console.error("Error fetching commandes valides:", error);
-    
+
     // Check if it's a connection error
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorCode = (error as { code?: string })?.code;
     const errorString = String(error).toLowerCase();
-    
+
     // Check for various connection error patterns
-    const isConnectionError = 
-      errorCode === 'P1001' || 
-      errorMessage.includes('connection') || 
-      errorMessage.includes('connexion') ||
-      errorMessage.includes('Closed') ||
-      errorMessage.includes('closed') ||
-      errorMessage.includes('reset') ||
-      errorMessage.includes('Reset') ||
-      errorString.includes('kind: closed') ||
-      errorString.includes('kind: connectionreset') ||
-      errorString.includes('connectionreset') ||
-      errorString.includes('connection closed')
-    
+    const isConnectionError =
+      errorCode === "P1001" ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("connexion") ||
+      errorMessage.includes("Closed") ||
+      errorMessage.includes("closed") ||
+      errorMessage.includes("reset") ||
+      errorMessage.includes("Reset") ||
+      errorString.includes("kind: closed") ||
+      errorString.includes("kind: connectionreset") ||
+      errorString.includes("connectionreset") ||
+      errorString.includes("connection closed");
+
     if (isConnectionError) {
       // Try to reconnect
       try {
@@ -249,43 +490,119 @@ export async function getCommandesValides() {
         // Retry the query once
         const commandes = await prisma.commande.findMany({
           where: {
-            etapeCommande: "VALIDE"
+            etapeCommande: "VALIDE",
           },
           include: {
-            client: true,
-            clientEntreprise: true,
-            voitureModel: true,
-            fournisseurs: true,
+            Client: true,
+            Client_entreprise: true,
+            VoitureModel: true,
+            CommandeToFournisseur: {
+              include: {
+                Fournisseur: true,
+              },
+            },
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: "desc" },
         });
-        
-        const serializedCommandes = commandes.map(cmd => ({
-          ...cmd,
-          prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-        }));
-        
+
+        const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+          const item = cmd as Record<string, unknown> & {
+            prix_unitaire?: unknown;
+            Client?: { createdAt: Date; updatedAt: Date } & Record<string, unknown>;
+            Client_entreprise?: { createdAt: Date; updatedAt: Date } & Record<
+              string,
+              unknown
+            >;
+            VoitureModel?: { createdAt: Date; updatedAt: Date } & Record<
+              string,
+              unknown
+            >;
+            CommandeToFournisseur?: Array<{
+              Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
+                string,
+                unknown
+              >;
+            }>;
+          };
+          return {
+            ...item,
+            prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+            date_livraison: (item.date_livraison as Date).toISOString(),
+            createdAt: (item.createdAt as Date).toISOString(),
+            updatedAt: (item.updatedAt as Date).toISOString(),
+            client: item.Client
+              ? {
+                  ...item.Client,
+                  createdAt: item.Client.createdAt.toISOString(),
+                  updatedAt: item.Client.updatedAt.toISOString(),
+                }
+              : null,
+            clientEntreprise: item.Client_entreprise
+              ? {
+                  ...item.Client_entreprise,
+                  createdAt: item.Client_entreprise.createdAt.toISOString(),
+                  updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+                }
+              : null,
+            voitureModel: item.VoitureModel
+              ? {
+                  ...item.VoitureModel,
+                  createdAt: item.VoitureModel.createdAt.toISOString(),
+                  updatedAt: item.VoitureModel.updatedAt.toISOString(),
+                }
+              : null,
+            fournisseurs: item.CommandeToFournisseur
+              ? item.CommandeToFournisseur.map((ctf) => ({
+                  ...ctf.Fournisseur,
+                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
+                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+                }))
+              : [],
+          };
+        });
+
         return { success: true, data: serializedCommandes };
       } catch (retryError) {
         console.error("Retry failed:", retryError);
         const retryErrorString = String(retryError).toLowerCase();
-        
+
         // Provide more specific error message
-        if (retryErrorString.includes('kind: closed') || retryErrorString.includes('connection closed')) {
-          return { success: false, error: "La connexion à la base de données a été fermée. Veuillez vérifier que le serveur de base de données est en cours d'exécution." };
+        if (
+          retryErrorString.includes("kind: closed") ||
+          retryErrorString.includes("connection closed")
+        ) {
+          return {
+            success: false,
+            error:
+              "La connexion à la base de données a été fermée. Veuillez vérifier que le serveur de base de données est en cours d'exécution.",
+          };
         }
-        
-        return { success: false, error: "Échec de la connexion à la base de données. Veuillez vérifier votre serveur de base de données et réessayer." };
+
+        return {
+          success: false,
+          error:
+            "Échec de la connexion à la base de données. Veuillez vérifier votre serveur de base de données et réessayer.",
+        };
       }
     }
-    
+
     // Provide more specific error message for non-connection errors
     // Reuse errorString already defined above
-    if (errorString.includes('kind: closed') || errorString.includes('connection closed')) {
-      return { success: false, error: "La connexion à la base de données a été fermée. Veuillez réessayer." };
+    if (
+      errorString.includes("kind: closed") ||
+      errorString.includes("connection closed")
+    ) {
+      return {
+        success: false,
+        error:
+          "La connexion à la base de données a été fermée. Veuillez réessayer.",
+      };
     }
-    
-    return { success: false, error: "Échec du chargement des commandes validées. Veuillez réessayer." };
+
+    return {
+      success: false,
+      error: "Échec du chargement des commandes validées. Veuillez réessayer.",
+    };
   }
 }
 
@@ -293,24 +610,44 @@ export async function getCommandesTransites() {
   try {
     const commandes = await prisma.commande.findMany({
       where: {
-        etapeCommande: "TRANSITE"
+        etapeCommande: "TRANSITE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Conteneur?: unknown;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        clientEntreprise: item.Client_entreprise,
+        voitureModel: item.VoitureModel,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        conteneur: item.Conteneur,
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes transites:", error);
@@ -318,26 +655,37 @@ export async function getCommandesTransites() {
   }
 }
 
-export async function updateCommandeToTransite(commandeId: string, conteneurId: string) {
+export async function updateCommandeToTransite(
+  commandeId: string,
+  conteneurId: string,
+) {
   try {
+    
     const commande = await prisma.commande.update({
       where: { id: commandeId },
       data: {
         etapeCommande: "TRANSITE",
-        conteneurId: conteneurId
+        conteneurId: conteneurId,
+        updatedAt: new Date(),
       },
       include: {
-        client: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
-      }
+        Client: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
+      },
     });
 
     // Serialize Decimal fields
     const serializedCommande = {
       ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+      prix_unitaire: commande.prix_unitaire
+        ? Number(commande.prix_unitaire)
+        : null,
     };
 
     revalidatePath("/manager/commandes-transites");
@@ -353,23 +701,42 @@ export async function getCommande(id: string) {
     const commande = await prisma.commande.findUnique({
       where: { id },
       include: {
-        client: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
-      }
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
+      },
     });
-    
+
     if (!commande) {
       return { success: false, error: "Commande not found" };
     }
-    
+
     // Serialize Decimal fields
-    const serializedCommande = {
-      ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+    const item = commande as Record<string, unknown> & {
+      prix_unitaire?: unknown;
+      Client?: unknown;
+      Client_entreprise?: unknown;
+      VoitureModel?: unknown;
+      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Conteneur?: unknown;
     };
-    
+    const serializedCommande = {
+      ...item,
+      prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+      client: item.Client,
+      clientEntreprise: item.Client_entreprise,
+      voitureModel: item.VoitureModel,
+      fournisseurs:
+        item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+      conteneur: item.Conteneur,
+    };
+
     return { success: true, data: serializedCommande };
   } catch (error) {
     console.error("Error fetching commande:", error);
@@ -377,17 +744,31 @@ export async function getCommande(id: string) {
   }
 }
 
-export async function updateCommande(id: string, data: {
-  nbr_portes?: string;
-  transmission?: "AUTOMATIQUE" | "MANUEL";
-  etapeCommande?: "PROPOSITION" | "VALIDE" | "TRANSITE" | "RENSEIGNEE" | "ARRIVE" | "VERIFIER" | "MONTAGE" | "TESTE" | "PARKING" | "CORRECTION" | "VENTE";
-  motorisation?: "ELECTRIQUE" | "ESSENCE" | "DIESEL" | "HYBRIDE";
-  couleur?: string;
-  date_livraison?: Date;
-  clientId?: string;
-  voitureModelId?: string;
-  fournisseurIds?: string[];
-}) {
+export async function updateCommande(
+  id: string,
+  data: {
+    nbr_portes?: string;
+    transmission?: "AUTOMATIQUE" | "MANUEL";
+    etapeCommande?:
+      | "PROPOSITION"
+      | "VALIDE"
+      | "TRANSITE"
+      | "RENSEIGNEE"
+      | "ARRIVE"
+      | "VERIFIER"
+      | "MONTAGE"
+      | "TESTE"
+      | "PARKING"
+      | "CORRECTION"
+      | "VENTE";
+    motorisation?: "ELECTRIQUE" | "ESSENCE" | "DIESEL" | "HYBRIDE";
+    couleur?: string;
+    date_livraison?: Date;
+    clientId?: string;
+    voitureModelId?: string;
+    fournisseurIds?: string[];
+  },
+) {
   try {
     const updateData = {
       ...(data.nbr_portes && { nbr_portes: data.nbr_portes }),
@@ -398,35 +779,59 @@ export async function updateCommande(id: string, data: {
       ...(data.date_livraison && { date_livraison: data.date_livraison }),
       ...(data.clientId && { clientId: data.clientId }),
       ...(data.voitureModelId && { voitureModelId: data.voitureModelId }),
+      updatedAt: new Date(),
     };
 
+    
     const commande = await prisma.commande.update({
       where: { id },
       data: updateData,
       include: {
-        client: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
-      }
+        Client: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
+      },
     });
 
     // Update fournisseurs if provided
     if (data.fournisseurIds) {
+      
       await prisma.commande.update({
         where: { id },
         data: {
-          fournisseurs: {
-            set: data.fournisseurIds.map(id => ({ id }))
-          }
-        }
+          CommandeToFournisseur: {
+            deleteMany: {},
+            create: data.fournisseurIds.map((id) => ({
+              B: id,
+            })),
+          },
+        },
       });
     }
 
     // Serialize Decimal fields
+    const updateItem = commande as Record<string, unknown> & {
+      prix_unitaire?: unknown;
+      Client?: unknown;
+      VoitureModel?: unknown;
+      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Conteneur?: unknown;
+    };
     const serializedCommande = {
-      ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+      ...updateItem,
+      prix_unitaire: updateItem.prix_unitaire
+        ? Number(updateItem.prix_unitaire)
+        : null,
+      client: updateItem.Client,
+      voitureModel: updateItem.VoitureModel,
+      fournisseurs:
+        updateItem.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+      conteneur: updateItem.Conteneur,
     };
 
     revalidatePath("/manager");
@@ -440,9 +845,9 @@ export async function updateCommande(id: string, data: {
 export async function deleteCommande(id: string) {
   try {
     await prisma.commande.delete({
-      where: { id }
+      where: { id },
     });
-    
+
     revalidatePath("/manager");
     return { success: true };
   } catch (error) {
@@ -455,25 +860,43 @@ export async function getCommandesByUserId(userId: string) {
   try {
     const commandes = await prisma.commande.findMany({
       where: {
-        client: {
-          userId: userId
-        }
+        Client: {
+          userId: userId,
+        },
       },
       include: {
-        client: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
+        Client: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Conteneur?: unknown;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        voitureModel: item.VoitureModel,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        conteneur: item.Conteneur,
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching user commandes:", error);
@@ -485,54 +908,54 @@ export async function getAllCommandesGrouped() {
   try {
     const commandes = await prisma.commande.findMany({
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
       },
-      orderBy: { date_livraison: 'asc' }
+      orderBy: { date_livraison: "asc" },
     });
 
     // Convert Decimal to number and serialize all data
-    const serializedCommandes = commandes.map(cmd => {
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        etapeCommande: string;
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Conteneur?: unknown;
+      };
       // Create a plain object with all Decimal fields converted
       const serialized = {
-        id: cmd.id,
-        etapeCommande: cmd.etapeCommande,
-        date_livraison: cmd.date_livraison,
-        createdAt: cmd.createdAt,
-        updatedAt: cmd.updatedAt,
-        clientId: cmd.clientId,
-        conteneurId: cmd.conteneurId,
-        commandeLocalId: cmd.commandeLocalId,
-        couleur: cmd.couleur,
-        montageId: cmd.montageId,
-        motorisation: cmd.motorisation,
-        nbr_portes: cmd.nbr_portes,
-        transmission: cmd.transmission,
-        voitureModelId: cmd.voitureModelId,
-        clientEntrepriseId: cmd.clientEntrepriseId,
-        factureId: cmd.factureId,
-        prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-        client: cmd.client,
-        clientEntreprise: cmd.clientEntreprise,
-        voitureModel: cmd.voitureModel,
-        conteneur: cmd.conteneur,
-        fournisseurs: cmd.fournisseurs,
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        clientEntreprise: item.Client_entreprise,
+        voitureModel: item.VoitureModel,
+        conteneur: item.Conteneur,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
       };
       return serialized;
     });
 
     // Group by etapeCommande
-    const grouped = serializedCommandes.reduce((acc, cmd) => {
-      const etape = cmd.etapeCommande;
-      if (!acc[etape]) {
-        acc[etape] = [];
+    const grouped: Record<string, unknown[]> = {};
+
+    (serializedCommandes as Array<Record<string, unknown>>).forEach((cmd) => {
+      const etape = String(cmd.etapeCommande || "UNKNOWN");
+      if (!grouped[etape]) {
+        grouped[etape] = [];
       }
-      acc[etape].push(cmd);
-      return acc;
-    }, {} as Record<string, typeof serializedCommandes>);
+      grouped[etape].push(cmd);
+    });
 
     return { success: true, data: grouped };
   } catch (error) {
@@ -545,24 +968,44 @@ export async function getCommandesDisponibles() {
   try {
     const commandes = await prisma.commande.findMany({
       where: {
-        commandeFlag: "DISPONIBLE"
+        commandeFlag: "DISPONIBLE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Conteneur?: unknown;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        clientEntreprise: item.Client_entreprise,
+        voitureModel: item.VoitureModel,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        conteneur: item.Conteneur,
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes disponibles:", error);
@@ -575,27 +1018,48 @@ export async function getCommandesVenduesProposition() {
     const commandes = await prisma.commande.findMany({
       where: {
         etapeCommande: "PROPOSITION",
-        commandeFlag: "VENDUE"
+        commandeFlag: "VENDUE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        clientEntreprise: item.Client_entreprise,
+        voitureModel: item.VoitureModel,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes vendues proposition:", error);
-    return { success: false, error: "Failed to fetch commandes vendues proposition" };
+    return {
+      success: false,
+      error: "Failed to fetch commandes vendues proposition",
+    };
   }
 }
 
@@ -604,27 +1068,48 @@ export async function getCommandesDisponiblesProposition() {
     const commandes = await prisma.commande.findMany({
       where: {
         etapeCommande: "PROPOSITION",
-        commandeFlag: "DISPONIBLE"
+        commandeFlag: "DISPONIBLE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
+
     // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        VoitureModel?: unknown;
+        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        client: item.Client,
+        clientEntreprise: item.Client_entreprise,
+        voitureModel: item.VoitureModel,
+        fournisseurs:
+          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching commandes disponibles proposition:", error);
-    return { success: false, error: "Failed to fetch commandes disponibles proposition" };
+    return {
+      success: false,
+      error: "Failed to fetch commandes disponibles proposition",
+    };
   }
 }
 
@@ -632,27 +1117,85 @@ export async function getAllCommandesProposition() {
   try {
     const commandes = await prisma.commande.findMany({
       where: {
-        etapeCommande: "PROPOSITION"
+        etapeCommande: "PROPOSITION",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
-    
-    // Serialize Decimal fields
-    const serializedCommandes = commandes.map(cmd => ({
-      ...cmd,
-      prix_unitaire: cmd.prix_unitaire ? Number(cmd.prix_unitaire) : null,
-    }));
-    
+
+    // Serialize Decimal fields and Dates
+    const serializedCommandes = (commandes as unknown[]).map((cmd: unknown) => {
+      const item = cmd as Record<string, unknown> & {
+        prix_unitaire?: unknown;
+        Client?: { createdAt: Date; updatedAt: Date } & Record<string, unknown>;
+        Client_entreprise?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        VoitureModel?: { createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >;
+        CommandeToFournisseur?: Array<{
+          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >;
+        }>;
+      };
+      return {
+        ...item,
+        prix_unitaire: item.prix_unitaire ? Number(item.prix_unitaire) : null,
+        date_livraison: (item.date_livraison as Date).toISOString(),
+        createdAt: (item.createdAt as Date).toISOString(),
+        updatedAt: (item.updatedAt as Date).toISOString(),
+        client: item.Client
+          ? {
+              ...item.Client,
+              createdAt: item.Client.createdAt.toISOString(),
+              updatedAt: item.Client.updatedAt.toISOString(),
+            }
+          : null,
+        clientEntreprise: item.Client_entreprise
+          ? {
+              ...item.Client_entreprise,
+              createdAt: item.Client_entreprise.createdAt.toISOString(),
+              updatedAt: item.Client_entreprise.updatedAt.toISOString(),
+            }
+          : null,
+        voitureModel: item.VoitureModel
+          ? {
+              ...item.VoitureModel,
+              createdAt: item.VoitureModel.createdAt.toISOString(),
+              updatedAt: item.VoitureModel.updatedAt.toISOString(),
+            }
+          : null,
+        fournisseurs: item.CommandeToFournisseur
+          ? item.CommandeToFournisseur.map((ctf) => ({
+              ...ctf.Fournisseur,
+              createdAt: ctf.Fournisseur.createdAt.toISOString(),
+              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            }))
+          : [],
+      };
+    });
+
     return { success: true, data: serializedCommandes };
   } catch (error) {
     console.error("Error fetching all commandes proposition:", error);
-    return { success: false, error: "Failed to fetch all commandes proposition" };
+    return {
+      success: false,
+      error: "Failed to fetch all commandes proposition",
+    };
   }
 }
 
@@ -660,34 +1203,59 @@ export async function attribuerCommande(
   commandeId: string,
   factureId: string,
   clientId?: string,
-  clientEntrepriseId?: string
+  clientEntrepriseId?: string,
 ) {
   try {
     if (!clientId && !clientEntrepriseId) {
-      return { success: false, error: "Un client ou une entreprise cliente est requis" };
+      return {
+        success: false,
+        error: "Un client ou une entreprise cliente est requis",
+      };
     }
 
+    
     const commande = await prisma.commande.update({
       where: { id: commandeId },
       data: {
         commandeFlag: "VENDUE",
         factureId: factureId,
+        updatedAt: new Date(),
         ...(clientId && { clientId }),
         ...(clientEntrepriseId && { clientEntrepriseId }),
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
-        conteneur: true,
-      }
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: {
+          include: {
+            Fournisseur: true,
+          },
+        },
+        Conteneur: true,
+      },
     });
 
     // Serialize Decimal fields
+    const attrItem = commande as Record<string, unknown> & {
+      prix_unitaire?: unknown;
+      Client?: unknown;
+      Client_entreprise?: unknown;
+      VoitureModel?: unknown;
+      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Conteneur?: unknown;
+    };
     const serializedCommande = {
-      ...commande,
-      prix_unitaire: commande.prix_unitaire ? Number(commande.prix_unitaire) : null,
+      ...attrItem,
+      prix_unitaire: attrItem.prix_unitaire
+        ? Number(attrItem.prix_unitaire)
+        : null,
+      client: attrItem.Client,
+      clientEntreprise: attrItem.Client_entreprise,
+      voitureModel: attrItem.VoitureModel,
+      fournisseurs:
+        attrItem.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+      conteneur: attrItem.Conteneur,
     };
 
     revalidatePath("/comptable/facture");
