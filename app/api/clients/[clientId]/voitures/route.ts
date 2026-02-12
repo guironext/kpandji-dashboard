@@ -14,7 +14,7 @@ export async function GET(
     const { clientId } = await params;
     const voitures = await prisma.voiture.findMany({
       where: { clientId },
-      include: { voitureModel: true },
+      include: { VoitureModel: true },
     });
     return NextResponse.json(voitures);
   } catch {

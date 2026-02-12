@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
             qteCommandeEnAttente,
           },
           include: {
-            voitureModel: true,
+            VoitureModel: true,
           },
         })
         return { data: updated, status: 200 }
@@ -39,12 +39,14 @@ export async function POST(request: NextRequest) {
       // Create new CommandeEnAttente
       const commandeEnAttente = await prisma.commandeEnAttente.create({
         data: {
+          id: crypto.randomUUID(),
+          updatedAt: new Date(),
           commandeId,
           voitureModelId,
           qteCommandeEnAttente,
         },
         include: {
-          voitureModel: true,
+          VoitureModel: true,
         },
       })
       return { data: commandeEnAttente, status: 201 }

@@ -150,7 +150,8 @@ const SuperviseurDashboard = () => {
       }
 
       if (activitiesResult.success && activitiesResult.data) {
-        setRecentActivities(activitiesResult.data);
+        const data = activitiesResult.data as unknown as RecentActivities;
+        setRecentActivities(data);
       }
 
       if (trendsResult.success && trendsResult.data) {
