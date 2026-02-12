@@ -44,7 +44,8 @@ const Page = () => {
     try {
       const result = await getAllEmployees();
       if (result.success) {
-        setEmployees((result.data || []) as unknown as Employee[]);
+        const data = (result.data || []) as unknown as Employee[];
+        setEmployees(data);
       }
     } catch (error) {
       console.error('Error loading employees:', error);
