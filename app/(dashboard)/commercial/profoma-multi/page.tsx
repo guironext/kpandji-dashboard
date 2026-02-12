@@ -176,7 +176,7 @@ export default function Page() {
       ]);
       
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(accessoiresResult.data);
@@ -232,7 +232,7 @@ export default function Page() {
         toast.success("Facture supprimée avec succès");
         const updatedFactures = await getFacturesByUser(clerkId);
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
           if (currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)) {
             setCurrentPage(Math.max(1, Math.ceil(updatedFactures.data.length / itemsPerPage)));
           }

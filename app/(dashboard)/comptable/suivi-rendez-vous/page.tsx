@@ -187,7 +187,7 @@ export default function SuiviRendezVousPage() {
     try {
       const result = await getAllRapportRendezVous();
       if (result.success && result.data) {
-        groupRapportsByUser(result.data);
+        groupRapportsByUser(result.data as unknown as RapportRendezVous[]);
       } else {
         toast.error(result.error || 'Failed to fetch reports');
       }

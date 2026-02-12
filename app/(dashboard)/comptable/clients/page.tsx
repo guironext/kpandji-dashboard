@@ -32,7 +32,7 @@ const Page = () => {
       try {
         const result = await getClientsByStatus("CLIENT");
         if (result.success && result.data) {
-          setClients(result.data);
+          setClients(result.data as unknown as Client[]);
         }
       } catch (error) {
         console.error("Error fetching clients:", error);

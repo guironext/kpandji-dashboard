@@ -12,9 +12,9 @@ const page = async () => {
       etapeSparePart: 'RANGE'
     },
     include: {
-      voiture: {
+      Voiture: {
         include: {
-          voitureModel: true
+          VoitureModel: true
         }
       }
     },
@@ -28,14 +28,14 @@ const page = async () => {
     ...sp,
     createdAt: sp.createdAt.toISOString(),
     updatedAt: sp.updatedAt.toISOString(),
-    voiture: sp.voiture ? {
-      ...sp.voiture,
-      createdAt: sp.voiture.createdAt.toISOString(),
-      updatedAt: sp.voiture.updatedAt.toISOString(),
-      voitureModel: sp.voiture.voitureModel ? {
-        ...sp.voiture.voitureModel,
-        createdAt: sp.voiture.voitureModel.createdAt.toISOString(),
-        updatedAt: sp.voiture.voitureModel.updatedAt.toISOString(),
+    voiture: sp.Voiture ? {
+      ...sp.Voiture,
+      createdAt: sp.Voiture.createdAt.toISOString(),
+      updatedAt: sp.Voiture.updatedAt.toISOString(),
+      voitureModel: sp.Voiture.VoitureModel ? {
+        ...sp.Voiture.VoitureModel,
+        createdAt: sp.Voiture.VoitureModel.createdAt.toISOString(),
+        updatedAt: sp.Voiture.VoitureModel.updatedAt.toISOString(),
       } : null
     } : null
   }))

@@ -138,7 +138,7 @@ export default function BonCommandeLocauxPage() {
   const loadFournisseurs = async () => {
     const result = await getAllFournisseurCommandeLocal();
     if (result.success && result.data) {
-      setFournisseurs(result.data);
+      setFournisseurs(result.data as unknown as Fournisseur[]);
     }
   };
 

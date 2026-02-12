@@ -108,7 +108,7 @@ export default function ConteneurRenseignerDetailPage() {
       const result = await getConteneur(conteneurId);
 
       if (result.success && result.data) {
-        setConteneur(result.data as Conteneur);
+        setConteneur(result.data as unknown as Conteneur);
       } else {
         setError(result.error || "Failed to fetch conteneur");
       }

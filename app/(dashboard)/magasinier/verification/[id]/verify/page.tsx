@@ -74,7 +74,7 @@ export default function SubcaseVerificationPage() {
       const result = await getSubcase(subcaseId);
 
       if (result.success && result.data) {
-        const subcaseData = result.data as Subcase;
+        const subcaseData = result.data as unknown as Subcase;
         setSubcase(subcaseData);
         // Initialize verification statuses
         const initialStatuses: Record<string, VerificationStatus> = {};

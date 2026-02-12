@@ -11,10 +11,10 @@ const page = async () => {
       commandeFlag: 'DISPONIBLE'
     },
     include: {
-      client: true,
-      clientEntreprise: true,
-      voitureModel: true,
-      conteneur: true,
+      Client: true,
+      Client_entreprise: true,
+      VoitureModel: true,
+      Conteneur: true,
     },
     orderBy: {
       createdAt: 'desc'
@@ -28,27 +28,27 @@ const page = async () => {
     date_livraison: cmd.date_livraison ? cmd.date_livraison.toISOString() : null,
     createdAt: cmd.createdAt.toISOString(),
     updatedAt: cmd.updatedAt.toISOString(),
-    conteneur: cmd.conteneur ? {
-      ...cmd.conteneur,
-      dateEmbarquement: cmd.conteneur.dateEmbarquement?.toISOString() || null,
-      dateArriveProbable: cmd.conteneur.dateArriveProbable?.toISOString() || null,
-      createdAt: cmd.conteneur.createdAt.toISOString(),
-      updatedAt: cmd.conteneur.updatedAt.toISOString(),
+    conteneur: cmd.Conteneur ? {
+      ...cmd.Conteneur,
+      dateEmbarquement: cmd.Conteneur.dateEmbarquement?.toISOString() || null,
+      dateArriveProbable: cmd.Conteneur.dateArriveProbable?.toISOString() || null,
+      createdAt: cmd.Conteneur.createdAt.toISOString(),
+      updatedAt: cmd.Conteneur.updatedAt.toISOString(),
     } : null,
-    client: cmd.client ? {
-      ...cmd.client,
-      createdAt: cmd.client.createdAt.toISOString(),
-      updatedAt: cmd.client.updatedAt.toISOString(),
+    client: cmd.Client ? {
+      ...cmd.Client,
+      createdAt: cmd.Client.createdAt.toISOString(),
+      updatedAt: cmd.Client.updatedAt.toISOString(),
     } : null,
-    clientEntreprise: cmd.clientEntreprise ? {
-      ...cmd.clientEntreprise,
-      createdAt: cmd.clientEntreprise.createdAt.toISOString(),
-      updatedAt: cmd.clientEntreprise.updatedAt.toISOString(),
+    clientEntreprise: cmd.Client_entreprise ? {
+      ...cmd.Client_entreprise,
+      createdAt: cmd.Client_entreprise.createdAt.toISOString(),
+      updatedAt: cmd.Client_entreprise.updatedAt.toISOString(),
     } : null,
-    voitureModel: cmd.voitureModel ? {
-      ...cmd.voitureModel,
-      createdAt: cmd.voitureModel.createdAt.toISOString(),
-      updatedAt: cmd.voitureModel.updatedAt.toISOString(),
+    voitureModel: cmd.VoitureModel ? {
+      ...cmd.VoitureModel,
+      createdAt: cmd.VoitureModel.createdAt.toISOString(),
+      updatedAt: cmd.VoitureModel.updatedAt.toISOString(),
     } : null,
   }))
 

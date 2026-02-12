@@ -109,7 +109,7 @@ export default function SuiviRendezVousPage() {
     try {
       const result = await getRapportRendezVousByUser(user.id);
       if (result.success) {
-        setRapports(result.data || []);
+        setRapports((result.data || []) as unknown as RapportRendezVous[]);
       } else {
         toast.error(result.error || 'Erreur lors du chargement des rapports');
       }

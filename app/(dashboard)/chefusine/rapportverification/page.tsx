@@ -32,6 +32,8 @@ type VerificationSpare = {
   partCode: string;
   partName: string;
   partNameFrench?: string | null;
+  quantity?: number;
+  subcaseNumber?: string | null;
   statusVerification?: string;
 };
 
@@ -176,8 +178,8 @@ export default async function RapportVerificationChefUsinePage() {
                                     : "Commande"}
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant={statusVariant(spare.statusVerification)}>
-                                    {spare.statusVerification}
+                                  <Badge variant={statusVariant(spare.statusVerification || "EN_ATTENTE")}>
+                                    {spare.statusVerification || "EN_ATTENTE"}
                                   </Badge>
                                 </TableCell>
                               </TableRow>

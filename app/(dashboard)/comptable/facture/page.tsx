@@ -214,7 +214,7 @@ export default function Page() {
       ]);
       
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(accessoiresResult.data);
@@ -250,7 +250,7 @@ export default function Page() {
         toast.success("Facture supprimée avec succès");
         const updatedFactures = await getFactures();
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
           if (currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)) {
             setCurrentPage(Math.max(1, Math.ceil(updatedFactures.data.length / itemsPerPage)));
           }
@@ -327,7 +327,7 @@ export default function Page() {
         // Refresh factures to update button state
         const updatedFactures = await getFactures();
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
           
         }
       } else {
@@ -350,7 +350,7 @@ export default function Page() {
     // Fetch available commandes
     const result = await getCommandesDisponibles();
     if (result.success && result.data) {
-      setCommandesDisponibles(result.data);
+      setCommandesDisponibles(result.data as unknown as CommandeDisponible[]);
       setIsAttribuerDialogOpen(true);
     } else {
       toast.error("Erreur lors de la récupération des commandes disponibles");
@@ -380,7 +380,7 @@ export default function Page() {
         // Refresh factures to update button state
         const updatedFactures = await getFactures();
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
         }
       } else {
         toast.error(result.error || "Erreur lors de l'attribution de la commande");

@@ -49,7 +49,7 @@ export default function CommandesPage() {
       try {
         const result = await getCommandesProposees();
         if (result.success && result.data) {
-          setCommandes(result.data as Commande[]);
+          setCommandes(result.data as unknown as Commande[]);
         }
       } catch (error) {
         console.error("Error fetching commandes:", error);

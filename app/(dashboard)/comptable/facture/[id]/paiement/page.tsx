@@ -132,7 +132,7 @@ export default function PaiementPage() {
       const result = await getFactureWithPaiements(factureId);
 
       if (result.success && result.data) {
-        setFacture(result.data as FactureData);
+        setFacture(result.data as unknown as FactureData);
       } else {
         toast.error(result.error || "Erreur lors du chargement des données");
         router.push(`/comptable/facture`);
@@ -183,7 +183,7 @@ export default function PaiementPage() {
         // Refresh the facture data to get the updated numeroEntreeCaisse
         const refreshResult = await getFactureWithPaiements(factureId);
         if (refreshResult.success && refreshResult.data) {
-          setFacture(refreshResult.data as FactureData);
+          setFacture(refreshResult.data as unknown as FactureData);
         }
       } else {
         toast.error(result.error || "Erreur lors de la génération du numéro d'entrée de caisse");
@@ -477,7 +477,7 @@ export default function PaiementPage() {
         // Refresh data
         const refreshResult = await getFactureWithPaiements(factureId);
         if (refreshResult.success && refreshResult.data) {
-          setFacture(refreshResult.data as FactureData);
+          setFacture(refreshResult.data as unknown as FactureData);
         }
       } else {
         toast.error(result.error || "Erreur lors de l'enregistrement du paiement");

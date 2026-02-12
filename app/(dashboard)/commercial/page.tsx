@@ -94,10 +94,10 @@ const CommercialDashboard = () => {
       ]);
       
       if (clientsResult.success && clientsResult.data) {
-        setClients(clientsResult.data);
+        setClients(clientsResult.data as unknown as Client[]);
       }
       if (commandesResult.success && commandesResult.data) {
-        setCommandes(commandesResult.data);
+        setCommandes(commandesResult.data as unknown as Commande[]);
       }
       setLoading(false);
     };

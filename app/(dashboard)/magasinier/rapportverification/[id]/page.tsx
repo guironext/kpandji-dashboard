@@ -62,7 +62,12 @@ export default async function RapportVerificationDetailsPage({
   }
 
   const { verificationConteneur, createdAt } = result.data;
-  const { conteneur, spares, tools, pieceComplements } = verificationConteneur;
+  const { conteneur, spares, tools, pieceComplements } = verificationConteneur as unknown as {
+    conteneur: { conteneurNumber: string; etapeConteneur: string };
+    spares: Array<{ id: string; partCode: string; partName: string; partNameFrench?: string | null; quantity?: number; subcaseNumber?: string | null; statusVerification?: string }>;
+    tools: Array<{ id: string; toolCode: string; toolName: string; quantity: number; check?: boolean }>;
+    pieceComplements: Array<{ id: string; partCode: string; partName: string; partNameFrench?: string; vehicleModel?: string; quantity: number }>;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -183,7 +188,7 @@ export default async function RapportVerificationDetailsPage({
                             : "Commande"}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusVariant(spare.statusVerification)}>
+                          <Badge variant={statusVariant(spare.statusVerification ?? "EN_ATTENTE")}>
                             {spare.statusVerification}
                           </Badge>
                         </TableCell>

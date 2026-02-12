@@ -26,8 +26,8 @@ import { useAuth } from "@clerk/nextjs";
 
 type Facture = {
   id: string;
-  date_facture: string;
-  date_echeance: string;
+  date_facture: string | Date;
+  date_echeance: string | Date;
   status_facture: string;
   nbr_voiture_commande: number;
   prix_unitaire: number;
@@ -151,7 +151,7 @@ export default function Page() {
       console.log("Accessoires result:", accessoiresResult);
       
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         console.log("Raw accessoires data:", JSON.stringify(accessoiresResult.data, null, 2));
@@ -270,7 +270,7 @@ export default function Page() {
         // Refresh the list
         const updatedFactures = await getFacturesByUser(clerkId);
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
           // Adjust current page if needed
           if (
             currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)

@@ -98,7 +98,7 @@ export default function SuiviCommandesPage() {
     const fetchCommandes = async () => {
       const result = await getAllCommandesGrouped();
       if (result.success && result.data) {
-        setCommandesGrouped(result.data);
+        setCommandesGrouped(result.data as unknown as Record<string, Commande[]>);
       }
       setLoading(false);
     };

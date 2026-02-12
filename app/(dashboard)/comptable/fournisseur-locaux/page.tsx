@@ -65,7 +65,7 @@ export default function FournisseurLocauxPage() {
     setIsLoadingData(true);
     const result = await getAllFournisseurCommandeLocal();
     if (result.success && result.data) {
-      setFournisseurs(result.data);
+      setFournisseurs(result.data as unknown as Fournisseur[]);
     }
     setIsLoadingData(false);
   };

@@ -23,7 +23,7 @@ export default function RendezVousPage() {
     try {
       const result = await getRendezVousByUser(user.id);
       if (result.success) {
-        setRendezVous(result.data || []);
+        setRendezVous((result.data || []) as unknown as RendezVous[]);
       } else {
         toast.error(result.error || 'Erreur lors du chargement des rendez-vous');
       }

@@ -174,14 +174,14 @@ function CreerFacturePageContent() {
       
       // Add regular clients
       if (clientsResult.success && clientsResult.data) {
-        clientsResult.data.forEach(client => {
+        (clientsResult.data as unknown as { id: string; nom: string }[]).forEach(client => {
           allClients.push({ id: client.id, nom: client.nom, type: "client" });
         });
       }
       
       // Add client_entreprises
       if (entreprisesResult.success && entreprisesResult.data) {
-        entreprisesResult.data.forEach(entreprise => {
+        (entreprisesResult.data as unknown as { id: string; nom_entreprise: string }[]).forEach(entreprise => {
           allClients.push({ id: entreprise.id, nom_entreprise: entreprise.nom_entreprise, type: "client_entreprise" });
         });
       }

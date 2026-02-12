@@ -141,7 +141,7 @@ const ClientPage = () => {
       
       const result = await getClientsByUserAndStatus(user.id, "CLIENT");
       if (result.success && result.data) {
-        setClients(result.data);
+        setClients(result.data as unknown as Client[]);
       }
     } catch (error) {
       console.error("Error fetching clients:", error);

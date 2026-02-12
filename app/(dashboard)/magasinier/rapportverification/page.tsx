@@ -40,15 +40,15 @@ export default async function RapportVerificationPage() {
   const rapports = result.success && Array.isArray(result.data) ? result.data : [];
   const totalReports = rapports.length;
   const totalSpares = rapports.reduce(
-    (sum, rapport) => sum + rapport.verificationConteneur.counts.spares,
+    (sum, rapport) => sum + (rapport.verificationConteneur?.counts?.spares ?? 0),
     0
   );
   const totalTools = rapports.reduce(
-    (sum, rapport) => sum + rapport.verificationConteneur.counts.tools,
+    (sum, rapport) => sum + (rapport.verificationConteneur?.counts?.tools ?? 0),
     0
   );
   const totalComplements = rapports.reduce(
-    (sum, rapport) => sum + rapport.verificationConteneur.counts.pieceComplements,
+    (sum, rapport) => sum + (rapport.verificationConteneur?.counts?.pieceComplements ?? 0),
     0
   );
 
@@ -163,11 +163,11 @@ export default async function RapportVerificationPage() {
                         <TableCell className="font-medium">
                           {rapport.id.slice(0, 8).toUpperCase()}
                         </TableCell>
-                        <TableCell>{rapport.verificationConteneur.conteneur.conteneurNumber}</TableCell>
-                        <TableCell>{formatDateTime(rapport.createdAt)}</TableCell>
-                        <TableCell>{rapport.verificationConteneur.counts.spares}</TableCell>
-                        <TableCell>{rapport.verificationConteneur.counts.tools}</TableCell>
-                        <TableCell>{rapport.verificationConteneur.counts.pieceComplements}</TableCell>
+<TableCell>{rapport.verificationConteneur?.conteneur?.conteneurNumber ?? '-'}</TableCell>
+                          <TableCell>{formatDateTime(rapport.createdAt)}</TableCell>
+                          <TableCell>{rapport.verificationConteneur?.counts?.spares ?? 0}</TableCell>
+                          <TableCell>{rapport.verificationConteneur?.counts?.tools ?? 0}</TableCell>
+                          <TableCell>{rapport.verificationConteneur?.counts?.pieceComplements ?? 0}</TableCell>
                         <TableCell className="text-right">
                           <Button asChild size="sm">
                             <Link href={`/magasinier/rapportverification/${rapport.id}`}>

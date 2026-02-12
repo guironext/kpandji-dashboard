@@ -206,7 +206,7 @@ export default function Page() {
       ]);
       
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(accessoiresResult.data);
@@ -242,7 +242,7 @@ export default function Page() {
       // Refresh the data
       const facturesResult = await getFacturesWithBonPourAcquis();
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
     } else {
       toast.error("Erreur lors de la transformation");

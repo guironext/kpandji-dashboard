@@ -63,7 +63,7 @@ export default async function VerificationPage() {
   const result = await getConteneursDepotageEnCours()
   
   const conteneurs: ConteneurType[] = result.success && Array.isArray(result.data) 
-    ? (result.data as ConteneurType[])
+    ? (result.data as unknown as ConteneurType[])
     : []
 
   return (

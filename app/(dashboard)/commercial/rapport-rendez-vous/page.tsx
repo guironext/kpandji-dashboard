@@ -58,7 +58,8 @@ export default function RapportRendezVousPage() {
       const result = await getRendezVousByUser(user.id);
       if (result.success) {
         // Filter only rendezvous with status EFFECTUE
-        const effectueRendezVous = (result.data || []).filter(rv => rv.statut === 'EFFECTUE');
+        const data = (result.data || []) as RendezVous[];
+        const effectueRendezVous = data.filter(rv => rv.statut === 'EFFECTUE');
         setRendezVous(effectueRendezVous);
       } else {
         toast.error(result.error || 'Erreur lors du chargement des rendez-vous');

@@ -16,8 +16,8 @@ export default function PrintCataloguePage() {
       fiche_technique: string | null;
       description?: string | null;
       image?: string | null;
-      createdAt: Date;
-      updatedAt: Date;
+      createdAt: string;
+      updatedAt: string;
     }>
   >([]);
   const [loading, setLoading] = useState(true);

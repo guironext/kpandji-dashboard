@@ -54,7 +54,7 @@ export default function RenseignerCommandePage() {
       const result = await getConteneursTransite();
       
       if (result.success && result.data) {
-        setConteneurs(result.data as Conteneur[]);
+        setConteneurs(result.data as unknown as Conteneur[]);
       } else {
         setError(result.error || "Failed to fetch conteneurs");
       }

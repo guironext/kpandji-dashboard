@@ -124,7 +124,7 @@ export default function ProformaDetailPage() {
       ]);
 
       if (factureResult.success && factureResult.data) {
-        setFacture(factureResult.data as Facture);
+        setFacture(factureResult.data as unknown as Facture);
       } else {
         toast.error("Erreur lors du chargement de la proforma");
       }

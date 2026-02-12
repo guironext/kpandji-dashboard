@@ -142,6 +142,7 @@ export default function ProjetsClient({
           {
             id: p.id,
             name: p.name,
+            projectStatus: (p.projectStatus ?? "ACTIVE") as "ACTIVE" | "INACTIVE",
             createdAt: typeof p.createdAt === "string" ? new Date(p.createdAt) : p.createdAt,
             updatedAt: typeof p.updatedAt === "string" ? new Date(p.updatedAt) : p.updatedAt,
             createdBy: p.createdBy,

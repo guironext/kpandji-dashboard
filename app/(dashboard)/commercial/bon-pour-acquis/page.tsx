@@ -214,7 +214,7 @@ export default function Page() {
       console.log("Accessoires result:", accessoiresResult);
       
       if (facturesResult.success && facturesResult.data) {
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(accessoiresResult.data);

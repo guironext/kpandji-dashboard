@@ -34,7 +34,7 @@ export default function CommandesLocauxPage() {
     const fetchCommandesLocaux = async () => {
       const result = await getAllCommandeLocaux();
       if (result.success && result.data) {
-        setCommandesLocaux(result.data);
+        setCommandesLocaux(result.data as unknown as CommandeLocal[]);
       }
       setLoading(false);
     };

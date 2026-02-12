@@ -160,9 +160,9 @@ export default function AjouterCommandePage() {
           getCommandesProposees(), // Changed from getAllCommandes()
         ]);
 
-        if (clientsRes.success) setClients(clientsRes.data || []);
+        if (clientsRes.success) setClients((clientsRes.data || []) as unknown as { id: string; nom: string; telephone: string }[]);
         if (modelesRes.success) setModeles(modelesRes.data || []);
-        if (commandesRes.success) setCommandes(commandesRes.data as CommandeData[] || []);
+        if (commandesRes.success) setCommandes((commandesRes.data || []) as unknown as CommandeData[]);
       } catch{
         toast.error("Erreur lors du chargement des données");
       }
@@ -197,7 +197,7 @@ export default function AjouterCommandePage() {
         setSelectedFournisseurs([]);
         // Reload commandes
         const commandesRes = await getCommandesProposees(); // Changed from getAllCommandes()
-        if (commandesRes.success) setCommandes(commandesRes.data as CommandeData[] || []);
+        if (commandesRes.success) setCommandes((commandesRes.data || []) as unknown as CommandeData[]);
       } else {
         toast.error(result.error || `Erreur lors de ${editingCommande ? "la modification" : "la création"}`);
       }
@@ -236,7 +236,7 @@ export default function AjouterCommandePage() {
         toast.success("Commande supprimée avec succès");
         // Reload commandes
         const commandesRes = await getCommandesProposees(); // Changed from getAllCommandes()
-        if (commandesRes.success) setCommandes(commandesRes.data as CommandeData[] || []);
+        if (commandesRes.success) setCommandes((commandesRes.data || []) as unknown as CommandeData[]);
       } else {
         toast.error(result.error || "Erreur lors de la suppression de la commande");
       }

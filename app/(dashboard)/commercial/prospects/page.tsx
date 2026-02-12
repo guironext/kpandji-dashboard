@@ -129,10 +129,10 @@ const ProspectsPage = () => {
         ]);
 
         if (clientsResult.success && clientsResult.data) {
-          setClients(clientsResult.data);
+          setClients(clientsResult.data as unknown as Client[]);
         }
         if (clientEntreprisesResult.success && clientEntreprisesResult.data) {
-          setClientEntreprises(clientEntreprisesResult.data);
+          setClientEntreprises(clientEntreprisesResult.data as unknown as ClientEntreprise[]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -157,10 +157,10 @@ const ProspectsPage = () => {
         ]);
 
         if (clientsResult.success && clientsResult.data) {
-          setClients(clientsResult.data);
+          setClients(clientsResult.data as unknown as Client[]);
         }
         if (clientEntreprisesResult.success && clientEntreprisesResult.data) {
-          setClientEntreprises(clientEntreprisesResult.data);
+          setClientEntreprises(clientEntreprisesResult.data as unknown as ClientEntreprise[]);
         }
       } catch (error) {
         console.error('Error refreshing data:', error);

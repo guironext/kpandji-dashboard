@@ -136,7 +136,21 @@ async function Page() {
     )
   }
 
-  const commandes = result.data
+  type CommandeItem = {
+    id: string;
+    etapeCommande: string;
+    couleur?: string;
+    transmission?: string;
+    motorisation?: string;
+    nbr_portes?: string;
+    createdAt?: Date | string;
+    date_livraison?: Date | string;
+    client?: { nom?: string };
+    voitureModel?: { model?: string };
+    conteneur?: { conteneurNumber?: string };
+    fournisseurs?: Array<{ id: string; nom?: string }>;
+  };
+  const commandes = result.data as unknown as CommandeItem[]
 
   // Group commandes by etapeCommande
   const groupedCommandes = commandes.reduce((acc, commande) => {
@@ -255,11 +269,11 @@ async function Page() {
                             )}
 
                             {/* Suppliers */}
-                            {commande.fournisseurs.length > 0 && (
+                            {(commande.fournisseurs?.length ?? 0) > 0 && (
                               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-200">
                                 <p className="text-xs font-semibold text-green-700 mb-1">🏭 Fournisseur(s)</p>
                                 <div className="space-y-1">
-                                  {commande.fournisseurs.map((f) => (
+                                  {(commande.fournisseurs ?? []).map((f) => (
                                     <p key={f.id} className="text-sm text-green-900 flex items-center gap-1">
                                       <span className="text-green-500">•</span>
                                       {f.nom}
@@ -276,7 +290,7 @@ async function Page() {
                                   📅 Créée
                                 </span>
                                 <span className="font-semibold text-gray-700">
-                                  {new Date(commande.createdAt).toLocaleDateString('fr-FR')}
+                                  {commande.createdAt ? new Date(commande.createdAt).toLocaleDateString('fr-FR') : 'N/A'}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between text-xs">
@@ -284,7 +298,7 @@ async function Page() {
                                   🚚 Livraison
                                 </span>
                                 <span className="font-semibold text-gray-700">
-                                  {new Date(commande.date_livraison).toLocaleDateString('fr-FR')}
+                                  {commande.date_livraison ? new Date(commande.date_livraison).toLocaleDateString('fr-FR') : 'N/A'}
                                 </span>
                               </div>
                             </div>

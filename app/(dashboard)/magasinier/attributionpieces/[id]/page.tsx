@@ -88,28 +88,28 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const equipeData = await prisma.equipe.findUnique({
     where: { id },
     include: {
-      chefEquipe: true,
-      membres: {
+      Employee: true,
+      EquipeMembre: {
         include: {
-          employee: true,
+          Employee: true,
         },
       },
-      montage: {
+      Montage: {
         include: {
-          ordreMontage: {
+          OrdreMontage: {
             include: {
-              commande: {
+              Commande: {
                 include: {
-                  client: true,
-                  voitureModel: true,
+                  Client: true,
+                  VoitureModel: true,
                 },
               },
-              voiture: {
+              Voiture: {
                 include: {
-                  voitureModel: true,
+                  VoitureModel: true,
                 },
               },
-              numeroChassis: true,
+              NumeroChassis: true,
             },
           },
         },
@@ -140,52 +140,52 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     stautsEquipe: equipeData.stautsEquipe,
     createdAt: equipeData.createdAt.toISOString(),
     updatedAt: equipeData.updatedAt.toISOString(),
-    chefEquipe: equipeData.chefEquipe
+    chefEquipe: equipeData.Employee
       ? {
-          id: equipeData.chefEquipe.id,
-          nom: equipeData.chefEquipe.nom,
-          prenoms: equipeData.chefEquipe.prenoms,
+          id: equipeData.Employee.id,
+          nom: equipeData.Employee.nom,
+          prenoms: equipeData.Employee.prenoms,
         }
       : null,
-    membres: equipeData.membres.map((m) => ({
+    membres: equipeData.EquipeMembre.map((m) => ({
       id: m.id,
       qualite: m.qualite,
       fonction: m.fonction,
       createdAt: m.createdAt.toISOString(),
       updatedAt: m.updatedAt.toISOString(),
       employee: {
-        id: m.employee.id,
-        nom: m.employee.nom,
-        prenoms: m.employee.prenoms,
+        id: m.Employee.id,
+        nom: m.Employee.nom,
+        prenoms: m.Employee.prenoms,
       },
     })),
-    montage: equipeData.montage
+    montage: equipeData.Montage
       ? {
-          id: equipeData.montage.id,
-          etapeMontage: equipeData.montage.etapeMontage,
-          createdAt: equipeData.montage.createdAt.toISOString(),
-          updatedAt: equipeData.montage.updatedAt.toISOString(),
-          ordreMontage: equipeData.montage.ordreMontage
+          id: equipeData.Montage.id,
+          etapeMontage: equipeData.Montage.etapeMontage,
+          createdAt: equipeData.Montage.createdAt.toISOString(),
+          updatedAt: equipeData.Montage.updatedAt.toISOString(),
+          ordreMontage: equipeData.Montage.OrdreMontage
             ? {
-                id: equipeData.montage.ordreMontage.id,
+                id: equipeData.Montage.OrdreMontage.id,
                 ordreMontageFlag:
-                  equipeData.montage.ordreMontage.ordreMontageFlag,
+                  equipeData.Montage.OrdreMontage.ordreMontageFlag,
                 createdAt:
-                  equipeData.montage.ordreMontage.createdAt.toISOString(),
+                  equipeData.Montage.OrdreMontage.createdAt.toISOString(),
                 updatedAt:
-                  equipeData.montage.ordreMontage.updatedAt.toISOString(),
-                commande: equipeData.montage.ordreMontage.commande
+                  equipeData.Montage.OrdreMontage.updatedAt.toISOString(),
+                commande: equipeData.Montage.OrdreMontage.Commande
                   ? {
-                      id: equipeData.montage.ordreMontage.commande.id,
-                      couleur: equipeData.montage.ordreMontage.commande.couleur,
+                      id: equipeData.Montage.OrdreMontage.Commande.id,
+                      couleur: equipeData.Montage.OrdreMontage.Commande.couleur,
                       motorisation:
-                        equipeData.montage.ordreMontage.commande.motorisation,
-                      voitureModel: equipeData.montage.ordreMontage.commande
-                        .voitureModel
+                        equipeData.Montage.OrdreMontage.Commande.motorisation,
+                      voitureModel: equipeData.Montage.OrdreMontage.Commande
+                        .VoitureModel
                         ? {
                             model:
-                              equipeData.montage.ordreMontage.commande
-                                .voitureModel.model,
+                              equipeData.Montage.OrdreMontage.Commande
+                                .VoitureModel.model,
                           }
                         : null,
                     }
@@ -205,9 +205,9 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
       },
     },
     include: {
-      voiture: {
+      Voiture: {
         include: {
-          voitureModel: true,
+          VoitureModel: true,
         },
       },
       Storage: true,
@@ -224,15 +224,15 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     etapeSparePart: sp.etapeSparePart,
     createdAt: sp.createdAt.toISOString(),
     updatedAt: sp.updatedAt.toISOString(),
-    voiture: sp.voiture
+    voiture: sp.Voiture
       ? {
-          id: sp.voiture.id,
-          couleur: sp.voiture.couleur,
-          motorisation: sp.voiture.motorisation,
-          createdAt: sp.voiture.createdAt.toISOString(),
-          updatedAt: sp.voiture.updatedAt.toISOString(),
-          voitureModel: sp.voiture.voitureModel
-            ? { model: sp.voiture.voitureModel.model }
+          id: sp.Voiture.id,
+          couleur: sp.Voiture.couleur,
+          motorisation: sp.Voiture.motorisation,
+          createdAt: sp.Voiture.createdAt.toISOString(),
+          updatedAt: sp.Voiture.updatedAt.toISOString(),
+          voitureModel: sp.Voiture.VoitureModel
+            ? { model: sp.Voiture.VoitureModel.model }
             : null,
         }
       : null,

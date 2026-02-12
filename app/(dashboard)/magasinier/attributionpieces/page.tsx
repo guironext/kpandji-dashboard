@@ -14,7 +14,7 @@ import AttributionEquipesClient from "./AttributionEquipesClient";
 const page = async () => {
   const result = await getMontagesWithExecutionStatus();
 
-  const montages = result.success && result.data ? result.data : [];
+  const montages = (result.success && result.data ? result.data : []) as Parameters<typeof AttributionEquipesClient>[0]["montages"];
 
   // Calculate stats
   const totalEquipes = montages.reduce(

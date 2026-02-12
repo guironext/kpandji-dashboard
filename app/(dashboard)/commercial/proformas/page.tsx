@@ -206,7 +206,7 @@ export default function Page() {
           id: f.id,
           accessoires: f.accessoires
         })), null, 2));
-        setFactures(facturesResult.data as Facture[]);
+        setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         console.log("All accessoires:", JSON.stringify(accessoiresResult.data, null, 2));
@@ -967,7 +967,7 @@ export default function Page() {
         toast.success("Facture supprimée avec succès");
         const updatedFactures = await getFacturesByUser(clerkId);
         if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as Facture[]);
+          setFactures(updatedFactures.data as unknown as Facture[]);
           if (currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)) {
             setCurrentPage(Math.max(1, Math.ceil(updatedFactures.data.length / itemsPerPage)));
           }
