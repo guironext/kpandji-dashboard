@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
     let voitureId: string;
 
     // If no voitures exist for this commande, create one
-    if ((commande as { Voiture: unknown[] }).Voiture.length === 0) {
-      // @ts-expect-error - bypassing Prisma type mismatch with introspected schema
+    if ((commande as { Voiture: unknown[] }).Voiture.length === 0) {   
       const nouvelleVoiture = await prisma.voiture.create({
         data: {
           id: crypto.randomUUID(),
@@ -91,7 +90,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the numero chassis flag to OCCUPE
-    // @ts-expect-error - bypassing Prisma type mismatch with introspected schema
     await prisma.numeroChassis.update({
       where: { id: numeroChassisId },
       data: { 
@@ -101,7 +99,6 @@ export async function POST(request: NextRequest) {
     })
 
     // Create the ordre de montage
-    // @ts-expect-error - bypassing Prisma type mismatch with introspected schema
     const ordreMontage = await prisma.ordreMontage.create({
       data: {
         id: crypto.randomUUID(),

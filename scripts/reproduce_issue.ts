@@ -96,8 +96,10 @@ async function main() {
       data: {
         conteneurNumber,
         etapeConteneur: "TRANSITE_DEJA_RENSEIGNE", // Target DEJA
-        commandes: {
+        Commande: {
           create: {
+            id: crypto.randomUUID(),
+            updatedAt: new Date(),
             etapeCommande: "TRANSITE_DEJA_RENSEIGNE",
             date_livraison: new Date(),
             couleur: "Red",
@@ -105,27 +107,34 @@ async function main() {
             transmission: "AUTOMATIQUE",
             nbr_portes: "4",
             prix_unitaire: 12345.67,
-            client: {
+            Client: {
               create: {
                 nom: "Test Client",
                 telephone: "123456789",
                 userId: userId,
+                updatedAt: new Date(),
               },
             },
           },
         },
-        subcases: {
+        Subcase: {
           create: {
+            id: crypto.randomUUID(),
+            updatedAt: new Date(),
             subcaseNumber: "SC-001",
-            tools: {
+            Tool: {
               create: {
+                id: crypto.randomUUID(),
+                updatedAt: new Date(),
                 toolCode: "TOOL-01",
                 toolName: "Hammer",
                 quantity: 1,
               },
             },
-            spareParts: {
+            SparePart: {
               create: {
+                id: crypto.randomUUID(),
+                updatedAt: new Date(),
                 partCode: "PART-01",
                 partName: "Screw",
                 quantity: 10,
@@ -133,9 +142,11 @@ async function main() {
             },
           },
         },
-        verifications: { create: {} },
-        voitures: {
+        VerificationConteneur: { create: { id: crypto.randomUUID(), updatedAt: new Date() } },
+        Voiture: {
           create: {
+            id: crypto.randomUUID(),
+            updatedAt: new Date(),
             nbr_portes: "4",
             transmission: "AUTOMATIQUE",
             motorisation: "ESSENCE",

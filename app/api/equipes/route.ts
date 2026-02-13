@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { StatusEquipe } from '@prisma/client'
 
 interface MembreInput {
   employeeId: string
@@ -12,15 +13,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
 
-    const whereClause = status ? { stautsEquipe: status } : {}
+    const whereClause = status ? { stautsEquipe: status as StatusEquipe } : {}
 
     const equipes = await prisma.equipe.findMany({
       where: whereClause,
       include: {
-        chefEquipe: true,
-        membres: {
+        Employee: true,
+        EquipeMembre: {
           include: {
-            employee: true
+            Employee: true
           }
         }
       },
@@ -59,8 +60,10 @@ export async function POST(request: NextRequest) {
         taches_accomplies: taches_accomplies || '',
         activite: activite || 'montage',
         montageId,
-        membres: {
+        EquipeMembre: {
           create: (membres as MembreInput[]).map((membre) => ({
+            id: crypto.randomUUID(),
+            updatedAt: new Date(),
             employeeId: membre.employeeId,
             qualite: membre.isChef ? 'CHEF_EQUIPE' : 'MEMBRE_EQUIPE',
             fonction: membre.fonction || ''
@@ -68,10 +71,10 @@ export async function POST(request: NextRequest) {
         }
       },
       include: {
-        chefEquipe: true,
-        membres: {
+        Employee: true,
+        EquipeMembre: {
           include: {
-            employee: true
+            Employee: true
           }
         }
       }

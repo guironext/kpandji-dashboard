@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
 
     const storage = await prisma.storage.create({
       data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         storageNumber,
         porte_Number,
         rayon,

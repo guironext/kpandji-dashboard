@@ -17,12 +17,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         stautsEquipe,
       },
       include: {
-        membres: {
+        EquipeMembre: {
           include: {
-            employee: true
+            Employee: true
           }
         },
-        chefEquipe: true
+        Employee: true
       }
     })
 
@@ -37,6 +37,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       for (const membre of membres) {
         await prisma.equipeMembre.create({
           data: {
+            id: crypto.randomUUID(),
+            updatedAt: new Date(),
             equipeId: id,
             employeeId: membre.employeeId,
             qualite: membre.isChef ? 'CHEF_EQUIPE' : 'MEMBRE_EQUIPE',

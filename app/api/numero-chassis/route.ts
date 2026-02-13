@@ -5,20 +5,20 @@ export async function GET() {
   try {
     const numeroChassis = await prisma.numeroChassis.findMany({
       include: {
-        ordreMontages: {
+        OrdreMontage: {
           select: {
             id: true,
             ordreMontageFlag: true,
-            voiture: {
+            Voiture: {
               include: {
-                voitureModel: true
+                VoitureModel: true
               }
             },
-            commande: {
+            Commande: {
               include: {
-                client: true,
-                clientEntreprise: true,
-                montage: true
+                Client: true,
+                Client_entreprise: true,
+                Montage_Commande_montageIdToMontage: true
               }
             }
           }
@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
 
     const numeroChassis = await prisma.numeroChassis.create({
       data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         chassisNumber,
         motorisation,
         numeroConteneur,

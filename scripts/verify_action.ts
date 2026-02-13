@@ -12,7 +12,7 @@ async function main() {
       return;
     }
 
-    const data = result.data;
+    const data = result.data as unknown[];
     console.log(`Received ${data.length} items.`);
 
     // Helper to check for non-plain objects

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         }
       },
       include: {
-        voitureModel: true
+        VoitureModel: true
       }
     })
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     
     // Group commandes by model, color, motorisation, and transmission for analysis
     const groupedBySpecs = commandes.reduce((acc, cmd) => {
-      const key = `${cmd.voitureModel?.model}-${cmd.couleur}-${cmd.motorisation}-${cmd.transmission}`
+      const key = `${cmd.VoitureModel?.model}-${cmd.couleur}-${cmd.motorisation}-${cmd.transmission}`
       if (!acc[key]) {
         acc[key] = []
       }
@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
     // Create the CommandeGroupee
     const commandeGroupee = await prisma.commandeGroupee.create({
       data: {
+        id: crypto.randomUUID(),
+        updatedAt: new Date(),
         date_validation: new Date(validationDate),
         stock_global: totalCommandes.toString(),
         vendue: venduCount.toString(),
@@ -93,11 +95,11 @@ export async function POST(request: NextRequest) {
         id: commandeGroupee.id
       },
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true
           }
         }
       }
@@ -118,11 +120,11 @@ export async function GET(_request: NextRequest) {
   try {
     const commandeGroupees = await prisma.commandeGroupee.findMany({
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true
           }
         }
       },

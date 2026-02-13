@@ -6,7 +6,7 @@ async function main() {
   try {
     const result = await getAllCommandesProposition();
     if (result.success) {
-      const data = result.data;
+      const data = result.data ?? [];
       console.log(`Received ${data.length} commandes.`);
       if (data.length > 0) {
         const first = data[0];

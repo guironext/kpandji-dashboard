@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         id: { in: commandeIds },
       },
       include: {
-        commandeGroupee: true,
+        CommandeGroupee: true,
       },
     });
 
@@ -158,11 +158,11 @@ export async function POST(request: NextRequest) {
     const createdConteneur = await prisma.conteneur.findUnique({
       where: { id: conteneur.id },
       include: {
-        commandes: {
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true,
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true,
           },
         },
       },

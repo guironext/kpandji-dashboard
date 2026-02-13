@@ -16,7 +16,7 @@ import { downloadExcelForAll, downloadExcelForUser } from "@/lib/exportRapportEx
 
 interface Report {
   id: string;
-  date_rendez_vous: Date;
+  date_rendez_vous: Date | string;
   heure_rendez_vous: string;
   duree_rendez_vous: string;
   nom_prenom_client: string;

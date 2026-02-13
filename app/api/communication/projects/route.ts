@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 function getCommunicationProjectModel() {
-  return (prisma as Record<string, unknown>).communicationProject as
+  return (prisma as unknown as Record<string, unknown>).communicationProject as
     | {
         create: (args: object) => Promise<unknown>;
       }

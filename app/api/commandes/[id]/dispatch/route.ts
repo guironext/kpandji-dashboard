@@ -29,10 +29,10 @@ export async function POST(
         etapeCommande: "VALIDE",
       },
       include: {
-        client: true,
-        clientEntreprise: true,
-        voitureModel: true,
-        fournisseurs: true,
+        Client: true,
+        Client_entreprise: true,
+        VoitureModel: true,
+        CommandeToFournisseur: { include: { Fournisseur: true } },
       },
     });
 
@@ -44,32 +44,32 @@ export async function POST(
       date_livraison: updatedCommande.date_livraison.toISOString(),
       createdAt: updatedCommande.createdAt.toISOString(),
       updatedAt: updatedCommande.updatedAt.toISOString(),
-      client: updatedCommande.client
+      client: updatedCommande.Client
         ? {
-            ...updatedCommande.client,
-            createdAt: updatedCommande.client.createdAt.toISOString(),
-            updatedAt: updatedCommande.client.updatedAt.toISOString(),
+            ...updatedCommande.Client,
+            createdAt: updatedCommande.Client.createdAt.toISOString(),
+            updatedAt: updatedCommande.Client.updatedAt.toISOString(),
           }
         : null,
-      clientEntreprise: updatedCommande.clientEntreprise
+      clientEntreprise: updatedCommande.Client_entreprise
         ? {
-            ...updatedCommande.clientEntreprise,
-            createdAt: updatedCommande.clientEntreprise.createdAt.toISOString(),
-            updatedAt: updatedCommande.clientEntreprise.updatedAt.toISOString(),
+            ...updatedCommande.Client_entreprise,
+            createdAt: updatedCommande.Client_entreprise.createdAt.toISOString(),
+            updatedAt: updatedCommande.Client_entreprise.updatedAt.toISOString(),
           }
         : null,
-      voitureModel: updatedCommande.voitureModel
+      voitureModel: updatedCommande.VoitureModel
         ? {
-            ...updatedCommande.voitureModel,
-            createdAt: updatedCommande.voitureModel.createdAt.toISOString(),
-            updatedAt: updatedCommande.voitureModel.updatedAt.toISOString(),
+            ...updatedCommande.VoitureModel,
+            createdAt: updatedCommande.VoitureModel.createdAt.toISOString(),
+            updatedAt: updatedCommande.VoitureModel.updatedAt.toISOString(),
           }
         : null,
-      fournisseurs: updatedCommande.fournisseurs
-        ? updatedCommande.fournisseurs.map((f) => ({
-            ...f,
-            createdAt: f.createdAt.toISOString(),
-            updatedAt: f.updatedAt.toISOString(),
+      fournisseurs: updatedCommande.CommandeToFournisseur
+        ? updatedCommande.CommandeToFournisseur.map((ctf) => ({
+            ...ctf.Fournisseur,
+            createdAt: ctf.Fournisseur.createdAt.toISOString(),
+            updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
           }))
         : [],
     };

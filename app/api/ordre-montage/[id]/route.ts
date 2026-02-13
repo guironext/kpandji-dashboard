@@ -20,18 +20,18 @@ export async function PUT(
       where: { id },
       data: { ordreMontageFlag },
       include: {
-        numeroChassis: true,
-        commande: {
+        NumeroChassis: true,
+        Commande: {
           include: {
-            voitureModel: true,
-            client: true,
-            clientEntreprise: true,
-            montage: true,
+            VoitureModel: true,
+            Client: true,
+            Client_entreprise: true,
+            Montage_Commande_montageIdToMontage: true,
           },
         },
-        voiture: {
+        Voiture: {
           include: {
-            voitureModel: true,
+            VoitureModel: true,
           },
         },
       },
@@ -43,9 +43,10 @@ export async function PUT(
       data: { etapeCommande: 'MONTAGE' },
     })
 
-    if (ordreMontage.commande.montage) {
+    const montage = ordreMontage.Commande?.Montage_Commande_montageIdToMontage;
+    if (montage) {
       await prisma.montage.update({
-        where: { id: ordreMontage.commande.montage.id },
+        where: { id: montage.id },
         data: { etapeMontage: 'EXECUTION' },
       })
     }

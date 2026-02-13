@@ -8,6 +8,8 @@ async function main() {
   // 1. Create Dummy Data
   const voitureModel = await prisma.voitureModel.create({
     data: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       model: "Test Model " + Date.now(),
       description: "Test Desc",
       // image: '...' // optional
@@ -31,6 +33,8 @@ async function main() {
 
   const commande = await prisma.commande.create({
     data: {
+      id: crypto.randomUUID(),
+      updatedAt: new Date(),
       etapeCommande: "PROPOSITION",
       commandeFlag: "DISPONIBLE",
       date_livraison: new Date(),
@@ -51,7 +55,7 @@ async function main() {
     const result = await getAllCommandesProposition();
 
     if (result.success) {
-      const data = result.data;
+      const data = result.data ?? [];
       const found = data.find((c: any) => c.id === commande.id);
 
       if (found) {

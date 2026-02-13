@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
     const ordreMontage = await prisma.ordreMontage.findUnique({
       where: { id: ordreMontageId },
       include: {
-        commande: true,
-        numeroChassis: true
+        Commande: true,
+        NumeroChassis: true
       }
     })
 

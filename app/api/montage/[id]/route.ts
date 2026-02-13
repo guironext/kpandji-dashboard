@@ -20,17 +20,17 @@ export async function PATCH(
       where: { id: montageId },
       data: {
         etapeMontage,
-        commande: {
+        Commande_Montage_commandeIdToCommande: {
           update: {
             etapeCommande: 'VALIDE'
           }
         }
       },
       include: {
-        commande: {
+        Commande_Montage_commandeIdToCommande: {
           include: {
-            client: true,
-            voitureModel: true
+            Client: true,
+            VoitureModel: true
           }
         }
       }
