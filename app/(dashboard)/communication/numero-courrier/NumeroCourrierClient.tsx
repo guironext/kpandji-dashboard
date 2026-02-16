@@ -670,7 +670,7 @@ export default function NumeroCourrierClient() {
                     </div>
                     <div>
                       <CardTitle className="text-xl">Aperçu du Document</CardTitle>
-                      <CardDescription className="text-slate-600">
+                      <CardDescription className="text-slate-600 mb-4">
                         N° KA/DCM/{savedCourrier.numero_courrier}
                       </CardDescription>
                     </div>

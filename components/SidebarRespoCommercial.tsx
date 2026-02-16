@@ -180,7 +180,7 @@ const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
             </div>
             {isOpen && (
               <div className="hidden md:block">
-                <h2 className="text-lg font-bold text-gray-900">Commercial</h2>
+                <h2 className="text-lg font-bold text-gray-900">Responsable Commercial</h2>
                 <p className="text-xs text-gray-500">Equipe Commercial</p>
               </div>
             )}

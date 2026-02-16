@@ -17,7 +17,9 @@ import {
   FileEdit,
   Database,
   Ship,
-  Building2
+  Building2,
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -131,7 +133,21 @@ const navItems = [
     label: "Paramètres",
     href: "/manager/parametres",
     category: "settings"
-  }
+  },
+  {
+    id: 17,
+    icon: <Mail className="w-5 h-5" />,
+    label: "Numéro Courrier",
+    href: "/manager/numero-courrier",
+    category: "Communication"
+  },
+  {
+    id: 18,
+    icon: <MessageSquare className="w-5 h-5" />,
+    label: "Messages",
+    href: "/manager/messages",
+    category: "Communication"
+  },
 ];
 
 const SidebarManager = ({ isOpen }: { isOpen: boolean }) => {

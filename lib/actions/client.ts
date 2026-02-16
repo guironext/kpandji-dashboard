@@ -138,6 +138,38 @@ export async function getClientsByStatus(status: "CLIENT" | "PROSPECT" | "FAVORA
   }
 }
 
+export async function getClientsByStatusWithVoitures(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
+  try {
+    const clients = await prisma.client.findMany({
+      where: { status_client: status },
+      include: {
+        User: true,
+        Voiture: {
+          include: { VoitureModel: true }
+        }
+      },
+      orderBy: { nom: 'asc' }
+    });
+    return {
+      success: true,
+      data: (clients as unknown[]).map((c: unknown) => {
+        const item = c as Record<string, unknown> & { User?: unknown; Voiture?: unknown[] };
+        return {
+          ...item,
+          user: item.User,
+          voitures: item.Voiture?.map((v: unknown) => {
+            const voiture = v as Record<string, unknown> & { VoitureModel?: unknown };
+            return { ...voiture, voitureModel: voiture.VoitureModel };
+          })
+        };
+      })
+    };
+  } catch (error) {
+    console.error("Error fetching clients by status with voitures:", error);
+    return { success: false, error: "Failed to fetch clients" };
+  }
+}
+
 export async function updateClient(id: string, data: {
   nom?: string;
   email?: string;
@@ -264,6 +296,29 @@ export async function getClientsByUserAndStatus(userId: string, status: "CLIENT"
   } catch (error) {
     console.error("Error fetching clients by user and status:", error);
     return { success: false, error: "Failed to fetch clients" };
+  }
+}
+
+export async function reassignClientProspect(
+  id: string,
+  newUserId: string,
+  newCommercialName: string
+) {
+  try {
+    const client = await prisma.client.update({
+      where: { id },
+      data: {
+        userId: newUserId,
+        commercial: newCommercialName,
+        updatedAt: new Date(),
+      },
+    });
+    revalidatePath("/commercial/prospects");
+    revalidatePath("/responsablecommercial/prospects");
+    return { success: true, data: client };
+  } catch (error) {
+    console.error("Error reassigning client prospect:", error);
+    return { success: false, error: "Failed to reassign prospect" };
   }
 }
 

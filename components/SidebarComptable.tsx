@@ -13,7 +13,9 @@ import {
   Receipt,
   Store,
   ShoppingCart,
-  Truck
+  Truck,
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -114,7 +116,21 @@ const navItems = [
     href: "/comptable/fournisseur-locaux",
     category: "partenaires"
   },
- 
+  {
+    id: 17,
+    icon: <Mail className="w-5 h-5" />,
+    label: "Numéro Courrier",
+    href: "/comptable/numero-courrier",
+    category: "Communication"
+  },
+  {
+    id: 18,
+    icon: <MessageSquare className="w-5 h-5" />,
+    label: "Messages",
+    href: "/comptable/messages",
+    category: "Communication"
+  },
+   
 ];
 
 const SidebarComptable = ({ isOpen }: { isOpen: boolean }) => {

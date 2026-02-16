@@ -274,6 +274,87 @@ export async function getClientEntreprisesByUser(userId: string) {
   }
 }
 
+export async function getClientEntreprisesByStatus(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
+  try {
+    const clientEntreprises = await prisma.client_entreprise.findMany({
+      where: {
+        status_client: status,
+      },
+      include: { User: true },
+      orderBy: { nom_entreprise: 'asc' }
+    });
+    
+    return { 
+      success: true, 
+      data: (clientEntreprises as unknown[]).map((ce: unknown) => {
+        const item = ce as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User
+        };
+      })
+    };
+  } catch (error) {
+    console.error("Error fetching client_entreprises by status:", error);
+    return { success: false, error: "Failed to fetch client_entreprises" };
+  }
+}
+
+export async function getClientEntreprisesByStatusWithVoitures(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
+  try {
+    const clientEntreprises = await prisma.client_entreprise.findMany({
+      where: { status_client: status },
+      include: {
+        User: true,
+        Voiture: {
+          include: { VoitureModel: true }
+        }
+      },
+      orderBy: { nom_entreprise: 'asc' }
+    });
+    return {
+      success: true,
+      data: (clientEntreprises as unknown[]).map((ce: unknown) => {
+        const item = ce as Record<string, unknown> & { User?: unknown; Voiture?: unknown[] };
+        return {
+          ...item,
+          user: item.User,
+          voitures: item.Voiture?.map((v: unknown) => {
+            const voiture = v as Record<string, unknown> & { VoitureModel?: unknown };
+            return { ...voiture, voitureModel: voiture.VoitureModel };
+          })
+        };
+      })
+    };
+  } catch (error) {
+    console.error("Error fetching client_entreprises by status with voitures:", error);
+    return { success: false, error: "Failed to fetch client_entreprises" };
+  }
+}
+
+export async function reassignClientEntrepriseProspect(
+  id: string,
+  newUserId: string,
+  newCommercialName: string
+) {
+  try {
+    const clientEntreprise = await prisma.client_entreprise.update({
+      where: { id },
+      data: {
+        userId: newUserId,
+        commercial: newCommercialName,
+        updatedAt: new Date(),
+      },
+    });
+    revalidatePath("/commercial/prospects");
+    revalidatePath("/responsablecommercial/prospects");
+    return { success: true, data: clientEntreprise };
+  } catch (error) {
+    console.error("Error reassigning client_entreprise prospect:", error);
+    return { success: false, error: "Failed to reassign prospect" };
+  }
+}
+
 export async function getClientEntreprisesByUserAndStatus(userId: string, status: "CLIENT" | "PROSPECT" | "ABANDONNE") {
   try {
     const user = await prisma.user.findUnique({
