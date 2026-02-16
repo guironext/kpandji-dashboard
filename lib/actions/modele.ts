@@ -108,6 +108,7 @@ export async function createModel(
     
     // Revalidate relevant paths
     revalidatePath("/manager/ajouter-modele");
+    revalidatePath("/responsablecommercial/ajouter-modele");
     
     return {
       success: true,
@@ -218,6 +219,43 @@ export async function getModele(modelId: string): Promise<{ success: boolean; da
     return {
       success: false,
       message: "Erreur lors de la récupération du modèle",
+    };
+  }
+}
+
+// Get VoitureModel count by transmission (from Commande linked to VoitureModel)
+export async function getVoitureModelCountByTransmission(): Promise<{
+  success: boolean;
+  data?: { name: string; value: number }[];
+  message: string;
+}> {
+  try {
+    const result = await prisma.commande.groupBy({
+      by: ["transmission"],
+      where: { voitureModelId: { not: null } },
+      _count: { id: true },
+    });
+
+    const labels: Record<string, string> = {
+      AUTOMATIQUE: "Automatique",
+      MANUEL: "Manuel",
+    };
+
+    const data = result.map((r) => ({
+      name: labels[r.transmission] ?? r.transmission,
+      value: r._count.id,
+    }));
+
+    return {
+      success: true,
+      data,
+      message: "Données récupérées",
+    };
+  } catch (error) {
+    console.error("Erreur getVoitureModelCountByTransmission:", error);
+    return {
+      success: false,
+      message: "Erreur lors de la récupération des données",
     };
   }
 }
@@ -348,6 +386,7 @@ export async function updateModele(
     
     revalidatePath("/manager/ajouter-modele");
     revalidatePath("/commercial/ajouter-modele");
+    revalidatePath("/responsablecommercial/ajouter-modele");
     
     return {
       success: true,
@@ -424,6 +463,7 @@ export async function deleteModele(modelId: string): Promise<{ success: boolean;
     
     // Revalidate relevant paths
     revalidatePath("/manager/ajouter-modele");
+    revalidatePath("/responsablecommercial/ajouter-modele");
     
     return {
       success: true,

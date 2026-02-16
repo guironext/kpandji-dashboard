@@ -9,8 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Search,
@@ -19,10 +17,10 @@ import {
   Calendar,
   Play,
   BarChart3,
-  User,
   ChevronRight,
   FileText,
 } from "lucide-react";
+import ProjetDetailClient from "./ProjetDetailClient";
 
 const SECTIONS = [
   {
@@ -159,41 +157,9 @@ export default async function ProjetDetailPage({
           </span>
         </nav>
 
-        {/* Hero: project name + meta */}
-        <header className="rounded-2xl bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-cyan-500/10 border border-violet-200/60 px-6 py-6 sm:px-8 sm:py-7 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="gap-1.5 font-medium bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-0 shadow-md shadow-indigo-500/25">
-              <FileText className="w-3.5 h-3.5" />
-              Projet de communication
-            </Badge>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mt-3">
-            {project.name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 mt-3">
-            {project.createdBy ? (
-              <span className="inline-flex items-center gap-1.5">
-                <User className="w-4 h-4 text-violet-500" />
-                Créé par {project.createdBy.firstName} {project.createdBy.lastName}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <User className="w-4 h-4 text-violet-400" />
-                —
-              </span>
-            )}
-            <span className="text-violet-300" aria-hidden>·</span>
-            <span>
-              Mis à jour le {new Date(project.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-            </span>
-          </div>
-        </header>
-
-        <Separator className="bg-gradient-to-r from-transparent via-violet-200 to-transparent h-0.5" />
-
-        {/* Sections */}
-        {!hasAnyContent ? (
-          <Card className="border-2 border-dashed border-violet-200 bg-white/70 overflow-hidden">
+        <ProjetDetailClient project={project}>
+          {!hasAnyContent ? (
+            <Card className="border-2 border-dashed border-violet-200 bg-white/70 overflow-hidden">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 p-5 mb-4 ring-4 ring-white/80 shadow-inner">
                 <FileText className="w-12 h-12 text-indigo-500" />
@@ -203,9 +169,9 @@ export default async function ProjetDetailPage({
                 Les différentes étapes du projet de communication pourront être complétées ici.
               </p>
             </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
+            </Card>
+          ) : (
+            <div className="space-y-6">
             {SECTIONS.map((section) => {
               const Icon = section.icon;
               const values = section.fields.map((f) => {
@@ -254,8 +220,9 @@ export default async function ProjetDetailPage({
                 </Card>
               );
             })}
-          </div>
-        )}
+            </div>
+          )}
+        </ProjetDetailClient>
       </div>
     </div>
   );

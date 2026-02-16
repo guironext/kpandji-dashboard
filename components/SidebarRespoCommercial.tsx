@@ -5,13 +5,17 @@ import {
   Users,
   BarChart3,
   Warehouse,
+  Car,
+  UserCheck,
   FileText,
+  Eye,
+  Calendar,
+  Receipt,
   ClipboardList,
-  Calculator,
-  BookOpen,
-  Settings,
-  Mail,
-  MessageSquare,
+  Package,
+  TrendingUp,
+  FileCheck,
+  Pen,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -23,76 +27,118 @@ const navItems = [
     id: 1,
     icon: <Home className="w-5 h-5" />,
     label: "Dashboard",
-    href: "/communication",
+    href: "/responsablecommercial",
     category: "main"
   },
   {
     id: 2,
-    icon: <FileText className="w-5 h-5" />,
-    label: "Projets",
-    href: "/communication/projets",
+    icon: <Car className="w-5 h-5" />,
+    label: "Modèles Voitures",
+    href: "/responsablecommercial/ajouter-modele",
     category: "operations"
   },
   {
     id: 3,
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: "Plan d'action",
-    href: "/communication/plan-action",
+    icon: <Package className="w-5 h-5" />,
+    label: "Accessoires",
+    href: "/responsablecommercial/ajouter-accessoires",
     category: "operations"
   },
   {
     id: 4,
-    icon: <Users className="w-5 h-5" />,
-    label: "Acteurs et Rôles",
-    href: "/communication/acteurs-roles",
+    icon: <Warehouse className="w-5 h-5" />,
+    label: "Stock disponible",
+    href: "/responsablecommercial/stock-disponible",
     category: "operations"
   },
   {
     id: 5,
-    icon: <Calculator className="w-5 h-5" />,
-    label: "Budget",
-    href: "/communication/budget",
+    icon: <UserCheck className="w-5 h-5" />,
+    label: "Prospects",
+    href: "/responsablecommercial/prospects",
     category: "operations"
   },
   {
     id: 6,
-    icon: <BookOpen className="w-5 h-5" />,
-    label: "Resumé Projets",  
-    href: "/communication/resume-projet",
-    category: "Documentation"
+    icon: <Users className="w-5 h-5" />,
+    label: "Clients",
+    href: "/responsablecommercial/clients",
+    category: "operations"
   },
   {
     id: 7,
-    icon: <Settings className="w-5 h-5" />,
-    label: "Mise en Oeuvre ",  
-    href: "/communication/mise-oeuvre",
-    category: "Documentation"
+    icon: <Calendar className="w-5 h-5" />,
+    label: "Rendez-vous",
+    href: "/responsablecommercial/rendez-vous",
+    category: "operations"
   },
   {
     id: 8,
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: "Rapport Projets",
-    href: "/communication/rapport-projets",
-    category: "Documentation"
+    icon: <ClipboardList className="w-5 h-5" />,
+    label: "Rapport Rendez-vous",
+    href: "/responsablecommercial/rapport-rendez-vous",
+    category: "operations"
   },
   {
     id: 9,
-    icon: <Mail className="w-5 h-5" />,
-    label: "Numéro Courrier",
-    href: "/communication/numero-courrier",
-    category: "Documentation"
-    
+    icon: <Eye className="w-5 h-5" />,
+    label: "Suivi Rendez-vous",
+    href: "/responsablecommercial/suivi-rendez-vous",
+    category: "operations"
   },
+  
   {
     id: 10,
-    icon: <MessageSquare className="w-5 h-5" />,
-    label: "Messages",
-    href: "/communication/messages",
-    category: "Documentation"
+    icon: <BarChart3 className="w-5 h-5" />,
+    label: "Tableau de Chute",
+    href: "/responsablecommercial/tableau-chute",
+    category: "operations"
   },
+  {
+    id: 11,
+    icon: <TrendingUp className="w-5 h-5" />,
+    label: "Suivi Commandes",
+    href: "/responsablecommercial/suivi-commandes",
+    category: "reports"
+  },
+  {
+    id: 12,
+    icon: <FileText className="w-5 h-5" />,
+    label: "Proformas",
+    href: "/responsablecommercial/proformas",
+    category: "facturation"
+  },
+  {
+    id: 13,
+    icon: <FileText className="w-5 h-5" />,
+    label: "Proformas-multi",
+    href: "/responsablecommercial/profoma-multi",
+    category: "facturation"
+  },
+  {
+    id: 14,
+    icon: <Receipt className="w-5 h-5" />,
+    label: "Bon de Commande",
+    href: "/responsablecommercial/bon-de-commande",
+    category: "facturation"
+  },
+  {
+    id: 15,
+    icon: <FileCheck className="w-5 h-5" />,
+    label: "Bon pour Acquis",
+    href: "/responsablecommercial/bon-pour-acquis",
+    category: "facturation"
+  },
+  {
+    id: 16,
+    icon: <Pen className="w-5 h-5" />,
+    label: "Signature",
+    href: "/responsablecommercial/signature",
+    category: "facturation"
+  }
 ];
 
-const SidebarCommunication = ({ isOpen }: { isOpen: boolean }) => {
+const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
   // Responsive width calculation
@@ -134,8 +180,8 @@ const SidebarCommunication = ({ isOpen }: { isOpen: boolean }) => {
             </div>
             {isOpen && (
               <div className="hidden md:block">
-                <h2 className="text-lg font-bold text-gray-900">Communication</h2>
-                <p className="text-xs text-gray-500">Equipe Communication</p>
+                <h2 className="text-lg font-bold text-gray-900">Commercial</h2>
+                <p className="text-xs text-gray-500">Equipe Commercial</p>
               </div>
             )}
           </div>
@@ -209,4 +255,4 @@ const SidebarCommunication = ({ isOpen }: { isOpen: boolean }) => {
   );
 };
 
-export default SidebarCommunication;
+export default SidebarRespoCommercial;

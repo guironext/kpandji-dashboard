@@ -10,6 +10,9 @@ import { put } from "@vercel/blob";
 const createAccessoireSchema = z.object({
   nom: z.string().min(1, "Le nom est requis"),
   image: z.string().optional(),
+  description: z.string().optional(),
+  prix: z.union([z.string(), z.number()]).optional().transform((v) => (v === "" || v === undefined ? undefined : Number(v))),
+  quantity: z.union([z.string(), z.number()]).optional().transform((v) => (v === "" || v === undefined ? undefined : Number(v))),
 });
 
 export type CreateAccessoireInput = z.infer<typeof createAccessoireSchema>;
@@ -69,10 +72,14 @@ export async function createAccessoire(
       data: {
         nom: data.nom,
         image: imagePath || null,
+        description: data.description || null,
+        prix: data.prix != null ? data.prix : null,
+        quantity: data.quantity != null ? data.quantity : null,
       },
     });
 
     revalidatePath("/commercial/ajouter-accessoires");
+    revalidatePath("/responsablecommercial/ajouter-accessoires");
 
     return {
       success: true,
@@ -124,6 +131,82 @@ export async function getAllAccessoires() {
   }
 }
 
+const updateAccessoireSchema = z.object({
+  nom: z.string().min(1, "Le nom est requis"),
+  image: z.string().optional(),
+  description: z.string().optional(),
+  prix: z.union([z.string(), z.number()]).optional().transform((v) => (v === "" || v === undefined ? undefined : Number(v))),
+  quantity: z.union([z.string(), z.number()]).optional().transform((v) => (v === "" || v === undefined ? undefined : Number(v))),
+});
+
+export type UpdateAccessoireInput = z.infer<typeof updateAccessoireSchema>;
+
+export async function updateAccessoire(
+  id: string,
+  data: UpdateAccessoireInput,
+  file?: File
+): Promise<{ success: boolean; message: string }> {
+  try {
+    updateAccessoireSchema.parse(data);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    let imagePath: string | undefined;
+
+    if (file) {
+      fileUploadSchema.parse({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+
+      if (isProduction) {
+        const filename = `accessoires/${timestamp}_${sanitizedName}`;
+        const blob = await put(filename, file, { access: 'public' });
+        imagePath = blob.url;
+      } else {
+        const externesDir = join(process.cwd(), "public", "externes");
+        await mkdir(externesDir, { recursive: true });
+        const filename = `${timestamp}_${sanitizedName}`;
+        const filepath = join(externesDir, filename);
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filepath, buffer);
+        imagePath = `/externes/${filename}`;
+      }
+    }
+
+    await prisma.accessoire.update({
+      where: { id },
+      data: {
+        nom: data.nom,
+        description: data.description || null,
+        prix: data.prix != null ? data.prix : null,
+        quantity: data.quantity != null ? data.quantity : null,
+        ...(imagePath !== undefined && { image: imagePath }),
+      },
+    });
+
+    revalidatePath("/commercial/ajouter-accessoires");
+    revalidatePath("/responsablecommercial/ajouter-accessoires");
+
+    return {
+      success: true,
+      message: "Accessoire modifié avec succès",
+    };
+  } catch (error) {
+    console.error("Error updating accessoire:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Erreur inconnue";
+    return {
+      success: false,
+      message: `Échec de la modification: ${errorMessage}`,
+    };
+  }
+}
+
 export async function deleteAccessoire(id: string) {
   try {
     await prisma.accessoire.delete({
@@ -131,6 +214,7 @@ export async function deleteAccessoire(id: string) {
     });
 
     revalidatePath("/commercial/ajouter-accessoires");
+    revalidatePath("/responsablecommercial/ajouter-accessoires");
     return {
       success: true,
       message: "Accessoire supprimé avec succès",

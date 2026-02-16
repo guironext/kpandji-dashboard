@@ -232,6 +232,76 @@ export async function getCommunicationProjectById(
   }
 }
 
+export type UpdateCommunicationProjectResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export async function updateCommunicationProject(
+  id: string,
+  data: Partial<CommunicationProjectInput> & { name?: string }
+): Promise<UpdateCommunicationProjectResult> {
+  const model = getCommunicationProjectModel();
+  if (!model) {
+    return {
+      success: false,
+      error: "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
+    };
+  }
+  try {
+    const updateData: Record<string, unknown> = {};
+    const fields: (keyof CommunicationProjectInput)[] = [
+      "name",
+      "createdById",
+      "diagnosticContext",
+      "diagnosticTarget",
+      "diagnosticEnvironment",
+      "diagnosticForces",
+      "objectives",
+      "strategyPositioning",
+      "strategyTargets",
+      "strategyChannels",
+      "actionPlan",
+      "actionSupports",
+      "actionCalendar",
+      "actionBudget",
+      "implementationContent",
+      "implementationLaunch",
+      "implementationTeams",
+      "evaluationMetrics",
+      "evaluationComparison",
+      "evaluationAdjustments",
+    ];
+    for (const key of fields) {
+      if (key in data) {
+        const val = data[key];
+        updateData[key] = val === "" || val === null ? null : val;
+      }
+    }
+    if (Object.keys(updateData).length === 0) {
+      return { success: true };
+    }
+    await model.update({
+      where: { id },
+      data: updateData,
+    });
+    try {
+      revalidatePath("/communication/projets");
+      revalidatePath(`/communication/projets/${id}`);
+      revalidatePath("/communication");
+    } catch {
+      // ignore revalidate errors
+    }
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("updateCommunicationProject error:", error);
+    return {
+      success: false,
+      error: message || "Erreur lors de la mise à jour du projet",
+    };
+  }
+}
+
 export type DeleteCommunicationProjectResult =
   | { success: true }
   | { success: false; error: string };
@@ -252,6 +322,7 @@ export async function deleteCommunicationProject(
     });
     try {
       revalidatePath("/communication/projets");
+      revalidatePath(`/communication/projets/${id}`);
       revalidatePath("/communication/resume-projet");
       revalidatePath("/communication");
     } catch {

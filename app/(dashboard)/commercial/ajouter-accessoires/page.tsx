@@ -51,7 +51,10 @@ export default function AjouterAccessoiresPage() {
     e.preventDefault();
     setLoading(true);
 
-    const result = await createAccessoire(formData, imageFile || undefined);
+    const result = await createAccessoire(
+      { nom: formData.nom, prix: undefined, quantity: undefined },
+      imageFile || undefined
+    );
 
     if (result.success) {
       toast.success(result.message);

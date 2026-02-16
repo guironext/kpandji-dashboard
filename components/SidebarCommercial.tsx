@@ -16,6 +16,8 @@ import {
   TrendingUp,
   FileCheck,
   Pen,
+  Mail,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -135,7 +137,21 @@ const navItems = [
     label: "Signature",
     href: "/commercial/signature",
     category: "facturation"
-  }
+  },
+  {
+    id: 17,
+    icon: <Mail className="w-5 h-5" />,
+    label: "Numéro Courrier",
+    href: "/commercial/numero-courrier",
+    category: "Communication"
+  },
+  {
+    id: 18,
+    icon: <MessageSquare className="w-5 h-5" />,
+    label: "Messages",
+    href: "/commercial/messages",
+    category: "Communication"
+  },
 ];
 
 const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {

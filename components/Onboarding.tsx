@@ -326,6 +326,9 @@ const OnboardingForm = ({
                                   <SelectItem value="COMMERCIAL">
                                     Commercial
                                   </SelectItem>
+                                  <SelectItem value="RESPONSABLE_COMMERCIAL">
+                                    Responsable Commercial
+                                  </SelectItem>
                                   <SelectItem value="RH">RH</SelectItem>
                                   <SelectItem value="SAV">SAV</SelectItem>
                                   <SelectItem value="LOGISTIQUE">
