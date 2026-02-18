@@ -156,7 +156,7 @@ export default function Page() {
       if (accessoiresResult.success && accessoiresResult.data) {
         console.log("Raw accessoires data:", JSON.stringify(accessoiresResult.data, null, 2));
         console.log("Accessoires count:", accessoiresResult.data.length);
-        accessoiresResult.data.forEach((acc, index) => {
+        accessoiresResult.data.forEach((acc: { id: string; nom: string; image?: string | null }, index) => {
           console.log(`Accessoire ${index + 1}:`, {
             id: acc.id,
             nom: acc.nom,
