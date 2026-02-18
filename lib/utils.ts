@@ -1,6 +1,47 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+/** Fetch with retry for transient network/connection failures */
+export async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  options?: { maxRetries?: number; delayMs?: number }
+): Promise<Response> {
+  const maxRetries = options?.maxRetries ?? 3;
+  const delayMs = options?.delayMs ?? 1000;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(input, init);
+      // Retry on 5xx server errors (connection/DB issues)
+      if (res.status >= 500 && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, delayMs * attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isRetryable =
+        errMsg.includes("fetch") ||
+        errMsg.includes("network") ||
+        errMsg.includes("Failed to fetch") ||
+        errMsg.includes("connection") ||
+        errMsg.includes("ECONNRESET") ||
+        errMsg.includes("ETIMEDOUT") ||
+        errMsg.includes("timeout");
+      if (isRetryable && attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, delayMs * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }

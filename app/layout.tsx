@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkProvider, ClerkFailed } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
+import { ClerkFailedOverlay } from "@/components/ClerkFailedOverlay";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -24,11 +21,15 @@ export const metadata: Metadata = {
 // Make sure to set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env.local file
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dev bypass: hide ClerkFailed overlay when user chose to continue without auth
+  const cookieStore = await cookies();
+  const devBypass = process.env.NODE_ENV === "development" && cookieStore.get("__clerk_dev_bypass")?.value === "1";
+
   if (!clerkPublishableKey) {
     throw new Error(
       "Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. Add it to .env.local and restart the dev server."
@@ -38,6 +39,7 @@ export default function RootLayout({
   return (
     <ClerkProvider
       publishableKey={clerkPublishableKey}
+      dynamic
       appearance={{
         elements: {
           rootBox: "w-full",
@@ -71,9 +73,14 @@ export default function RootLayout({
     >
       <html lang="fr">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${inter.variable} font-sans antialiased`}
           suppressHydrationWarning={true}
         >
+          {!devBypass && (
+            <ClerkFailed>
+              <ClerkFailedOverlay />
+            </ClerkFailed>
+          )}
           {children}
           <Toaster />
         </body>

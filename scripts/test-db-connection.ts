@@ -3,11 +3,7 @@
  * Run with: npx tsx scripts/test-db-connection.ts
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient({
-  log: ['error', 'warn'],
-});
+import { prisma } from '../lib/prisma';
 
 async function testConnection() {
   console.log('🔍 Testing database connection...\n');

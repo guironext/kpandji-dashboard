@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -30,6 +31,7 @@ model User {
   NumeroCourrier            NumeroCourrier[]
   SentMessages              Message[]                 @relation("SentMessages")
   ReceivedMessages          Message[]                 @relation("ReceivedMessages")
+  ObjectifCible             ObjectifCible[]
 }
 
 model Message {
@@ -1038,6 +1040,50 @@ model CommunicationBudgetItem {
   updatedAt   DateTime             @updatedAt
 
   @@index([projectId])
+}
+
+model ObjectifFinanciere {
+  id                 String    @id @default(uuid())
+  nomDuCommercial    String
+  pole               String
+  duree              String
+  chiffreAffaire     Decimal
+  finObjectif        DateTime?
+  pourcentageAtteint Decimal   @default(0)
+  ecartCible         Decimal?  // écart par rapport à la cible
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([nomDuCommercial])
+  @@index([duree])
+}
+
+model ObjectifPeriod {
+  id            String         @id @default(uuid())
+  start         DateTime
+  end           DateTime
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ObjectifCible ObjectifCible[]
+
+  @@index([start])
+}
+
+model ObjectifCible {
+  id             String        @id @default(uuid())
+  periodId       String
+  userId         String
+  prospectCible  Int
+  prospectReel   Int           @default(0)
+  tauxAtteint    Decimal       @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  period         ObjectifPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, userId])
+  @@index([periodId])
+  @@index([userId])
 }
 
 model NumeroCourrier {

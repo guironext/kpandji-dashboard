@@ -3,7 +3,8 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButtonWithFallback } from "./SignInButtonWithFallback";
 import { Button } from "./ui/button";
 import { MenuIcon, Bell, Settings } from "lucide-react";
 import Image from "next/image";
@@ -106,8 +107,8 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
                 />
               </SignedIn>
               <SignedOut>
-                <Button size="sm" variant="outline">
-                  <SignInButton mode="modal" />
+                <Button size="sm" variant="outline" asChild>
+                  <SignInButtonWithFallback href="/sign-in">Se connecter</SignInButtonWithFallback>
                 </Button>
               </SignedOut>
             </div>

@@ -21,6 +21,24 @@ CLERK_SECRET_KEY=sk_test_your_secret_key_here
 DATABASE_URL=postgresql://user:password@localhost:5432/dbname?schema=public
 ```
 
+**Connection pooler (Neon):** For Neon, use the pooled connection string (hostname includes `-pooler`):
+
+```bash
+DATABASE_URL="postgresql://user:password@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require"
+```
+
+Get it from [Neon Console](https://console.neon.tech) → your project → **Connect** → enable **Connection pooling**.
+
+**Neon CLI (optional):** This project includes Neon CLI. After `npm install`, run:
+
+```bash
+npm run neon:auth        # Log in to Neon (first time only)
+npm run neon:url         # Get pooled connection string for DATABASE_URL
+npm run neon:url-direct  # Get direct connection string
+npm run neon:branches    # List database branches
+npm run neon:projects   # List projects
+```
+
 ### Optional: Vercel Blob Storage (for file uploads)
 ```bash
 BLOB_READ_WRITE_TOKEN=your_blob_token_here

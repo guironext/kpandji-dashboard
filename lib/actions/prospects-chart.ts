@@ -55,7 +55,6 @@ export async function getProspectsChartDataByCommercialAndMonth(): Promise<{
 
       const d = new Date(p.createdAt);
       const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const monthLabel = d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, new Map());

@@ -190,7 +190,6 @@ export default function ProjetDetailClient({ project, children }: Props) {
     }
   };
 
-  const currentStep = STEPS.find((s) => s.id === editStep)!;
   const stepColor = STEP_COLORS[editStep - 1];
 
   return (

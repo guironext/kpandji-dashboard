@@ -72,6 +72,29 @@ export async function getOrCreateUser(clerkId?: string) {
 }
 
 /**
+ * Get all users with role COMMERCIAL
+ */
+export async function getCommercialUsers() {
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: UserRole.COMMERCIAL },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+      select: { id: true, firstName: true, lastName: true },
+    });
+    return {
+      success: true,
+      data: users.map((u) => ({
+        id: u.id,
+        fullName: `${u.firstName} ${u.lastName}`.trim(),
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching commercial users:", error);
+    return { success: false, error: "Failed to fetch users", data: [] };
+  }
+}
+
+/**
  * Get user by clerkId, return null if not found (don't create)
  */
 export async function getUserByClerkId(clerkId: string) {

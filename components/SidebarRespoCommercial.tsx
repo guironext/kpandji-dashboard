@@ -16,126 +16,86 @@ import {
   TrendingUp,
   FileCheck,
   Pen,
+  Target,
+  CalendarRange,
+  KeyRound,
+  Files,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
 
-// Organized navigation items with better icons and logical grouping
-const navItems = [
+// Category-first navigation structure with logical grouping
+const iconClass = "w-5 h-5";
+
+const navCategories = [
   {
-    id: 1,
-    icon: <Home className="w-5 h-5" />,
-    label: "Dashboard",
-    href: "/responsablecommercial",
-    category: "main"
+    id: "main",
+    label: "Principal",
+    color: "#6366f1",
+    bg: "#6366f11a", // indigo-500 @ 10% opacity
+    items: [
+      { id: 1, icon: <Home className={iconClass} />, label: "Dashboard", href: "/responsablecommercial" },
+      { id: 2, icon: <Target className={iconClass} />, label: "Objectifs", href: "/responsablecommercial/objectifs" },
+      { id: 3, icon: <CalendarRange className={iconClass} />, label: "Calendrier Sortie", href: "/responsablecommercial/calendrier-sortie" },
+      { id: 4, icon: <KeyRound className={iconClass} />, label: "Reservation Véhicule", href: "/responsablecommercial/reservation-vehicule" },
+    ],
   },
   {
-    id: 2,
-    icon: <Car className="w-5 h-5" />,
-    label: "Modèles Voitures",
-    href: "/responsablecommercial/ajouter-modele",
-    category: "operations"
+    id: "inventory",
+    label: "Inventaire",
+    color: "#0ea5e9",
+    bg: "#0ea5e91a", // sky-500 @ 10% opacity
+    items: [
+      { id: 5, icon: <Car className={iconClass} />, label: "Modèles Voitures", href: "/responsablecommercial/ajouter-modele" },
+      { id: 6, icon: <Package className={iconClass} />, label: "Accessoires", href: "/responsablecommercial/ajouter-accessoires" },
+      { id: 7, icon: <Warehouse className={iconClass} />, label: "Stock disponible", href: "/responsablecommercial/stock-disponible" },
+    ],
   },
   {
-    id: 3,
-    icon: <Package className="w-5 h-5" />,
-    label: "Accessoires",
-    href: "/responsablecommercial/ajouter-accessoires",
-    category: "operations"
+    id: "crm",
+    label: "Commercial",
+    color: "#22c55e",
+    bg: "#22c55e1a", // green-500 @ 10% opacity
+    items: [
+      { id: 8, icon: <UserCheck className={iconClass} />, label: "Prospects", href: "/responsablecommercial/prospects" },
+      { id: 9, icon: <Users className={iconClass} />, label: "Clients", href: "/responsablecommercial/clients" },
+    ],
   },
   {
-    id: 4,
-    icon: <Warehouse className="w-5 h-5" />,
-    label: "Stock disponible",
-    href: "/responsablecommercial/stock-disponible",
-    category: "operations"
-  },
-  {
-    id: 5,
-    icon: <UserCheck className="w-5 h-5" />,
-    label: "Prospects",
-    href: "/responsablecommercial/prospects",
-    category: "operations"
-  },
-  {
-    id: 6,
-    icon: <Users className="w-5 h-5" />,
-    label: "Clients",
-    href: "/responsablecommercial/clients",
-    category: "operations"
-  },
-  {
-    id: 7,
-    icon: <Calendar className="w-5 h-5" />,
+    id: "appointments",
     label: "Rendez-vous",
-    href: "/responsablecommercial/rendez-vous",
-    category: "operations"
+    color: "#f59e0b",
+    bg: "#f59e0b1a", // amber-500 @ 10% opacity
+    items: [
+      { id: 10, icon: <Calendar className={iconClass} />, label: "Rendez-vous", href: "/responsablecommercial/rendez-vous" },
+      { id: 11, icon: <ClipboardList className={iconClass} />, label: "Rapport Rendez-vous", href: "/responsablecommercial/rapport-rendez-vous" },
+      { id: 12, icon: <Eye className={iconClass} />, label: "Suivi Rendez-vous", href: "/responsablecommercial/suivi-rendez-vous" },
+    ],
   },
   {
-    id: 8,
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: "Rapport Rendez-vous",
-    href: "/responsablecommercial/rapport-rendez-vous",
-    category: "operations"
+    id: "reports",
+    label: "Rapports",
+    color: "#8b5cf6",
+    bg: "#8b5cf61a", // violet-500 @ 10% opacity
+    items: [
+      { id: 13, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
+      { id: 14, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
+    ],
   },
   {
-    id: 9,
-    icon: <Eye className="w-5 h-5" />,
-    label: "Suivi Rendez-vous",
-    href: "/responsablecommercial/suivi-rendez-vous",
-    category: "operations"
+    id: "facturation",
+    label: "Facturation",
+    color: "#ec4899",
+    bg: "#ec48991a", // pink-500 @ 10% opacity
+    items: [
+      { id: 15, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
+      { id: 16, icon: <Files className={iconClass} />, label: "Proformas-multi", href: "/responsablecommercial/profoma-multi" },
+      { id: 17, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
+      { id: 18, icon: <FileCheck className={iconClass} />, label: "Bon pour Acquis", href: "/responsablecommercial/bon-pour-acquis" },
+      { id: 19, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
+    ],
   },
-  
-  {
-    id: 10,
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: "Tableau de Chute",
-    href: "/responsablecommercial/tableau-chute",
-    category: "operations"
-  },
-  {
-    id: 11,
-    icon: <TrendingUp className="w-5 h-5" />,
-    label: "Suivi Commandes",
-    href: "/responsablecommercial/suivi-commandes",
-    category: "reports"
-  },
-  {
-    id: 12,
-    icon: <FileText className="w-5 h-5" />,
-    label: "Proformas",
-    href: "/responsablecommercial/proformas",
-    category: "facturation"
-  },
-  {
-    id: 13,
-    icon: <FileText className="w-5 h-5" />,
-    label: "Proformas-multi",
-    href: "/responsablecommercial/profoma-multi",
-    category: "facturation"
-  },
-  {
-    id: 14,
-    icon: <Receipt className="w-5 h-5" />,
-    label: "Bon de Commande",
-    href: "/responsablecommercial/bon-de-commande",
-    category: "facturation"
-  },
-  {
-    id: 15,
-    icon: <FileCheck className="w-5 h-5" />,
-    label: "Bon pour Acquis",
-    href: "/responsablecommercial/bon-pour-acquis",
-    category: "facturation"
-  },
-  {
-    id: 16,
-    icon: <Pen className="w-5 h-5" />,
-    label: "Signature",
-    href: "/responsablecommercial/signature",
-    category: "facturation"
-  }
 ];
 
 const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
@@ -143,23 +103,6 @@ const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
 
   // Responsive width calculation
   const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";
-
-  // Group items by category for better organization
-  const groupedItems = navItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, typeof navItems>);
-
-  const categoryLabels = {
-    main: "Principal",
-    inventory: "Inventaire",
-    operations: "Opérations",
-    reports: "Rapports",
-    facturation: "Facturation"
-  };
 
   return (
     <aside
@@ -189,15 +132,22 @@ const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
 
         {/* Navigation Items */}
         <div className="flex-1 p-4 space-y-6">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-2">
+          {navCategories.map((category) => (
+            <div
+              key={category.id}
+              className="space-y-2 rounded-xl p-3 -mx-1"
+              style={{ backgroundColor: category.bg }}
+            >
               {isOpen && (
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">
-                  {categoryLabels[category as keyof typeof categoryLabels]}
+                <h3
+                  className="text-xs font-semibold uppercase tracking-wider px-3"
+                  style={{ color: category.color }}
+                >
+                  {category.label}
                 </h3>
               )}
               
-              {items.map((item, index) => {
+              {category.items.map((item, index) => {
                 const isActive = pathname === item.href;
 
                 return (

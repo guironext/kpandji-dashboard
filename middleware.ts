@@ -1,10 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
 	"/",
+	"/sign-in(.*)",
+	"/sign-up(.*)",
 	"/api/webhooks/(.*)",
 	"/api/numero-chassis",
+	"/api/dev-bypass",
 ]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
@@ -61,11 +64,8 @@ const isCommunicationRoute = createRouteMatcher([
 	"/communication/(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req: NextRequest) => {
+const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	const { userId, sessionClaims, redirectToSignIn } = await auth();
-
-	console.log(sessionClaims?.metadata);
-	console.log(req.nextUrl.searchParams.get("onboardingCompleted"));
 
 	// Handle root path redirects based on role and onboarding status
 	if (
@@ -496,6 +496,17 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
 	return NextResponse.next();
 });
+
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
+	// Dev bypass: skip auth when Clerk fails to load (ad-blocker, etc.)
+	if (
+		process.env.NODE_ENV === "development" &&
+		req.cookies.get("__clerk_dev_bypass")?.value === "1"
+	) {
+		return NextResponse.next();
+	}
+	return clerkHandler(req, event);
+}
 
 export const config = {
 	matcher: [
