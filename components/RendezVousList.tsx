@@ -32,7 +32,6 @@ import {
   SortDesc,
   PencilIcon
 } from 'lucide-react';
-import { updateRendezVous } from '@/lib/actions/rendezvous';
 import { toast } from 'sonner';
 import { RendezVous } from '@/lib/types/rendezvous';
 
@@ -80,44 +79,76 @@ export function RendezVousList({ rendezVous, onUpdate }: RendezVousListProps) {
   const handleSaveEdit = async () => {
     if (!selectedRendezVous) return;
 
-    try {
-      const dateTime = new Date(`${formData.date}T${formData.time}`);
-      const result = await updateRendezVous(selectedRendezVous.id, {
-        date: dateTime,
-        duree: formData.duree || undefined,
-        resume_rendez_vous: formData.resume_rendez_vous || undefined,
-        note: formData.note || undefined,
-      });
+    const doSave = async (retries = 2) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const dateTime = new Date(`${formData.date}T${formData.time}`);
+          const res = await fetch(`/api/rendez-vous/${selectedRendezVous.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date: dateTime.toISOString(),
+              duree: formData.duree || undefined,
+              resume_rendez_vous: formData.resume_rendez_vous || undefined,
+              note: formData.note || undefined,
+            }),
+            credentials: 'same-origin',
+          });
+          const result = await res.json().catch(() => ({}));
 
-      if (result.success) {
-        toast.success('Rendez-vous mis à jour avec succès');
-        setEditDialogOpen(false);
-        onUpdate?.();
-      } else {
-        toast.error(result.error || 'Erreur lors de la mise à jour');
+          if (result.success) {
+            toast.success('Rendez-vous mis à jour avec succès');
+            setEditDialogOpen(false);
+            onUpdate?.();
+            return;
+          }
+          toast.error(result.error || 'Erreur lors de la mise à jour');
+          return;
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
       }
+    };
+
+    try {
+      await doSave();
     } catch (error) {
       console.error('Error updating rendez-vous:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error('Erreur réseau. Réessayez.');
     }
   };
 
   const handleStatusUpdate = async (rendezVousId: string, newStatus: string) => {
     setUpdatingStatus(rendezVousId);
-    try {
-      const result = await updateRendezVous(rendezVousId, {
-        statut: newStatus as RendezVous['statut'],
-      });
-
-      if (result.success) {
-        toast.success('Statut mis à jour avec succès');
-        onUpdate?.();
-      } else {
-        toast.error(result.error || 'Erreur lors de la mise à jour');
+    const doUpdate = async (retries = 2) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const res = await fetch(`/api/rendez-vous/${rendezVousId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statut: newStatus }),
+            credentials: 'same-origin',
+          });
+          const result = await res.json().catch(() => ({}));
+          if (result.success) {
+            toast.success('Statut mis à jour avec succès');
+            onUpdate?.();
+            return;
+          }
+          toast.error(result.error || 'Erreur lors de la mise à jour');
+          return;
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          await new Promise((r) => setTimeout(r, 500));
+        }
       }
+    };
+    try {
+      await doUpdate();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error('Erreur réseau. Réessayez.');
     } finally {
       setUpdatingStatus(null);
     }

@@ -30,7 +30,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { getClientsByUser, getClientEntreprisesByUser } from '@/lib/actions/rendezvous';
 import { toast } from 'sonner';
 import { Loader2, Calendar, User, Building2, Plus } from 'lucide-react';
 import { Client, ClientEntreprise } from '@/lib/types/rendezvous';
@@ -74,15 +73,19 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
     const fetchClients = async () => {
       try {
         setLoadingClients(true);
+        const [clientsRes, clientEntreprisesRes] = await Promise.all([
+          fetch(`/api/prospects/clients?userId=${encodeURIComponent(clerkUserId)}`),
+          fetch(`/api/prospects/client-entreprises?userId=${encodeURIComponent(clerkUserId)}`),
+        ]);
         const [clientsResult, clientEntreprisesResult] = await Promise.all([
-          getClientsByUser(clerkUserId),
-          getClientEntreprisesByUser(clerkUserId)
+          clientsRes.json().catch(() => ({ success: false })),
+          clientEntreprisesRes.json().catch(() => ({ success: false })),
         ]);
 
-        if (clientsResult.success) {
+        if (clientsResult.success && clientsResult.data) {
           setClients(clientsResult.data as Client[] || []);
         }
-        if (clientEntreprisesResult.success) {
+        if (clientEntreprisesResult.success && clientEntreprisesResult.data) {
           setClientEntreprises(clientEntreprisesResult.data as ClientEntreprise[] || []);
         }
       } catch (error) {

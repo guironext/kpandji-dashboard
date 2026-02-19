@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createFactureWithMultipleLines, getFactureById, updateFacture } from "@/lib/actions/facture";
 import { getClientsByUser } from "@/lib/actions/client";
 import { getClientEntreprisesByUser } from "@/lib/actions/client_entreprise";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
@@ -198,7 +197,8 @@ function CreerFacturePageContent() {
       
       setLoading(true);
       try {
-        const result = await getFactureById(factureId);
+        const res = await fetch(`/api/facture/${factureId}`);
+        const result = await res.json();
         if (result.success && result.data) {
           const facture = result.data as unknown as FactureData & {
             clientEntrepriseId?: string;
@@ -302,20 +302,22 @@ function CreerFacturePageContent() {
       if (isEditMode && factureId) {
         // Update existing facture (only first item for now)
         const firstItem = validItems[0];
-        
-        // Update facture with client information based on type
-        // Note: updateFacture only handles clientId for now
-        // You may need to extend it to handle clientEntrepriseId
-        const result = await updateFacture(factureId, {
-          ...(formData.clientType === "client" ? { clientId: formData.clientId } : {}),
-          nbr_voiture_commande: firstItem.nbr_voiture,
-          prix_unitaire: firstItem.prix_unitaire,
-          remise: formData.remise,
-          tva: formData.tva,
-          avance_payee: formData.avance_payee,
-          date_facture: new Date(formData.date_facture),
-          date_echeance: new Date(formData.date_echeance),
+
+        const res = await fetch(`/api/facture/${factureId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(formData.clientType === "client" ? { clientId: formData.clientId } : {}),
+            nbr_voiture_commande: firstItem.nbr_voiture,
+            prix_unitaire: firstItem.prix_unitaire,
+            remise: formData.remise,
+            tva: formData.tva,
+            avance_payee: formData.avance_payee,
+            date_facture: formData.date_facture,
+            date_echeance: formData.date_echeance,
+          }),
         });
+        const result = await res.json();
         
         if (result.success) {
           if (validItems.length > 1) {
@@ -335,32 +337,40 @@ function CreerFacturePageContent() {
         );
 
         // Create one facture with multiple line items
-        const result = await createFactureWithMultipleLines({
-          ...(formData.clientType === "client" 
-            ? { clientId: formData.clientId } 
-            : { clientEntrepriseId: formData.clientId }),
-          userId: dbUserId!,
-          date_facture: new Date(formData.date_facture),
-          date_echeance: new Date(formData.date_echeance),
-          remise: formData.remise,
-          tva: formData.tva,
-          avance_payee: formData.avance_payee,
-          status_facture: formData.status_facture,
-          lignes: validItems.map(item => ({
-            voitureModelId: item.voitureModelId,
-            couleur: item.couleur,
-            nbr_voiture: item.nbr_voiture,
-            prix_unitaire: item.prix_unitaire,
-            transmission: item.transmission,
-            motorisation: item.motorisation
-          })),
-          accessoires: validAccessories.length > 0 ? validAccessories.map(item => ({
-            nom: item.nom,
-            description: item.description,
-            prix_unitaire: item.prix_unitaire,
-            quantity: item.quantity
-          })) : undefined
+        const res = await fetch("/api/facture", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(formData.clientType === "client"
+              ? { clientId: formData.clientId }
+              : { clientEntrepriseId: formData.clientId }),
+            userId: dbUserId,
+            date_facture: formData.date_facture,
+            date_echeance: formData.date_echeance,
+            remise: formData.remise,
+            tva: formData.tva,
+            avance_payee: formData.avance_payee,
+            status_facture: formData.status_facture,
+            lignes: validItems.map((item) => ({
+              voitureModelId: item.voitureModelId,
+              couleur: item.couleur,
+              nbr_voiture: item.nbr_voiture,
+              prix_unitaire: item.prix_unitaire,
+              transmission: item.transmission,
+              motorisation: item.motorisation,
+            })),
+            accessoires:
+              validAccessories.length > 0
+                ? validAccessories.map((item) => ({
+                    nom: item.nom,
+                    description: item.description,
+                    prix_unitaire: item.prix_unitaire,
+                    quantity: item.quantity,
+                  }))
+                : undefined,
+          }),
         });
+        const result = await res.json();
     
         if (result.success) {
           toast.success(`Facture créée avec ${validItems.length} article(s)${validAccessories.length > 0 ? ` et ${validAccessories.length} accessoire(s)` : ''}`);

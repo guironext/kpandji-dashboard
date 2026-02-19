@@ -252,10 +252,11 @@ export async function updateRendezVous(
   },
 ) {
   try {
+    const { duree: _duree, ...validData } = data;
     const rendezVous = await prisma.rendezVous.update({
       where: { id },
       data: {
-        ...data,
+        ...validData,
         updatedAt: new Date(),
       },
       include: { client: true },
@@ -265,7 +266,14 @@ export async function updateRendezVous(
     return { success: true, data: rendezVous };
   } catch (error) {
     console.error("Error updating rendez-vous:", error);
-    return { success: false, error: "Failed to update appointment" };
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const msg =
+      errMsg.includes("Record to update not found")
+        ? "Rendez-vous introuvable."
+        : errMsg.includes("connect") || errMsg.includes("database")
+          ? "Impossible de joindre la base de données. Réessayez plus tard."
+          : `Erreur : ${errMsg}`;
+    return { success: false, error: msg };
   }
 }
 

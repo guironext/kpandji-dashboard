@@ -1,7 +1,31 @@
-import { NextResponse } from "next/server";
-import { createRendezVous } from "@/lib/actions/rendezvous";
+import { NextRequest, NextResponse } from "next/server";
+import { createRendezVous, getRendezVousByUser } from "@/lib/actions/rendezvous";
 
 export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
+  try {
+    const userId = request.nextUrl.searchParams.get("userId");
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "userId requis" },
+        { status: 400 }
+      );
+    }
+    const result = await getRendezVousByUser(userId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("API getRendezVous error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Erreur lors du chargement",
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {

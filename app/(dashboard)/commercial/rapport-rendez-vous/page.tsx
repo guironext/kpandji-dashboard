@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, FileText, User, Building2, Phone, Mail, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { getRendezVousByUser, createRapportRendezVousComplet } from '@/lib/actions/rendezvous';
 import { RapportRendezVousForm } from '@/components/RapportRendezVousForm';
 
 interface RendezVous {
@@ -55,7 +54,8 @@ export default function RapportRendezVousPage() {
     if (!user?.id) return;
 
     try {
-      const result = await getRendezVousByUser(user.id);
+      const res = await fetch(`/api/rendez-vous?userId=${encodeURIComponent(user.id)}`);
+      const result = await res.json();
       if (result.success) {
         // Filter only rendezvous with status EFFECTUE
         const data = (result.data || []) as RendezVous[];
@@ -128,7 +128,12 @@ export default function RapportRendezVousPage() {
     commentaire_global?: string;
   }) => {
     try {
-      const result = await createRapportRendezVousComplet(data);
+      const res = await fetch('/api/rapport-rendez-vous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
       if (result.success) {
         toast.success('Rapport créé avec succès!');
         setShowForm(false);
