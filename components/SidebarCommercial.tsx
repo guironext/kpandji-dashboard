@@ -18,256 +18,344 @@ import {
   Pen,
   Mail,
   MessageSquare,
+  LayoutDashboard,
+  ShoppingCart,
+  FileSpreadsheet,
+  Radio,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
-// Organized navigation items with better icons and logical grouping
 const navItems = [
   {
     id: 1,
-    icon: <Home className="w-5 h-5" />,
+    icon: Home,
     label: "Dashboard",
     href: "/commercial",
-    category: "main"
+    category: "main",
   },
   {
     id: 2,
-    icon: <Car className="w-5 h-5" />,
+    icon: Car,
     label: "Modèles Voitures",
     href: "/commercial/ajouter-modele",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 3,
-    icon: <Package className="w-5 h-5" />,
+    icon: Package,
     label: "Accessoires",
     href: "/commercial/ajouter-accessoires",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 4,
-    icon: <Warehouse className="w-5 h-5" />,
+    icon: Warehouse,
     label: "Stock disponible",
     href: "/commercial/stock-disponible",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 5,
-    icon: <UserCheck className="w-5 h-5" />,
+    icon: UserCheck,
     label: "Prospects",
     href: "/commercial/prospects",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 6,
-    icon: <Users className="w-5 h-5" />,
+    icon: Users,
     label: "Clients",
     href: "/commercial/clients",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 7,
-    icon: <Calendar className="w-5 h-5" />,
+    icon: Calendar,
     label: "Rendez-vous",
     href: "/commercial/rendez-vous",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 8,
-    icon: <ClipboardList className="w-5 h-5" />,
+    icon: ClipboardList,
     label: "Rapport Rendez-vous",
     href: "/commercial/rapport-rendez-vous",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 9,
-    icon: <Eye className="w-5 h-5" />,
+    icon: Eye,
     label: "Suivi Rendez-vous",
     href: "/commercial/suivi-rendez-vous",
-    category: "operations"
+    category: "operations",
   },
-  
   {
     id: 10,
-    icon: <BarChart3 className="w-5 h-5" />,
+    icon: BarChart3,
     label: "Tableau de Chute",
     href: "/commercial/tableau-chute",
-    category: "operations"
+    category: "operations",
   },
   {
     id: 11,
-    icon: <TrendingUp className="w-5 h-5" />,
+    icon: TrendingUp,
     label: "Suivi Commandes",
     href: "/commercial/suivi-commandes",
-    category: "reports"
+    category: "reports",
   },
   {
     id: 12,
-    icon: <FileText className="w-5 h-5" />,
+    icon: FileText,
     label: "Proformas",
     href: "/commercial/proformas",
-    category: "facturation"
+    category: "facturation",
   },
   {
     id: 13,
-    icon: <FileText className="w-5 h-5" />,
+    icon: FileSpreadsheet,
     label: "Proformas-multi",
     href: "/commercial/profoma-multi",
-    category: "facturation"
+    category: "facturation",
   },
   {
     id: 14,
-    icon: <Receipt className="w-5 h-5" />,
+    icon: Receipt,
     label: "Bon de Commande",
     href: "/commercial/bon-de-commande",
-    category: "facturation"
+    category: "facturation",
   },
   {
     id: 15,
-    icon: <FileCheck className="w-5 h-5" />,
+    icon: FileCheck,
     label: "Bon pour Acquis",
     href: "/commercial/bon-pour-acquis",
-    category: "facturation"
+    category: "facturation",
   },
   {
     id: 16,
-    icon: <Pen className="w-5 h-5" />,
+    icon: Pen,
     label: "Signature",
     href: "/commercial/signature",
-    category: "facturation"
+    category: "facturation",
   },
   {
     id: 17,
-    icon: <Mail className="w-5 h-5" />,
+    icon: Mail,
     label: "Numéro Courrier",
     href: "/commercial/numero-courrier",
-    category: "Communication"
+    category: "communication",
   },
   {
     id: 18,
-    icon: <MessageSquare className="w-5 h-5" />,
+    icon: MessageSquare,
     label: "Messages",
     href: "/commercial/messages",
-    category: "Communication"
+    category: "communication",
   },
 ];
+
+const categoryConfig = {
+  main: {
+    label: "Principal",
+    icon: LayoutDashboard,
+    color: "from-amber-500 to-orange-600",
+    bgColor: "bg-amber-500/10",
+    textColor: "text-amber-700",
+  },
+  operations: {
+    label: "Opérations",
+    icon: ShoppingCart,
+    color: "from-blue-500 to-indigo-600",
+    bgColor: "bg-blue-500/10",
+    textColor: "text-blue-700",
+  },
+  reports: {
+    label: "Rapports",
+    icon: BarChart3,
+    color: "from-emerald-500 to-teal-600",
+    bgColor: "bg-emerald-500/10",
+    textColor: "text-emerald-700",
+  },
+  facturation: {
+    label: "Facturation",
+    icon: Receipt,
+    color: "from-violet-500 to-purple-600",
+    bgColor: "bg-violet-500/10",
+    textColor: "text-violet-700",
+  },
+  communication: {
+    label: "Communication",
+    icon: Radio,
+    color: "from-rose-500 to-pink-600",
+    bgColor: "bg-rose-500/10",
+    textColor: "text-rose-700",
+  },
+} as const;
 
 const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
-  // Responsive width calculation
-  const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";
-
-  // Group items by category for better organization
   const groupedItems = navItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
+    if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  const categoryLabels = {
-    main: "Principal",
-    inventory: "Inventaire",
-    operations: "Opérations",
-    reports: "Rapports",
-    facturation: "Facturation"
+  const categoryOrder = ["main", "operations", "reports", "facturation", "communication"];
+
+  const NavLink = ({ item }: { item: (typeof navItems)[0] }) => {
+    const isActive = pathname === item.href;
+    const Icon = item.icon;
+
+    const linkContent = (
+      <Link
+        href={item.href}
+        className={clsx(
+          "group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+          "hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2",
+          isOpen ? "justify-start" : "justify-center",
+          isActive
+            ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25"
+            : "text-slate-600 hover:bg-white/80 hover:text-slate-900"
+        )}
+        aria-label={item.label}
+      >
+        <div
+          className={clsx(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+            isActive
+              ? "bg-white/20"
+              : "bg-slate-100 text-slate-600 group-hover:bg-amber-100 group-hover:text-amber-600"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+        <span
+          className={clsx(
+            "text-sm font-medium whitespace-nowrap transition-all duration-300",
+            isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
+    );
+
+    if (!isOpen) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12} className="font-medium">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
   };
 
   return (
-    <aside
-      className={clsx(
-        "h-full border-r border-gray-200 bg-white shadow-lg transition-all duration-300 ease-in-out overflow-y-auto -mt-10",
-        responsiveWidth
-      )}
-    >
-      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <TooltipProvider delayDuration={0}>
+      <aside
+        className={clsx(
+          "h-full flex flex-col border-r border-slate-200/80 bg-white transition-all duration-300 ease-out overflow-hidden",
+          "shadow-[4px_0_24px_-4px_rgba(0,0,0,0.08)]"
+        )}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-5 h-5 text-white" />
+        <div className="shrink-0 border-b border-slate-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50/50 px-4 py-5">
+          <div
+            className={clsx(
+              "flex items-center gap-3 transition-all duration-300",
+              isOpen ? "justify-start" : "justify-center"
+            )}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30">
+              <Car className="h-5 w-5 text-white" />
             </div>
             {isOpen && (
-              <div className="hidden md:block">
-                <h2 className="text-lg font-bold text-gray-900">Commercial</h2>
-                <p className="text-xs text-gray-500">Equipe Commercial</p>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-slate-900 truncate">
+                  Commercial
+                </h2>
+                <p className="text-xs text-slate-500">Espace de vente</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Navigation Items */}
-        <div className="flex-1 p-4 space-y-6">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              {isOpen && (
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">
-                  {categoryLabels[category as keyof typeof categoryLabels]}
-                </h3>
-              )}
-              
-              {items.map((item, index) => {
-                const isActive = pathname === item.href;
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 custom-scrollbar">
+          <div className="space-y-8">
+            {categoryOrder.map((category) => {
+              const items = groupedItems[category];
+              if (!items?.length) return null;
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={clsx(
-                      "group flex items-center text-gray-700 duration-200 ease-in-out transform px-3 py-2.5 rounded-xl",
-                      "hover:bg-white hover:shadow-sm hover:scale-[1.02] transition-all",
-                      isOpen ? "justify-start gap-3" : "justify-center",
-                      isActive
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-[1.02]"
-                        : "hover:text-gray-900"
-                    )}
-                    style={{
-                      transitionDelay: `${index * 50}ms`,
-                    }}
-                    aria-label={item.label}
-                  >
-                    <div className={clsx(
-                      "transition-all duration-200 group-hover:scale-110",
-                      isActive ? "text-white" : "text-gray-600 group-hover:text-blue-600"
-                    )}>
-                      {item.icon}
+              const config = categoryConfig[category as keyof typeof categoryConfig];
+              if (!config) return null;
+
+              const CategoryIcon = config.icon;
+
+              return (
+                <div key={category} className="space-y-2">
+                  {isOpen && (
+                    <div className="flex items-center gap-2 px-3 mb-2">
+                      <div
+                        className={clsx(
+                          "flex h-6 w-6 items-center justify-center rounded-md",
+                          config.bgColor,
+                          config.textColor
+                        )}
+                      >
+                        <CategoryIcon className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {config.label}
+                      </span>
                     </div>
-                    
-                    <span
-                      className={clsx(
-                        "text-sm font-medium transition-all duration-300 whitespace-nowrap",
-                        isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                  )}
+
+                  <div className="space-y-1">
+                    {items.map((item) => (
+                      <NavLink key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="text-xs text-gray-500">
-              {isOpen ? "Version 1.0" : "v1.0"}
-            </div>
+        <div className="shrink-0 border-t border-slate-200/80 bg-slate-50/80 px-4 py-3">
+          <div
+            className={clsx(
+              "flex items-center transition-all duration-300",
+              isOpen ? "justify-start gap-2" : "justify-center"
+            )}
+          >
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span
+              className={clsx(
+                "text-xs text-slate-500 transition-all duration-300",
+                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              )}
+            >
+              En ligne
+            </span>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 };
 

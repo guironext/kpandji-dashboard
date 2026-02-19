@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
 	"/api/webhooks/(.*)",
 	"/api/numero-chassis",
 	"/api/dev-bypass",
+	"/api/health",
+	"/api/ping",
 ]);
 // Skip middleware for prospects API - uses userId from body, avoids fetch issues
 const isProspectsApi = createRouteMatcher(["/api/prospects/(.*)"]);

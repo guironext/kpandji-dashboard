@@ -4,12 +4,20 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-let databaseUrl = process.env.DATABASE_URL || "postgresql://dummy:dummy@dummy:5432/dummy";
-if (databaseUrl && databaseUrl.startsWith("postgresql://")) {
+function configureDatabaseUrl(): void {
+  const raw = process.env.DATABASE_URL;
+  if (!raw || raw.includes("dummy")) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(
+        "[Prisma] DATABASE_URL is missing or invalid. Set it in Vercel Environment Variables."
+      );
+    }
+    return;
+  }
   try {
-    const url = new URL(databaseUrl);
+    const url = new URL(raw);
     if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", "10");
+      url.searchParams.set("connection_limit", "5");
     }
     if (!url.searchParams.has("pool_timeout")) {
       url.searchParams.set("pool_timeout", "20");
@@ -20,15 +28,18 @@ if (databaseUrl && databaseUrl.startsWith("postgresql://")) {
     if (!url.searchParams.has("sslmode") && url.hostname.includes("neon.tech")) {
       url.searchParams.set("sslmode", "require");
     }
-    databaseUrl = url.toString();
-    process.env.DATABASE_URL = databaseUrl;
+    process.env.DATABASE_URL = url.toString();
   } catch (error) {
-    console.warn("Failed to parse DATABASE_URL, using original:", error);
+    console.warn("[Prisma] Failed to parse DATABASE_URL:", error);
   }
 }
 
+configureDatabaseUrl();
+
 export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient();
+  globalForPrisma.prisma ?? new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

@@ -64,7 +64,8 @@
     "svix": "^1.69.0",
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "prisma": "^6.19.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -79,7 +80,6 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
     "neonctl": "^2.20.2",
-    "prisma": "^6.19.2",
     "style-loader": "^4.0.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",

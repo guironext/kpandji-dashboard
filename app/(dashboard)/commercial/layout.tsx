@@ -30,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div
         className={clsx(
           "fixed top-24 left-0 h-[calc(100vh-4rem)] z-40 transition-all duration-500 ease-in-out",
-          isSidebarOpen ? "w-52" : "w-20"
+          isSidebarOpen ? "w-64" : "w-20"
         )}
       >
         <SidebarCommercial isOpen={isSidebarOpen} />
@@ -49,7 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main
         className={clsx(
           "pt-16 h-screen overflow-y-auto transition-all duration-500 ease-in-out",
-          isSidebarOpen ? "ml-52" : "ml-20"
+          isSidebarOpen ? "ml-64" : "ml-20"
         )}
       >
         <div className={clsx(isSidebarOpen ? "ml-13" : "ml-1")}>{children}</div>

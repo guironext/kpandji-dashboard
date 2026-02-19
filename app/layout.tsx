@@ -26,9 +26,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Dev bypass: hide ClerkFailed overlay when user chose to continue without auth
-  const cookieStore = await cookies();
-  const devBypass = process.env.NODE_ENV === "development" && cookieStore.get("__clerk_dev_bypass")?.value === "1";
+  let devBypass = false;
+  try {
+    const cookieStore = await cookies();
+    devBypass = process.env.NODE_ENV === "development" && cookieStore.get("__clerk_dev_bypass")?.value === "1";
+  } catch (e) {
+    console.warn("[Layout] Could not read cookies:", e);
+  }
 
   if (!clerkPublishableKey) {
     throw new Error(
