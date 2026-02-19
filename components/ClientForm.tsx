@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createClient } from '@/lib/actions/client';
 import { toast } from 'sonner';
 import { Loader2, User} from 'lucide-react';
 
@@ -63,22 +62,56 @@ export function ClientForm({ userId, userName, onSuccess }: ClientFormProps) {
 
   const onSubmit = async (data: ClientFormData) => {
     setIsSubmitting(true);
-    try {
-      const result = await createClient({
-        ...data,
-        userId,
-      });
 
-      if (result.success) {
-        toast.success('Client créé avec succès!');
-        form.reset();
-        onSuccess?.();
-      } else {
-        toast.error(result.error || 'Erreur lors de la création du client');
+    const createViaApi = async (): Promise<{ success: boolean; error?: string }> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      const res = await fetch('/api/prospects/client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, userId }),
+        credentials: 'same-origin',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const json = await res.json().catch(() => ({}));
+      return { success: json.success ?? false, error: json.error };
+    };
+
+    const submitWithRetry = async (retries = 5) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const result = await createViaApi();
+          if (result.success) {
+            toast.success('Client créé avec succès!');
+            form.reset();
+            onSuccess?.();
+            return;
+          }
+          toast.error(result.error || 'Erreur lors de la création du client');
+          return;
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
       }
+    };
+
+    try {
+      await submitWithRetry();
     } catch (error) {
       console.error('Error creating client:', error);
-      toast.error('Erreur lors de la création du client');
+      const raw = error instanceof Error ? error.message : String(error);
+      const msg =
+        raw.includes('fetch') ||
+        raw.includes('network') ||
+        raw.includes('Load failed') ||
+        raw.includes('abort')
+          ? 'Erreur réseau. Vérifiez votre connexion et réessayez.'
+          : raw;
+      toast.error(msg || 'Erreur lors de la création du client');
     } finally {
       setIsSubmitting(false);
     }

@@ -22,8 +22,14 @@ export async function createClient(data: {
     const userResult = await getOrCreateUser(data.userId);
     
     if (!userResult.success || !userResult.data) {
-      console.log("Failed to get or create user for clerkId:", data.userId);
-      return { success: false, error: userResult.error || "User not found" };
+      console.error("Failed to get or create user for clerkId:", data.userId, userResult.error);
+      const err = userResult.error || "User not found";
+      const msg =
+        err.includes("email") ? "Profil incomplet : ajoutez un email dans vos paramètres Clerk."
+        : err.includes("Clerk") ? "Utilisateur introuvable. Reconnectez-vous."
+        : err.includes("authenticated") ? "Session expirée. Reconnectez-vous."
+        : `Erreur utilisateur : ${err}`;
+      return { success: false, error: msg };
     }
     
     const user = userResult.data;
@@ -52,13 +58,20 @@ export async function createClient(data: {
 
     console.log("Client created successfully:", client);
     revalidatePath("/manager");
+    revalidatePath("/commercial/prospects");
     return { success: true, data: client };
   } catch (error) {
     console.error("Error creating client:", error);
-    if (error instanceof Error) {
-      return { success: false, error: `Failed to create client: ${error.message}` };
-    }
-    return { success: false, error: "Failed to create client" };
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const msg =
+      errMsg.includes("Unique constraint") || errMsg.includes("unique")
+        ? "Un client avec ces informations existe déjà."
+        : errMsg.includes("Foreign key") || errMsg.includes("constraint")
+          ? "Erreur de référence. Vérifiez que votre profil est complet."
+          : errMsg.includes("connect") || errMsg.includes("database")
+            ? "Impossible de joindre la base de données. Réessayez plus tard."
+            : `Erreur : ${errMsg}`;
+    return { success: false, error: msg };
   }
 }
 
@@ -367,31 +380,17 @@ export async function getClientsByUser(userId: string) {
       where: {
         userId: user.id,
       },
-      include: { 
-        User: true,
-        Voiture: {
-          include: {
-            VoitureModel: true
-          }
-        }
-      },
+      include: { User: true },
       orderBy: { createdAt: 'desc' }  // Newest to oldest
     });
     
     return { 
       success: true, 
       data: (clients as unknown[]).map((c: unknown) => {
-        const item = c as Record<string, unknown> & { User?: unknown; Voiture?: unknown[] };
+        const item = c as Record<string, unknown> & { User?: unknown };
         return {
           ...item,
-          user: item.User,
-          voitures: item.Voiture?.map((v: unknown) => {
-            const voiture = v as Record<string, unknown> & { VoitureModel?: unknown };
-            return {
-              ...voiture,
-              voitureModel: voiture.VoitureModel
-            };
-          })
+          user: item.User
         };
       })
     };

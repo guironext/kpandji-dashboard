@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { createRendezVous, getClientsByUser, getClientEntreprisesByUser } from '@/lib/actions/rendezvous';
+import { getClientsByUser, getClientEntreprisesByUser } from '@/lib/actions/rendezvous';
 import { toast } from 'sonner';
 import { Loader2, Calendar, User, Building2, Plus } from 'lucide-react';
 import { Client, ClientEntreprise } from '@/lib/types/rendezvous';
@@ -98,28 +98,49 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
 
   const onSubmit = async (data: RendezVousFormData) => {
     setIsSubmitting(true);
-    try {
-      // Combine date and time
-      const dateTime = new Date(`${data.date}T${data.time}`);
-      
-      const result = await createRendezVous({
-        date: dateTime,
-        statut: 'EN_ATTENTE',
-        clientId: data.clientType === 'CLIENT' ? data.clientId : undefined,
-        clientEntrepriseId: data.clientType === 'CLIENT_ENTREPRISE' ? data.clientId : undefined,
-      });
+    const submitWithRetry = async (retries = 3) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const dateTime = new Date(`${data.date}T${data.time}`);
+          const res = await fetch('/api/rendez-vous', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date: dateTime.toISOString(),
+              statut: 'EN_ATTENTE',
+              clientId: data.clientType === 'CLIENT' ? data.clientId : undefined,
+              clientEntrepriseId: data.clientType === 'CLIENT_ENTREPRISE' ? data.clientId : undefined,
+            }),
+            credentials: 'same-origin',
+          });
+          const result = await res.json().catch(() => ({}));
 
-      if (result.success) {
-        toast.success('Rendez-vous créé avec succès!');
-        form.reset();
-        setIsOpen(false);
-        onSuccess?.();
-      } else {
-        toast.error(result.error || 'Erreur lors de la création du rendez-vous');
+          if (result.success) {
+            toast.success('Rendez-vous créé avec succès!');
+            form.reset();
+            setIsOpen(false);
+            onSuccess?.();
+            return;
+          }
+          toast.error(result.error || 'Erreur lors de la création du rendez-vous');
+          return;
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        }
       }
+    };
+
+    try {
+      await submitWithRetry();
     } catch (error) {
       console.error('Error creating rendez-vous:', error);
-      toast.error('Erreur lors de la création du rendez-vous');
+      const raw = error instanceof Error ? error.message : String(error);
+      const msg =
+        raw.includes('fetch') || raw.includes('network') || raw.includes('Load failed')
+          ? 'Erreur réseau. Vérifiez votre connexion et réessayez.'
+          : raw;
+      toast.error(msg || 'Erreur lors de la création du rendez-vous');
     } finally {
       setIsSubmitting(false);
     }

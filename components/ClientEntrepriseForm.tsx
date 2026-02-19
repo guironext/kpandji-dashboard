@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createClientEntreprise } from '@/lib/actions/client_entreprise';
 import { toast } from 'sonner';
 import { Loader2, Building2, Users } from 'lucide-react';
 
@@ -77,22 +76,58 @@ export function ClientEntrepriseForm({ userId, userName, onSuccess }: ClientEntr
 
   const onSubmit = async (data: ClientEntrepriseFormData) => {
     setIsSubmitting(true);
-    try {
-      const result = await createClientEntreprise({
-        ...data,
-        userId,
-      });
 
-      if (result.success) {
-        toast.success('Client entreprise créé avec succès!');
-        form.reset();
-        onSuccess?.();
-      } else {
-        toast.error(result.error || 'Erreur lors de la création du client entreprise');
+    const createViaApi = async (): Promise<{ success: boolean; error?: string }> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      const res = await fetch('/api/prospects/client-entreprise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, userId }),
+        credentials: 'same-origin',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const json = await res.json().catch(() => ({}));
+      return { success: json.success ?? false, error: json.error };
+    };
+
+    const submitWithRetry = async (retries = 5) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const result = await createViaApi();
+          if (result.success) {
+            toast.success('Client entreprise créé avec succès!');
+            form.reset();
+            onSuccess?.();
+            return;
+          }
+          toast.error(
+            result.error || 'Erreur lors de la création du client entreprise',
+          );
+          return;
+        } catch (error) {
+          if (attempt === retries - 1) throw error;
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
       }
+    };
+
+    try {
+      await submitWithRetry();
     } catch (error) {
       console.error('Error creating client entreprise:', error);
-      toast.error('Erreur lors de la création du client entreprise');
+      const raw = error instanceof Error ? error.message : String(error);
+      const msg =
+        raw.includes('fetch') ||
+        raw.includes('network') ||
+        raw.includes('Load failed') ||
+        raw.includes('abort')
+          ? 'Erreur réseau. Vérifiez votre connexion et réessayez.'
+          : raw;
+      toast.error(msg || 'Erreur lors de la création du client entreprise');
     } finally {
       setIsSubmitting(false);
     }

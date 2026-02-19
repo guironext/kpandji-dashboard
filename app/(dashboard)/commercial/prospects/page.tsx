@@ -25,16 +25,6 @@ import {
 import { ClientForm } from "@/components/ClientForm";
 import { ClientEntrepriseForm } from "@/components/ClientEntrepriseForm";
 import {
-	getClientsByUser,
-	updateClient,
-	deleteClient,
-} from "@/lib/actions/client";
-import {
-	getClientEntreprisesByUser,
-	updateClientEntreprise,
-	deleteClientEntreprise,
-} from "@/lib/actions/client_entreprise";
-import {
 	Users,
 	Building2,
 	Phone,
@@ -55,10 +45,44 @@ import {
 	XAxis,
 	YAxis,
 	Tooltip,
+	Legend,
 	ResponsiveContainer,
 	CartesianGrid,
 } from "recharts";
 import { toast } from "sonner";
+
+async function fetchClients(userId: string) {
+	const res = await fetch(`/api/prospects/clients?userId=${encodeURIComponent(userId)}`);
+	return res.json();
+}
+async function fetchClientEntreprises(userId: string) {
+	const res = await fetch(`/api/prospects/client-entreprises?userId=${encodeURIComponent(userId)}`);
+	return res.json();
+}
+async function updateClientApi(id: string, data: Record<string, unknown>) {
+	const res = await fetch(`/api/prospects/client/${id}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+async function deleteClientApi(id: string) {
+	const res = await fetch(`/api/prospects/client/${id}`, { method: "DELETE" });
+	return res.json();
+}
+async function updateClientEntrepriseApi(id: string, data: Record<string, unknown>) {
+	const res = await fetch(`/api/prospects/client-entreprise/${id}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+async function deleteClientEntrepriseApi(id: string) {
+	const res = await fetch(`/api/prospects/client-entreprise/${id}`, { method: "DELETE" });
+	return res.json();
+}
 
 interface Client {
 	id: string;
@@ -159,20 +183,36 @@ const ProspectsPage = () => {
 				return;
 			}
 
-			try {
-				const [clientsResult, clientEntreprisesResult] = await Promise.all([
-					getClientsByUser(user.id),
-					getClientEntreprisesByUser(user.id),
-				]);
+			const fetchWithRetry = async (retries = 3) => {
+				for (let attempt = 0; attempt < retries; attempt++) {
+					try {
+						const [clientsResult, clientEntreprisesResult] =
+							await Promise.all([
+								fetchClients(user.id),
+								fetchClientEntreprises(user.id),
+							]);
 
-				if (clientsResult.success && clientsResult.data) {
-					setClients(clientsResult.data as unknown as Client[]);
+						if (clientsResult.success && clientsResult.data) {
+							setClients(clientsResult.data as unknown as Client[]);
+						}
+						if (
+							clientEntreprisesResult.success &&
+							clientEntreprisesResult.data
+						) {
+							setClientEntreprises(
+								clientEntreprisesResult.data as unknown as ClientEntreprise[],
+							);
+						}
+						return;
+					} catch (error) {
+						if (attempt === retries - 1) throw error;
+						await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+					}
 				}
-				if (clientEntreprisesResult.success && clientEntreprisesResult.data) {
-					setClientEntreprises(
-						clientEntreprisesResult.data as unknown as ClientEntreprise[],
-					);
-				}
+			};
+
+			try {
+				await fetchWithRetry();
 			} catch (error) {
 				console.error("Error fetching data:", error);
 				toast.error("Erreur lors du chargement des données");
@@ -184,30 +224,59 @@ const ProspectsPage = () => {
 		fetchData();
 	}, [isLoaded, user?.id]);
 
-	// Chart data: prospects created by current user, grouped by month
-	const chartDataByMonth = useMemo(() => {
-		const allProspects: { createdAt: Date }[] = [
-			...clients.map((c) => ({ createdAt: c.createdAt })),
-			...clientEntreprises.map((c) => ({ createdAt: c.createdAt })),
+	// Chart data: prospects (status_client === PROSPECT) by month and secteur_activite
+	const { chartDataByMonth, secteurColors, secteurs } = useMemo(() => {
+		const allProspects: { createdAt: Date; secteur_activite?: string | null }[] = [
+			...clients
+				.filter((c) => c.status_client === "PROSPECT")
+				.map((c) => ({ createdAt: c.createdAt, secteur_activite: c.secteur_activite })),
+			...clientEntreprises
+				.filter((c) => c.status_client === "PROSPECT")
+				.map((c) => ({ createdAt: c.createdAt, secteur_activite: c.secteur_activite })),
 		];
-		const monthMap = new Map<string, number>();
+
+		const secteurSet = new Set<string>();
+		const monthSecteurMap = new Map<string, Map<string, number>>();
+
 		for (const p of allProspects) {
 			const d = new Date(p.createdAt);
 			const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-			monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+			const secteur = (p.secteur_activite?.trim() || "Non renseigné") as string;
+			secteurSet.add(secteur);
+
+			if (!monthSecteurMap.has(monthKey)) {
+				monthSecteurMap.set(monthKey, new Map());
+			}
+			const secteurMap = monthSecteurMap.get(monthKey)!;
+			secteurMap.set(secteur, (secteurMap.get(secteur) ?? 0) + 1);
 		}
-		const sortedMonths = Array.from(monthMap.keys()).sort();
-		return sortedMonths.map((monthKey) => {
+
+		const secteurs = Array.from(secteurSet).sort();
+		const sortedMonths = Array.from(monthSecteurMap.keys()).sort();
+
+		const chartData = sortedMonths.map((monthKey) => {
 			const [year, month] = monthKey.split("-");
 			const monthLabel = new Date(
 				parseInt(year),
 				parseInt(month) - 1
 			).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-			return {
-				month: monthLabel,
-				prospects: monthMap.get(monthKey) ?? 0,
-			};
+			const row: Record<string, string | number> = { month: monthLabel };
+			for (const s of secteurs) {
+				row[s] = monthSecteurMap.get(monthKey)?.get(s) ?? 0;
+			}
+			return row;
 		});
+
+		const COLORS = [
+			"#2563eb", "#16a34a", "#ca8a04", "#dc2626", "#9333ea",
+			"#0891b2", "#ea580c", "#4f46e5", "#0d9488", "#be185d",
+		];
+		const secteurColors: Record<string, string> = {};
+		secteurs.forEach((s, i) => {
+			secteurColors[s] = COLORS[i % COLORS.length];
+		});
+
+		return { chartDataByMonth: chartData, secteurColors, secteurs };
 	}, [clients, clientEntreprises]);
 
 	const handleFormSuccess = () => {
@@ -215,23 +284,39 @@ const ProspectsPage = () => {
 		const fetchData = async () => {
 			if (!user?.id) return;
 
-			try {
-				const [clientsResult, clientEntreprisesResult] = await Promise.all([
-					getClientsByUser(user.id),
-					getClientEntreprisesByUser(user.id),
-				]);
+			const fetchWithRetry = async (retries = 2) => {
+				for (let attempt = 0; attempt < retries; attempt++) {
+					try {
+						const [clientsResult, clientEntreprisesResult] =
+							await Promise.all([
+								fetchClients(user.id),
+								fetchClientEntreprises(user.id),
+							]);
 
-				if (clientsResult.success && clientsResult.data) {
-					setClients(clientsResult.data as unknown as Client[]);
+						if (clientsResult.success && clientsResult.data) {
+							setClients(clientsResult.data as unknown as Client[]);
+						}
+						if (
+							clientEntreprisesResult.success &&
+							clientEntreprisesResult.data
+						) {
+							setClientEntreprises(
+								clientEntreprisesResult.data as unknown as ClientEntreprise[],
+							);
+						}
+						return;
+					} catch (error) {
+						if (attempt === retries - 1) {
+							console.error("Error refreshing data:", error);
+							toast.error("Erreur lors du rafraîchissement");
+						} else {
+							await new Promise((r) => setTimeout(r, 500));
+						}
+					}
 				}
-				if (clientEntreprisesResult.success && clientEntreprisesResult.data) {
-					setClientEntreprises(
-						clientEntreprisesResult.data as unknown as ClientEntreprise[],
-					);
-				}
-			} catch (error) {
-				console.error("Error refreshing data:", error);
-			}
+			};
+
+			await fetchWithRetry();
 		};
 
 		fetchData();
@@ -283,7 +368,7 @@ const ProspectsPage = () => {
 
 		setIsSubmittingEdit(true);
 		try {
-			const result = await updateClientEntreprise(
+			const result = await updateClientEntrepriseApi(
 				editingClientEntreprise.id,
 				formData,
 			);
@@ -314,7 +399,7 @@ const ProspectsPage = () => {
 		}
 
 		try {
-			const result = await deleteClientEntreprise(id);
+			const result = await deleteClientEntrepriseApi(id);
 
 			if (result.success) {
 				toast.success("Client entreprise supprimé avec succès!");
@@ -353,7 +438,7 @@ const ProspectsPage = () => {
 
 		setIsSubmittingClientEdit(true);
 		try {
-			const result = await updateClient(editingClient.id, clientFormData);
+			const result = await updateClientApi(editingClient.id, clientFormData);
 
 			if (result.success) {
 				toast.success("Client mis à jour avec succès!");
@@ -381,7 +466,7 @@ const ProspectsPage = () => {
 		}
 
 		try {
-			const result = await deleteClient(id);
+			const result = await deleteClientApi(id);
 
 			if (result.success) {
 				toast.success("Client supprimé avec succès!");
@@ -506,75 +591,44 @@ const ProspectsPage = () => {
 				</div>
 			</div>
 
-			<div className="px-6 -mt-6">
-				{/* Chart - Prospects créés par mois (utilisateur actuel) */}
-				<div className="max-w-7xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-xl p-6">
-					<div className="flex items-center gap-2 mb-4">
-						<BarChart3 className="h-5 w-5 text-blue-600" />
-						<h2 className="text-lg font-semibold text-gray-900">
-							Prospects créés par mois
-						</h2>
-					</div>
-					<div className="h-[280px] w-full">
-						{loading ? (
-							<div className="flex h-full items-center justify-center rounded-xl bg-gray-50">
-								<Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-							</div>
-						) : chartDataByMonth.length > 0 ? (
+			
+			{/* Main Content */}
+			<div className="px-6 py-8 space-y-8">
+				{/* Chart: Prospects (statut PROSPECT) par mois et secteur d'activité */}
+				<div className="max-w-7xl mx-auto">
+					<div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+							<BarChart3 className="h-5 w-5 text-blue-600" />
+							Prospects par mois et secteur d&apos;activité
+						</h3>
+						<div className="h-80">
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart
 									data={chartDataByMonth}
-									margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+									layout="vertical"
+									margin={{ top: 10, right: 30, left: 60, bottom: 0 }}
 								>
-									<CartesianGrid
-										strokeDasharray="3 3"
-										stroke="rgba(0,0,0,0.08)"
-									/>
-									<XAxis
-										dataKey="month"
-										stroke="#64748b"
-										tick={{ fill: "#475569", fontSize: 12 }}
-									/>
-									<YAxis
-										stroke="#64748b"
-										tick={{ fill: "#475569", fontSize: 12 }}
-									/>
-									<Tooltip
-										contentStyle={{
-											borderRadius: "12px",
-											border: "1px solid #e2e8f0",
-											background: "#fff",
-											boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-										}}
-										labelStyle={{ color: "#334155" }}
-										labelFormatter={(label) => `Mois: ${label}`}
-										formatter={(value: number | undefined) => [
-											`${value ?? 0} prospect${(value ?? 0) > 1 ? "s" : ""}`,
-											"Créés",
-										]}
-									/>
-									<Bar
-										dataKey="prospects"
-										fill="#3b82f6"
-										radius={[4, 4, 0, 0]}
-										name="Prospects"
-									/>
+									<CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
+									<XAxis type="number" className="text-xs" />
+									<YAxis type="category" dataKey="month" width={80} className="text-xs" />
+									<Tooltip />
+									<Legend />
+									{secteurs.map((secteur: string) => (
+										<Bar
+											key={secteur}
+											dataKey={secteur}
+											stackId="a"
+											fill={secteurColors[secteur]}
+											radius={[0, 0, 0, 0]}
+											name={secteur}
+										/>
+									))}
 								</BarChart>
 							</ResponsiveContainer>
-						) : (
-							<div className="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50">
-								<BarChart3 className="h-12 w-12 text-gray-300 mb-2" />
-								<p className="text-sm text-gray-500">
-									Aucun prospect créé pour le moment
-								</p>
-							</div>
-						)}
+						</div>
 					</div>
 				</div>
-			</div>
 
-			{/* Main Content */}
-			<div className="px-6 py-8 space-y-8">
 				{/* Forms Section */}
 				<div className="max-w-7xl mx-auto">
 					<div className="mb-8">

@@ -9,6 +9,9 @@ const isPublicRoute = createRouteMatcher([
 	"/api/numero-chassis",
 	"/api/dev-bypass",
 ]);
+// Skip middleware for prospects API - uses userId from body, avoids fetch issues
+const isProspectsApi = createRouteMatcher(["/api/prospects/(.*)"]);
+const isRendezVousApi = createRouteMatcher(["/api/rendez-vous(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
@@ -152,6 +155,8 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	}
 
 	if (isPublicRoute(req)) return NextResponse.next();
+	if (isProspectsApi(req)) return NextResponse.next();
+	if (isRendezVousApi(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {
 		return redirectToSignIn({

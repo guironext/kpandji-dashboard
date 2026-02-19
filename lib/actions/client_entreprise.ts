@@ -240,31 +240,17 @@ export async function getClientEntreprisesByUser(userId: string) {
       where: {
         userId: user.id,
       },
-      include: { 
-        User: true,
-        Voiture: {
-          include: {
-            VoitureModel: true
-          }
-        }
-      },
+      include: { User: true },
       orderBy: { createdAt: 'desc' }  // Newest to oldest
     });
     
     return { 
       success: true, 
       data: (clientEntreprises as unknown[]).map((ce: unknown) => {
-        const item = ce as Record<string, unknown> & { User?: unknown; Voiture?: unknown[] };
+        const item = ce as Record<string, unknown> & { User?: unknown };
         return {
           ...item,
-          user: item.User,
-          voitures: item.Voiture?.map((v: unknown) => {
-            const voiture = v as Record<string, unknown> & { VoitureModel?: unknown };
-            return {
-              ...voiture,
-              voitureModel: voiture.VoitureModel
-            };
-          })
+          user: item.User
         };
       })
     };

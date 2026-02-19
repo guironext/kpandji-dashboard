@@ -72,7 +72,14 @@ export async function createRendezVous(data: {
     return { success: true, data: serializedRendezVous };
   } catch (error) {
     console.error("Error creating rendez-vous:", error);
-    return { success: false, error: "Failed to create appointment" };
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const msg =
+      errMsg.includes("Foreign key") || errMsg.includes("constraint")
+        ? "Client ou entreprise introuvable. Vérifiez la sélection."
+        : errMsg.includes("connect") || errMsg.includes("database")
+          ? "Impossible de joindre la base de données. Réessayez plus tard."
+          : `Erreur : ${errMsg}`;
+    return { success: false, error: msg };
   }
 }
 

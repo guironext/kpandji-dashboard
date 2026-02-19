@@ -36,11 +36,12 @@ export async function getOrCreateUser(clerkId?: string) {
         return { success: false, error: "User not found in Clerk" };
       }
 
-      // Get email from Clerk user
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
-      if (!email) {
-        return { success: false, error: "User email not found" };
-      }
+      // Get email from Clerk user (primary first, then first available)
+      const email =
+        (clerkUser as { primaryEmailAddress?: { emailAddress?: string } })
+          .primaryEmailAddress?.emailAddress ||
+        clerkUser.emailAddresses[0]?.emailAddress ||
+        `${targetClerkId}@clerk.temp`;
 
       // Get role from metadata or default to EMPLOYEE
       const role =
