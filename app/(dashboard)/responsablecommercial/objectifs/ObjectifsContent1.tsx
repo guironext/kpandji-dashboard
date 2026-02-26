@@ -8,7 +8,6 @@ import {
   Users,
   Target,
   Plus,
-  BarChart3,
   Loader2,
   Calendar as CalendarIcon,
   Pencil,
@@ -17,7 +16,7 @@ import {
   Building2,
 } from "lucide-react";
 import { formatNumberWithSpaces, fetchWithRetry } from "@/lib/utils";
-import DatePicker, { registerLocale } from "react-datepicker";
+import { registerLocale } from "react-datepicker";
 import { fr as datePickerFr } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,7 +34,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,14 +53,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
 import { toast } from "sonner";
 import { getCommercialActivitiesStats } from "@/lib/actions/superviseur";
 import { DefinePeriodDialog } from "./DefinePeriodDialog";
@@ -232,8 +222,8 @@ export function ObjectifsContent() {
   const [poleEditSubmitting, setPoleEditSubmitting] = useState(false);
   const [objectifsPoles, setObjectifsPoles] = useState<{ id: string; userId: string; objectifPeriodId: string; objectifPoleCible: string; commercialName: string }[]>([]);
   const [objectifsPolesLoading, setObjectifsPolesLoading] = useState(false);
-  const [venteStats, setVenteStats] = useState<{ name: string; commandes: number }[]>([]);
-  const [venteLoading, setVenteLoading] = useState(false);
+  const [, setVenteStats] = useState<{ name: string; commandes: number }[]>([]);
+  const [, setVenteLoading] = useState(false);
   const [venteVolumeDialogOpen, setVenteVolumeDialogOpen] = useState(false);
   const [venteVolumeFormData, setVenteVolumeFormData] = useState({ userId: "", volumeDeVente: "" });
   const [venteVolumeSubmitting, setVenteVolumeSubmitting] = useState(false);

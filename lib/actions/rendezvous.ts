@@ -252,7 +252,8 @@ export async function updateRendezVous(
   },
 ) {
   try {
-    const { duree: _duree, ...validData } = data;
+    const { duree, ...validData } = data;
+    void duree;
     const rendezVous = await prisma.rendezVous.update({
       where: { id },
       data: {
