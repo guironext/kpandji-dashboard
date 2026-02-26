@@ -21,7 +21,7 @@ export async function updateObjectifFinanciere(
 
     const finObjectifDate = data.finObjectif ? new Date(data.finObjectif) : null;
     await executeWithRetry(() =>
-      prisma.objectifFinanciere.update({
+      prisma.objectifsfinancieres.update({
       where: { id },
       data: {
         nomDuCommercial: data.nomDuCommercial,
@@ -48,7 +48,7 @@ export async function deleteObjectifFinanciere(id: string) {
     const { userId } = await auth();
     if (!userId) return { success: false, error: "Non autorisé" };
 
-    await executeWithRetry(() => prisma.objectifFinanciere.delete({ where: { id } }));
+    await executeWithRetry(() => prisma.objectifsfinancieres.delete({ where: { id } }));
     revalidatePath("/responsablecommercial/objectifs");
     return { success: true };
   } catch (error) {
@@ -73,7 +73,7 @@ export async function createObjectifFinanciere(data: {
 
     const finObjectifDate = data.finObjectif ? new Date(data.finObjectif) : null;
     const objectif = await executeWithRetry(() =>
-      prisma.objectifFinanciere.create({
+      prisma.objectifsfinancieres.create({
       data: {
         nomDuCommercial: data.nomDuCommercial,
         pole: data.pole,
@@ -101,7 +101,7 @@ export async function getObjectifsFinancieres() {
     if (!userId) return { success: false, error: "Non autorisé", data: [] };
 
     const objectifs = await executeWithRetry(() =>
-      prisma.objectifFinanciere.findMany({
+      prisma.objectifsfinancieres.findMany({
       orderBy: [{ duree: "desc" }, { nomDuCommercial: "asc" }],
       select: {
         id: true,

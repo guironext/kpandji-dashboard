@@ -161,8 +161,8 @@ export function CalendrierSortieCalendar({ events, onSelectEvent }: Props) {
         components={{
           event: EventComponent,
         }}
-        eventPropGetter={(event) => {
-          const rv = (event as CalendarEvent).resource;
+        eventPropGetter={(event: CalendarEvent) => {
+          const rv = event.resource;
           const style = STATUT_COLORS[rv.statut] || STATUT_COLORS.EN_ATTENTE;
           return {
             style: {
