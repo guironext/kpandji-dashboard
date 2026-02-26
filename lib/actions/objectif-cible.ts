@@ -13,9 +13,9 @@ export async function getObjectifsCibles() {
     const objectifs = await executeWithRetry(() =>
       prisma.objectifCible.findMany({
       where: { user: { role: "COMMERCIAL" } },
-      orderBy: [{ period: { start: "desc" } }, { user: { firstName: "asc" } }],
+      orderBy: [{ period: { objectif_start: "desc" } }, { user: { firstName: "asc" } }],
       include: {
-        period: { select: { id: true, start: true, end: true } },
+        period: { select: { id: true, objectif_start: true, objectif_end: true } },
         user: { select: { id: true, firstName: true, lastName: true } },
       },
     })
@@ -28,8 +28,8 @@ export async function getObjectifsCibles() {
         periodId: o.periodId,
         userId: o.userId,
         commercialName: `${o.user.firstName} ${o.user.lastName}`.trim(),
-        periodStart: o.period.start,
-        periodEnd: o.period.end,
+        periodStart: o.period.objectif_start,
+        periodEnd: o.period.objectif_end,
         prospectCible: o.prospectCible,
         prospectReel: o.prospectReel,
         tauxAtteint: Number(o.tauxAtteint),

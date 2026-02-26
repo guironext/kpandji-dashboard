@@ -1,19 +1,26 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-/** Fetch with retry for transient network/connection failures */
+/** Fetch with retry for transient network/connection failures (e.g. Neon cold start) */
 export async function fetchWithRetry(
   input: RequestInfo | URL,
   init?: RequestInit,
-  options?: { maxRetries?: number; delayMs?: number }
+  options?: { maxRetries?: number; delayMs?: number; timeoutMs?: number }
 ): Promise<Response> {
-  const maxRetries = options?.maxRetries ?? 3;
-  const delayMs = options?.delayMs ?? 1000;
+  const maxRetries = options?.maxRetries ?? 5;
+  const delayMs = options?.delayMs ?? 4000;
+  const timeoutMs = options?.timeoutMs ?? 35000;
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(input, init);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       // Retry on 5xx server errors (connection/DB issues)
       if (res.status >= 500 && attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, delayMs * attempt));
@@ -30,7 +37,8 @@ export async function fetchWithRetry(
         errMsg.includes("connection") ||
         errMsg.includes("ECONNRESET") ||
         errMsg.includes("ETIMEDOUT") ||
-        errMsg.includes("timeout");
+        errMsg.includes("timeout") ||
+        errMsg.includes("abort");
       if (isRetryable && attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, delayMs * attempt));
         continue;

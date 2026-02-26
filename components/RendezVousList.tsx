@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,8 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  PencilIcon
+  PencilIcon,
+  Car
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RendezVous } from '@/lib/types/rendezvous';
@@ -38,6 +40,7 @@ import { RendezVous } from '@/lib/types/rendezvous';
 interface RendezVousListProps {
   rendezVous: RendezVous[];
   onUpdate?: () => void;
+  clerkUserId?: string;
 }
 
 const statusConfig = {
@@ -48,7 +51,18 @@ const statusConfig = {
   ANNULE: { label: 'Annulé', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' },
 };
 
-export function RendezVousList({ rendezVous, onUpdate }: RendezVousListProps) {
+const MOYENS_TRANSPORT = [
+  "Djetran",
+  "Banco",
+  "Taxi Compteur",
+  "Yango",
+  "Lathaye",
+  "Autre",
+] as const;
+
+export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdProp }: RendezVousListProps) {
+  const { user } = useUser();
+  const clerkUserId = clerkUserIdProp ?? user?.id;
   const [sortBy, setSortBy] = useState<'date' | 'statut'>('statut');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -62,6 +76,78 @@ export function RendezVousList({ rendezVous, onUpdate }: RendezVousListProps) {
     resume_rendez_vous: '',
     note: '',
   });
+  const [reservationDialogOpen, setReservationDialogOpen] = useState(false);
+  const [reservationRendezVous, setReservationRendezVous] = useState<RendezVous | null>(null);
+  const [savingReservation, setSavingReservation] = useState(false);
+  const [reservationForm, setReservationForm] = useState({
+    dateReservation: '',
+    dateRetour: '',
+    heure_reserve: '',
+    destination: '',
+    motif: '',
+    commentaire: '',
+    moyenTransport: '',
+  });
+
+  const handleReservationClick = (rendezVous: RendezVous) => {
+    setReservationRendezVous(rendezVous);
+    const rdvDate = new Date(rendezVous.date);
+    const dateStr = rdvDate.toISOString().split('T')[0];
+    const timeStr = rdvDate.toTimeString().slice(0, 5);
+    setReservationForm({
+      dateReservation: dateStr,
+      dateRetour: dateStr,
+      heure_reserve: timeStr,
+      destination: '',
+      motif: '',
+      commentaire: '',
+      moyenTransport: '',
+    });
+    setReservationDialogOpen(true);
+  };
+
+  const handleSaveReservation = async () => {
+    if (!reservationRendezVous) return;
+    const { dateReservation, dateRetour, heure_reserve, destination, motif, commentaire, moyenTransport } = reservationForm;
+    if (!moyenTransport || !dateReservation || !dateRetour || !heure_reserve || !destination.trim() || !motif.trim()) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    setSavingReservation(true);
+    try {
+      const base = typeof window !== 'undefined' ? window.location.origin : '';
+      const res = await fetch(`${base}/api/reservation-vehicule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rendezVousId: reservationRendezVous.id,
+          moyenTransport: moyenTransport.trim(),
+          dateReservation: `${dateReservation}T00:00:00`,
+          dateRetour: `${dateRetour}T23:59:59`,
+          heure_reserve,
+          destination: destination.trim(),
+          motif: motif.trim(),
+          commentaire: commentaire.trim() || undefined,
+          clerkUserId: clerkUserId || undefined,
+          clientOuEntrepriseNom: getClientInfo(reservationRendezVous)?.name || undefined,
+        }),
+        credentials: 'same-origin',
+      });
+      const result = await res.json().catch(() => ({}));
+      if (result.success) {
+        toast.success('Réservation enregistrée avec succès');
+        setReservationDialogOpen(false);
+        onUpdate?.();
+      } else {
+        toast.error(result.error || 'Erreur lors de l\'enregistrement');
+      }
+    } catch (error) {
+      console.error('Error saving reservation:', error);
+      toast.error('Erreur réseau. Réessayez.');
+    } finally {
+      setSavingReservation(false);
+    }
+  };
 
   const handleEditClick = (rendezVous: RendezVous) => {
     setSelectedRendezVous(rendezVous);
@@ -384,6 +470,16 @@ export function RendezVousList({ rendezVous, onUpdate }: RendezVousListProps) {
                         <div className="text-xs text-gray-400 bg-gray-50 px-3 py-2 rounded-lg">
                           Créé le {new Intl.DateTimeFormat('fr-FR').format(new Date(rendezVous.createdAt))}
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2 text-xs font-medium text-gray-900 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => handleReservationClick(rendezVous)}
+                          disabled={rendezVous.statut !== 'CONFIRME'}
+                        >
+                          <Car className="h-4 w-4" />
+                          Reserver un véhicule
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -459,6 +555,119 @@ export function RendezVousList({ rendezVous, onUpdate }: RendezVousListProps) {
             </Button>
             <Button onClick={handleSaveEdit}>
               Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reservation Véhicule Dialog */}
+      <Dialog open={reservationDialogOpen} onOpenChange={setReservationDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Réserver un véhicule</DialogTitle>
+            <DialogDescription>
+              {reservationRendezVous && getClientInfo(reservationRendezVous) && (
+                <>Réservation pour le rendez-vous avec {getClientInfo(reservationRendezVous)?.name}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {reservationRendezVous && (() => {
+              const info = getClientInfo(reservationRendezVous);
+              if (!info) return null;
+              const Icon = info.icon;
+              return (
+                <div className="grid gap-2">
+                  <Label>Client / Entreprise</Label>
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-900">
+                    <Icon className="h-4 w-4 text-gray-500" />
+                    {info.name}
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="grid gap-2">
+              <Label htmlFor="moyenTransport">Véhicule / Moyen de transport *</Label>
+              <Select
+                value={reservationForm.moyenTransport}
+                onValueChange={(v) => setReservationForm({ ...reservationForm, moyenTransport: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un moyen de transport" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOYENS_TRANSPORT.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="dateReservation">Date de réservation *</Label>
+                <Input
+                  id="dateReservation"
+                  type="date"
+                  value={reservationForm.dateReservation}
+                  onChange={(e) => setReservationForm({ ...reservationForm, dateReservation: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dateRetour">Date de retour *</Label>
+                <Input
+                  id="dateRetour"
+                  type="date"
+                  value={reservationForm.dateRetour}
+                  onChange={(e) => setReservationForm({ ...reservationForm, dateRetour: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="heure_reserve">Heure réservée *</Label>
+              <Input
+                id="heure_reserve"
+                type="time"
+                value={reservationForm.heure_reserve}
+                onChange={(e) => setReservationForm({ ...reservationForm, heure_reserve: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="destination">Destination *</Label>
+              <Input
+                id="destination"
+                placeholder="Ex: Centre-ville"
+                value={reservationForm.destination}
+                onChange={(e) => setReservationForm({ ...reservationForm, destination: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="motif">Motif *</Label>
+              <Input
+                id="motif"
+                placeholder="Ex: Rendez-vous client"
+                value={reservationForm.motif}
+                onChange={(e) => setReservationForm({ ...reservationForm, motif: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="commentaire">Commentaire</Label>
+              <Textarea
+                id="commentaire"
+                placeholder="Commentaire optionnel..."
+                value={reservationForm.commentaire}
+                onChange={(e) => setReservationForm({ ...reservationForm, commentaire: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReservationDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveReservation} disabled={savingReservation}>
+              {savingReservation ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>

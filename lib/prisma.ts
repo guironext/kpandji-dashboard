@@ -25,8 +25,13 @@ function configureDatabaseUrl(): void {
     if (!url.searchParams.has("connect_timeout")) {
       url.searchParams.set("connect_timeout", "15");
     }
-    if (!url.searchParams.has("sslmode") && url.hostname.includes("neon.tech")) {
-      url.searchParams.set("sslmode", "require");
+    if (url.hostname.includes("neon.tech")) {
+      if (!url.searchParams.has("sslmode")) {
+        url.searchParams.set("sslmode", "require");
+      }
+      if (url.hostname.includes("pooler") && !url.searchParams.has("pgbouncer")) {
+        url.searchParams.set("pgbouncer", "true");
+      }
     }
     process.env.DATABASE_URL = url.toString();
   } catch (error) {
@@ -38,7 +43,12 @@ configureDatabaseUrl();
 
 export const prisma =
   globalForPrisma.prisma ?? new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    log:
+      process.env.NODE_ENV === "development"
+        ? process.env.PRISMA_LOG === "1"
+          ? ["error", "warn"]
+          : [] // Suppress E57P01 connection noise; PRISMA_LOG=1 to debug
+        : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -48,7 +58,7 @@ if (process.env.NODE_ENV !== "production") {
 // Helper function to execute queries with retry logic
 export async function executeWithRetry<T>(
   query: () => Promise<T>,
-  maxRetries = 3,
+  maxRetries = 4,
   delay = 1000,
 ): Promise<T> {
   let lastError: unknown;
@@ -59,34 +69,42 @@ export async function executeWithRetry<T>(
     } catch (error: unknown) {
       lastError = error;
 
-      // Check if it's a connection error
+      // Check if it's a connection error (including P1001 = can't reach DB, e.g. Neon cold start)
       const errorString =
         typeof error === "object" && error !== null
           ? JSON.stringify(error)
           : String(error);
+      const prismaCode =
+        typeof error === "object" && error !== null && "code" in error
+          ? (error as { code?: string }).code
+          : undefined;
       const isConnectionError =
+        prismaCode === "P1001" ||
+        prismaCode === "P1017" ||
+        prismaCode === "P1008" ||
         (error instanceof Error &&
           (error.message.includes("connection") ||
             error.message.includes("ConnectionReset") ||
+            error.message.includes("Can't reach") ||
             error.message.includes("closed by the remote host") ||
-            error.message.includes("Closed"))) ||
+            error.message.includes("Closed") ||
+            error.message.includes("administrator command") ||
+            error.message.includes("terminating connection"))) ||
         (errorString &&
           (errorString.includes("kind: Closed") ||
             errorString.includes('"kind":"Closed"') ||
-            errorString.includes("Closed"))) ||
-        (typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          (error.code === "P1001" ||
-            error.code === "P1017" ||
-            error.code === "P1008"));
+            errorString.includes("Closed") ||
+            errorString.includes("E57P01") ||
+            errorString.includes("administrator command") ||
+            errorString.includes("terminating connection")));
 
       if (isConnectionError && attempt < maxRetries) {
+        // Use longer delays for P1001 (Neon cold start can take 15-30s)
+        const waitMs = prismaCode === "P1001" ? 8000 * attempt : delay * attempt;
         console.warn(
-          `Database connection error (attempt ${attempt}/${maxRetries}), retrying...`,
+          `Database connection error (attempt ${attempt}/${maxRetries}), retrying in ${waitMs / 1000}s...`,
         );
-        // Wait before retrying (Prisma will automatically reconnect)
-        await new Promise((resolve) => setTimeout(resolve, delay * attempt));
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
       }
 

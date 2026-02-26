@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type LucideIcon,
   Home,
   Users,
   BarChart3,
@@ -22,6 +23,8 @@ import {
   ShoppingCart,
   FileSpreadsheet,
   Radio,
+  Target,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -33,133 +36,63 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 
-const navItems = [
-  {
-    id: 1,
-    icon: Home,
-    label: "Dashboard",
-    href: "/commercial",
-    category: "main",
-  },
-  {
-    id: 2,
-    icon: Car,
-    label: "Modèles Voitures",
-    href: "/commercial/ajouter-modele",
-    category: "operations",
-  },
-  {
-    id: 3,
-    icon: Package,
-    label: "Accessoires",
-    href: "/commercial/ajouter-accessoires",
-    category: "operations",
-  },
-  {
-    id: 4,
-    icon: Warehouse,
-    label: "Stock disponible",
-    href: "/commercial/stock-disponible",
-    category: "operations",
-  },
-  {
-    id: 5,
-    icon: UserCheck,
-    label: "Prospects",
-    href: "/commercial/prospects",
-    category: "operations",
-  },
-  {
-    id: 6,
-    icon: Users,
-    label: "Clients",
-    href: "/commercial/clients",
-    category: "operations",
-  },
-  {
-    id: 7,
-    icon: Calendar,
-    label: "Rendez-vous",
-    href: "/commercial/rendez-vous",
-    category: "operations",
-  },
-  {
-    id: 8,
-    icon: ClipboardList,
-    label: "Rapport Rendez-vous",
-    href: "/commercial/rapport-rendez-vous",
-    category: "operations",
-  },
-  {
-    id: 9,
-    icon: Eye,
-    label: "Suivi Rendez-vous",
-    href: "/commercial/suivi-rendez-vous",
-    category: "operations",
-  },
-  {
-    id: 10,
-    icon: BarChart3,
-    label: "Tableau de Chute",
-    href: "/commercial/tableau-chute",
-    category: "operations",
-  },
-  {
-    id: 11,
-    icon: TrendingUp,
-    label: "Suivi Commandes",
-    href: "/commercial/suivi-commandes",
-    category: "reports",
-  },
-  {
-    id: 12,
-    icon: FileText,
-    label: "Proformas",
-    href: "/commercial/proformas",
-    category: "facturation",
-  },
-  {
-    id: 13,
-    icon: FileSpreadsheet,
-    label: "Proformas-multi",
-    href: "/commercial/profoma-multi",
-    category: "facturation",
-  },
-  {
-    id: 14,
-    icon: Receipt,
-    label: "Bon de Commande",
-    href: "/commercial/bon-de-commande",
-    category: "facturation",
-  },
-  {
-    id: 15,
-    icon: FileCheck,
-    label: "Bon pour Acquis",
-    href: "/commercial/bon-pour-acquis",
-    category: "facturation",
-  },
-  {
-    id: 16,
-    icon: Pen,
-    label: "Signature",
-    href: "/commercial/signature",
-    category: "facturation",
-  },
-  {
-    id: 17,
-    icon: Mail,
-    label: "Numéro Courrier",
-    href: "/commercial/numero-courrier",
-    category: "communication",
-  },
-  {
-    id: 18,
-    icon: MessageSquare,
-    label: "Messages",
-    href: "/commercial/messages",
-    category: "communication",
-  },
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation items — type-safe, grouped by category, ordered for sidebar
+// ─────────────────────────────────────────────────────────────────────────────
+
+type NavCategory =
+  | "main"
+  | "objectifs"
+  | "logistique"
+  | "operations"
+  | "reports"
+  | "facturation"
+  | "communication";
+
+interface NavItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  category: NavCategory;
+}
+
+/** Flattened nav items for rendering — order matches categoryOrder */
+const navItems: NavItem[] = [
+  // Principal
+  { id: "main-dashboard", icon: Home, label: "Dashboard", href: "/commercial", category: "main" },
+
+  // Objectifs
+  { id: "obj-objectifs", icon: Target, label: "Mes Objectifs", href: "/commercial/objectifs", category: "objectifs" },
+
+  // Logistique
+  { id: "log-modeles", icon: Car, label: "Modèles Voitures", href: "/commercial/ajouter-modele", category: "logistique" },
+  { id: "log-accessoires", icon: Package, label: "Accessoires", href: "/commercial/ajouter-accessoires", category: "logistique" },
+  { id: "log-stock", icon: Warehouse, label: "Stock disponible", href: "/commercial/stock-disponible", category: "logistique" },
+
+  // Opérations
+  { id: "op-prospects", icon: UserCheck, label: "Prospects", href: "/commercial/prospects", category: "operations" },
+  { id: "op-clients", icon: Users, label: "Clients", href: "/commercial/clients", category: "operations" },
+  { id: "op-rdv", icon: Calendar, label: "Rendez-vous", href: "/commercial/rendez-vous", category: "operations" },
+  { id: "op-calendrier-sortie", icon: Calendar, label: "Calendrier Sortie", href: "/commercial/calendrier-sortie", category: "operations" },
+  { id: "op-reservation", icon: Calendar, label: "Reservation Véhicule", href: "/commercial/reservation-vehicule", category: "operations" },
+  { id: "op-rapport-rdv", icon: ClipboardList, label: "Rapport Rendez-vous", href: "/commercial/rapport-rendez-vous", category: "operations" },
+  { id: "op-suivi-rdv", icon: Eye, label: "Suivi Rendez-vous", href: "/commercial/suivi-rendez-vous", category: "operations" },
+  { id: "op-tableau-chute", icon: BarChart3, label: "Tableau de Chute", href: "/commercial/tableau-chute", category: "operations" },
+
+  // Rapports
+  { id: "rep-commandes", icon: TrendingUp, label: "Suivi Commandes", href: "/commercial/suivi-commandes", category: "reports" },
+
+  // Facturation
+  { id: "fac-proformas", icon: FileText, label: "Proformas", href: "/commercial/proformas", category: "facturation" },
+  { id: "fac-proformas-multi", icon: FileSpreadsheet, label: "Proformas-multi", href: "/commercial/profoma-multi", category: "facturation" },
+  { id: "fac-bon-commande", icon: Receipt, label: "Bon de Commande", href: "/commercial/bon-de-commande", category: "facturation" },
+  { id: "fac-bon-acquis", icon: FileCheck, label: "Bon pour Acquis", href: "/commercial/bon-pour-acquis", category: "facturation" },
+  { id: "fac-signature", icon: Pen, label: "Signature", href: "/commercial/signature", category: "facturation" },
+
+  // Communication
+  { id: "com-courrier", icon: Mail, label: "Numéro Courrier", href: "/commercial/numero-courrier", category: "communication" },
+  { id: "com-messages", icon: MessageSquare, label: "Messages", href: "/commercial/messages", category: "communication" },
 ];
 
 const categoryConfig = {
@@ -169,6 +102,13 @@ const categoryConfig = {
     color: "from-amber-500 to-orange-600",
     bgColor: "bg-amber-500/10",
     textColor: "text-amber-700",
+  },
+  objectifs: {
+    label: "Objectifs",
+    icon: Target,
+    color: "from-cyan-500 to-blue-600",
+    bgColor: "bg-cyan-500/10",
+    textColor: "text-cyan-700",
   },
   operations: {
     label: "Opérations",
@@ -198,6 +138,13 @@ const categoryConfig = {
     bgColor: "bg-rose-500/10",
     textColor: "text-rose-700",
   },
+  logistique: {
+    label: "Logistique",
+    icon: Truck,
+    color: "from-slate-600 to-slate-800",
+    bgColor: "bg-slate-500/10",
+    textColor: "text-slate-700",
+  },
 } as const;
 
 const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {
@@ -209,7 +156,7 @@ const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  const categoryOrder = ["main", "operations", "reports", "facturation", "communication"];
+  const categoryOrder = ["main", "objectifs", "operations", "reports", "facturation", "communication", "logistique"];
 
   const NavLink = ({ item }: { item: (typeof navItems)[0] }) => {
     const isActive = pathname === item.href;

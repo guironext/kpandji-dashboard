@@ -10,12 +10,14 @@ const isPublicRoute = createRouteMatcher([
 	"/api/dev-bypass",
 	"/api/health",
 	"/api/ping",
+	"/api/reservation-vehicule",
 ]);
 // Skip middleware for prospects API - uses userId from body, avoids fetch issues
 const isProspectsApi = createRouteMatcher(["/api/prospects/(.*)"]);
 const isRendezVousApi = createRouteMatcher(["/api/rendez-vous(.*)"]);
 const isRapportRendezVousApi = createRouteMatcher(["/api/rapport-rendez-vous(.*)"]);
 const isFactureApi = createRouteMatcher(["/api/facture(.*)"]);
+const isReservationVehiculeApi = createRouteMatcher(["/api/reservation-vehicule(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
@@ -163,6 +165,7 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	if (isRendezVousApi(req)) return NextResponse.next();
 	if (isRapportRendezVousApi(req)) return NextResponse.next();
 	if (isFactureApi(req)) return NextResponse.next();
+	if (isReservationVehiculeApi(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {
 		return redirectToSignIn({

@@ -14,22 +14,38 @@ export async function GET() {
     }
 
     const objectifs = await executeWithRetry(() =>
-      prisma.objectifFinanciere.findMany({
-      orderBy: [{ duree: "desc" }, { nomDuCommercial: "asc" }],
-      select: {
-        id: true,
-        nomDuCommercial: true,
-        pole: true,
-        duree: true,
-        chiffreAffaire: true,
-        finObjectif: true,
-        pourcentageAtteint: true,
-        ecartCible: true,
-      },
-    })
+      prisma.objectifsfinancieres.findMany({
+        orderBy: [{ createdAt: "desc" }],
+        select: {
+          id: true,
+          nomDuCommercial: true,
+          pole: true,
+          duree: true,
+          chiffreAffaire: true,
+          finObjectif: true,
+          pourcentageAtteint: true,
+          ecartCible: true,
+          objectifPeriodId: true,
+          userId: true,
+        } as Record<string, boolean>,
+      })
     );
 
-    const data = objectifs.map((o) => ({
+    type ObjectifRow = {
+      id: string;
+      nomDuCommercial: string;
+      pole: string;
+      duree: string;
+      chiffreAffaire: { toNumber?: () => number } | number;
+      finObjectif: Date | null;
+      pourcentageAtteint: { toNumber?: () => number } | number;
+      ecartCible: { toNumber?: () => number } | number | null;
+      objectifPeriodId: string | null;
+      userId: string | null;
+    };
+    const rows = objectifs as unknown as ObjectifRow[];
+
+    const data = rows.map((o) => ({
       id: o.id,
       nomDuCommercial: o.nomDuCommercial,
       pole: o.pole,
@@ -38,6 +54,8 @@ export async function GET() {
       finObjectif: o.finObjectif ? o.finObjectif.toISOString() : null,
       pourcentageAtteint: Number(o.pourcentageAtteint),
       ecartCible: o.ecartCible != null ? Number(o.ecartCible) : null,
+      objectifPeriodId: o.objectifPeriodId,
+      userId: o.userId,
     }));
 
     return NextResponse.json({ success: true, data });
@@ -74,11 +92,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { nomDuCommercial, pole, duree, chiffreAffaire, finObjectif } = body;
+    const { userId: targetUserId, objectifPeriodId, chiffreAffaire } = body;
 
-    if (!nomDuCommercial || !pole || !duree || chiffreAffaire == null) {
+    if (!targetUserId || !chiffreAffaire) {
       return NextResponse.json(
-        { success: false, error: "Champs requis manquants" },
+        { success: false, error: "Commercial et chiffre d'affaires sont requis" },
         { status: 400 }
       );
     }
@@ -91,22 +109,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finObjectifDate =
-      finObjectif && (typeof finObjectif === "string" || typeof finObjectif === "number" || finObjectif instanceof Date)
-        ? new Date(finObjectif)
-        : null;
+    const user = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { id: String(targetUserId) },
+        select: { id: true, firstName: true, lastName: true },
+      })
+    );
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Commercial introuvable" },
+        { status: 400 }
+      );
+    }
+    const nomDuCommercial = `${user.firstName} ${user.lastName}`.trim();
 
     const objectif = await executeWithRetry(() =>
-      prisma.objectifFinanciere.create({
-      data: {
-        nomDuCommercial: String(nomDuCommercial),
-        pole: String(pole),
-        duree: String(duree),
-        chiffreAffaire: new Decimal(ca),
-        finObjectif: finObjectifDate,
-        pourcentageAtteint: new Decimal(0),
-      },
-    })
+      prisma.objectifsfinancieres.create({
+        data: {
+          nomDuCommercial,
+          pole: "",
+          duree: "",
+          chiffreAffaire: new Decimal(ca),
+          pourcentageAtteint: new Decimal(0),
+          userId: user.id,
+          objectifPeriodId: objectifPeriodId || null,
+          objectif_cible: String(ca),
+        } as unknown as Parameters<typeof prisma.objectifsfinancieres.create>[0]["data"],
+      })
     );
 
     revalidatePath("/responsablecommercial/objectifs");

@@ -338,10 +338,7 @@ export function ClientEntrepriseForm({ userId, userName, onSuccess }: ClientEntr
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="PROSPECT">Prospect</SelectItem>
-                          <SelectItem value="CLIENT">Client</SelectItem>
-                          <SelectItem value="FAVORABLE">Favorable</SelectItem>
-                          <SelectItem value="A_SUIVRE">À suivre</SelectItem>
-                          <SelectItem value="ABANDONNE">Abandonné</SelectItem>
+                          
                         </SelectContent>
                       </Select>
                       <FormMessage />

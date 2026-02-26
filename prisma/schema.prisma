@@ -30,7 +30,14 @@ model User {
   NumeroCourrier            NumeroCourrier[]
   SentMessages              Message[]                 @relation("SentMessages")
   ReceivedMessages          Message[]                 @relation("ReceivedMessages")
+  Objectifsprospects        Objectifsprospects[]
+  Objectifsvehicules        Objectifsvehicules[]
+  Objectifsfinancieres      Objectifsfinancieres[]
+  ObjectifPeriod            ObjectifPeriod[]
   ObjectifCible             ObjectifCible[]
+  ObjectifPole              ObjectifPole[]
+  CalendrierSortie          CalendrierSortie[]
+  ReservationVehicule       ReservationVehicule[]
 }
 
 model Message {
@@ -83,6 +90,8 @@ model RendezVous {
   Client_entreprise  Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   client             Client?             @relation(fields: [clientId], references: [id], onDelete: Cascade)
   Voiture            Voiture[]
+  CalendrierSortie   CalendrierSortie[]
+  ReservationVehicule ReservationVehicule[]
 }
 
 model Conteneur {
@@ -567,6 +576,8 @@ model RapportCorrection {
   Correction   Correction @relation(fields: [correctionId], references: [id])
 }
 
+
+
 model RapportEquipe {
   id        String   @id
   details   String
@@ -857,6 +868,8 @@ model Voiture {
   Conteneur          Conteneur?          @relation(fields: [conteneurId], references: [id])
   RendezVous         RendezVous?         @relation(fields: [rendezVousId], references: [id])
   VoitureModel       VoitureModel?       @relation(fields: [voitureModelId], references: [id])
+  CalendrierSortie   CalendrierSortie[]
+  ReservationVehicule ReservationVehicule[]
 }
 
 model VoitureModel {
@@ -1041,48 +1054,187 @@ model CommunicationBudgetItem {
   @@index([projectId])
 }
 
-model ObjectifFinanciere {
-  id                 String    @id @default(uuid())
-  nomDuCommercial    String
-  pole               String
-  duree              String
-  chiffreAffaire     Decimal
-  finObjectif        DateTime?
-  pourcentageAtteint Decimal   @default(0)
-  ecartCible         Decimal?  // écart par rapport à la cible
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
 
-  @@index([nomDuCommercial])
-  @@index([duree])
-}
+/// Objectifs commerciaux 
+model ObjectifPeriod{
+  id String @id @default(uuid())
+  objectif_start DateTime
+  objectif_end DateTime
+  objectif_duree String
+  objectifs_financieres String
+  objectifs_vehicules String
+  objectifs_clients String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model ObjectifPeriod {
-  id            String         @id @default(uuid())
-  start         DateTime
-  end           DateTime
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  ObjectifCible ObjectifCible[]
-
-  @@index([start])
+  Objectifsprospects   Objectifsprospects[]
+  Objectifsvehicules   Objectifsvehicules[]
+  Objectifsfinancieres Objectifsfinancieres[]
+  ObjectifCible       ObjectifCible[]
+  ObjectifPole        ObjectifPole[]
 }
 
 model ObjectifCible {
-  id             String        @id @default(uuid())
-  periodId       String
-  userId         String
-  prospectCible  Int
-  prospectReel   Int           @default(0)
-  tauxAtteint    Decimal       @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  period         ObjectifPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  periodId      String
+  userId        String
+  prospectCible Int      @default(0)
+  prospectReel  Int      @default(0)
+  tauxAtteint   Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  period ObjectifPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, userId])
-  @@index([periodId])
   @@index([userId])
+  @@index([periodId])
+}
+
+model Objectifsprospects {
+  id String @id @default(uuid())
+  objectif_cible String
+  objectif_reel_atteint String
+  objectif_pourcentage_atteint Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  objectifPeriodId String
+  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([objectifPeriodId])
+}
+
+model CalendrierSortie {
+  id String @id @default(uuid())
+  dateSortie DateTime
+  dateRetour DateTime
+  destination String
+  motif String
+  commentaire String?
+  statut StatutCalendrierSortie @default(EN_ATTENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  voitureId String?
+  Voiture Voiture? @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+  rendezVousId String
+  RendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  autre_moyen_transport String?
+  moyenTransport String?
+  ReservationVehicule ReservationVehicule[]
+}
+
+enum StatutCalendrierSortie {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+  EN_COURS
+  TERMINEE
+}
+
+model ReservationVehicule {
+  id String @id @default(uuid())
+  dateReservation DateTime
+  dateRetour DateTime
+  heure_reserve String
+  destination String
+  motif String
+  commentaire String?
+  statut StatutReservationVehicule @default(EN_ATTENTE)
+  rendezVousId String
+  RendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  voitureId String?
+  Voiture Voiture? @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+  moyenTransport String?
+  clientOuEntrepriseNom String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendrierSortieId String
+  CalendrierSortie CalendrierSortie @relation(fields: [calendrierSortieId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([rendezVousId])
+  @@index([voitureId])
+  @@index([calendrierSortieId])
+}
+
+enum StatutReservationVehicule {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+  EN_COURS
+  TERMINEE
+}
+
+model Objectifsvehicules {
+  id String @id @default(uuid())
+  objectif_cible String
+  objectif_reel_atteint String?
+  objectif_pourcentage_atteint Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  objectifPeriodId String
+  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([objectifPeriodId])
+}
+
+model Objectifsfinancieres {
+  id                String    @id @default(uuid())
+  nomDuCommercial   String    @default("")
+  pole              String    @default("")
+  duree             String    @default("")
+  chiffreAffaire    Decimal   @default(0) @db.Decimal(18, 2)
+  finObjectif       DateTime?
+  pourcentageAtteint Decimal  @default(0) @db.Decimal(10, 2)
+  ecartCible        Decimal?
+  objectif_cible    String?
+  objectif_reel_atteint String?
+  objectif_pourcentage_atteint Float?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  userId            String?
+  objectifPeriodId  String?
+  User              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ObjectifPeriod    ObjectifPeriod? @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([objectifPeriodId])
+}
+
+model ObjectifPole {
+  id String @id @default(uuid())
+  objectifPoleCible String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  objectifPeriodId String
+  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([objectifPeriodId])
 }
 
 model NumeroCourrier {

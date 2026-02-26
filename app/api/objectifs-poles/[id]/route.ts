@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { prisma, executeWithRetry } from "@/lib/prisma";
-import { Decimal } from "@prisma/client/runtime/library";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    let body: Record<string, unknown>;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
@@ -26,64 +25,54 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    const { userId: targetUserId, chiffreAffaire } = body;
 
-    if (chiffreAffaire == null) {
-      return NextResponse.json(
-        { success: false, error: "chiffreAffaire est requis" },
-        { status: 400 }
-      );
-    }
-
-    const ca = Number(chiffreAffaire);
-    if (isNaN(ca) || ca <= 0) {
-      return NextResponse.json(
-        { success: false, error: "Chiffre d'affaires invalide" },
-        { status: 400 }
-      );
-    }
-
-    const updateData: {
-      chiffreAffaire: Decimal;
-      objectif_cible: string;
-      nomDuCommercial?: string;
+    const { userId: targetUserId, objectifPoleCible } = body as {
       userId?: string;
-    } = {
-      chiffreAffaire: new Decimal(ca),
-      objectif_cible: String(ca),
+      objectifPoleCible?: string;
     };
 
-    if (targetUserId && typeof targetUserId === "string") {
-      const user = await executeWithRetry(() =>
-        prisma.user.findUnique({
-          where: { id: targetUserId },
-          select: { id: true, firstName: true, lastName: true },
-        })
+    if (!targetUserId || !objectifPoleCible) {
+      return NextResponse.json(
+        { success: false, error: "userId et objectifPoleCible sont requis" },
+        { status: 400 }
       );
-      if (user) {
-        updateData.userId = user.id;
-        updateData.nomDuCommercial = `${user.firstName} ${user.lastName}`.trim();
-      }
+    }
+
+    const userExists = await executeWithRetry(() =>
+      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } })
+    );
+    if (!userExists) {
+      return NextResponse.json(
+        { success: false, error: "Commercial introuvable." },
+        { status: 400 }
+      );
     }
 
     await executeWithRetry(() =>
-      prisma.objectifsfinancieres.update({
+      prisma.objectifPole.update({
         where: { id },
-        data: updateData,
+        data: {
+          userId: targetUserId,
+          objectifPoleCible: String(objectifPoleCible).trim(),
+        },
       })
     );
 
     revalidatePath("/responsablecommercial/objectifs");
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating Objectifsfinancieres:", error);
-    const msg = error instanceof Error ? error.message : "Échec de la mise à jour";
-    const isDbError = msg.includes("reach database") || msg.includes("connection");
+    console.error("Error updating ObjectifPole:", error);
+    const msg = error instanceof Error ? error.message : "Échec de la modification";
+    const isDbError =
+      msg.includes("P1001") ||
+      msg.includes("Can't reach") ||
+      msg.includes("P2003") ||
+      msg.includes("P2025");
     return NextResponse.json(
       {
         success: false,
         error: isDbError
-          ? "Connexion base de données impossible. Vérifiez DATABASE_URL et que la base Neon est active."
+          ? "Base de données inaccessible ou enregistrement introuvable."
           : msg,
       },
       { status: 500 }
@@ -103,7 +92,7 @@ export async function DELETE(
 
     const { id } = await params;
     await executeWithRetry(() =>
-      prisma.objectifsfinancieres.delete({
+      prisma.objectifPole.delete({
         where: { id },
       })
     );
@@ -111,14 +100,17 @@ export async function DELETE(
     revalidatePath("/responsablecommercial/objectifs");
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting Objectifsfinancieres:", error);
+    console.error("Error deleting ObjectifPole:", error);
     const msg = error instanceof Error ? error.message : "Échec de la suppression";
-    const isDbError = msg.includes("reach database") || msg.includes("connection");
+    const isDbError =
+      msg.includes("P1001") ||
+      msg.includes("Can't reach") ||
+      msg.includes("P2025");
     return NextResponse.json(
       {
         success: false,
         error: isDbError
-          ? "Connexion base de données impossible. Vérifiez DATABASE_URL et que la base Neon est active."
+          ? "Base de données inaccessible ou enregistrement introuvable."
           : msg,
       },
       { status: 500 }
