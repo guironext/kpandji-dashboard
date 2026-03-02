@@ -32,7 +32,7 @@ export async function POST(
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: { include: { Fournisseur: true } },
+        Fournisseur: true,
       },
     });
 
@@ -65,11 +65,11 @@ export async function POST(
             updatedAt: updatedCommande.VoitureModel.updatedAt.toISOString(),
           }
         : null,
-      fournisseurs: updatedCommande.CommandeToFournisseur
-        ? updatedCommande.CommandeToFournisseur.map((ctf) => ({
-            ...ctf.Fournisseur,
-            createdAt: ctf.Fournisseur.createdAt.toISOString(),
-            updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+      fournisseurs: updatedCommande.Fournisseur
+        ? updatedCommande.Fournisseur.map((f) => ({
+            ...f,
+            createdAt: f.createdAt.toISOString(),
+            updatedAt: f.updatedAt.toISOString(),
           }))
         : [],
     };

@@ -13,6 +13,14 @@ npx prisma init
 |!!npx prisma dev
 ||| npx prisma migrate dev
 |||| 
+
+npx prisma migrate resolve --rolled-back "20260225120000_create_calendrier_sortie_reservation"
+
+npx prisma migrate deploy
+
+||||
+
+
 npx prisma migrate reset   ////All data will be lost.
 |||| npx prisma db push
 npm i @prisma/client

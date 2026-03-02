@@ -9,7 +9,7 @@ export function ClerkFailedOverlay() {
         Impossible de charger l&apos;authentification
       </h1>
       <p className="text-muted-foreground max-w-md text-sm">
-        Les scripts Clerk sont probablement bloqués. Essayez :
+        Les scripts Clerk n&apos;ont pas pu se charger (timeout ou blocage). Essayez :
       </p>
       <ul className="text-muted-foreground list-inside list-disc text-left text-sm">
         <li>Désactiver les bloqueurs de publicité (uBlock, AdBlock…)</li>

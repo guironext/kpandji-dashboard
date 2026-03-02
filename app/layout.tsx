@@ -43,7 +43,6 @@ export default async function RootLayout({
   return (
     <ClerkProvider
       publishableKey={clerkPublishableKey}
-      dynamic
       appearance={{
         elements: {
           rootBox: "w-full",

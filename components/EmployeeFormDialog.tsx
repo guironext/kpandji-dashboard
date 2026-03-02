@@ -314,7 +314,7 @@ export function EmployeeFormDialog({ onSuccess, editingEmployee }: EmployeeFormD
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un groupe sanguin" />
+                          <SelectValue placeholder="Groupe sanguin" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

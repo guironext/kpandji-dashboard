@@ -6,7 +6,9 @@ import {
   Clock,
   Users,
   BarChart3,
-  Warehouse
+  Warehouse,
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -48,7 +50,11 @@ const navItems = [
     label: "Rapport Montages",
     href: "/rh/rapportmontage",
     category: "reports"
-  }
+  },
+   // Communication
+   { id: 6, icon: <Mail className="w-5 h-5" />, label: "Numéro Courrier", href: "/rh/numero-courrier", category: "communication" },
+   { id: 7, icon: <MessageSquare className="w-5 h-5" />, label: "Messages", href: "/rh/messages", category: "communication" },
+ 
 ];
 
 const SidebarRh = ({ isOpen }: { isOpen: boolean }) => {
@@ -70,7 +76,8 @@ const SidebarRh = ({ isOpen }: { isOpen: boolean }) => {
     main: "Principal",
     inventory: "Inventaire",
     operations: "Opérations",
-    reports: "Rapports"
+    reports: "Rapports",
+    communication: "Communication"
   };
 
   return (

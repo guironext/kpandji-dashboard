@@ -5,7 +5,7 @@ import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { User, Building2 } from "lucide-react";
+import { User, Building2, MapPin } from "lucide-react";
 
 const locales = { "fr-FR": fr };
 const parseDate = (dateStr: string, formatStr: string, referenceDate?: Date) =>
@@ -48,6 +48,29 @@ export type CalendarEvent = {
   resource: ReservationVehicule;
 };
 
+const STATUT_STYLES: Record<string, { bg: string; border: string; text: string }> = {
+  EN_ATTENTE: {
+    bg: "oklch(0.96 0.08 85)",
+    border: "oklch(0.75 0.15 75)",
+    text: "oklch(0.35 0.08 55)",
+  },
+  CONFIRME: {
+    bg: "oklch(0.88 0.12 155)",
+    border: "oklch(0.55 0.18 160)",
+    text: "oklch(0.22 0.06 165)",
+  },
+  DEPLACE: {
+    bg: "oklch(0.88 0.1 250)",
+    border: "oklch(0.55 0.22 260)",
+    text: "oklch(0.25 0.1 265)",
+  },
+  EN_COURS: {
+    bg: "oklch(0.85 0.12 300)",
+    border: "oklch(0.55 0.22 310)",
+    text: "oklch(0.28 0.1 315)",
+  },
+};
+
 function getClientOrCompanyName(rv: ReservationVehicule): string | null {
   return (
     rv.clientOuEntrepriseNom ||
@@ -60,12 +83,19 @@ function getClientOrCompanyName(rv: ReservationVehicule): string | null {
 function EventComponent({ event }: { event: CalendarEvent }) {
   const rv = event.resource;
   const clientName = getClientOrCompanyName(rv);
+  const style = STATUT_STYLES[rv.statut] ?? STATUT_STYLES.EN_ATTENTE;
   return (
-    <div className="text-xs overflow-hidden p-0.5">
-      <div className="font-medium truncate">{rv.destination}</div>
-      <div className="text-muted-foreground truncate">{rv.heure_reserve}</div>
+    <div
+      className="text-xs overflow-hidden p-1.5 rounded border-l-[3px] h-full flex flex-col justify-center"
+      style={{ borderLeftColor: style.border }}
+    >
+      <div className="font-semibold truncate flex items-center gap-1">
+        <MapPin className="h-3 w-3 shrink-0 opacity-80" />
+        {rv.destination}
+      </div>
+      <div className="text-[11px] opacity-90 mt-0.5 font-medium">{rv.heure_reserve}</div>
       {clientName && (
-        <div className="flex items-center gap-1 truncate text-muted-foreground mt-0.5">
+        <div className="flex items-center gap-1 truncate mt-1 opacity-90">
           {rv.RendezVous?.Client_entreprise ? (
             <Building2 className="h-3 w-3 shrink-0" />
           ) : (
@@ -84,14 +114,15 @@ type Props = {
 
 export function CalendrierSortieCalendar({ events }: Props) {
   return (
-    <div className="h-[600px]">
+    <div className="relative w-full min-h-[500px] calendrier-sortie-wrapper">
       <Calendar
         localizer={localizer}
         events={events}
         startAccessor="start"
         endAccessor="end"
         titleAccessor="title"
-        style={{ height: "100%" }}
+        style={{ height: 700 }}
+        showAllEvents
         culture="fr-FR"
         messages={{
           today: "Aujourd'hui",
@@ -109,14 +140,18 @@ export function CalendrierSortieCalendar({ events }: Props) {
         components={{
           event: EventComponent,
         }}
-        eventPropGetter={() => ({
-          style: {
-            backgroundColor: "hsl(var(--primary))",
-            color: "hsl(var(--primary-foreground))",
-            border: "none",
-            borderRadius: "4px",
-          },
-        })}
+        eventPropGetter={(event: CalendarEvent) => {
+          const rv = event.resource;
+          const style = STATUT_STYLES[rv.statut] ?? STATUT_STYLES.EN_ATTENTE;
+          return {
+            style: {
+              backgroundColor: style.bg,
+              color: style.text,
+              border: `1px solid ${style.border}`,
+              borderRadius: "6px",
+            },
+          };
+        }}
       />
     </div>
   );

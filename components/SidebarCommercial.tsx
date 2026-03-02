@@ -90,10 +90,7 @@ const navItems: NavItem[] = [
   { id: "fac-bon-acquis", icon: FileCheck, label: "Bon pour Acquis", href: "/commercial/bon-pour-acquis", category: "facturation" },
   { id: "fac-signature", icon: Pen, label: "Signature", href: "/commercial/signature", category: "facturation" },
 
-  // Communication
-  { id: "com-courrier", icon: Mail, label: "Numéro Courrier", href: "/commercial/numero-courrier", category: "communication" },
-  { id: "com-messages", icon: MessageSquare, label: "Messages", href: "/commercial/messages", category: "communication" },
-];
+  ];
 
 const categoryConfig = {
   main: {

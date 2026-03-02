@@ -182,9 +182,9 @@
   display: none;  /* Chrome, Safari and Opera */
 }
 
-/* React Big Calendar - taller cells & polish */
+/* React Big Calendar - Calendrier Sortie polish */
 .rbc-month-row {
-  min-height: 140px !important;
+  min-height: 100px !important;
 }
 
 .rbc-row-segment {
@@ -195,6 +195,7 @@
   padding: 1rem 0;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
 
 .rbc-toolbar button {
@@ -202,10 +203,15 @@
   border-radius: 0.5rem;
   font-weight: 500;
   transition: all 0.2s;
+  border: 1px solid var(--border);
 }
 
 .rbc-toolbar button:hover {
   background: oklch(0.97 0.001 106.424);
+}
+
+.dark .rbc-toolbar button:hover {
+  background: oklch(0.27 0.007 34.298);
 }
 
 .rbc-toolbar button.rbc-active {
@@ -214,16 +220,88 @@
   border-color: transparent;
 }
 
+.dark .rbc-toolbar button.rbc-active {
+  background: oklch(0.488 0.243 264.376);
+}
+
 .rbc-header {
   padding: 0.75rem 0.5rem;
   font-weight: 600;
   font-size: 0.875rem;
+  color: var(--foreground);
 }
 
 .rbc-today {
   background: oklch(0.98 0.02 85 / 0.4);
 }
 
+.dark .rbc-today {
+  background: oklch(0.35 0.05 85 / 0.25);
+}
+
 .rbc-off-range-bg {
   background: oklch(0.98 0.001 106.424);
+}
+
+.dark .rbc-off-range-bg {
+  background: oklch(0.22 0.005 34.298);
+}
+
+/* Calendrier sortie wrapper - event cells */
+.calendrier-sortie-wrapper .rbc-event {
+  border-radius: 6px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.calendrier-sortie-wrapper .rbc-event:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.calendrier-sortie-wrapper .rbc-event-content {
+  padding: 0;
+}
+
+.calendrier-sortie-wrapper .rbc-month-view,
+.calendrier-sortie-wrapper .rbc-time-view {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.calendrier-sortie-wrapper .rbc-day-bg {
+  background: var(--card);
+}
+
+.calendrier-sortie-wrapper .rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid var(--border);
+}
+
+.calendrier-sortie-wrapper .rbc-time-slot {
+  border-color: var(--border) !important;
+}
+
+.calendrier-sortie-wrapper .rbc-date-cell {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.calendrier-sortie-wrapper .rbc-header {
+  background: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+
+/* Scrollable day cells - show scrollbar when many events */
+.calendrier-sortie-wrapper .rbc-row-content-scrollable .rbc-row-content-scroll-container {
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+}
+.calendrier-sortie-wrapper .rbc-row-content-scrollable .rbc-row-content-scroll-container::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+.calendrier-sortie-wrapper .rbc-row-content-scrollable .rbc-row-content-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
 }

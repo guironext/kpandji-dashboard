@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, MapPin, RefreshCw, CalendarDays, Car } from "lucide-react";
 import { toast } from "sonner";
 import type {
   ReservationVehicule,
@@ -14,7 +16,7 @@ import type {
 const CalendrierSortieCalendar = dynamic(
   () =>
     import("./CalendrierSortieCalendar").then((mod) => mod.CalendrierSortieCalendar),
-  { ssr: false, loading: () => <div className="h-[600px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
+  { ssr: false, loading: () => <div className="h-full min-h-[400px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div> }
 );
 
 const CALENDAR_STATUTS = ["EN_ATTENTE", "CONFIRME", "DEPLACE", "EN_COURS"] as const;
@@ -55,6 +57,16 @@ function reservationToEvent(rv: ReservationVehicule): CalendarEvent {
     end: endDate,
     resource: rv,
   };
+}
+
+function countTodayEvents(events: CalendarEvent[]): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return events.filter((e) => {
+    const d = new Date(e.start);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  }).length;
 }
 
 export default function CalendrierSortiePage() {
@@ -103,6 +115,7 @@ export default function CalendrierSortiePage() {
     CALENDAR_STATUTS.includes(r.statut as (typeof CALENDAR_STATUTS)[number])
   );
   const events: CalendarEvent[] = filteredReservations.map(reservationToEvent);
+  const todayCount = countTodayEvents(events);
 
   if (!isLoaded || loading) {
     return (
@@ -113,40 +126,78 @@ export default function CalendrierSortiePage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-xl">Calendrier des sorties</CardTitle>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50"
-            title="Actualiser"
-          >
-            <RefreshCw
-              className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
-            />
-          </button>
+    <div className="flex flex-col min-h-screen p-4 md:p-6 gap-4 pb-8">
+      <Card className="flex-1 flex flex-col min-h-0 overflow-hidden shadow-sm border-border/80">
+        <CardHeader className="flex-shrink-0 px-6 pt-6 pb-4 space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <CalendarDays className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold tracking-tight">
+                    Calendrier des sorties
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Réservations véhicule — en attente, confirmées, déplacées, en cours
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {events.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="px-3 py-1.5 text-sm font-medium bg-primary/10 text-primary border-primary/20">
+                    <Car className="h-3.5 w-3.5 mr-1" />
+                    {events.length} réservation{events.length > 1 ? "s" : ""}
+                  </Badge>
+                  {todayCount > 0 && (
+                    <Badge variant="outline" className="px-3 py-1.5 text-sm font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                      {todayCount} aujourd&apos;hui
+                    </Badge>
+                  )}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="shrink-0"
+                title="Actualiser"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Réservations véhicule (en attente, confirmées, déplacées, en cours)
-          </p>
-          <div className="rounded-lg border bg-card overflow-hidden">
+        <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden px-6 pb-6">
+          <div className="flex-1 min-h-0 max-h-[calc(100vh-14rem)] rounded-xl border-2 border-border bg-card overflow-y-auto overflow-x-auto pb-8 custom-scrollbar">
             <CalendrierSortieCalendar events={events} />
           </div>
         </CardContent>
       </Card>
 
       {events.length === 0 && !loading && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Aucune réservation à afficher.</p>
-            <p className="text-sm mt-1">
-              Seules les réservations en attente, confirmées, déplacées ou en
-              cours sont affichées.
-            </p>
+        <Card className="flex-shrink-0 border-dashed">
+          <CardContent className="py-12 px-6">
+            <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto">
+              <div className="p-4 rounded-full bg-muted/80 mb-4">
+                <MapPin className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-lg text-foreground">
+                Aucune réservation à afficher
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Seules les réservations en attente, confirmées, déplacées ou en cours sont affichées dans le calendrier.
+              </p>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                Créez une réservation véhicule pour la voir apparaître ici.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

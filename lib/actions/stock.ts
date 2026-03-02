@@ -259,10 +259,8 @@ export async function attributeSparePart(data: {
         equipeId: data.equipeId,
         montageSparePartId: (montageSparePart as { id: string }).id,
         updatedAt: new Date(),
-        MontageSparePartAttributionToSparePart: {
-          create: {
-            B: data.sparePartId,
-          },
+        SparePart: {
+          connect: { id: data.sparePartId },
         },
       },
     });
@@ -328,10 +326,8 @@ export async function saveSparePartAttribution(data: {
             equipeId: data.equipeId,
             montageSparePartId: montageSparePart.id,
             updatedAt: new Date(),
-            MontageSparePartAttributionToSparePart: {
-              create: {
-                B: sp.id,
-              },
+            SparePart: {
+              connect: { id: sp.id },
             },
           },
         });

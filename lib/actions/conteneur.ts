@@ -1420,11 +1420,7 @@ export async function getConteneursRenseignes() {
           include: {
             Client: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: true,
@@ -1451,7 +1447,7 @@ export async function getConteneursRenseignes() {
         dateEmbarquement: (c.dateEmbarquement as Date | null)?.toISOString() || null,
         dateArriveProbable: (c.dateArriveProbable as Date | null)?.toISOString() || null,
         commandes: (c.Commande || []).map((commande: unknown) => {
-          const cmd = commande as Record<string, unknown> & { VoitureModel?: unknown; Client?: unknown; Client_entreprise?: unknown; CommandeToFournisseur?: Array<{ Fournisseur: unknown }> };
+          const cmd = commande as Record<string, unknown> & { VoitureModel?: unknown; Client?: unknown; Client_entreprise?: unknown; Fournisseur?: unknown[] };
           // CRITICAL: Convert prix_unitaire using the most aggressive method possible
           let prixUnitaireFinal: number | null = null;
           const prixRaw = cmd.prix_unitaire;
@@ -1542,7 +1538,7 @@ export async function getConteneursRenseignes() {
               : null,
             client: cmd.Client,
             voitureModel: cmd.VoitureModel,
-            fournisseurs: (cmd.CommandeToFournisseur || []).map((ctf) => ctf.Fournisseur),
+            fournisseurs: cmd.Fournisseur || [],
           };
 
           return commandeObj;
@@ -1730,11 +1726,7 @@ export async function getConteneursArrives() {
           include: {
             Client: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: true,
@@ -1761,7 +1753,7 @@ export async function getConteneursArrives() {
             updatedAt: Date;
             Client?: unknown;
             VoitureModel?: unknown;
-            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+            Fournisseur?: unknown[];
           };
           return {
             ...cmd,
@@ -1771,7 +1763,7 @@ export async function getConteneursArrives() {
             updatedAt: (cmd.updatedAt as Date).toISOString(),
             client: cmd.Client,
             voitureModel: cmd.VoitureModel,
-            fournisseurs: (cmd.CommandeToFournisseur || []).map((ctf) => ctf.Fournisseur),
+            fournisseurs: cmd.Fournisseur || [],
           };
         }),
         subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -1826,11 +1818,7 @@ export async function getConteneursArrivesWithAllArriveStatuses() {
             Client: true,
             VoitureModel: true,
             Client_entreprise: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
             SparePart: {
               where: {
                 etapeSparePart: "ARRIVE",
@@ -1879,7 +1867,7 @@ export async function getConteneursArrivesWithAllArriveStatuses() {
               Client?: unknown;
               Client_entreprise?: unknown;
               VoitureModel?: unknown;
-              CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+              Fournisseur?: unknown[];
             };
             return {
               ...cmd,
@@ -1894,9 +1882,7 @@ export async function getConteneursArrivesWithAllArriveStatuses() {
               client: cmd.Client,
               clientEntreprise: cmd.Client_entreprise,
               voitureModel: cmd.VoitureModel,
-              fournisseurs: (cmd.CommandeToFournisseur || []).map(
-                (ctf: unknown) => (ctf as { Fournisseur: unknown }).Fournisseur,
-              ),
+              fournisseurs: cmd.Fournisseur || [],
             };
           }),
         subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -2145,15 +2131,11 @@ export async function getConteneursDepotageEnCours() {
                 telephone: true,
               },
             },
-            CommandeToFournisseur: {
+            Fournisseur: {
               select: {
-                Fournisseur: {
-                  select: {
-                    id: true,
-                    nom: true,
-                    email: true,
-                  },
-                },
+                id: true,
+                nom: true,
+                email: true,
               },
             },
             SparePart: {
@@ -2268,7 +2250,7 @@ export async function getConteneursDepotageEnCours() {
                 "DEPOTAGE_EN_COURS",
             )
             .map((commande: unknown) => {
-              const cmd = commande as Record<string, unknown> & { Client?: unknown; Client_entreprise?: unknown; VoitureModel?: unknown; SparePart?: unknown[]; CommandeToFournisseur?: Array<{ Fournisseur: unknown }> };
+              const cmd = commande as Record<string, unknown> & { Client?: unknown; Client_entreprise?: unknown; VoitureModel?: unknown; SparePart?: unknown[]; Fournisseur?: unknown[] };
               return {
                 ...cmd,
                 prix_unitaire: cmd.prix_unitaire
@@ -2282,9 +2264,7 @@ export async function getConteneursDepotageEnCours() {
                 client: cmd.Client,
                 clientEntreprise: cmd.Client_entreprise,
                 voitureModel: cmd.VoitureModel,
-                fournisseurs: (cmd.CommandeToFournisseur || []).map(
-                  (ctf: unknown) => (ctf as { Fournisseur: unknown }).Fournisseur,
-                ),
+                fournisseurs: cmd.Fournisseur || [],
               };
             }),
           subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -2459,11 +2439,7 @@ export async function getConteneursDecharge() {
           include: {
             Client: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: {
@@ -2495,7 +2471,7 @@ export async function getConteneursDecharge() {
             updatedAt: Date;
             Client?: unknown;
             VoitureModel?: unknown;
-            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+            Fournisseur?: unknown[];
           };
           return {
             ...cmd,
@@ -2507,9 +2483,7 @@ export async function getConteneursDecharge() {
             updatedAt: (cmd.updatedAt as Date).toISOString(),
             client: cmd.Client,
             voitureModel: cmd.VoitureModel,
-            fournisseurs: (cmd.CommandeToFournisseur || []).map(
-              (ctf: unknown) => (ctf as { Fournisseur: unknown }).Fournisseur,
-            ),
+            fournisseurs: cmd.Fournisseur || [],
           };
         }),
         subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -2921,11 +2895,7 @@ export async function getConteneursVerifies() {
           include: {
             Client: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: {
@@ -2957,7 +2927,7 @@ export async function getConteneursVerifies() {
             updatedAt: Date;
             Client?: unknown;
             VoitureModel?: unknown;
-            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+            Fournisseur?: unknown[];
           };
           return {
             ...cmd,
@@ -2967,7 +2937,7 @@ export async function getConteneursVerifies() {
             updatedAt: (cmd.updatedAt as Date).toISOString(),
             client: cmd.Client,
             voitureModel: cmd.VoitureModel,
-            fournisseurs: (cmd.CommandeToFournisseur || []).map((ctf) => ctf.Fournisseur),
+            fournisseurs: cmd.Fournisseur || [],
           };
         }),
         subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -3038,11 +3008,7 @@ export async function getConteneursTransite() {
             Client: true,
             Client_entreprise: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: true,
@@ -3071,7 +3037,7 @@ export async function getConteneursTransite() {
             Client?: unknown;
             Client_entreprise?: unknown;
             VoitureModel?: unknown;
-            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+            Fournisseur?: unknown[];
           };
           let prixUnitaireFinal: number | null = null;
           const prixRaw = cmd.prix_unitaire;
@@ -3126,7 +3092,7 @@ export async function getConteneursTransite() {
             client: cmd.Client,
             clientEntreprise: cmd.Client_entreprise,
             voitureModel: cmd.VoitureModel,
-            fournisseurs: (cmd.CommandeToFournisseur || []).map((ctf) => ctf.Fournisseur),
+            fournisseurs: cmd.Fournisseur || [],
           };
         }),
         subcases: (c.Subcase || []).map((subcase: unknown) => {
@@ -3260,11 +3226,7 @@ export async function getConteneursValides() {
           include: {
             Client: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
         },
         Subcase: true,

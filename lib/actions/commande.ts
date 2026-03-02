@@ -67,10 +67,8 @@ export async function createCommande(data: {
         ...(data.prix_unitaire && { prix_unitaire: data.prix_unitaire }),
         ...(data.fournisseurIds &&
           data.fournisseurIds.length > 0 && {
-            CommandeToFournisseur: {
-              create: data.fournisseurIds.map((id) => ({
-                B: id,
-              })),
+            Fournisseur: {
+              connect: data.fournisseurIds.map((id) => ({ id })),
             },
           }),
       },
@@ -128,11 +126,7 @@ export async function getAllCommandes() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -150,12 +144,10 @@ export async function getAllCommandes() {
           string,
           unknown
         >;
-        CommandeToFournisseur?: Array<{
-          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
-            string,
-            unknown
-          >;
-        }>;
+        Fournisseur?: Array<{ createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >>;
       };
       return {
         ...item,
@@ -181,11 +173,11 @@ export async function getAllCommandes() {
               updatedAt: item.VoitureModel.updatedAt.toISOString(),
             }
           : null,
-        fournisseurs: item.CommandeToFournisseur
-          ? item.CommandeToFournisseur.map((ctf) => ({
-              ...ctf.Fournisseur,
-              createdAt: ctf.Fournisseur.createdAt.toISOString(),
-              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+        fournisseurs: item.Fournisseur
+          ? item.Fournisseur.map((f) => ({
+              ...f,
+              createdAt: f.createdAt.toISOString(),
+              updatedAt: f.updatedAt.toISOString(),
             }))
           : [],
       };
@@ -209,11 +201,7 @@ export async function getCommandesProposees() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -233,12 +221,10 @@ export async function getCommandesProposees() {
             string,
             unknown
           >;
-          CommandeToFournisseur?: Array<{
-            Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
-              string,
-              unknown
-            >;
-          }>;
+          Fournisseur?: Array<{ createdAt: Date; updatedAt: Date } & Record<
+            string,
+            unknown
+          >>;
         };
         try {
           const accessoires = await prisma.accessoire.findMany({
@@ -269,11 +255,11 @@ export async function getCommandesProposees() {
                   updatedAt: item.VoitureModel.updatedAt.toISOString(),
                 }
               : null,
-            fournisseurs: item.CommandeToFournisseur
-              ? item.CommandeToFournisseur.map((ctf) => ({
-                  ...ctf.Fournisseur,
-                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
-                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            fournisseurs: item.Fournisseur
+              ? item.Fournisseur.map((f) => ({
+                  ...f,
+                  createdAt: f.createdAt.toISOString(),
+                  updatedAt: f.updatedAt.toISOString(),
                 }))
               : [],
           };
@@ -303,11 +289,11 @@ export async function getCommandesProposees() {
                   updatedAt: item.VoitureModel.updatedAt.toISOString(),
                 }
               : null,
-            fournisseurs: item.CommandeToFournisseur
-              ? item.CommandeToFournisseur.map((ctf) => ({
-                  ...ctf.Fournisseur,
-                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
-                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            fournisseurs: item.Fournisseur
+              ? item.Fournisseur.map((f) => ({
+                  ...f,
+                  createdAt: f.createdAt.toISOString(),
+                  updatedAt: f.updatedAt.toISOString(),
                 }))
               : [],
           };
@@ -333,21 +319,14 @@ export async function updateCommandeStatus(
       data: {
         etapeCommande: "VALIDE",
         updatedAt: new Date(),
-        CommandeToFournisseur: {
-          deleteMany: {},
-          create: fournisseurIds.map((id) => ({
-            B: id,
-          })),
+        Fournisseur: {
+          set: fournisseurIds.map((id) => ({ id })),
         },
       },
       include: {
         Client: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
     });
 
@@ -362,9 +341,9 @@ export async function updateCommandeStatus(
       fournisseurs:
         (
           commande as Record<string, unknown> & {
-            CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+            Fournisseur?: unknown[];
           }
-        ).CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        ).Fournisseur || [],
     };
 
     revalidatePath("/manager/commandes-proposees");
@@ -392,11 +371,7 @@ export async function getCommandesValides() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -414,12 +389,10 @@ export async function getCommandesValides() {
           string,
           unknown
         >;
-        CommandeToFournisseur?: Array<{
-          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
-            string,
-            unknown
-          >;
-        }>;
+        Fournisseur?: Array<{ createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >>;
       };
       return {
         ...item,
@@ -448,11 +421,11 @@ export async function getCommandesValides() {
               updatedAt: item.VoitureModel.updatedAt.toISOString(),
             }
           : null,
-        fournisseurs: item.CommandeToFournisseur
-          ? item.CommandeToFournisseur.map((ctf) => ({
-              ...ctf.Fournisseur,
-              createdAt: ctf.Fournisseur.createdAt.toISOString(),
-              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+        fournisseurs: item.Fournisseur
+          ? item.Fournisseur.map((f) => ({
+              ...f,
+              createdAt: f.createdAt.toISOString(),
+              updatedAt: f.updatedAt.toISOString(),
             }))
           : [],
       };
@@ -496,11 +469,7 @@ export async function getCommandesValides() {
             Client: true,
             Client_entreprise: true,
             VoitureModel: true,
-            CommandeToFournisseur: {
-              include: {
-                Fournisseur: true,
-              },
-            },
+            Fournisseur: true,
           },
           orderBy: { createdAt: "desc" },
         });
@@ -517,12 +486,10 @@ export async function getCommandesValides() {
               string,
               unknown
             >;
-            CommandeToFournisseur?: Array<{
-              Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
-                string,
-                unknown
-              >;
-            }>;
+            Fournisseur?: Array<{ createdAt: Date; updatedAt: Date } & Record<
+              string,
+              unknown
+            >>;
           };
           return {
             ...item,
@@ -551,11 +518,11 @@ export async function getCommandesValides() {
                   updatedAt: item.VoitureModel.updatedAt.toISOString(),
                 }
               : null,
-            fournisseurs: item.CommandeToFournisseur
-              ? item.CommandeToFournisseur.map((ctf) => ({
-                  ...ctf.Fournisseur,
-                  createdAt: ctf.Fournisseur.createdAt.toISOString(),
-                  updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+            fournisseurs: item.Fournisseur
+              ? item.Fournisseur.map((f) => ({
+                  ...f,
+                  createdAt: f.createdAt.toISOString(),
+                  updatedAt: f.updatedAt.toISOString(),
                 }))
               : [],
           };
@@ -616,11 +583,7 @@ export async function getCommandesTransites() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
       orderBy: { createdAt: "desc" },
@@ -633,7 +596,7 @@ export async function getCommandesTransites() {
         Client?: unknown;
         Client_entreprise?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
         Conteneur?: unknown;
       };
       return {
@@ -643,7 +606,7 @@ export async function getCommandesTransites() {
         clientEntreprise: item.Client_entreprise,
         voitureModel: item.VoitureModel,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
         conteneur: item.Conteneur,
       };
     });
@@ -671,11 +634,7 @@ export async function updateCommandeToTransite(
       include: {
         Client: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
     });
@@ -704,11 +663,7 @@ export async function getCommande(id: string) {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
     });
@@ -723,7 +678,7 @@ export async function getCommande(id: string) {
       Client?: unknown;
       Client_entreprise?: unknown;
       VoitureModel?: unknown;
-      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Fournisseur?: unknown[];
       Conteneur?: unknown;
     };
     const serializedCommande = {
@@ -733,7 +688,7 @@ export async function getCommande(id: string) {
       clientEntreprise: item.Client_entreprise,
       voitureModel: item.VoitureModel,
       fournisseurs:
-        item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        item.Fournisseur || [],
       conteneur: item.Conteneur,
     };
 
@@ -789,11 +744,7 @@ export async function updateCommande(
       include: {
         Client: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
     });
@@ -804,11 +755,8 @@ export async function updateCommande(
       await prisma.commande.update({
         where: { id },
         data: {
-          CommandeToFournisseur: {
-            deleteMany: {},
-            create: data.fournisseurIds.map((id) => ({
-              B: id,
-            })),
+          Fournisseur: {
+            set: data.fournisseurIds.map((id) => ({ id })),
           },
         },
       });
@@ -819,7 +767,7 @@ export async function updateCommande(
       prix_unitaire?: unknown;
       Client?: unknown;
       VoitureModel?: unknown;
-      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Fournisseur?: unknown[];
       Conteneur?: unknown;
     };
     const serializedCommande = {
@@ -830,7 +778,7 @@ export async function updateCommande(
       client: updateItem.Client,
       voitureModel: updateItem.VoitureModel,
       fournisseurs:
-        updateItem.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        updateItem.Fournisseur || [],
       conteneur: updateItem.Conteneur,
     };
 
@@ -867,11 +815,7 @@ export async function getCommandesByUserId(userId: string) {
       include: {
         Client: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
       orderBy: { createdAt: "desc" },
@@ -883,7 +827,7 @@ export async function getCommandesByUserId(userId: string) {
         prix_unitaire?: unknown;
         Client?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
         Conteneur?: unknown;
       };
       return {
@@ -892,7 +836,7 @@ export async function getCommandesByUserId(userId: string) {
         client: item.Client,
         voitureModel: item.VoitureModel,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
         conteneur: item.Conteneur,
       };
     });
@@ -911,11 +855,7 @@ export async function getAllCommandesGrouped() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
       orderBy: { date_livraison: "asc" },
@@ -929,7 +869,7 @@ export async function getAllCommandesGrouped() {
         Client?: unknown;
         Client_entreprise?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
         Conteneur?: unknown;
       };
       // Create a plain object with all Decimal fields converted
@@ -941,7 +881,7 @@ export async function getAllCommandesGrouped() {
         voitureModel: item.VoitureModel,
         conteneur: item.Conteneur,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
       };
       return serialized;
     });
@@ -974,11 +914,7 @@ export async function getCommandesDisponibles() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
       orderBy: { createdAt: "desc" },
@@ -991,7 +927,7 @@ export async function getCommandesDisponibles() {
         Client?: unknown;
         Client_entreprise?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
         Conteneur?: unknown;
       };
       return {
@@ -1001,7 +937,7 @@ export async function getCommandesDisponibles() {
         clientEntreprise: item.Client_entreprise,
         voitureModel: item.VoitureModel,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
         conteneur: item.Conteneur,
       };
     });
@@ -1024,11 +960,7 @@ export async function getCommandesVenduesProposition() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -1040,7 +972,7 @@ export async function getCommandesVenduesProposition() {
         Client?: unknown;
         Client_entreprise?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
       };
       return {
         ...item,
@@ -1049,7 +981,7 @@ export async function getCommandesVenduesProposition() {
         clientEntreprise: item.Client_entreprise,
         voitureModel: item.VoitureModel,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
       };
     });
 
@@ -1074,11 +1006,7 @@ export async function getCommandesDisponiblesProposition() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -1090,7 +1018,7 @@ export async function getCommandesDisponiblesProposition() {
         Client?: unknown;
         Client_entreprise?: unknown;
         VoitureModel?: unknown;
-        CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+        Fournisseur?: unknown[];
       };
       return {
         ...item,
@@ -1099,7 +1027,7 @@ export async function getCommandesDisponiblesProposition() {
         clientEntreprise: item.Client_entreprise,
         voitureModel: item.VoitureModel,
         fournisseurs:
-          item.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+          item.Fournisseur || [],
       };
     });
 
@@ -1123,11 +1051,7 @@ export async function getAllCommandesProposition() {
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -1145,12 +1069,10 @@ export async function getAllCommandesProposition() {
           string,
           unknown
         >;
-        CommandeToFournisseur?: Array<{
-          Fournisseur: { createdAt: Date; updatedAt: Date } & Record<
-            string,
-            unknown
-          >;
-        }>;
+        Fournisseur?: Array<{ createdAt: Date; updatedAt: Date } & Record<
+          string,
+          unknown
+        >>;
       };
       return {
         ...item,
@@ -1179,11 +1101,11 @@ export async function getAllCommandesProposition() {
               updatedAt: item.VoitureModel.updatedAt.toISOString(),
             }
           : null,
-        fournisseurs: item.CommandeToFournisseur
-          ? item.CommandeToFournisseur.map((ctf) => ({
-              ...ctf.Fournisseur,
-              createdAt: ctf.Fournisseur.createdAt.toISOString(),
-              updatedAt: ctf.Fournisseur.updatedAt.toISOString(),
+        fournisseurs: item.Fournisseur
+          ? item.Fournisseur.map((f) => ({
+              ...f,
+              createdAt: f.createdAt.toISOString(),
+              updatedAt: f.updatedAt.toISOString(),
             }))
           : [],
       };
@@ -1227,11 +1149,7 @@ export async function attribuerCommande(
         Client: true,
         Client_entreprise: true,
         VoitureModel: true,
-        CommandeToFournisseur: {
-          include: {
-            Fournisseur: true,
-          },
-        },
+        Fournisseur: true,
         Conteneur: true,
       },
     });
@@ -1242,7 +1160,7 @@ export async function attribuerCommande(
       Client?: unknown;
       Client_entreprise?: unknown;
       VoitureModel?: unknown;
-      CommandeToFournisseur?: Array<{ Fournisseur: unknown }>;
+      Fournisseur?: unknown[];
       Conteneur?: unknown;
     };
     const serializedCommande = {
@@ -1254,7 +1172,7 @@ export async function attribuerCommande(
       clientEntreprise: attrItem.Client_entreprise,
       voitureModel: attrItem.VoitureModel,
       fournisseurs:
-        attrItem.CommandeToFournisseur?.map((ctf) => ctf.Fournisseur) || [],
+        attrItem.Fournisseur || [],
       conteneur: attrItem.Conteneur,
     };
 

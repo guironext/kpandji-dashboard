@@ -49,6 +49,8 @@ export type ReservationVehicule = {
   commentaire: string | null;
   statut: string;
   moyenTransport: string | null;
+  accompagnant?: string | null;
+  coutTransport?: unknown;
   clientOuEntrepriseNom: string | null;
   createdAt: string;
   RendezVous?: {
@@ -135,7 +137,7 @@ type Props = {
 
 export function CalendrierSortieCalendar({ events, onSelectEvent }: Props) {
   return (
-    <div className="h-[800px]">
+    <div className="h-[800px] calendrier-sortie-wrapper">
       <Calendar
         localizer={localizer}
         events={events}
@@ -144,6 +146,7 @@ export function CalendrierSortieCalendar({ events, onSelectEvent }: Props) {
         endAccessor="end"
         titleAccessor="title"
         style={{ height: "100%" }}
+        showAllEvents
         culture="fr-FR"
         messages={{
           today: "Aujourd'hui",

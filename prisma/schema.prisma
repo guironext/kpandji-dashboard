@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -18,38 +19,37 @@ model User {
   createdAt                 DateTime                    @default(now())
   updatedAt                 DateTime                    @updatedAt
   telephone                 String?
+  CalendrierSortie          CalendrierSortie[]
   Client                    Client[]
   Client_entreprise         Client_entreprise[]
+  CommunicationProject      CommunicationProject[]
   Employee                  Employee[]
   Facture                   Facture[]
+  ReceivedMessages          Message[]                   @relation("ReceivedMessages")
+  SentMessages              Message[]                   @relation("SentMessages")
+  NumeroCourrier            NumeroCourrier[]
+  ObjectifCible             ObjectifCible[]
+  ObjectifPeriod            ObjectifPeriod[]
+  ObjectifPole              ObjectifPole[]
+  Objectifsfinancieres      Objectifsfinancieres[]
+  Objectifsprospects        Objectifsprospects[]
+  Objectifsvehicules        Objectifsvehicules[]
   Paiement                  Paiement[]
+  ReservationVehicule       ReservationVehicule[]
   Signature                 Signature?
   Tableau_chute             Tableau_chute[]
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
-  CommunicationProject      CommunicationProject[]
-  NumeroCourrier            NumeroCourrier[]
-  SentMessages              Message[]                 @relation("SentMessages")
-  ReceivedMessages          Message[]                 @relation("ReceivedMessages")
-  Objectifsprospects        Objectifsprospects[]
-  Objectifsvehicules        Objectifsvehicules[]
-  Objectifsfinancieres      Objectifsfinancieres[]
-  ObjectifPeriod            ObjectifPeriod[]
-  ObjectifCible             ObjectifCible[]
-  ObjectifPole              ObjectifPole[]
-  CalendrierSortie          CalendrierSortie[]
-  ReservationVehicule       ReservationVehicule[]
 }
 
 model Message {
   id         String    @id @default(uuid())
   senderId   String
-  receiverId String?   // null = broadcast to all users
+  receiverId String?
   content    String
   createdAt  DateTime  @default(now())
   readAt     DateTime?
-
-  sender     User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User?     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model Client {
@@ -77,21 +77,21 @@ model Client {
 }
 
 model RendezVous {
-  id                 String              @id @default(uuid())
-  date               DateTime
-  resume_rendez_vous String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  statut             RendezVousStatut    @default(EN_ATTENTE)
-  note               String?
-  clientId           String?
-  clientEntrepriseId String?
-  RapportRendezVous  RapportRendezVous[]
-  Client_entreprise  Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
-  client             Client?             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  Voiture            Voiture[]
-  CalendrierSortie   CalendrierSortie[]
+  id                  String                @id @default(uuid())
+  date                DateTime
+  resume_rendez_vous  String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  statut              RendezVousStatut      @default(EN_ATTENTE)
+  note                String?
+  clientId            String?
+  clientEntrepriseId  String?
+  CalendrierSortie    CalendrierSortie[]
+  RapportRendezVous   RapportRendezVous[]
+  Client_entreprise   Client_entreprise?    @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  client              Client?               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   ReservationVehicule ReservationVehicule[]
+  Voiture             Voiture[]
 }
 
 model Conteneur {
@@ -149,7 +149,7 @@ model Equipe {
   EquipeMembre                EquipeMembre[]
   MontageSparePartAttribution MontageSparePartAttribution[]
   RapportEquipe               RapportEquipe[]
-  EquipeToMontageSparePart    EquipeToMontageSparePart[]
+  MontageSparePart            MontageSparePart[]
 }
 
 model Accessoire {
@@ -225,16 +225,16 @@ model Client_entreprise {
 }
 
 model Commande {
-  id                                   String                  @id
+  id                                   String             @id
   etapeCommande                        EtapeCommande
   date_livraison                       DateTime
-  createdAt                            DateTime                @default(now())
+  createdAt                            DateTime           @default(now())
   updatedAt                            DateTime
   clientId                             String?
   conteneurId                          String?
   commandeLocalId                      String?
   couleur                              String
-  montageId                            String?                 @unique
+  montageId                            String?            @unique
   motorisation                         Motorisation
   nbr_portes                           String
   transmission                         Transmission
@@ -242,28 +242,28 @@ model Commande {
   clientEntrepriseId                   String?
   factureId                            String?
   prix_unitaire                        Decimal?
-  commandeFlag                         CommandeFlag            @default(VENDUE)
+  commandeFlag                         CommandeFlag       @default(VENDUE)
   commandeGroupeeId                    String?
   numChassis                           String?
   Accessoire                           Accessoire[]
-  Client_entreprise                    Client_entreprise?      @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
-  Client                               Client?                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  CommandeGroupee                      CommandeGroupee?        @relation(fields: [commandeGroupeeId], references: [id])
-  CommandeLocal                        CommandeLocal?          @relation(fields: [commandeLocalId], references: [id])
-  Conteneur                            Conteneur?              @relation(fields: [conteneurId], references: [id])
-  Facture                              Facture?                @relation(fields: [factureId], references: [id])
-  Montage_Commande_montageIdToMontage  Montage?                @relation("Commande_montageIdToMontage", fields: [montageId], references: [id])
-  VoitureModel                         VoitureModel?           @relation(fields: [voitureModelId], references: [id])
+  Client_entreprise                    Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+  Client                               Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  CommandeGroupee                      CommandeGroupee?   @relation(fields: [commandeGroupeeId], references: [id])
+  CommandeLocal                        CommandeLocal?     @relation(fields: [commandeLocalId], references: [id])
+  Conteneur                            Conteneur?         @relation(fields: [conteneurId], references: [id])
+  Facture                              Facture?           @relation(fields: [factureId], references: [id])
+  Montage_Commande_montageIdToMontage  Montage?           @relation("Commande_montageIdToMontage", fields: [montageId], references: [id])
+  VoitureModel                         VoitureModel?      @relation(fields: [voitureModelId], references: [id])
   CommandeEnAttente                    CommandeEnAttente?
   Correction                           Correction[]
   CourrieAvantage                      CourrieAvantage[]
-  Montage_Montage_commandeIdToCommande Montage[]               @relation("Montage_commandeIdToCommande")
+  Montage_Montage_commandeIdToCommande Montage[]          @relation("Montage_commandeIdToCommande")
   OrdreMontage                         OrdreMontage[]
   SparePart                            SparePart[]
   Teste                                Teste[]
   Tool                                 Tool[]
   Voiture                              Voiture[]
-  CommandeToFournisseur                CommandeToFournisseur[]
+  Fournisseur                          Fournisseur[]
 }
 
 model CommandeEnAttente {
@@ -291,35 +291,35 @@ model CommandeGroupee {
 }
 
 model CommandeLocal {
-  id                                      String                                    @id
-  article                                 String
-  description                             String
-  quantity                                Int
-  price                                   Decimal
-  total                                   Decimal
-  date_livraison                          DateTime
-  createdAt                               DateTime                                  @default(now())
-  updatedAt                               DateTime
-  Commande                                Commande[]
-  PieceComplement                         PieceComplement[]
-  SparePart                               SparePart[]
-  Tool                                    Tool[]
-  Voiture                                 Voiture[]
-  CommandeLocalToFournisseurCommandeLocal CommandeLocalToFournisseurCommandeLocal[]
+  id                       String                     @id
+  article                  String
+  description              String
+  quantity                 Int
+  price                    Decimal
+  total                    Decimal
+  date_livraison           DateTime
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  Commande                 Commande[]
+  PieceComplement          PieceComplement[]
+  SparePart                SparePart[]
+  Tool                     Tool[]
+  Voiture                  Voiture[]
+  FournisseurCommandeLocal FournisseurCommandeLocal[]
 }
 
 model Correction {
-  id                    String                  @id
-  details               String
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime
-  voitureId             String
-  commandeId            String?
-  Commande              Commande?               @relation(fields: [commandeId], references: [id])
-  Voiture               Voiture                 @relation(fields: [voitureId], references: [id])
-  RapportCorrection     RapportCorrection[]
-  CorrectionToSparePart CorrectionToSparePart[]
-  CorrectionToTool      CorrectionToTool[]
+  id                String              @id
+  details           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  voitureId         String
+  commandeId        String?
+  Commande          Commande?           @relation(fields: [commandeId], references: [id])
+  Voiture           Voiture             @relation(fields: [voitureId], references: [id])
+  RapportCorrection RapportCorrection[]
+  SparePart         SparePart[]
+  Tool              Tool[]
 }
 
 model CourrieAvantage {
@@ -424,34 +424,34 @@ model FactureLigne {
 }
 
 model Fournisseur {
-  id                    String                  @id
-  nom                   String
-  email                 String?
-  telephone             String?
-  adresse               String?
-  ville                 String?
-  code_postal           String?
-  pays                  String?
-  type_Activite         String?
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime
-  CommandeToFournisseur CommandeToFournisseur[]
+  id            String     @id
+  nom           String
+  email         String?
+  telephone     String?
+  adresse       String?
+  ville         String?
+  code_postal   String?
+  pays          String?
+  type_Activite String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+  Commande      Commande[]
 }
 
 model FournisseurCommandeLocal {
-  id                                      String                                    @id
-  nom                                     String
-  email                                   String?
-  telephone                               String?
-  adresse                                 String?
-  ville                                   String?
-  code_postal                             String?
-  pays                                    String?
-  type_Activite                           String?
-  commandeLocalId                         String?
-  createdAt                               DateTime                                  @default(now())
-  updatedAt                               DateTime
-  CommandeLocalToFournisseurCommandeLocal CommandeLocalToFournisseurCommandeLocal[]
+  id              String          @id
+  nom             String
+  email           String?
+  telephone       String?
+  adresse         String?
+  ville           String?
+  code_postal     String?
+  pays            String?
+  type_Activite   String?
+  commandeLocalId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  CommandeLocal   CommandeLocal[]
 }
 
 model LocalBuy {
@@ -480,20 +480,20 @@ model MontageSparePart {
   montageId                   String
   Montage                     Montage                       @relation(fields: [montageId], references: [id])
   MontageSparePartAttribution MontageSparePartAttribution[]
-  EquipeToMontageSparePart    EquipeToMontageSparePart[]
-  MontageSparePartToSparePart MontageSparePartToSparePart[]
-  MontageSparePartToTool      MontageSparePartToTool[]
+  Equipe                      Equipe[]
+  SparePart                   SparePart[]
+  Tool                        Tool[]
 }
 
 model MontageSparePartAttribution {
-  id                                     String                                   @id
-  createdAt                              DateTime                                 @default(now())
-  updatedAt                              DateTime
-  equipeId                               String
-  montageSparePartId                     String
-  Equipe                                 Equipe                                   @relation(fields: [equipeId], references: [id])
-  MontageSparePart                       MontageSparePart                         @relation(fields: [montageSparePartId], references: [id])
-  MontageSparePartAttributionToSparePart MontageSparePartAttributionToSparePart[]
+  id                 String           @id
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  equipeId           String
+  montageSparePartId String
+  Equipe             Equipe           @relation(fields: [equipeId], references: [id])
+  MontageSparePart   MontageSparePart @relation(fields: [montageSparePartId], references: [id])
+  SparePart          SparePart[]
 }
 
 model NumeroChassis {
@@ -575,8 +575,6 @@ model RapportCorrection {
   correctionId String
   Correction   Correction @relation(fields: [correctionId], references: [id])
 }
-
-
 
 model RapportEquipe {
   id        String   @id
@@ -691,32 +689,32 @@ model SistreInvoiceItem {
 }
 
 model SparePart {
-  id                                     String                                   @id
-  partCode                               String
-  partName                               String
-  partNameFrench                         String?
-  quantity                               Int
-  createdAt                              DateTime                                 @default(now())
-  updatedAt                              DateTime
-  commandeLocalId                        String?
-  voitureId                              String?
-  subcaseId                              String?
-  verificationConteneurId                String?
-  commandeId                             String?
-  storageId                              String?
-  etapeSparePart                         EtapeSparePart                           @default(TRANSITE)
-  statusVerification                     StatusVerification                       @default(EN_ATTENTE)
-  verificationName                       String?
-  Attribution                            Attribution[]
-  Commande                               Commande?                                @relation(fields: [commandeId], references: [id])
-  CommandeLocal                          CommandeLocal?                           @relation(fields: [commandeLocalId], references: [id])
-  Storage                                Storage?                                 @relation(fields: [storageId], references: [id])
-  Subcase                                Subcase?                                 @relation(fields: [subcaseId], references: [id])
-  VerificationConteneur                  VerificationConteneur?                   @relation(fields: [verificationConteneurId], references: [id])
-  Voiture                                Voiture?                                 @relation(fields: [voitureId], references: [id])
-  CorrectionToSparePart                  CorrectionToSparePart[]
-  MontageSparePartAttributionToSparePart MontageSparePartAttributionToSparePart[]
-  MontageSparePartToSparePart            MontageSparePartToSparePart[]
+  id                          String                        @id
+  partCode                    String
+  partName                    String
+  partNameFrench              String?
+  quantity                    Int
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime
+  commandeLocalId             String?
+  voitureId                   String?
+  subcaseId                   String?
+  verificationConteneurId     String?
+  commandeId                  String?
+  storageId                   String?
+  etapeSparePart              EtapeSparePart                @default(TRANSITE)
+  statusVerification          StatusVerification            @default(EN_ATTENTE)
+  verificationName            String?
+  Attribution                 Attribution[]
+  Commande                    Commande?                     @relation(fields: [commandeId], references: [id])
+  CommandeLocal               CommandeLocal?                @relation(fields: [commandeLocalId], references: [id])
+  Storage                     Storage?                      @relation(fields: [storageId], references: [id])
+  Subcase                     Subcase?                      @relation(fields: [subcaseId], references: [id])
+  VerificationConteneur       VerificationConteneur?        @relation(fields: [verificationConteneurId], references: [id])
+  Voiture                     Voiture?                      @relation(fields: [voitureId], references: [id])
+  Correction                  Correction[]
+  MontageSparePartAttribution MontageSparePartAttribution[]
+  MontageSparePart            MontageSparePart[]
 }
 
 model StockDisponible {
@@ -804,24 +802,24 @@ model Teste {
 }
 
 model Tool {
-  id                      String                   @id
+  id                      String                 @id
   toolCode                String
   toolName                String
   quantity                Int
-  createdAt               DateTime                 @default(now())
+  createdAt               DateTime               @default(now())
   updatedAt               DateTime
-  check                   Boolean                  @default(false)
+  check                   Boolean                @default(false)
   commandeId              String?
   commandeLocalId         String?
   subcaseId               String?
   verificationConteneurId String?
-  etapeTool               EtapeTool                @default(TRANSITE)
-  Commande                Commande?                @relation(fields: [commandeId], references: [id])
-  CommandeLocal           CommandeLocal?           @relation(fields: [commandeLocalId], references: [id])
-  Subcase                 Subcase?                 @relation(fields: [subcaseId], references: [id])
-  VerificationConteneur   VerificationConteneur?   @relation(fields: [verificationConteneurId], references: [id])
-  CorrectionToTool        CorrectionToTool[]
-  MontageSparePartToTool  MontageSparePartToTool[]
+  etapeTool               EtapeTool              @default(TRANSITE)
+  Commande                Commande?              @relation(fields: [commandeId], references: [id])
+  CommandeLocal           CommandeLocal?         @relation(fields: [commandeLocalId], references: [id])
+  Subcase                 Subcase?               @relation(fields: [subcaseId], references: [id])
+  VerificationConteneur   VerificationConteneur? @relation(fields: [verificationConteneurId], references: [id])
+  Correction              Correction[]
+  MontageSparePart        MontageSparePart[]
 }
 
 model VerificationConteneur {
@@ -837,39 +835,39 @@ model VerificationConteneur {
 }
 
 model Voiture {
-  id                 String              @id
-  nbr_portes         String
-  transmission       Transmission
-  motorisation       Motorisation
-  couleur            String
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime
-  clientId           String?
-  commandeId         String?
-  commandeLocalId    String?
-  conteneurId        String?
-  voitureModelId     String?
-  etatVoiture        EtatVoiture
-  clientEntrepriseId String?
-  description        String?
-  rendezVousId       String?
-  Accessoire         Accessoire[]
-  Correction         Correction[]
-  Facture            Facture[]
-  OrdreMontage       OrdreMontage[]
-  RapportRendezVous  RapportRendezVous[]
-  SparePart          SparePart[]
-  Tableau_chute      Tableau_chute[]
-  Teste              Teste[]
-  Client_entreprise  Client_entreprise?  @relation(fields: [clientEntrepriseId], references: [id])
-  Client             Client?             @relation(fields: [clientId], references: [id])
-  Commande           Commande?           @relation(fields: [commandeId], references: [id])
-  CommandeLocal      CommandeLocal?      @relation(fields: [commandeLocalId], references: [id])
-  Conteneur          Conteneur?          @relation(fields: [conteneurId], references: [id])
-  RendezVous         RendezVous?         @relation(fields: [rendezVousId], references: [id])
-  VoitureModel       VoitureModel?       @relation(fields: [voitureModelId], references: [id])
-  CalendrierSortie   CalendrierSortie[]
+  id                  String                @id
+  nbr_portes          String
+  transmission        Transmission
+  motorisation        Motorisation
+  couleur             String
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  clientId            String?
+  commandeId          String?
+  commandeLocalId     String?
+  conteneurId         String?
+  voitureModelId      String?
+  etatVoiture         EtatVoiture
+  clientEntrepriseId  String?
+  description         String?
+  rendezVousId        String?
+  Accessoire          Accessoire[]
+  CalendrierSortie    CalendrierSortie[]
+  Correction          Correction[]
+  Facture             Facture[]
+  OrdreMontage        OrdreMontage[]
+  RapportRendezVous   RapportRendezVous[]
   ReservationVehicule ReservationVehicule[]
+  SparePart           SparePart[]
+  Tableau_chute       Tableau_chute[]
+  Teste               Teste[]
+  Client_entreprise   Client_entreprise?    @relation(fields: [clientEntrepriseId], references: [id])
+  Client              Client?               @relation(fields: [clientId], references: [id])
+  Commande            Commande?             @relation(fields: [commandeId], references: [id])
+  CommandeLocal       CommandeLocal?        @relation(fields: [commandeLocalId], references: [id])
+  Conteneur           Conteneur?            @relation(fields: [conteneurId], references: [id])
+  RendezVous          RendezVous?           @relation(fields: [rendezVousId], references: [id])
+  VoitureModel        VoitureModel?         @relation(fields: [voitureModelId], references: [id])
 }
 
 model VoitureModel {
@@ -887,142 +885,48 @@ model VoitureModel {
   Voiture           Voiture[]
 }
 
-model CommandeLocalToFournisseurCommandeLocal {
-  A                        String
-  B                        String
-  CommandeLocal            CommandeLocal            @relation(fields: [A], references: [id], onDelete: Cascade)
-  FournisseurCommandeLocal FournisseurCommandeLocal @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_CommandeLocalToFournisseurCommandeLocal_AB_pkey")
-  @@index([B], map: "_CommandeLocalToFournisseurCommandeLocal_B_index")
-  @@map("_CommandeLocalToFournisseurCommandeLocal")
-}
-
-model CommandeToFournisseur {
-  A           String
-  B           String
-  Commande    Commande    @relation(fields: [A], references: [id], onDelete: Cascade)
-  Fournisseur Fournisseur @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_CommandeToFournisseur_AB_pkey")
-  @@index([B], map: "_CommandeToFournisseur_B_index")
-  @@map("_CommandeToFournisseur")
-}
-
-model CorrectionToSparePart {
-  A          String
-  B          String
-  Correction Correction @relation(fields: [A], references: [id], onDelete: Cascade)
-  SparePart  SparePart  @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_CorrectionToSparePart_AB_pkey")
-  @@index([B], map: "_CorrectionToSparePart_B_index")
-  @@map("_CorrectionToSparePart")
-}
-
-model CorrectionToTool {
-  A          String
-  B          String
-  Correction Correction @relation(fields: [A], references: [id], onDelete: Cascade)
-  Tool       Tool       @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_CorrectionToTool_AB_pkey")
-  @@index([B], map: "_CorrectionToTool_B_index")
-  @@map("_CorrectionToTool")
-}
-
-model EquipeToMontageSparePart {
-  A                String
-  B                String
-  Equipe           Equipe           @relation(fields: [A], references: [id], onDelete: Cascade)
-  MontageSparePart MontageSparePart @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_EquipeToMontageSparePart_AB_pkey")
-  @@index([B], map: "_EquipeToMontageSparePart_B_index")
-  @@map("_EquipeToMontageSparePart")
-}
-
-model MontageSparePartAttributionToSparePart {
-  A                           String
-  B                           String
-  MontageSparePartAttribution MontageSparePartAttribution @relation(fields: [A], references: [id], onDelete: Cascade)
-  SparePart                   SparePart                   @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_MontageSparePartAttributionToSparePart_AB_pkey")
-  @@index([B], map: "_MontageSparePartAttributionToSparePart_B_index")
-  @@map("_MontageSparePartAttributionToSparePart")
-}
-
-model MontageSparePartToSparePart {
-  A                String
-  B                String
-  MontageSparePart MontageSparePart @relation(fields: [A], references: [id], onDelete: Cascade)
-  SparePart        SparePart        @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_MontageSparePartToSparePart_AB_pkey")
-  @@index([B], map: "_MontageSparePartToSparePart_B_index")
-  @@map("_MontageSparePartToSparePart")
-}
-
-model MontageSparePartToTool {
-  A                String
-  B                String
-  MontageSparePart MontageSparePart @relation(fields: [A], references: [id], onDelete: Cascade)
-  Tool             Tool             @relation(fields: [B], references: [id], onDelete: Cascade)
-
-  @@id([A, B], map: "_MontageSparePartToTool_AB_pkey")
-  @@index([B], map: "_MontageSparePartToTool_B_index")
-  @@map("_MontageSparePartToTool")
-}
-
 model CommunicationProject {
   id                    String                      @id @default(uuid())
   name                  String
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
   createdById           String?
-  createdBy             User?                       @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  // 1. Analyse de la situation (diagnostic)
-  diagnosticContext     String? // Contexte, problème ou besoin
-  diagnosticTarget      String? // Cible (public visé)
-  diagnosticEnvironment String? // Environnement (concurrence, marché, image)
-  diagnosticForces      String? // Forces / faiblesses
-  // 2. Définition des objectifs (SMART)
-  objectives            String? // Objectifs clairs et mesurables
-  // 3. Stratégie
-  strategyPositioning   String? // Positionnement et message principal
-  strategyTargets       String? // Cibles prioritaires
-  strategyChannels      String? // Canaux (réseaux sociaux, affichage, etc.)
-  // 4. Plan d'action
-  actionPlan            String? // Actions à réaliser
-  actionSupports        String? // Supports (affiches, vidéos, posts…)
-  actionCalendar        String? // Calendrier
-  actionBudget          String? // Budget et responsabilités
-  // 5. Mise en œuvre
-  implementationContent String? // Création des contenus
-  implementationLaunch  String? // Lancement des campagnes
-  implementationTeams   String? // Coordination des équipes
-  // 6. Évaluation
-  evaluationMetrics     String? // Mesure d'efficacité (stats, retours, ventes)
-  evaluationComparison  String? // Comparaison avec objectifs
-  evaluationAdjustments String? // Ajustements
+  diagnosticContext     String?
+  diagnosticTarget      String?
+  diagnosticEnvironment String?
+  diagnosticForces      String?
+  objectives            String?
+  strategyPositioning   String?
+  strategyTargets       String?
+  strategyChannels      String?
+  actionPlan            String?
+  actionSupports        String?
+  actionCalendar        String?
+  actionBudget          String?
+  implementationContent String?
+  implementationLaunch  String?
+  implementationTeams   String?
+  evaluationMetrics     String?
+  evaluationComparison  String?
+  evaluationAdjustments String?
   projectStatus         ProjectStatus               @default(ACTIVE)
-  planActions           CommunicationPlanAction[]
-  actors                CommunicationProjectActor[]
   budgetItems           CommunicationBudgetItem[]
+  planActions           CommunicationPlanAction[]
+  createdBy             User?                       @relation(fields: [createdById], references: [id])
+  actors                CommunicationProjectActor[]
 }
 
 model CommunicationPlanAction {
   id         String               @id @default(uuid())
   projectId  String
-  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title      String // Action label
-  startDate  DateTime // Start date/time
-  endDate    DateTime // End date/time
-  completed  Boolean              @default(false) // Whether the action is done
-  orderIndex Int                  @default(0) // Display order
+  title      String
+  startDate  DateTime
+  endDate    DateTime
+  orderIndex Int                  @default(0)
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
+  completed  Boolean              @default(false)
+  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
@@ -1030,65 +934,61 @@ model CommunicationPlanAction {
 model CommunicationProjectActor {
   id         String               @id @default(uuid())
   projectId  String
-  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name       String // Actor name
-  department String // Department
-  job        String // Job/role they are dealing with
+  name       String
+  department String
+  job        String
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
+  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
 model CommunicationBudgetItem {
-  id          String               @id @default(uuid())
-  projectId   String
-  project     CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  designation String // Item description
-  prixUnitaire Float // Unit price
-  quantite    Float // Quantity
-  montant     Float // Amount (prixUnitaire * quantite)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id           String               @id @default(uuid())
+  projectId    String
+  designation  String
+  prixUnitaire Float
+  quantite     Float
+  montant      Float
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  project      CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
-
 /// Objectifs commerciaux 
-model ObjectifPeriod{
-  id String @id @default(uuid())
-  objectif_start DateTime
-  objectif_end DateTime
-  objectif_duree String
+model ObjectifPeriod {
+  id                    String                 @id @default(uuid())
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  objectif_start        DateTime
+  objectif_end          DateTime
+  objectif_duree        String
   objectifs_financieres String
-  objectifs_vehicules String
-  objectifs_clients String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
- 
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  Objectifsprospects   Objectifsprospects[]
-  Objectifsvehicules   Objectifsvehicules[]
-  Objectifsfinancieres Objectifsfinancieres[]
-  ObjectifCible       ObjectifCible[]
-  ObjectifPole        ObjectifPole[]
+  objectifs_vehicules   String
+  objectifs_clients     String
+  userId                String
+  ObjectifCible         ObjectifCible[]
+  User                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ObjectifPole          ObjectifPole[]
+  Objectifsfinancieres  Objectifsfinancieres[]
+  Objectifsprospects    Objectifsprospects[]
+  Objectifsvehicules    Objectifsvehicules[]
 }
 
 model ObjectifCible {
-  id            String   @id @default(uuid())
+  id            String         @id @default(uuid())
   periodId      String
   userId        String
-  prospectCible Int      @default(0)
-  prospectReel  Int      @default(0)
-  tauxAtteint   Decimal  @default(0) @db.Decimal(5, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  period ObjectifPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prospectCible Int            @default(0)
+  prospectReel  Int            @default(0)
+  tauxAtteint   Decimal        @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  period        ObjectifPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, userId])
   @@index([userId])
@@ -1096,143 +996,123 @@ model ObjectifCible {
 }
 
 model Objectifsprospects {
-  id String @id @default(uuid())
-  objectif_cible String
-  objectif_reel_atteint String
+  id                           String         @id @default(uuid())
+  objectif_cible               String
+  objectif_reel_atteint        String
   objectif_pourcentage_atteint Float
+  createdAt                    DateTime       @default(now())
+  updatedAt                    DateTime       @updatedAt
+  userId                       String
+  objectifPeriodId             String
+  ObjectifPeriod               ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  User                         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  objectifPeriodId String
-  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([objectifPeriodId])
 }
 
 model CalendrierSortie {
-  id String @id @default(uuid())
-  dateSortie DateTime
-  dateRetour DateTime
-  destination String
-  motif String
-  commentaire String?
-  statut StatutCalendrierSortie @default(EN_ATTENTE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId])
-  voitureId String?
-  Voiture Voiture? @relation(fields: [voitureId], references: [id], onDelete: Cascade)
-  rendezVousId String
-  RendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(uuid())
+  dateSortie            DateTime
+  dateRetour            DateTime
+  destination           String
+  motif                 String
+  commentaire           String?
+  statut                StatutCalendrierSortie @default(EN_ATTENTE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  userId                String
+  voitureId             String?
+  rendezVousId          String
   autre_moyen_transport String?
-  moyenTransport String?
-  ReservationVehicule ReservationVehicule[]
-}
+  moyenTransport        String?
+  RendezVous            RendezVous             @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  User                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Voiture               Voiture?               @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+  ReservationVehicule   ReservationVehicule[]
 
-enum StatutCalendrierSortie {
-  EN_ATTENTE
-  CONFIRME
-  ANNULE
-  DEPLACE
-  EFFECTUE
-  EN_COURS
-  TERMINEE
+  @@index([userId])
 }
 
 model ReservationVehicule {
-  id String @id @default(uuid())
-  dateReservation DateTime
-  dateRetour DateTime
-  heure_reserve String
-  destination String
-  motif String
-  commentaire String?
-  statut StatutReservationVehicule @default(EN_ATTENTE)
-  rendezVousId String
-  RendezVous RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
-  voitureId String?
-  Voiture Voiture? @relation(fields: [voitureId], references: [id], onDelete: Cascade)
-  moyenTransport String?
+  id                    String                    @id @default(uuid())
+  dateReservation       DateTime
+  dateRetour            DateTime
+  heure_reserve         String
+  destination           String
+  motif                 String
+  commentaire           String?
+  statut                StatutReservationVehicule @default(EN_ATTENTE)
+  rendezVousId          String
+  voitureId             String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  userId                String
+  calendrierSortieId    String
+  moyenTransport        String?
   clientOuEntrepriseNom String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  calendrierSortieId String
-  CalendrierSortie CalendrierSortie @relation(fields: [calendrierSortieId], references: [id], onDelete: Cascade)
+  coutTransport         Decimal?                  @default(0)
+  accompagnant          String?
+  CalendrierSortie      CalendrierSortie          @relation(fields: [calendrierSortieId], references: [id], onDelete: Cascade)
+  RendezVous            RendezVous                @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  User                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Voiture               Voiture?                  @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([rendezVousId])
   @@index([voitureId])
   @@index([calendrierSortieId])
 }
 
-enum StatutReservationVehicule {
-  EN_ATTENTE
-  CONFIRME
-  ANNULE
-  DEPLACE
-  EFFECTUE
-  EN_COURS
-  TERMINEE
-}
-
 model Objectifsvehicules {
-  id String @id @default(uuid())
-  objectif_cible String
-  objectif_reel_atteint String?
+  id                           String         @id @default(uuid())
+  objectif_cible               String
+  objectif_reel_atteint        String?
   objectif_pourcentage_atteint Float?
+  createdAt                    DateTime       @default(now())
+  updatedAt                    DateTime       @updatedAt
+  userId                       String
+  objectifPeriodId             String
+  ObjectifPeriod               ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  User                         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  objectifPeriodId String
-  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
-  
   @@index([userId])
   @@index([objectifPeriodId])
 }
 
 model Objectifsfinancieres {
-  id                String    @id @default(uuid())
-  nomDuCommercial   String    @default("")
-  pole              String    @default("")
-  duree             String    @default("")
-  chiffreAffaire    Decimal   @default(0) @db.Decimal(18, 2)
-  finObjectif       DateTime?
-  pourcentageAtteint Decimal  @default(0) @db.Decimal(10, 2)
-  ecartCible        Decimal?
-  objectif_cible    String?
-  objectif_reel_atteint String?
+  id                           String          @id @default(uuid())
+  objectif_cible               String?
+  objectif_reel_atteint        String?
   objectif_pourcentage_atteint Float?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  userId            String?
-  objectifPeriodId  String?
-  User              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ObjectifPeriod    ObjectifPeriod? @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  userId                       String?
+  objectifPeriodId             String?
+  nomDuCommercial              String          @default("")
+  pole                         String          @default("")
+  duree                        String          @default("")
+  chiffreAffaire               Decimal         @default(0) @db.Decimal(18, 2)
+  finObjectif                  DateTime?
+  pourcentageAtteint           Decimal         @default(0) @db.Decimal(10, 2)
+  ecartCible                   Decimal?
+  ObjectifPeriod               ObjectifPeriod? @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  User                         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([objectifPeriodId])
 }
 
 model ObjectifPole {
-  id String @id @default(uuid())
+  id                String         @id @default(uuid())
   objectifPoleCible String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  userId            String
+  objectifPeriodId  String
+  ObjectifPeriod    ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
+  User              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  userId String
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  objectifPeriodId String
-  ObjectifPeriod ObjectifPeriod @relation(fields: [objectifPeriodId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([objectifPeriodId])
 }
@@ -1253,12 +1133,30 @@ model NumeroCourrier {
   @@index([numero_courrier])
 }
 
+enum StatutCalendrierSortie {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+  EN_COURS
+  TERMINEE
+}
+
+enum StatutReservationVehicule {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+  EN_COURS
+  TERMINEE
+}
+
 enum UserRole {
   ADMIN
   MANAGER
   COMMERCIAL
-  RESPONSABLE_COMMERCIAL
-  COMMUNICATION
   CHEFUSINE
   CHEFEQUIPE
   MAGASINIER
@@ -1273,6 +1171,8 @@ enum UserRole {
   COMPTABLE
   CONCESSIONAIRE
   SUPERVISEUR
+  COMMUNICATION
+  RESPONSABLE_COMMERCIAL
 }
 
 enum ChassisFlag {

@@ -66,6 +66,8 @@ export async function PATCH(
       commentaire,
       clientOuEntrepriseNom,
       statut,
+      accompagnant,
+      coutTransport,
     } = body as {
       moyenTransport?: string;
       dateReservation?: string;
@@ -76,6 +78,8 @@ export async function PATCH(
       commentaire?: string;
       clientOuEntrepriseNom?: string;
       statut?: string;
+      accompagnant?: string;
+      coutTransport?: number | string;
     };
 
     const dateReservationDate = dateReservation
@@ -93,6 +97,10 @@ export async function PATCH(
         ? clientOuEntrepriseNom?.trim() || null
         : existing.clientOuEntrepriseNom;
     const heure = heure_reserve?.trim() ?? existing.heure_reserve;
+    const accomp = accompagnant !== undefined ? accompagnant?.trim() || null : existing.accompagnant;
+    const cout = coutTransport !== undefined
+      ? (typeof coutTransport === "number" ? coutTransport : parseFloat(String(coutTransport)) || 0)
+      : (existing.coutTransport ? Number(existing.coutTransport) : 0);
 
     await prisma.$transaction([
       prisma.reservationVehicule.update({
@@ -106,6 +114,8 @@ export async function PATCH(
           commentaire: comm,
           moyenTransport: transport,
           clientOuEntrepriseNom: clientNom,
+          accompagnant: accomp,
+          coutTransport: cout,
           ...(statut && { statut: statut as "EN_ATTENTE" | "CONFIRME" | "ANNULE" | "DEPLACE" | "EFFECTUE" | "EN_COURS" | "TERMINEE" }),
           updatedAt: new Date(),
         },

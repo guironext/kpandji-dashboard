@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Loader2,
   MapPin,
@@ -121,6 +122,8 @@ export default function CalendrierSortiePage() {
   const [editingReservation, setEditingReservation] =
     useState<ReservationVehicule | null>(null);
   const [editStatut, setEditStatut] = useState("");
+  const [editAccompagnant, setEditAccompagnant] = useState("");
+  const [editCoutTransport, setEditCoutTransport] = useState("");
   const [updating, setUpdating] = useState(false);
 
   const fetchReservations = useCallback(async () => {
@@ -160,8 +163,11 @@ export default function CalendrierSortiePage() {
   };
 
   const handleSelectEvent = (event: CalendarEvent) => {
-    setEditingReservation(event.resource);
-    setEditStatut(event.resource.statut);
+    const rv = event.resource;
+    setEditingReservation(rv);
+    setEditStatut(rv.statut);
+    setEditAccompagnant(rv.accompagnant ?? "");
+    setEditCoutTransport(rv.coutTransport != null ? String(rv.coutTransport) : "");
     setEditDialogOpen(true);
   };
 
@@ -177,6 +183,8 @@ export default function CalendrierSortiePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             statut: editStatut,
+            accompagnant: editAccompagnant.trim() || null,
+            coutTransport: editCoutTransport ? parseFloat(editCoutTransport) : 0,
             clerkUserId: user?.id,
           }),
           credentials: "same-origin",
@@ -184,7 +192,7 @@ export default function CalendrierSortiePage() {
       );
       const result = await res.json().catch(() => ({}));
       if (result.success) {
-        toast.success("Statut modifié avec succès");
+        toast.success("Réservation modifiée avec succès");
         setEditDialogOpen(false);
         setEditingReservation(null);
         fetchReservations();
@@ -367,20 +375,43 @@ export default function CalendrierSortiePage() {
               </div>
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6 space-y-3">
-            <label className="text-sm font-medium text-stone-700">Statut</label>
-            <Select value={editStatut} onValueChange={setEditStatut}>
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Sélectionner un statut" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-stone-700">Statut</label>
+              <Select value={editStatut} onValueChange={setEditStatut}>
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-stone-700">Accompagnateur</label>
+              <Input
+                value={editAccompagnant}
+                onChange={(e) => setEditAccompagnant(e.target.value)}
+                placeholder="Nom de l'accompagnateur"
+                className="h-11 rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-stone-700">Coût du transport</label>
+              <Input
+                type="number"
+                value={editCoutTransport}
+                onChange={(e) => setEditCoutTransport(e.target.value)}
+                placeholder="0"
+                min={0}
+                step="0.01"
+                className="h-11 rounded-xl"
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
