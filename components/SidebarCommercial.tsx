@@ -89,6 +89,8 @@ const navItems: NavItem[] = [
   { id: "fac-bon-commande", icon: Receipt, label: "Bon de Commande", href: "/commercial/bon-de-commande", category: "facturation" },
   { id: "fac-bon-acquis", icon: FileCheck, label: "Bon pour Acquis", href: "/commercial/bon-pour-acquis", category: "facturation" },
   { id: "fac-signature", icon: Pen, label: "Signature", href: "/commercial/signature", category: "facturation" },
+  { id: "fac-numero-courrier", icon: Mail, label: "Numéro Courrier", href: "/commercial/numero-courrier", category: "facturation" },
+  { id: "fac-messages", icon: MessageSquare, label: "Messages", href: "/commercial/messages", category: "facturation" },
 
   ];
 
