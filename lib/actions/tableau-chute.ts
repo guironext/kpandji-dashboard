@@ -60,11 +60,13 @@ export async function createTableauChute(data: {
           nom_prenom_client: rv.client?.nom || rv.Client_entreprise?.nom_entreprise || "Client",
           telephone_client: rv.client?.telephone || rv.Client_entreprise?.telephone || "",
           type_client: rv.client ? "Particulier" : "Professionnel",
-          presentation_gamme: false,
-          essai_vehicule: false,
-          negociation_commerciale: false,
-          livraison_vehicule: false,
-          service_apres_vente: false,
+          Com_Pres: false,
+          Com_Drive: false,
+          Com_Achat: false,
+          Com_Livre: false,
+          Com_APV: false,
+          Com_Office: false,
+          Com_Close: false,
           devis_offre_remise: false,
           assurance_entretien: false,
           reprise_ancien_vehicule: false,
@@ -423,5 +425,209 @@ export async function updateTableauChuteRendezVousMois(data: {
   } catch (error) {
     console.error("Error updating tableau chute rendez-vous:", error);
     return { success: false, error: "Failed to update tableau chute rendez-vous" };
+  }
+}
+
+export type TableauChuteRendezVousItem = {
+  id: string;
+  mois_chute: string;
+  modeles_discutes: unknown;
+  createdAt: string;
+  rapportRendezVous: {
+    id: string;
+    nom_prenom_client: string;
+    telephone_client: string;
+    email_client?: string;
+    profession_societe?: string;
+    type_client: string;
+    client?: { id: string; nom: string; email?: string; telephone: string };
+    clientEntreprise?: { id: string; nom_entreprise: string; email?: string; telephone: string };
+    rendezVous: { id: string; date: string; statut: string };
+  };
+};
+
+export type TableauChuteByMonth = {
+  mois_chute: string;
+  items: TableauChuteRendezVousItem[];
+};
+
+export type TableauChuteByCommercial = {
+  commercialId: string;
+  commercialName: string;
+  months: TableauChuteByMonth[];
+  totalChutes: number;
+};
+
+export type TableauChuteByPeriodAndCommercialData = {
+  periodId: string;
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  commercials: TableauChuteByCommercial[];
+};
+
+export type TableauChuteByPeriodAndCommercialResult = {
+  periods: TableauChuteByPeriodAndCommercialData[];
+};
+
+/**
+ * Fetches all tableau_chute_rendez_vous grouped by ObjectifPeriod, commercial, and month.
+ * For RESPONSABLE_COMMERCIAL / ADMIN only.
+ */
+export async function getTableauChuteRendezVousByObjectifPeriodAndCommercial(): Promise<{
+  success: boolean;
+  data?: TableauChuteByPeriodAndCommercialResult;
+  error?: string;
+}> {
+  try {
+    const { auth } = await import("@clerk/nextjs/server");
+    const { getOrCreateUser } = await import("./user");
+    const authResult = await auth();
+    const clerkId = authResult?.userId;
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const userResult = await getOrCreateUser(clerkId);
+    if (!userResult.success || !userResult.data) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+    const user = userResult.data;
+
+    const allowedRoles = ["RESPONSABLE_COMMERCIAL", "ADMIN"];
+    if (!allowedRoles.includes(user.role)) {
+      return { success: false, error: "Non autorisé" };
+    }
+
+    const [periods, tableauxChute] = await Promise.all([
+      prisma.objectifPeriod.findMany({
+        orderBy: { objectif_start: "desc" },
+        select: { id: true, objectif_start: true, objectif_end: true },
+      }),
+      prisma.tableau_chute_rendez_vous.findMany({
+        include: {
+          User: { select: { id: true, firstName: true, lastName: true } },
+          RapportRendezVous: {
+            include: {
+              Client: true,
+              Client_entreprise: true,
+              RendezVous: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const result: TableauChuteByPeriodAndCommercialData[] = [];
+
+    for (const p of periods) {
+      const periodStart = p.objectif_start;
+      const periodEnd = p.objectif_end;
+
+      const byCommercial = new Map<
+        string,
+        { commercialName: string; byMonth: Map<string, TableauChuteRendezVousItem[]> }
+      >();
+
+      for (const tcrv of tableauxChute) {
+        const rvDate = tcrv.RapportRendezVous?.RendezVous?.date ?? tcrv.RapportRendezVous?.date_rendez_vous;
+        const date = rvDate ? new Date(rvDate) : null;
+        if (!date || date < periodStart || date > periodEnd) continue;
+
+        const commercialId = tcrv.userId;
+        const commercialName = tcrv.User
+          ? `${tcrv.User.firstName} ${tcrv.User.lastName}`.trim() || "—"
+          : "—";
+
+        if (!byCommercial.has(commercialId)) {
+          byCommercial.set(commercialId, {
+            commercialName,
+            byMonth: new Map(),
+          });
+        }
+        const entry = byCommercial.get(commercialId)!;
+        const mois = tcrv.mois_chute?.trim() || "Non renseigné";
+        if (!entry.byMonth.has(mois)) {
+          entry.byMonth.set(mois, []);
+        }
+
+        const item: TableauChuteRendezVousItem = {
+          id: tcrv.id,
+          mois_chute: tcrv.mois_chute,
+          modeles_discutes: tcrv.modeles_discutes,
+          createdAt: tcrv.createdAt.toISOString(),
+          rapportRendezVous: {
+            id: tcrv.RapportRendezVous.id,
+            nom_prenom_client: tcrv.RapportRendezVous.nom_prenom_client,
+            telephone_client: tcrv.RapportRendezVous.telephone_client,
+            email_client: tcrv.RapportRendezVous.email_client ?? undefined,
+            profession_societe: tcrv.RapportRendezVous.profession_societe ?? undefined,
+            type_client: tcrv.RapportRendezVous.type_client,
+            client: tcrv.RapportRendezVous.Client
+              ? {
+                  id: tcrv.RapportRendezVous.Client.id,
+                  nom: tcrv.RapportRendezVous.Client.nom,
+                  email: tcrv.RapportRendezVous.Client.email ?? undefined,
+                  telephone: tcrv.RapportRendezVous.Client.telephone,
+                }
+              : undefined,
+            clientEntreprise: tcrv.RapportRendezVous.Client_entreprise
+              ? {
+                  id: tcrv.RapportRendezVous.Client_entreprise.id,
+                  nom_entreprise: tcrv.RapportRendezVous.Client_entreprise.nom_entreprise,
+                  email: tcrv.RapportRendezVous.Client_entreprise.email ?? undefined,
+                  telephone: tcrv.RapportRendezVous.Client_entreprise.telephone,
+                }
+              : undefined,
+            rendezVous: {
+              id: tcrv.RapportRendezVous.RendezVous.id,
+              date: tcrv.RapportRendezVous.RendezVous.date.toISOString(),
+              statut: tcrv.RapportRendezVous.RendezVous.statut,
+            },
+          },
+        };
+        entry.byMonth.get(mois)!.push(item);
+      }
+
+      const startStr = periodStart.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const endStr = periodEnd.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
+      const commercials: TableauChuteByCommercial[] = Array.from(byCommercial.entries()).map(
+        ([commercialId, { commercialName, byMonth }]) => {
+          const months: TableauChuteByMonth[] = Array.from(byMonth.entries())
+            .map(([mois_chute, items]) => ({ mois_chute, items }))
+            .sort((a, b) => a.mois_chute.localeCompare(b.mois_chute));
+          const totalChutes = months.reduce((s, m) => s + m.items.length, 0);
+          return {
+            commercialId,
+            commercialName,
+            months,
+            totalChutes,
+          };
+        }
+      );
+
+      result.push({
+        periodId: p.id,
+        periodStart: periodStart.toISOString(),
+        periodEnd: periodEnd.toISOString(),
+        periodLabel: `${startStr} — ${endStr}`,
+        commercials: commercials.sort((a, b) => a.commercialName.localeCompare(b.commercialName)),
+      });
+    }
+
+    return { success: true, data: { periods: result } };
+  } catch (error) {
+    console.error("Error fetching tableau chute by ObjectifPeriod and Commercial:", error);
+    return { success: false, error: "Échec du chargement des données" };
   }
 }

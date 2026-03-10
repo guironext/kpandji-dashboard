@@ -458,11 +458,13 @@ export async function createRapportRendezVousComplet(data: {
   email_client?: string;
   profession_societe?: string;
   type_client: string;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   objet_autre?: string;
   modeles_discutes: Prisma.InputJsonValue[];
   motivations_achat?: string;
@@ -471,36 +473,49 @@ export async function createRapportRendezVousComplet(data: {
   degre_interet?: string;
   decision_attendue?: string;
   devis_offre_remise: boolean;
+  propositions_faites?: string;
   reference_offre?: string;
   financement_propose?: string;
   assurance_entretien: boolean;
   reprise_ancien_vehicule: boolean;
+  suivi_actions?: string;
   actions_suivi: Prisma.InputJsonValue[];
   commentaire_global?: string;
 }) {
   try {
+    const dateRendezVous =
+      typeof data.date_rendez_vous === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(data.date_rendez_vous)
+        ? (() => {
+            const [y, m, d] = data.date_rendez_vous.split("-").map(Number);
+            return new Date(y, m - 1, d);
+          })()
+        : new Date(data.date_rendez_vous);
+
     const rapport = await prisma.rapportRendezVous.create({
       data: {
         id: crypto.randomUUID(),
         rendezVousId: data.rendezVousId,
-        clientId: data.clientId,
-        clientEntrepriseId: data.clientEntrepriseId,
-        date_rendez_vous: new Date(data.date_rendez_vous),
-        heure_rendez_vous: data.heure_rendez_vous,
-        lieu_rendez_vous: data.lieu_rendez_vous,
-        lieu_autre: data.lieu_autre,
-        conseiller_commercial: data.conseiller_commercial,
-        duree_rendez_vous: data.duree_rendez_vous,
-        nom_prenom_client: data.nom_prenom_client,
-        telephone_client: data.telephone_client,
+        clientId: data.clientId || undefined,
+        clientEntrepriseId: data.clientEntrepriseId || undefined,
+        date_rendez_vous: dateRendezVous,
+        heure_rendez_vous: data.heure_rendez_vous || "00:00",
+        lieu_rendez_vous: data.lieu_rendez_vous || "Showroom",
+        lieu_autre: data.lieu_autre || undefined,
+        conseiller_commercial: data.conseiller_commercial || "Non renseigné",
+        duree_rendez_vous: data.duree_rendez_vous || "0",
+        nom_prenom_client: data.nom_prenom_client || "Non renseigné",
+        telephone_client: data.telephone_client || "Non renseigné",
         email_client: data.email_client,
         profession_societe: data.profession_societe,
-        type_client: data.type_client,
-        presentation_gamme: data.presentation_gamme,
-        essai_vehicule: data.essai_vehicule,
-        negociation_commerciale: data.negociation_commerciale,
-        livraison_vehicule: data.livraison_vehicule,
-        service_apres_vente: data.service_apres_vente,
+        type_client: data.type_client || "Particulier",
+        Com_Pres: data.Com_Pres ?? false,
+        Com_Drive: data.Com_Drive ?? false,
+        Com_Achat: data.Com_Achat ?? false,
+        Com_Livre: data.Com_Livre ?? false,
+        Com_APV: data.Com_APV ?? false,
+        Com_Office: data.Com_Office ?? false,
+        Com_Close: data.Com_Close ?? false,
         objet_autre: data.objet_autre,
         modeles_discutes: data.modeles_discutes,
         motivations_achat: data.motivations_achat,
@@ -508,11 +523,13 @@ export async function createRapportRendezVousComplet(data: {
         objections_freins: data.objections_freins,
         degre_interet: data.degre_interet,
         decision_attendue: data.decision_attendue,
-        devis_offre_remise: data.devis_offre_remise,
+        devis_offre_remise: data.devis_offre_remise ?? false,
+        propositions_faites: data.propositions_faites,
         reference_offre: data.reference_offre,
         financement_propose: data.financement_propose,
-        assurance_entretien: data.assurance_entretien,
-        reprise_ancien_vehicule: data.reprise_ancien_vehicule,
+        assurance_entretien: data.assurance_entretien ?? false,
+        reprise_ancien_vehicule: data.reprise_ancien_vehicule ?? false,
+        suivi_actions: data.suivi_actions,
         actions_suivi: data.actions_suivi,
         commentaire_global: data.commentaire_global,
         updatedAt: new Date(),
@@ -523,9 +540,17 @@ export async function createRapportRendezVousComplet(data: {
     return { success: true, data: rapport };
   } catch (error) {
     console.error("Error creating complete rapport rendez-vous:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+    const prismaCode =
+      error && typeof error === "object" && "code" in error
+        ? (error as { code?: string }).code
+        : undefined;
     return {
       success: false,
-      error: "Failed to create complete appointment report",
+      error: prismaCode
+        ? `Erreur base de données (${prismaCode}): ${message}`
+        : message || "Failed to create complete appointment report",
     };
   }
 }
@@ -578,12 +603,14 @@ export async function getRapportRendezVousByUser(clerkUserId: string) {
     // Remap for frontend compatibility
     const serializedRapports = (rapports as unknown[]).map((rapport: unknown) => {
       const r = rapport as Record<string, unknown> & {
+        Client?: unknown;
         Client_entreprise?: unknown;
         RendezVous?: unknown;
         Voiture?: Record<string, unknown> & { VoitureModel?: unknown };
       };
       return {
         ...r,
+        client: r.Client,
         clientEntreprise: r.Client_entreprise,
         rendezVous: r.RendezVous,
         voiture: r.Voiture ? {
@@ -614,11 +641,13 @@ export async function updateRapportRendezVousComplet(
     email_client?: string;
     profession_societe?: string;
     type_client?: string;
-    presentation_gamme?: boolean;
-    essai_vehicule?: boolean;
-    negociation_commerciale?: boolean;
-    livraison_vehicule?: boolean;
-    service_apres_vente?: boolean;
+    Com_Pres?: boolean;
+    Com_Drive?: boolean;
+    Com_Achat?: boolean;
+    Com_Livre?: boolean;
+    Com_APV?: boolean;
+    Com_Office?: boolean;
+    Com_Close?: boolean;
     objet_autre?: string;
     modeles_discutes?: Prisma.InputJsonValue[];
     motivations_achat?: string;
@@ -627,10 +656,12 @@ export async function updateRapportRendezVousComplet(
     degre_interet?: string;
     decision_attendue?: string;
     devis_offre_remise?: boolean;
+    propositions_faites?: string;
     reference_offre?: string;
     financement_propose?: string;
     assurance_entretien?: boolean;
     reprise_ancien_vehicule?: boolean;
+    suivi_actions?: string;
     actions_suivi?: Prisma.InputJsonValue[];
     commentaire_global?: string;
   },
@@ -660,16 +691,20 @@ export async function updateRapportRendezVousComplet(
       updateData.profession_societe = data.profession_societe;
     if (data.type_client !== undefined)
       updateData.type_client = data.type_client;
-    if (data.presentation_gamme !== undefined)
-      updateData.presentation_gamme = data.presentation_gamme;
-    if (data.essai_vehicule !== undefined)
-      updateData.essai_vehicule = data.essai_vehicule;
-    if (data.negociation_commerciale !== undefined)
-      updateData.negociation_commerciale = data.negociation_commerciale;
-    if (data.livraison_vehicule !== undefined)
-      updateData.livraison_vehicule = data.livraison_vehicule;
-    if (data.service_apres_vente !== undefined)
-      updateData.service_apres_vente = data.service_apres_vente;
+    if (data.Com_Pres !== undefined)
+      updateData.Com_Pres = data.Com_Pres;
+    if (data.Com_Drive !== undefined)
+      updateData.Com_Drive = data.Com_Drive;
+    if (data.Com_Achat !== undefined)
+      updateData.Com_Achat = data.Com_Achat;
+    if (data.Com_Livre !== undefined)
+      updateData.Com_Livre = data.Com_Livre;
+    if (data.Com_APV !== undefined)
+      updateData.Com_APV = data.Com_APV;
+    if (data.Com_Office !== undefined)
+      updateData.Com_Office = data.Com_Office;
+    if (data.Com_Close !== undefined)
+      updateData.Com_Close = data.Com_Close;
     if (data.objet_autre !== undefined)
       updateData.objet_autre = data.objet_autre;
     if (data.modeles_discutes !== undefined)
@@ -686,6 +721,8 @@ export async function updateRapportRendezVousComplet(
       updateData.decision_attendue = data.decision_attendue;
     if (data.devis_offre_remise !== undefined)
       updateData.devis_offre_remise = data.devis_offre_remise;
+    if (data.propositions_faites !== undefined)
+      updateData.propositions_faites = data.propositions_faites;
     if (data.reference_offre !== undefined)
       updateData.reference_offre = data.reference_offre;
     if (data.financement_propose !== undefined)
@@ -694,6 +731,8 @@ export async function updateRapportRendezVousComplet(
       updateData.assurance_entretien = data.assurance_entretien;
     if (data.reprise_ancien_vehicule !== undefined)
       updateData.reprise_ancien_vehicule = data.reprise_ancien_vehicule;
+    if (data.suivi_actions !== undefined)
+      updateData.suivi_actions = data.suivi_actions;
     if (data.actions_suivi !== undefined)
       updateData.actions_suivi = data.actions_suivi;
     if (data.commentaire_global !== undefined)

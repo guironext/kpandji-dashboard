@@ -23,6 +23,7 @@ const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
 const isEmployeeRoute = createRouteMatcher(["/employee", "/employee/(.*)"]);
 const isManagerRoute = createRouteMatcher(["/manager", "/manager/(.*)"]);
+const isJuristeRoute = createRouteMatcher(["/juriste", "/juriste/(.*)"]);
 const isMagasinierRoute = createRouteMatcher([
 	"/magasinier",
 	"/magasinier/(.*)",
@@ -73,6 +74,57 @@ const isCommunicationRoute = createRouteMatcher([
 	"/communication/(.*)",
 ]);
 
+const ROLE_REDIRECTS: Record<string, string> = {
+	ADMIN: "/admin",
+	EMPLOYEE: "/employee",
+	MANAGER: "/manager",
+	MAGASINIER: "/magasinier",
+	CHEFUSINE: "/chefusine",
+	JURISTE: "/juriste",
+	CHEFEQUIPE: "/chefequipe",
+	CHEFQUALITE: "/chefqualite",
+	COMMERCIAL: "/commercial",
+	RESPONSABLE_COMMERCIAL: "/responsablecommercial",
+	COMMUNICATION: "/communication",
+	RH: "/rh",
+	SAV: "/sav",
+	LOGISTIQUE: "/logistique",
+	FINANCE: "/finance",
+	DIRECTEUR_GENERAL: "/directeurgeneral",
+	CLIENTELLE: "/clientelle",
+	COMPTABLE: "/comptable",
+	CONCESSIONAIRE: "/concessionnaire",
+	SUPERVISEUR: "/superviseur",
+};
+
+function getRedirectForRole(role: string | undefined): string | null {
+	return (role && ROLE_REDIRECTS[role]) ?? null;
+}
+
+type RouteMatcher = (req: NextRequest) => boolean;
+const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
+	{ match: isAdminRoute, role: "ADMIN" },
+	{ match: isEmployeeRoute, role: "EMPLOYEE" },
+	{ match: isManagerRoute, role: "MANAGER" },
+	{ match: isChefusineRoute, role: "CHEFUSINE" },
+	{ match: isJuristeRoute, role: "JURISTE" },
+	{ match: isChefequipeRoute, role: "CHEFEQUIPE" },
+	{ match: isMagasinierRoute, role: "MAGASINIER" },
+	{ match: isChefqualiteRoute, role: "CHEFQUALITE" },
+	{ match: isCommercialRoute, role: "COMMERCIAL" },
+	{ match: isResponsablecommercialRoute, role: "RESPONSABLE_COMMERCIAL" },
+	{ match: isCommunicationRoute, role: "COMMUNICATION" },
+	{ match: isRhRoute, role: "RH" },
+	{ match: isSavRoute, role: "SAV" },
+	{ match: isLogistiqueRoute, role: "LOGISTIQUE" },
+	{ match: isFinanceRoute, role: "FINANCE" },
+	{ match: isDirecteurGeneralRoute, role: "DIRECTEUR_GENERAL" },
+	{ match: isClientelleRoute, role: "CLIENTELLE" },
+	{ match: isComptableRoute, role: "COMPTABLE" },
+	{ match: isConcessionnaireRoute, role: "CONCESSIONAIRE" },
+	{ match: isSuperviseurRoute, role: "SUPERVISEUR" },
+];
+
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	const { userId, sessionClaims, redirectToSignIn } = await auth();
 
@@ -91,73 +143,11 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 		req.nextUrl.pathname === "/" &&
 		sessionClaims?.metadata?.onboardingCompleted
 	) {
-		const role = sessionClaims?.metadata?.role;
-		let redirectUrl: string;
-
-		switch (role) {
-			case "ADMIN":
-				redirectUrl = "/admin";
-				break;
-			case "EMPLOYEE":
-				redirectUrl = "/employee";
-				break;
-			case "MANAGER":
-				redirectUrl = "/manager";
-				break;
-			case "MAGASINIER":
-				redirectUrl = "/magasinier";
-				break;
-			case "CHEFUSINE":
-				redirectUrl = "/chefusine";
-				break;
-			case "CHEFEQUIPE":
-				redirectUrl = "/chefequipe";
-				break;
-			case "CHEFQUALITE":
-				redirectUrl = "/chefqualite";
-				break;
-			case "COMMERCIAL":
-				redirectUrl = "/commercial";
-				break;
-			case "RESPONSABLE_COMMERCIAL":
-				redirectUrl = "/responsablecommercial";
-				break;
-			case "COMMUNICATION":
-				redirectUrl = "/communication";
-				break;
-			case "RH":
-				redirectUrl = "/rh";
-				break;
-			case "SAV":
-				redirectUrl = "/sav";
-				break;
-			case "LOGISTIQUE":
-				redirectUrl = "/logistique";
-				break;
-			case "FINANCE":
-				redirectUrl = "/finance";
-				break;
-			case "DIRECTEUR_GENERAL":
-				redirectUrl = "/directeurgeneral";
-				break;
-			case "CLIENTELLE":
-				redirectUrl = "/clientelle";
-				break;
-			case "COMPTABLE":
-				redirectUrl = "/comptable";
-				break;
-			case "CONCESSIONAIRE":
-				redirectUrl = "/concessionnaire";
-				break;
-			case "SUPERVISEUR":
-				redirectUrl = "/superviseur";
-				break;
-			default:
-				return NextResponse.next();
+		const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+		if (redirectUrl) {
+			return NextResponse.redirect(new URL(redirectUrl, req.url));
 		}
-
-		const targetUrl = new URL(redirectUrl, req.url);
-		return NextResponse.redirect(targetUrl);
+		return NextResponse.next();
 	}
 
 	if (isPublicRoute(req)) return NextResponse.next();
@@ -179,150 +169,20 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 		sessionClaims?.metadata?.onboardingCompleted &&
 		isOnboardingRoute(req)
 	) {
-		console.log("Onboarding completed, redirecting to appropriate page");
-
-		const role = sessionClaims?.metadata?.role;
-		let redirectUrl: string;
-
-		switch (role) {
-			case "ADMIN":
-				redirectUrl = "/admin";
-				break;
-			case "EMPLOYEE":
-				redirectUrl = "/employee";
-				break;
-			case "MANAGER":
-				redirectUrl = "/manager";
-				break;
-			case "MAGASINIER":
-				redirectUrl = "/magasinier";
-				break;
-			case "CHEFUSINE":
-				redirectUrl = "/chefusine";
-				break;
-			case "CHEFEQUIPE":
-				redirectUrl = "/chefequipe";
-				break;
-			case "CHEFQUALITE":
-				redirectUrl = "/chefqualite";
-				break;
-			case "COMMERCIAL":
-				redirectUrl = "/commercial";
-				break;
-			case "COMMUNICATION":
-				redirectUrl = "/communication";
-				break;
-			case "RESPONSABLE_COMMERCIAL":
-				redirectUrl = "/responsablecommercial";
-				break;
-			case "RH":
-				redirectUrl = "/rh";
-				break;
-			case "SAV":
-				redirectUrl = "/sav";
-				break;
-			case "LOGISTIQUE":
-				redirectUrl = "/logistique";
-				break;
-			case "FINANCE":
-				redirectUrl = "/finance";
-				break;
-			case "DIRECTEUR_GENERAL":
-				redirectUrl = "/directeurgeneral";
-				break;
-			case "CLIENTELLE":
-				redirectUrl = "/clientelle";
-				break;
-			case "COMPTABLE":
-				redirectUrl = "/comptable";
-				break;
-			case "CONCESSIONAIRE":
-				redirectUrl = "/concessionnaire";
-				break;
-			case "SUPERVISEUR":
-				redirectUrl = "/superviseur";
-				break;
-			default:
-				return NextResponse.next();
+		const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+		if (redirectUrl) {
+			return NextResponse.redirect(new URL(redirectUrl, req.url));
 		}
-
-		console.log(`Redirecting ${role.toLowerCase()} to ${redirectUrl} page`);
-		const targetUrl = new URL(redirectUrl, req.url);
-		return NextResponse.redirect(targetUrl);
+		return NextResponse.next();
 	}
 
 	// Handle onboarding completion via query parameter
 	if (userId && isOnboardingRoute(req)) {
 		if (req.nextUrl.searchParams.get("onboardingCompleted")) {
-			console.log("Onboarding completed, redirecting to appropriate page");
-
-			const role = sessionClaims?.metadata?.role;
-			let redirectUrl: string;
-
-			switch (role) {
-				case "ADMIN":
-					redirectUrl = "/admin";
-					break;
-				case "EMPLOYEE":
-					redirectUrl = "/employee";
-					break;
-				case "MANAGER":
-					redirectUrl = "/manager";
-					break;
-				case "MAGASINIER":
-					redirectUrl = "/magasinier";
-					break;
-				case "CHEFUSINE":
-					redirectUrl = "/chefusine";
-					break;
-				case "CHEFEQUIPE":
-					redirectUrl = "/chefequipe";
-					break;
-				case "CHEFQUALITE":
-					redirectUrl = "/chefqualite";
-					break;
-				case "COMMERCIAL":
-					redirectUrl = "/commercial";
-					break;
-				case "RESPONSABLE_COMMERCIAL":
-					redirectUrl = "/responsablecommercial";
-					break;
-				case "COMMUNICATION":
-					redirectUrl = "/communication";
-					break;
-				case "RH":
-					redirectUrl = "/rh";
-					break;
-				case "SAV":
-					redirectUrl = "/sav";
-					break;
-				case "LOGISTIQUE":
-					redirectUrl = "/logistique";
-					break;
-				case "FINANCE":
-					redirectUrl = "/finance";
-					break;
-				case "DIRECTEUR_GENERAL":
-					redirectUrl = "/directeurgeneral";
-					break;
-				case "CLIENTELLE":
-					redirectUrl = "/clientelle";
-					break;
-				case "COMPTABLE":
-					redirectUrl = "/comptable";
-					break;
-				case "CONCESSIONAIRE":
-					redirectUrl = "/concessionnaire";
-					break;
-				case "SUPERVISEUR":
-					redirectUrl = "/superviseur";
-					break;
-				default:
-					return NextResponse.next();
+			const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+			if (redirectUrl) {
+				return NextResponse.redirect(new URL(redirectUrl, req.url));
 			}
-
-			const targetUrl = new URL(redirectUrl, req.url);
-			return NextResponse.redirect(targetUrl);
 		}
 		return NextResponse.next();
 	}
@@ -338,169 +198,12 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	}
 
 	// Role-based route protection
-	if (isAdminRoute(req)) {
-		if (sessionClaims?.metadata?.role === "ADMIN") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isEmployeeRoute(req)) {
-		if (sessionClaims?.metadata?.role === "EMPLOYEE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isManagerRoute(req)) {
-		if (sessionClaims?.metadata?.role === "MANAGER") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isChefusineRoute(req)) {
-		if (sessionClaims?.metadata?.role === "CHEFUSINE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isChefequipeRoute(req)) {
-		if (sessionClaims?.metadata?.role === "CHEFEQUIPE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isMagasinierRoute(req)) {
-		if (sessionClaims?.metadata?.role === "MAGASINIER") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isChefqualiteRoute(req)) {
-		if (sessionClaims?.metadata?.role === "CHEFQUALITE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isCommercialRoute(req)) {
-		if (sessionClaims?.metadata?.role === "COMMERCIAL") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-	if (isResponsablecommercialRoute(req)) {
-		if (sessionClaims?.metadata?.role === "RESPONSABLE_COMMERCIAL") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-	if (isCommunicationRoute(req)) {
-		if (sessionClaims?.metadata?.role === "COMMUNICATION") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isRhRoute(req)) {
-		if (sessionClaims?.metadata?.role === "RH") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isSavRoute(req)) {
-		if (sessionClaims?.metadata?.role === "SAV") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isLogistiqueRoute(req)) {
-		if (sessionClaims?.metadata?.role === "LOGISTIQUE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isFinanceRoute(req)) {
-		if (sessionClaims?.metadata?.role === "FINANCE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isDirecteurGeneralRoute(req)) {
-		if (sessionClaims?.metadata?.role === "DIRECTEUR_GENERAL") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-
-	if (isClientelleRoute(req)) {
-		if (sessionClaims?.metadata?.role === "CLIENTELLE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-	if (isComptableRoute(req)) {
-		if (sessionClaims?.metadata?.role === "COMPTABLE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-	if (isConcessionnaireRoute(req)) {
-		if (sessionClaims?.metadata?.role === "CONCESSIONAIRE") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
-		}
-	}
-	if (isSuperviseurRoute(req)) {
-		if (sessionClaims?.metadata?.role === "SUPERVISEUR") {
-			return NextResponse.next();
-		} else {
-			const homepageUrl = new URL("/", req.url);
-			return NextResponse.redirect(homepageUrl);
+	for (const { match, role } of ROLE_ROUTES) {
+		if (match(req)) {
+			if (sessionClaims?.metadata?.role === role) {
+				return NextResponse.next();
+			}
+			return NextResponse.redirect(new URL("/", req.url));
 		}
 	}
 
@@ -511,7 +214,14 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	return NextResponse.next();
 });
 
+// Minimal Clerk handler for server actions: runs Clerk so auth() works, but no redirects
+const serverActionClerkHandler = clerkMiddleware(() => NextResponse.next());
+
 export default async function middleware(req: NextRequest, event: NextFetchEvent) {
+	// Server actions: run Clerk (no redirects) so auth() works in server actions
+	if (req.headers.get("Next-Action")) {
+		return serverActionClerkHandler(req, event);
+	}
 	// Dev bypass: skip auth when Clerk fails to load (ad-blocker, etc.)
 	if (
 		process.env.NODE_ENV === "development" &&

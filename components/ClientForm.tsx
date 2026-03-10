@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, User} from 'lucide-react';
+import { SECTEUR_ACTIVITE_OPTIONS } from '@/lib/constants/secteur-activite';
 
 const clientSchema = z.object({
   nom: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
@@ -185,9 +186,23 @@ export function ClientForm({ userId, userName, onSuccess }: ClientFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Secteur d&apos;activité</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Automobile, Finance, etc." {...field} />
-                    </FormControl>
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un secteur" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SECTEUR_ACTIVITE_OPTIONS.map((secteur) => (
+                          <SelectItem key={secteur} value={secteur}>
+                            {secteur}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

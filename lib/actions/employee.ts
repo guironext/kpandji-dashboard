@@ -13,6 +13,12 @@ export async function createEmployee(data: {
   bloodType?: string | null;
   specialite: string;
   email?: string | null;
+  numro_matricule?: string | null;
+  poste?: string | null;
+  date_Embauche?: string | null; // ISO string for serialization
+  personne_urgence?: string | null;
+  telephone_personne_urgence?: string | null;
+  relation_personne_urgence?: string | null;
   userId: string;
 }) {
   try {
@@ -39,6 +45,12 @@ export async function createEmployee(data: {
       bloodType: data.bloodType ?? null,
       specialite: data.specialite,
       email: data.email || null,
+      numro_matricule: data.numro_matricule || null,
+      poste: data.poste || null,
+      date_Embauche: data.date_Embauche ? new Date(data.date_Embauche) : null,
+      personne_urgence: data.personne_urgence || null,
+      telephone_personne_urgence: data.telephone_personne_urgence || null,
+      relation_personne_urgence: data.relation_personne_urgence || null,
       userId: user.id,
     };
 
@@ -60,6 +72,27 @@ export async function createEmployee(data: {
   }
 }
 
+/** Serialize object for server action response - convert Dates to ISO strings */
+function serializeForClient<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (obj instanceof Date) {
+    return obj.toISOString() as unknown as T;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(serializeForClient) as unknown as T;
+  }
+  if (typeof obj === "object" && obj.constructor === Object) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = serializeForClient(value);
+    }
+    return result as unknown as T;
+  }
+  return obj;
+}
+
 export async function getEmployee(id: string) {
   try {
     const employee = await prisma.employee.findUnique({
@@ -71,11 +104,12 @@ export async function getEmployee(id: string) {
       return { success: false, error: "Employee not found" };
     }
     
-    // Remap User to user for frontend compatibility
-    const serializedEmployee = {
+    // Remap User to user and serialize for client (Dates -> ISO strings)
+    const raw = {
       ...employee,
       user: (employee as Record<string, unknown>).User
     };
+    const serializedEmployee = serializeForClient(raw);
     
     return { success: true, data: serializedEmployee };
   } catch (error) {
@@ -90,16 +124,12 @@ export async function getAllEmployees() {
       include: { User: true },
       orderBy: { nom: 'asc' }
     });
-    
-    // Remap User to user for frontend compatibility
-    const serializedEmployees = (employees as unknown[]).map((emp: unknown) => {
-      const e = emp as Record<string, unknown> & { User?: unknown };
-      return {
-        ...e,
-        user: e.User
-      };
-    });
-    
+
+    const serializedEmployees = employees.map((emp) => ({
+      ...emp,
+      user: emp.User,
+    }));
+
     return { success: true, data: serializedEmployees };
   } catch (error) {
     console.error("Error fetching employees:", error);
@@ -116,11 +146,23 @@ export async function updateEmployee(id: string, data: {
   bloodType?: string | null;
   specialite?: string;
   email?: string | null;
+  numro_matricule?: string | null;
+  poste?: string | null;
+  date_Embauche?: string | null; // ISO string for serialization
+  personne_urgence?: string | null;
+  telephone_personne_urgence?: string | null;
+  relation_personne_urgence?: string | null;
 }) {
   try {
+    const { date_Embauche, ...rest } = data;
     const employee = await prisma.employee.update({
       where: { id },
-      data
+      data: {
+        ...rest,
+        ...(date_Embauche !== undefined && {
+          date_Embauche: date_Embauche ? new Date(date_Embauche) : null,
+        }),
+      },
     });
     
     revalidatePath("/rh/employes");

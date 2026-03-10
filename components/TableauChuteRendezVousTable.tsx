@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableauChuteDetailDialog } from '@/components/TableauChuteDetailDialog';
 import { TableauChuteReporterDialog } from '@/components/TableauChuteReporterDialog';
+import { Eye, CalendarClock, CalendarRange, Phone, Mail, ClipboardList, MessageSquare, AlertTriangle } from 'lucide-react';
 
 interface TableauChuteRendezVousData {
   id: string;
@@ -62,60 +64,57 @@ export function TableauChuteRendezVousTable({ data, onRefresh, showReporterButto
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg border-0 bg-white">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
-          <CardTitle className="text-xl font-semibold text-slate-800 flex items-center space-x-2">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+      <Card className="border shadow-sm overflow-hidden">
+        <CardHeader className="border-b bg-muted/30 px-6 py-5">
+          <CardTitle className="text-lg font-semibold flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <ClipboardList className="h-5 w-5" />
             </div>
             <span>Détails des Rendez-vous en Chute</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar">
             <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow className="hover:bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700 py-4">Mois de Chute</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Informations Client</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Décision Attendue</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Objections</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Commentaire</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Actions</TableHead>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b">
+                  <TableHead className="font-medium py-4 text-muted-foreground">Mois de Chute</TableHead>
+                  <TableHead className="font-medium py-4 text-muted-foreground">Informations Client</TableHead>
+                  <TableHead className="font-medium py-4 text-muted-foreground">Décision Attendue</TableHead>
+                  <TableHead className="font-medium py-4 text-muted-foreground">Objections</TableHead>
+                  <TableHead className="font-medium py-4 text-muted-foreground">Commentaire</TableHead>
+                  <TableHead className="font-medium py-4 text-muted-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.map((item, index) => (
-                  <TableRow key={item.id} className={`hover:bg-slate-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-25'}`}>
+                  <TableRow
+                    key={item.id}
+                    className={`transition-colors hover:bg-muted/50 ${index % 2 === 1 ? "bg-muted/20" : ""}`}
+                  >
                     <TableCell className="py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span className="font-semibold text-slate-800">{item.mois_chute}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                        <span className="font-medium text-foreground">{item.mois_chute}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="space-y-2">
-                        <div className="font-semibold text-slate-800">
+                      <div className="space-y-1.5">
+                        <div className="font-medium text-foreground">
                           {item.rapportRendezVous.nom_prenom_client}
                         </div>
-                        <div className="flex items-center space-x-2 text-sm text-slate-600">
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
                           <span>{item.rapportRendezVous.telephone_client}</span>
                         </div>
                         {item.rapportRendezVous.email_client && (
-                          <div className="flex items-center space-x-2 text-sm text-slate-600">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            <span>{item.rapportRendezVous.email_client}</span>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate max-w-[200px]">{item.rapportRendezVous.email_client}</span>
                           </div>
                         )}
                         {item.rapportRendezVous.profession_societe && (
-                          <div className="text-sm text-slate-500 italic">
+                          <div className="text-xs text-muted-foreground italic">
                             {item.rapportRendezVous.profession_societe}
                           </div>
                         )}
@@ -124,88 +123,86 @@ export function TableauChuteRendezVousTable({ data, onRefresh, showReporterButto
                     <TableCell className="py-4">
                       <div className="text-sm">
                         {item.rapportRendezVous.decision_attendue ? (
-                          <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-800">
-                            <svg className="h-3 w-3 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                          <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 font-normal">
+                            <CalendarClock className="h-3 w-3 mr-1 inline" />
                             {item.rapportRendezVous.decision_attendue}
                           </Badge>
                         ) : (
-                          <span className="text-slate-400 italic">Non spécifiée</span>
+                          <span className="text-muted-foreground italic">Non spécifiée</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 max-w-xs">
+                    <TableCell className="py-4 max-w-[220px]">
                       <div className="text-sm">
                         {item.rapportRendezVous.objections_freins ? (
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <div className="flex items-start space-x-2">
-                              <svg className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                              </svg>
-                              <div className="text-red-800 text-wrap max-w-md" title={item.rapportRendezVous.objections_freins}>
-                                {item.rapportRendezVous.objections_freins.length > 100 
-                                  ? `${item.rapportRendezVous.objections_freins.substring(0, 100)}...` 
+                          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2.5">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                              <div
+                                className="text-foreground/90 text-wrap line-clamp-2"
+                                title={item.rapportRendezVous.objections_freins}
+                              >
+                                {item.rapportRendezVous.objections_freins.length > 100
+                                  ? `${item.rapportRendezVous.objections_freins.substring(0, 100)}...`
                                   : item.rapportRendezVous.objections_freins}
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">Aucune objection</span>
+                          <span className="text-muted-foreground italic">Aucune objection</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 max-w-xs">
-                      <div className="text-sm text-wrap max-w-md">
+                    <TableCell className="py-4 max-w-[220px]">
+                      <div className="text-sm">
                         {item.rapportRendezVous.commentaire_global ? (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div className="flex items-start space-x-2">
-                              <svg className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                              </svg>
-                              <div className="text-blue-800" title={item.rapportRendezVous.commentaire_global}>
-                                {item.rapportRendezVous.commentaire_global.length > 100 
-                                  ? `${item.rapportRendezVous.commentaire_global.substring(0, 100)}...` 
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                              <div
+                                className="text-foreground/90 text-wrap line-clamp-2"
+                                title={item.rapportRendezVous.commentaire_global}
+                              >
+                                {item.rapportRendezVous.commentaire_global.length > 100
+                                  ? `${item.rapportRendezVous.commentaire_global.substring(0, 100)}...`
                                   : item.rapportRendezVous.commentaire_global}
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">Aucun commentaire</span>
+                          <span className="text-muted-foreground italic">Aucun commentaire</span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="flex flex-col items-center space-y-2">
-                        <button
+                      <div className="flex flex-col items-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setSelectedItem(item);
                             setDetailOpen(true);
                           }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors w-full flex items-center gap-2"
+                          className="h-8 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
                           title="Voir détails"
                         >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
+                          <Eye className="h-4 w-4" />
                           Détails
-                        </button>
-                       
+                        </Button>
                         {showReporterButton && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               setSelectedId(item.id);
                               setReporterOpen(true);
                             }}
-                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors w-full flex items-center gap-2"
+                            className="h-8 gap-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
                             title="Reporter"
                           >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                            <CalendarRange className="h-4 w-4" />
                             Reporter
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </TableCell>

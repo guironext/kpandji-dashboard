@@ -305,3 +305,40 @@
   background: var(--border);
   border-radius: 3px;
 }
+
+/* Programme congé - reduced height, scrollable cells */
+.programme-conge-calendar .rbc-month-row {
+  min-height: 72px !important;
+}
+
+.programme-conge-calendar .rbc-row-content {
+  overflow-y: auto !important;
+  max-height: 65px;
+  scrollbar-width: thin;
+}
+
+.programme-conge-calendar .rbc-row-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.programme-conge-calendar .rbc-row-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.programme-conge-calendar .rbc-row-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.programme-conge-calendar .rbc-event {
+  border-radius: 6px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.programme-conge-calendar .rbc-month-view,
+.programme-conge-calendar .rbc-time-view {
+  border-color: var(--border);
+  background: var(--card);
+}

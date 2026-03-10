@@ -55,11 +55,13 @@ interface RapportRendezVous {
   email_client?: string | null;
   profession_societe?: string | null;
   type_client: string;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   objet_autre?: string | null;
   modeles_discutes?: unknown;
   motivations_achat?: string | null;
@@ -576,29 +578,39 @@ export default function SuiviRendezVousPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {selectedRapport.presentation_gamme && (
+                      {selectedRapport.Com_Pres && (
                         <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
-                          Présentation gamme
+                          Com_Pres
                         </Badge>
                       )}
-                      {selectedRapport.essai_vehicule && (
+                      {selectedRapport.Com_Drive && (
                         <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
-                          Essai véhicule
+                          Com_Drive
                         </Badge>
                       )}
-                      {selectedRapport.negociation_commerciale && (
+                      {selectedRapport.Com_Achat && (
                         <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
-                          Négociation commerciale
+                          Com_Achat
                         </Badge>
                       )}
-                      {selectedRapport.livraison_vehicule && (
+                      {selectedRapport.Com_Livre && (
                         <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
-                          Livraison véhicule
+                          Com_Livre
                         </Badge>
                       )}
-                      {selectedRapport.service_apres_vente && (
+                      {selectedRapport.Com_APV && (
                         <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
-                          Service après-vente
+                          Com_APV
+                        </Badge>
+                      )}
+                      {selectedRapport.Com_Office && (
+                        <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
+                          Com_Office
+                        </Badge>
+                      )}
+                      {selectedRapport.Com_Close && (
+                        <Badge variant="outline" className="bg-purple-100 border-purple-300 text-purple-700">
+                          Com_Close
                         </Badge>
                       )}
                       {selectedRapport.objet_autre && (

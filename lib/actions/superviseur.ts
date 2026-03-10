@@ -28,11 +28,13 @@ interface RapportRendezVousData {
   email_client: string | null;
   profession_societe: string | null;
   type_client: string;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   objet_autre: string | null;
   modeles_discutes: string | null;
   motivations_achat: string | null;
@@ -731,11 +733,13 @@ export async function getAllRapportRendezVousByUser() {
         email_client: string | null;
         profession_societe: string | null;
         type_client: string;
-        presentation_gamme: boolean;
-        essai_vehicule: boolean;
-        negociation_commerciale: boolean;
-        livraison_vehicule: boolean;
-        service_apres_vente: boolean;
+        Com_Pres: boolean;
+        Com_Drive: boolean;
+        Com_Achat: boolean;
+        Com_Livre: boolean;
+        Com_APV: boolean;
+        Com_Office: boolean;
+        Com_Close: boolean;
         objet_autre: string | null;
         modeles_discutes: unknown;
         motivations_achat: string | null;
@@ -781,11 +785,13 @@ export async function getAllRapportRendezVousByUser() {
         email_client: report.email_client as string | null,
         profession_societe: report.profession_societe as string | null,
         type_client: report.type_client as string,
-        presentation_gamme: report.presentation_gamme as boolean,
-        essai_vehicule: report.essai_vehicule as boolean,
-        negociation_commerciale: report.negociation_commerciale as boolean,
-        livraison_vehicule: report.livraison_vehicule as boolean,
-        service_apres_vente: report.service_apres_vente as boolean,
+        Com_Pres: report.Com_Pres as boolean,
+        Com_Drive: report.Com_Drive as boolean,
+        Com_Achat: report.Com_Achat as boolean,
+        Com_Livre: report.Com_Livre as boolean,
+        Com_APV: report.Com_APV as boolean,
+        Com_Office: report.Com_Office as boolean,
+        Com_Close: report.Com_Close as boolean,
         objet_autre: report.objet_autre as string | null,
         modeles_discutes: typeof report.modeles_discutes === 'string' ? report.modeles_discutes : null,
         motivations_achat: report.motivations_achat as string | null,

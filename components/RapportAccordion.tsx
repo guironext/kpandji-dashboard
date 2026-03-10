@@ -63,11 +63,13 @@ interface Report {
   objections_freins: string | null;
   commentaire_global: string | null;
   decision_attendue: string | null;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   devis_offre_remise: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -344,34 +346,46 @@ export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {
                           Objets du rendez-vous
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {report.presentation_gamme && (
+                          {report.Com_Pres && (
                             <Badge variant="outline" className="gap-1.5 border-green-200 bg-green-50 text-green-700">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Présentation gamme
+                              Com_Pres
                             </Badge>
                           )}
-                          {report.essai_vehicule && (
+                          {report.Com_Drive && (
                             <Badge variant="outline" className="gap-1.5 border-blue-200 bg-blue-50 text-blue-700">
                               <Car className="h-3.5 w-3.5" />
-                              Essai véhicule
+                              Com_Drive
                             </Badge>
                           )}
-                          {report.negociation_commerciale && (
+                          {report.Com_Achat && (
                             <Badge variant="outline" className="gap-1.5 border-purple-200 bg-purple-50 text-purple-700">
                               <DollarSign className="h-3.5 w-3.5" />
-                              Négociation
+                              Com_Achat
                             </Badge>
                           )}
-                          {report.livraison_vehicule && (
+                          {report.Com_Livre && (
                             <Badge variant="outline" className="gap-1.5 border-indigo-200 bg-indigo-50 text-indigo-700">
                               <Package className="h-3.5 w-3.5" />
-                              Livraison
+                              Com_Livre
                             </Badge>
                           )}
-                          {report.service_apres_vente && (
+                          {report.Com_APV && (
                             <Badge variant="outline" className="gap-1.5 border-amber-200 bg-amber-50 text-amber-700">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              SAV
+                              Com_APV
+                            </Badge>
+                          )}
+                          {report.Com_Office && (
+                            <Badge variant="outline" className="gap-1.5 border-slate-200 bg-slate-50 text-slate-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Com_Office
+                            </Badge>
+                          )}
+                          {report.Com_Close && (
+                            <Badge variant="outline" className="gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Com_Close
                             </Badge>
                           )}
                           {report.devis_offre_remise && (

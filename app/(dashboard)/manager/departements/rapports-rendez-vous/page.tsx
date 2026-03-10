@@ -50,11 +50,13 @@ interface RapportRendezVousData {
   objections_freins?: string | null;
   commentaire_global?: string | null;
   decision_attendue?: string | null;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   devis_offre_remise: boolean;
   voiture?: {
     id: string;
@@ -85,11 +87,13 @@ interface Report {
   objections_freins: string | null;
   commentaire_global: string | null;
   decision_attendue: string | null;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   devis_offre_remise: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -192,11 +196,13 @@ const RapportsRendezVousPage = async () => {
         objections_freins: r.objections_freins ?? null,
         commentaire_global: r.commentaire_global ?? null,
         decision_attendue: r.decision_attendue ?? null,
-        presentation_gamme: r.presentation_gamme,
-        essai_vehicule: r.essai_vehicule,
-        negociation_commerciale: r.negociation_commerciale,
-        livraison_vehicule: r.livraison_vehicule,
-        service_apres_vente: r.service_apres_vente,
+        Com_Pres: r.Com_Pres,
+        Com_Drive: r.Com_Drive,
+        Com_Achat: r.Com_Achat,
+        Com_Livre: r.Com_Livre,
+        Com_APV: r.Com_APV,
+        Com_Office: r.Com_Office,
+        Com_Close: r.Com_Close,
         devis_offre_remise: r.devis_offre_remise,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
@@ -243,7 +249,7 @@ const RapportsRendezVousPage = async () => {
   ).length;
   
   const withDevis = allReports.filter((r) => r.devis_offre_remise).length;
-  const withTestDrive = allReports.filter((r) => r.essai_vehicule).length;
+  const withTestDrive = allReports.filter((r) => r.Com_Drive).length;
   
   // Get top performer
   const topPerformer = reportsByUser.reduce((top, current) =>

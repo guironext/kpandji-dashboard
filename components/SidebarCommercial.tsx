@@ -25,6 +25,7 @@ import {
   Radio,
   Target,
   Truck,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -35,7 +36,6 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation items — type-safe, grouped by category, ordered for sidebar
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,6 +64,7 @@ const navItems: NavItem[] = [
 
   // Objectifs
   { id: "obj-objectifs", icon: Target, label: "Mes Objectifs", href: "/commercial/objectifs", category: "objectifs" },
+  { id: "obj-stats", icon: Activity, label: "Mes Performances", href: "/commercial/statistiques", category: "objectifs" },
 
   // Logistique
   { id: "log-modeles", icon: Car, label: "Modèles Voitures", href: "/commercial/ajouter-modele", category: "logistique" },

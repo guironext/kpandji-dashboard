@@ -50,6 +50,7 @@ import {
 	CartesianGrid,
 } from "recharts";
 import { toast } from "sonner";
+import { SECTEUR_ACTIVITE_OPTIONS } from "@/lib/constants/secteur-activite";
 
 async function fetchClients(userId: string) {
 	const res = await fetch(`/api/prospects/clients?userId=${encodeURIComponent(userId)}`);
@@ -1450,17 +1451,26 @@ const ProspectsPage = () => {
 									<Label htmlFor="secteur_activite">
 										Secteur d&apos;activité
 									</Label>
-									<Input
-										id="secteur_activite"
-										value={formData.secteur_activite}
-										onChange={(e) =>
+									<Select
+										value={formData.secteur_activite || ""}
+										onValueChange={(value) =>
 											setFormData({
 												...formData,
-												secteur_activite: e.target.value,
+												secteur_activite: value,
 											})
 										}
-										placeholder="Automobile, Finance, etc."
-									/>
+									>
+										<SelectTrigger id="secteur_activite">
+											<SelectValue placeholder="Sélectionner un secteur" />
+										</SelectTrigger>
+										<SelectContent>
+											{SECTEUR_ACTIVITE_OPTIONS.map((secteur) => (
+												<SelectItem key={secteur} value={secteur}>
+													{secteur}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
 								</div>
 							</div>
 						</div>
@@ -1763,17 +1773,26 @@ const ProspectsPage = () => {
 									<Label htmlFor="client_secteur_activite">
 										Secteur d&apos;activité
 									</Label>
-									<Input
-										id="client_secteur_activite"
-										value={clientFormData.secteur_activite}
-										onChange={(e) =>
+									<Select
+										value={clientFormData.secteur_activite || ""}
+										onValueChange={(value) =>
 											setClientFormData({
 												...clientFormData,
-												secteur_activite: e.target.value,
+												secteur_activite: value,
 											})
 										}
-										placeholder="Automobile, Finance, etc."
-									/>
+									>
+										<SelectTrigger id="client_secteur_activite">
+											<SelectValue placeholder="Sélectionner un secteur" />
+										</SelectTrigger>
+										<SelectContent>
+											{SECTEUR_ACTIVITE_OPTIONS.map((secteur) => (
+												<SelectItem key={secteur} value={secteur}>
+													{secteur}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
 								</div>
 							</div>
 						</div>

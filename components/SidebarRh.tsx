@@ -4,11 +4,12 @@ import {
   Home,
   UserPlus,
   Clock,
-  Users,
-  BarChart3,
   Warehouse,
   Mail,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  CalendarDays,
+  FileCheck
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -34,26 +35,46 @@ const navItems = [
     id: 3,
     icon: <Clock className="w-5 h-5" />,
     label: "Pointage Employé",
-    href: "/rh/correction",
+    href: "/rh/pointage",
     category: "operations"
   },
   {
     id: 4,
-    icon: <Users className="w-5 h-5" />,
-    label: "Rapport Equipe",
-    href: "/rh/rapportequipe",
+    icon: <FileText className="w-5 h-5" />,
+    label: "Rapport Pointage",
+    href: "/rh/rapportpointage",
     category: "operations"
   },
   {
     id: 5,
-    icon: <BarChart3 className="w-5 h-5" />,
-    label: "Rapport Montages",
-    href: "/rh/rapportmontage",
-    category: "reports"
+    icon: <CalendarDays className="w-5 h-5" />,
+    label: "Programme Congé",
+    href: "/rh/programme-conge",
+    category: "operations"
   },
-   // Communication
-   { id: 6, icon: <Mail className="w-5 h-5" />, label: "Numéro Courrier", href: "/rh/numero-courrier", category: "communication" },
-   { id: 7, icon: <MessageSquare className="w-5 h-5" />, label: "Messages", href: "/rh/messages", category: "communication" },
+  {
+    id: 6,
+    icon: <FileCheck className="w-5 h-5" />,
+    label: "Demande Permission",
+    href: "/rh/demande-permission",
+    category: "operations"
+  },
+  
+ 
+  {
+    id: 9,
+    icon: <Mail className="w-5 h-5" />,
+    label: "Numéro Courrier",
+    href: "/rh/numero-courrier",
+    category: "communication"
+  },
+  {
+    id: 10,
+    icon: <MessageSquare className="w-5 h-5" />,
+    label: "Messages",
+    href: "/rh/messages",
+    category: "communication"
+  },
  
 ];
 

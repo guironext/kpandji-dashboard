@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { getTableauChuteRendezVousByUser } from '@/lib/actions/tableau-chute';
 import { TableauChuteRendezVousTable } from '@/components/TableauChuteRendezVousTable';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Users, TrendingDown, AlertCircle } from 'lucide-react';
+import { CalendarDays, Users, TrendingDown, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface TableauChuteRendezVousData {
   id: string;
@@ -89,41 +90,36 @@ const Page = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <Skeleton className="h-8 w-8 rounded" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <div className="min-h-[60vh] space-y-8 animate-in fade-in duration-300">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-72 rounded-lg" />
+          <Skeleton className="h-4 w-96 max-w-full" />
         </div>
-        
-        {/* Table Skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="overflow-hidden border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-7 w-14" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card className="border-0 shadow-sm overflow-hidden">
+          <CardContent className="p-6">
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-6 w-48 mb-6" />
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex gap-4 items-center py-3 border-b border-border/50 last:border-0">
+                  <Skeleton className="h-4 w-28 shrink-0" />
+                  <Skeleton className="h-4 w-40 shrink-0" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-24 shrink-0" />
                 </div>
               ))}
             </div>
@@ -135,19 +131,31 @@ const Page = () => {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2">
-          <TrendingDown className="h-8 w-8 text-red-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Tableau de Chute</h1>
-        </div>
-        
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <div>
-                <h3 className="font-semibold text-red-800">Erreur de chargement</h3>
-                <p className="text-red-600">{error}</p>
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tableau de Chute</h1>
+            <p className="text-muted-foreground text-sm mt-1">Suivi des rendez-vous en chute</p>
+          </div>
+        </header>
+        <Card className="border-destructive/30 bg-destructive/5 overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-foreground">Erreur de chargement</h3>
+                <p className="text-muted-foreground text-sm">{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => fetchData()}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Réessayer
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -158,18 +166,23 @@ const Page = () => {
 
   if (data.length === 0) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2">
-          <TrendingDown className="h-8 w-8 text-blue-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Tableau de Chute</h1>
-        </div>
-        
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <TrendingDown className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-              <h3 className="font-semibold text-blue-800 mb-2">Aucun tableau de chute</h3>
-              <p className="text-blue-600">Aucun rendez-vous en chute trouvé pour le moment.</p>
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tableau de Chute</h1>
+            <p className="text-muted-foreground text-sm mt-1">Suivi des rendez-vous en chute</p>
+          </div>
+        </header>
+        <Card className="border-0 shadow-sm overflow-hidden bg-muted/30">
+          <CardContent className="p-16">
+            <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
+                <TrendingDown className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="font-semibold text-lg text-foreground mb-2">Aucun rendez-vous en chute</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Aucun rendez-vous en chute n&apos;a été enregistré pour le moment. Les rendez-vous en chute apparaîtront ici lorsqu&apos;ils seront signalés.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -177,73 +190,80 @@ const Page = () => {
     );
   }
 
+  const statCards = [
+    {
+      label: "Total Chutes",
+      value: totalChutes,
+      icon: TrendingDown,
+      className: "from-amber-500/10 to-orange-500/5 border-amber-200/50 dark:border-amber-800/30",
+      iconBg: "bg-amber-500",
+      iconColor: "text-amber-600 dark:text-amber-400",
+    },
+    {
+      label: "Clients Uniques",
+      value: uniqueClients,
+      icon: Users,
+      className: "from-emerald-500/10 to-teal-500/5 border-emerald-200/50 dark:border-emerald-800/30",
+      iconBg: "bg-emerald-500",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+    },
+    {
+      label: "Ce Mois",
+      value: thisMonthChutes,
+      icon: CalendarDays,
+      className: "from-sky-500/10 to-blue-500/5 border-sky-200/50 dark:border-sky-800/30",
+      iconBg: "bg-sky-500",
+      iconColor: "text-sky-600 dark:text-sky-400",
+    },
+    {
+      label: "Taux de Chute",
+      value: `${totalChutes > 0 ? Math.round((thisMonthChutes / totalChutes) * 100) : 0}%`,
+      icon: AlertCircle,
+      className: "from-rose-500/10 to-pink-500/5 border-rose-200/50 dark:border-rose-800/30",
+      iconBg: "bg-rose-500",
+      iconColor: "text-rose-600 dark:text-rose-400",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex items-center space-x-2">
-        <TrendingDown className="h-8 w-8 text-blue-500" />
-        <h1 className="text-3xl font-bold tracking-tight">Tableau de Chute</h1>
-      </div>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tableau de Chute</h1>
+          <p className="text-muted-foreground text-sm mt-1">Suivi des rendez-vous en chute et opportunités à relancer</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchData()}
+          className="shrink-0"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Actualiser
+        </Button>
+      </header>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <TrendingDown className="h-6 w-6 text-white" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((stat) => (
+          <Card
+            key={stat.label}
+            className={`overflow-hidden border bg-gradient-to-br ${stat.className} transition-all hover:shadow-md hover:-translate-y-0.5`}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.iconBg} text-white shadow-sm`}>
+                  <stat.icon className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium ${stat.iconColor}`}>{stat.label}</p>
+                  <p className="text-2xl font-bold text-foreground tabular-nums mt-0.5">{stat.value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-blue-600">Total Chutes</p>
-                <p className="text-2xl font-bold text-blue-800">{totalChutes}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-green-100">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-green-500 rounded-lg">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-600">Clients Uniques</p>
-                <p className="text-2xl font-bold text-green-800">{uniqueClients}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-orange-100">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-orange-500 rounded-lg">
-                <CalendarDays className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-orange-600">Ce Mois</p>
-                <p className="text-2xl font-bold text-orange-800">{thisMonthChutes}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-purple-100">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-purple-600">Taux de Chute</p>
-                <p className="text-2xl font-bold text-purple-800">
-                  {totalChutes > 0 ? Math.round((thisMonthChutes / totalChutes) * 100) : 0}%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Main Table */}

@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 // Force Vercel to rebuild - Updated: 2025-11-05 at 13:45
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "2mb",
+    },
+  },
   images: {
     remotePatterns: [
       {
@@ -38,7 +43,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://*.hcaptcha.com https://challenges.cloudflare.com",
               "img-src 'self' data: blob: https://*.clerk.accounts.dev https://*.clerk.com https://img.clerk.com https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://challenges.cloudflare.com",
               "font-src 'self' data: https://www.google.com https://*.gstatic.com",
-              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.com https://*.neon.tech wss://*.clerk.accounts.dev wss://*.clerk.com https://www.google.com https://*.googleapis.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
+              "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.com https://*.neon.tech https://*.blob.vercel-storage.com https://*.vercel-storage.com wss://*.clerk.accounts.dev wss://*.clerk.com https://www.google.com https://*.googleapis.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://*.google.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
               "frame-ancestors 'self' https://*.clerk.accounts.dev https://*.clerk.com",
             ].join('; '),

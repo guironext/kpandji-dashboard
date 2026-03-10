@@ -320,7 +320,7 @@ model Correction {
   RapportCorrection RapportCorrection[]
   SparePart         SparePart[]
   Tool              Tool[]
-}
+}                                             
 
 model CourrieAvantage {
   id               String    @id
@@ -341,18 +341,103 @@ model Employee {
   id           String         @id
   nom          String
   prenoms      String
+  numro_matricule String?
   contact      String
   bloodType    String?
   specialite   String
-  userId       String
+  poste        String?
   email        String?
   adresse      String?
   image        String?
+  personne_urgence String?
+  telephone_personne_urgence String?
+  relation_personne_urgence String?
+  date_Embauche DateTime?
+  date_Depart   DateTime?
+  status       StatusEmployee @default(ACTIVE)
+  userId       String
   User         User           @relation(fields: [userId], references: [id])
-  Equipe       Equipe[]
-  EquipeMembre EquipeMembre[]
-  LocalBuy     LocalBuy[]
-  Teste        Teste[]
+  Equipe                 Equipe[]
+  EquipeMembre           EquipeMembre[]
+  LocalBuy               LocalBuy[]
+  Teste                  Teste[]
+  Pointage               Pointage[]
+  Nomination_vote_Employee Nomination_vote_Employee[]
+  Permission             Permission[]
+  CongeAnnuel            CongeAnnuel[]
+}
+
+enum StatusEmployee {
+  ACTIVE
+  INACTIVE
+  EN_COURS_DE_DEMISSION
+  DEMISSIONNE
+  EN_COURS_DE_REINTEGRATION
+  REINTEGRE
+  EN_COURS_DE_FORMATION
+  FORMEE
+  CONGE_ANNUEL
+  CONGE_MATERNITE
+  CONGE_PATERNITE
+
+}
+
+model Pointage {
+  id String @id
+  date DateTime
+  heure_entree DateTime
+  heure_sortie DateTime
+  employeeId String
+  Employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model Nomination_vote_Employee{
+  id String @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  employeeId String
+  datedebut DateTime
+  datefin DateTime
+  titre String
+  description String
+  Employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+model Permission {
+  id String @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  employeeId String
+  datedebut DateTime
+  datefin DateTime
+  titre StatusPermission
+  description String
+  Employee Employee @relation(fields: [employeeId], references: [id])
+}
+enum StatusPermission {
+  EN_ATTENTE
+  VALIDE
+  EN_COURS
+  TERMINEE
+  ANNULE
+}
+
+model CongeAnnuel {
+  id String @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  employeeId String
+  datedebut DateTime
+  datefin DateTime
+  status StatusCongeAnnuel @default(EN_ATTENTE)
+  Employee Employee @relation(fields: [employeeId], references: [id])
+}
+enum StatusCongeAnnuel {
+  EN_ATTENTE
+  VALIDE
+  EN_COURS
+  TERMINEE
+  ANNULE
 }
 
 model EquipeMembre {
@@ -609,11 +694,13 @@ model RapportRendezVous {
   email_client              String?
   profession_societe        String?
   type_client               String
-  presentation_gamme        Boolean                     @default(false)
-  essai_vehicule            Boolean                     @default(false)
-  negociation_commerciale   Boolean                     @default(false)
-  livraison_vehicule        Boolean                     @default(false)
-  service_apres_vente       Boolean                     @default(false)
+  Com_Pres                  Boolean                     @default(false)
+  Com_Drive                 Boolean                     @default(false)
+  Com_Achat                 Boolean                     @default(false)
+  Com_Livre                 Boolean                     @default(false)
+  Com_APV                   Boolean                     @default(false)
+  Com_Office                Boolean                     @default(false)
+  Com_Close                 Boolean                     @default(false)
   objet_autre               String?
   modeles_discutes          Json?
   motivations_achat         String?
@@ -622,10 +709,12 @@ model RapportRendezVous {
   degre_interet             String?
   decision_attendue         String?
   devis_offre_remise        Boolean                     @default(false)
+  propositions_faites      String?
   reference_offre           String?
   financement_propose       String?
   assurance_entretien       Boolean                     @default(false)
   reprise_ancien_vehicule   Boolean                     @default(false)
+  suivi_actions             String?
   actions_suivi             Json?
   commentaire_global        String?
   voitureId                 String?
@@ -1131,6 +1220,23 @@ model NumeroCourrier {
 
   @@index([userId])
   @@index([numero_courrier])
+}
+
+model GoodiesBrochures {
+  id String @id @default(uuid())
+  nom String
+  description String?
+  categorie String?
+  quantite Int @default(0)
+  prix_achat Decimal? @default(0) @db.Decimal(18, 2)
+  origine_artisan String?
+  contact_artisan String?
+  attribution_commercial String?
+  quantite_attribuee Int @default(0)
+  quantite_restante Int @default(0)
+  destination String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum StatutCalendrierSortie {

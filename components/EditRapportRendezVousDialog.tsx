@@ -23,11 +23,13 @@ interface RapportRendezVous {
   email_client?: string | null;
   profession_societe?: string | null;
   type_client: string;
-  presentation_gamme: boolean;
-  essai_vehicule: boolean;
-  negociation_commerciale: boolean;
-  livraison_vehicule: boolean;
-  service_apres_vente: boolean;
+  Com_Pres: boolean;
+  Com_Drive: boolean;
+  Com_Achat: boolean;
+  Com_Livre: boolean;
+  Com_APV: boolean;
+  Com_Office: boolean;
+  Com_Close: boolean;
   objet_autre?: string | null;
   modeles_discutes?: unknown;
   motivations_achat?: string | null;
@@ -36,10 +38,12 @@ interface RapportRendezVous {
   degre_interet?: string | null;
   decision_attendue?: string | null;
   devis_offre_remise: boolean;
+  propositions_faites?: string | null;
   reference_offre?: string | null;
   financement_propose?: string | null;
   assurance_entretien: boolean;
   reprise_ancien_vehicule: boolean;
+  suivi_actions?: string | null;
   actions_suivi?: unknown;
   commentaire_global?: string | null;
   rendezVous?: {
@@ -90,11 +94,13 @@ export function EditRapportRendezVousDialog({
     email_client?: string;
     profession_societe?: string;
     type_client: string;
-    presentation_gamme: boolean;
-    essai_vehicule: boolean;
-    negociation_commerciale: boolean;
-    livraison_vehicule: boolean;
-    service_apres_vente: boolean;
+    Com_Pres: boolean;
+    Com_Drive: boolean;
+    Com_Achat: boolean;
+    Com_Livre: boolean;
+    Com_APV: boolean;
+    Com_Office: boolean;
+    Com_Close: boolean;
     objet_autre?: string;
     modeles_discutes: Array<{
       modele: string;
@@ -109,10 +115,12 @@ export function EditRapportRendezVousDialog({
     degre_interet?: string;
     decision_attendue?: string;
     devis_offre_remise: boolean;
+    propositions_faites?: string;
     reference_offre?: string;
     financement_propose?: string;
     assurance_entretien: boolean;
     reprise_ancien_vehicule: boolean;
+    suivi_actions?: string;
     actions_suivi: Array<{
       action: string;
       responsable: string;
@@ -134,11 +142,13 @@ export function EditRapportRendezVousDialog({
         email_client: data.email_client,
         profession_societe: data.profession_societe,
         type_client: data.type_client,
-        presentation_gamme: data.presentation_gamme,
-        essai_vehicule: data.essai_vehicule,
-        negociation_commerciale: data.negociation_commerciale,
-        livraison_vehicule: data.livraison_vehicule,
-        service_apres_vente: data.service_apres_vente,
+        Com_Pres: data.Com_Pres,
+        Com_Drive: data.Com_Drive,
+        Com_Achat: data.Com_Achat,
+        Com_Livre: data.Com_Livre,
+        Com_APV: data.Com_APV,
+        Com_Office: data.Com_Office,
+        Com_Close: data.Com_Close,
         objet_autre: data.objet_autre,
         modeles_discutes: data.modeles_discutes,
         motivations_achat: data.motivations_achat,
@@ -147,6 +157,7 @@ export function EditRapportRendezVousDialog({
         degre_interet: data.degre_interet,
         decision_attendue: data.decision_attendue,
         devis_offre_remise: data.devis_offre_remise,
+        propositions_faites: data.propositions_faites,
         reference_offre: data.reference_offre,
         financement_propose: data.financement_propose,
         assurance_entretien: data.assurance_entretien,
@@ -193,11 +204,13 @@ export function EditRapportRendezVousDialog({
     email_client: rapport.email_client || '',
     profession_societe: rapport.profession_societe || '',
     type_client: rapport.type_client,
-    presentation_gamme: rapport.presentation_gamme,
-    essai_vehicule: rapport.essai_vehicule,
-    negociation_commerciale: rapport.negociation_commerciale,
-    livraison_vehicule: rapport.livraison_vehicule,
-    service_apres_vente: rapport.service_apres_vente,
+    Com_Pres: rapport.Com_Pres,
+    Com_Drive: rapport.Com_Drive,
+    Com_Achat: rapport.Com_Achat,
+    Com_Livre: rapport.Com_Livre,
+    Com_APV: rapport.Com_APV,
+    Com_Office: rapport.Com_Office,
+    Com_Close: rapport.Com_Close,
     objet_autre: rapport.objet_autre || '',
     modeles_discutes: (rapport.modeles_discutes as Array<{
       modele: string;
@@ -212,10 +225,12 @@ export function EditRapportRendezVousDialog({
     degre_interet: rapport.degre_interet || '',
     decision_attendue: rapport.decision_attendue || '',
     devis_offre_remise: rapport.devis_offre_remise,
+    propositions_faites: rapport.propositions_faites || '',
     reference_offre: rapport.reference_offre || '',
     financement_propose: rapport.financement_propose || '',
     assurance_entretien: rapport.assurance_entretien,
     reprise_ancien_vehicule: rapport.reprise_ancien_vehicule,
+    suivi_actions: rapport.suivi_actions || '',
     actions_suivi: (rapport.actions_suivi as Array<{
       action: string;
       responsable: string;

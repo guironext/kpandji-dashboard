@@ -1,8 +1,661 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { getOrCreateUser } from "./user";
+
+export type ClientsByMonthChartData = {
+  chartData: Array<{ month: string; clients: number; clientEntreprises: number; total: number }>;
+  totalClients: number;
+  totalClientEntreprises: number;
+};
+
+export type ClientsBySecteurActiviteData = {
+  chartData: Array<{ secteur: string; clients: number; clientEntreprises: number; total: number }>;
+};
+
+export type ClientOrEntrepriseItem = {
+  id: string;
+  type: "client" | "client_entreprise";
+  nom: string;
+  secteur_activite: string;
+  commercialName: string;
+};
+
+export type SecteurGroup = {
+  secteur: string;
+  clients: ClientOrEntrepriseItem[];
+  clientEntreprises: ClientOrEntrepriseItem[];
+};
+
+export type ClientsBySecteurPerPeriodData = {
+  periodId: string;
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  secteurs: SecteurGroup[];
+};
+
+export type FactureWithClientData = {
+  id: string;
+  clientName: string;
+  type: "client" | "client_entreprise";
+  status_facture: string;
+  date_facture: string;
+  total_ttc: number;
+};
+
+export type ClientsFacturesData = {
+  factures: FactureWithClientData[];
+};
+
+export type FacturesByStatusData = {
+  chartData: Array<{ status: string; count: number }>;
+  factures: Array<{
+    id: string;
+    clientName: string;
+    status_facture: string;
+    date_facture: string;
+    total_ttc: number;
+  }>;
+};
+
+export type VehiculesLivresData = {
+  total: number;
+  byMonth: Array<{ month: string; count: number }>;
+};
+
+/**
+ * Fetches Client and Client_entreprise with status PROSPECT or CLIENT,
+ * created by the current user, grouped by secteur_activite.
+ */
+export async function getClientsAndClientEntreprisesBySecteurActiviteForCurrentUser(): Promise<{
+  success: boolean;
+  data?: ClientsBySecteurActiviteData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const [clients, clientEntreprises] = await Promise.all([
+      prisma.client.findMany({
+        where: {
+          userId: user.id,
+          status_client: { in: ["PROSPECT", "CLIENT"] },
+        },
+        select: { secteur_activite: true },
+      }),
+      prisma.client_entreprise.findMany({
+        where: {
+          userId: user.id,
+          status_client: { in: ["PROSPECT", "CLIENT"] },
+        },
+        select: { secteur_activite: true },
+      }),
+    ]);
+
+    const secteurMap = new Map<string, { clients: number; clientEntreprises: number }>();
+
+    const addToSecteur = (secteur: string | null, isClient: boolean) => {
+      const key = secteur?.trim() || "Non renseigné";
+      const current = secteurMap.get(key) ?? { clients: 0, clientEntreprises: 0 };
+      if (isClient) current.clients += 1;
+      else current.clientEntreprises += 1;
+      secteurMap.set(key, current);
+    };
+
+    for (const c of clients) {
+      addToSecteur(c.secteur_activite, true);
+    }
+    for (const c of clientEntreprises) {
+      addToSecteur(c.secteur_activite, false);
+    }
+
+    const chartData = Array.from(secteurMap.entries())
+      .map(([secteur, counts]) => ({
+        secteur,
+        clients: counts.clients,
+        clientEntreprises: counts.clientEntreprises,
+        total: counts.clients + counts.clientEntreprises,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      success: true,
+      data: { chartData },
+    };
+  } catch (error) {
+    console.error("Error fetching clients by secteur_activite:", error);
+    return { success: false, error: "Échec du chargement des données" };
+  }
+}
+
+/**
+ * Fetches all Client and Client_entreprise for each ObjectifPeriod,
+ * grouped by secteur_activite. For RESPONSABLE_COMMERCIAL / ADMIN only.
+ * Clients are included if createdAt is within the period's objectif_start and objectif_end.
+ * Pass clerkUserId from the client (useUser().id) when calling from a client component,
+ * since auth() may not work when middleware skips Clerk for server actions.
+ */
+export async function getClientsBySecteurForAllObjectifPeriods(clerkUserId?: string): Promise<{
+  success: boolean;
+  data?: ClientsBySecteurPerPeriodData[];
+  error?: string;
+}> {
+  try {
+    let clerkId = clerkUserId;
+    if (!clerkId) {
+      const authResult = await auth();
+      clerkId = authResult?.userId ?? undefined;
+    }
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const userResult = await getOrCreateUser(clerkId);
+    if (!userResult.success || !userResult.data) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+    const user = userResult.data;
+
+    const allowedRoles = ["RESPONSABLE_COMMERCIAL", "ADMIN"];
+    if (!allowedRoles.includes(user.role)) {
+      return { success: false, error: "Non autorisé" };
+    }
+
+    const periods = await prisma.objectifPeriod.findMany({
+      orderBy: { objectif_start: "desc" },
+      select: { id: true, objectif_start: true, objectif_end: true },
+    });
+
+    const result: ClientsBySecteurPerPeriodData[] = [];
+
+    for (const p of periods) {
+      const [clients, clientEntreprises] = await Promise.all([
+        prisma.client.findMany({
+          where: {
+            status_client: { in: ["PROSPECT", "CLIENT"] },
+            createdAt: {
+              gte: p.objectif_start,
+              lte: p.objectif_end,
+            },
+          },
+          select: {
+            id: true,
+            nom: true,
+            secteur_activite: true,
+            User: { select: { firstName: true, lastName: true } },
+          },
+        }),
+        prisma.client_entreprise.findMany({
+          where: {
+            status_client: { in: ["PROSPECT", "CLIENT"] },
+            createdAt: {
+              gte: p.objectif_start,
+              lte: p.objectif_end,
+            },
+          },
+          select: {
+            id: true,
+            nom_entreprise: true,
+            secteur_activite: true,
+            User: { select: { firstName: true, lastName: true } },
+          },
+        }),
+      ]);
+
+      const secteurMap = new Map<
+        string,
+        { clients: ClientOrEntrepriseItem[]; clientEntreprises: ClientOrEntrepriseItem[] }
+      >();
+
+      const addToSecteur = (
+        secteur: string | null,
+        item: ClientOrEntrepriseItem,
+        isClient: boolean
+      ) => {
+        const key = secteur?.trim() || "Non renseigné";
+        const current = secteurMap.get(key) ?? {
+          clients: [],
+          clientEntreprises: [],
+        };
+        if (isClient) current.clients.push(item);
+        else current.clientEntreprises.push(item);
+        secteurMap.set(key, current);
+      };
+
+      const getCommercialName = (u: { firstName: string; lastName: string } | null) =>
+        u ? `${u.firstName} ${u.lastName}`.trim() || "—" : "—";
+
+      for (const c of clients) {
+        const secteur = c.secteur_activite?.trim() || "Non renseigné";
+        addToSecteur(
+          c.secteur_activite,
+          {
+            id: c.id,
+            type: "client",
+            nom: c.nom,
+            secteur_activite: secteur,
+            commercialName: getCommercialName(c.User),
+          },
+          true
+        );
+      }
+      for (const ce of clientEntreprises) {
+        const secteur = ce.secteur_activite?.trim() || "Non renseigné";
+        addToSecteur(
+          ce.secteur_activite,
+          {
+            id: ce.id,
+            type: "client_entreprise",
+            nom: ce.nom_entreprise,
+            secteur_activite: secteur,
+            commercialName: getCommercialName(ce.User),
+          },
+          false
+        );
+      }
+
+      const secteurs: SecteurGroup[] = Array.from(secteurMap.entries())
+        .map(([secteur, data]) => ({
+          secteur,
+          clients: data.clients,
+          clientEntreprises: data.clientEntreprises,
+        }))
+        .sort(
+          (a, b) =>
+            b.clients.length +
+            b.clientEntreprises.length -
+            (a.clients.length + a.clientEntreprises.length)
+        );
+
+      const startStr = p.objectif_start.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const endStr = p.objectif_end.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
+      result.push({
+        periodId: p.id,
+        periodStart: p.objectif_start.toISOString(),
+        periodEnd: p.objectif_end.toISOString(),
+        periodLabel: `${startStr} — ${endStr}`,
+        secteurs,
+      });
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error fetching clients by secteur per period:", error);
+    return { success: false, error: "Échec du chargement des données" };
+  }
+}
+
+/**
+ * Fetches all factures for Client and Client_entreprise created by the current user,
+ * with status_facture.
+ */
+export async function getFacturesByCurrentUserClients(): Promise<{
+  success: boolean;
+  data?: ClientsFacturesData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const [clientIds, clientEntrepriseIds] = await Promise.all([
+      prisma.client.findMany({
+        where: { userId: user.id },
+        select: { id: true },
+      }).then((r) => r.map((c) => c.id)),
+      prisma.client_entreprise.findMany({
+        where: { userId: user.id },
+        select: { id: true },
+      }).then((r) => r.map((c) => c.id)),
+    ]);
+
+    const factures = await prisma.facture.findMany({
+      where: {
+        OR: [
+          { clientId: { in: clientIds } },
+          { clientEntrepriseId: { in: clientEntrepriseIds } },
+        ],
+      },
+      include: {
+        Client: { select: { nom: true } },
+        Client_entreprise: { select: { nom_entreprise: true } },
+      },
+      orderBy: { date_facture: "desc" },
+    });
+
+    const facturesData: FactureWithClientData[] = factures.map((f) => ({
+      id: f.id,
+      clientName: f.Client?.nom ?? f.Client_entreprise?.nom_entreprise ?? "—",
+      type: f.clientId ? "client" : "client_entreprise",
+      status_facture: f.status_facture,
+      date_facture: f.date_facture.toISOString(),
+      total_ttc: Number(f.total_ttc),
+    }));
+
+    return {
+      success: true,
+      data: { factures: facturesData },
+    };
+  } catch (error) {
+    console.error("Error fetching factures by current user clients:", error);
+    return { success: false, error: "Échec du chargement des factures" };
+  }
+}
+
+/**
+ * Fetches all factures created by the current user, grouped by status_facture.
+ */
+export async function getFacturesByCurrentUserGroupedByStatus(): Promise<{
+  success: boolean;
+  data?: FacturesByStatusData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const factures = await prisma.facture.findMany({
+      where: { userId: user.id },
+      include: {
+        Client: { select: { nom: true } },
+        Client_entreprise: { select: { nom_entreprise: true } },
+      },
+      orderBy: { date_facture: "desc" },
+    });
+
+    const statusCounts = new Map<string, number>();
+    for (const f of factures) {
+      const status = f.status_facture;
+      statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
+    }
+
+    const STATUS_ORDER = ["EN_ATTENTE", "PROFORMA", "FACTURE", "PAYEE", "ANNULEE"];
+    const orderedStatuses = STATUS_ORDER.filter((s) => statusCounts.has(s));
+    const otherStatuses = Array.from(statusCounts.keys()).filter((s) => !STATUS_ORDER.includes(s));
+    const chartData = [...orderedStatuses, ...otherStatuses].map((status) => ({
+      status,
+      count: statusCounts.get(status)!,
+    }));
+
+    const facturesData = factures.map((f) => ({
+      id: f.id,
+      clientName: f.Client?.nom ?? f.Client_entreprise?.nom_entreprise ?? "—",
+      status_facture: f.status_facture,
+      date_facture: f.date_facture.toISOString(),
+      total_ttc: Number(f.total_ttc),
+    }));
+
+    return {
+      success: true,
+      data: { chartData, factures: facturesData },
+    };
+  } catch (error) {
+    console.error("Error fetching factures by current user:", error);
+    return { success: false, error: "Échec du chargement des factures" };
+  }
+}
+
+/**
+ * Fetches count of RapportRendezVous with Com_Livre=true for current user's clients,
+ * grouped by month (Nombre de véhicules livrés).
+ */
+export async function getVehiculesLivresByCurrentUser(): Promise<{
+  success: boolean;
+  data?: VehiculesLivresData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const rapports = await prisma.rapportRendezVous.findMany({
+      where: {
+        Com_Livre: true,
+        OR: [
+          { Client: { userId: user.id } },
+          { Client_entreprise: { userId: user.id } },
+        ],
+      },
+      select: { createdAt: true },
+    });
+
+    const monthMap = new Map<string, number>();
+    for (const r of rapports) {
+      const d = new Date(r.createdAt);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+    }
+
+    const byMonth = Array.from(monthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([monthKey, count]) => {
+        const [year, month] = monthKey.split("-");
+        const monthLabel = new Date(
+          parseInt(year),
+          parseInt(month) - 1
+        ).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+        return { month: monthLabel, count };
+      });
+
+    return {
+      success: true,
+      data: {
+        total: rapports.length,
+        byMonth,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching véhicules livrés:", error);
+    return { success: false, error: "Échec du chargement" };
+  }
+}
+
+/**
+ * Fetches count of RapportRendezVous with Com_Drive=true for current user's clients,
+ * grouped by month (Nombre d'essais réalisés).
+ */
+export async function getEssaisRealisesByCurrentUser(): Promise<{
+  success: boolean;
+  data?: VehiculesLivresData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const rapports = await prisma.rapportRendezVous.findMany({
+      where: {
+        Com_Drive: true,
+        OR: [
+          { Client: { userId: user.id } },
+          { Client_entreprise: { userId: user.id } },
+        ],
+      },
+      select: { createdAt: true },
+    });
+
+    const monthMap = new Map<string, number>();
+    for (const r of rapports) {
+      const d = new Date(r.createdAt);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+    }
+
+    const byMonth = Array.from(monthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([monthKey, count]) => {
+        const [year, month] = monthKey.split("-");
+        const monthLabel = new Date(
+          parseInt(year),
+          parseInt(month) - 1
+        ).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+        return { month: monthLabel, count };
+      });
+
+    return {
+      success: true,
+      data: {
+        total: rapports.length,
+        byMonth,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching essais réalisés:", error);
+    return { success: false, error: "Échec du chargement" };
+  }
+}
+
+/**
+ * Fetches Client and Client_entreprise with status PROSPECT or CLIENT,
+ * created by the current user, grouped by month for chart display.
+ */
+export async function getClientsAndClientEntreprisesByMonthForCurrentUser(): Promise<{
+  success: boolean;
+  data?: ClientsByMonthChartData;
+  error?: string;
+}> {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Non authentifié" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur non trouvé" };
+    }
+
+    const [clients, clientEntreprises] = await Promise.all([
+      prisma.client.findMany({
+        where: {
+          userId: user.id,
+          status_client: { in: ["PROSPECT", "CLIENT"] },
+        },
+        select: { createdAt: true },
+      }),
+      prisma.client_entreprise.findMany({
+        where: {
+          userId: user.id,
+          status_client: { in: ["PROSPECT", "CLIENT"] },
+        },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    const monthMap = new Map<string, { clients: number; clientEntreprises: number }>();
+
+    for (const c of clients) {
+      const d = new Date(c.createdAt);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const current = monthMap.get(monthKey) ?? { clients: 0, clientEntreprises: 0 };
+      current.clients += 1;
+      monthMap.set(monthKey, current);
+    }
+
+    for (const c of clientEntreprises) {
+      const d = new Date(c.createdAt);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const current = monthMap.get(monthKey) ?? { clients: 0, clientEntreprises: 0 };
+      current.clientEntreprises += 1;
+      monthMap.set(monthKey, current);
+    }
+
+    const sortedMonths = Array.from(monthMap.keys()).sort();
+
+    const chartData = sortedMonths.map((monthKey) => {
+      const [year, month] = monthKey.split("-");
+      const monthLabel = new Date(
+        parseInt(year),
+        parseInt(month) - 1
+      ).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+      const counts = monthMap.get(monthKey)!;
+      return {
+        month: monthLabel,
+        clients: counts.clients,
+        clientEntreprises: counts.clientEntreprises,
+        total: counts.clients + counts.clientEntreprises,
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        chartData,
+        totalClients: clients.length,
+        totalClientEntreprises: clientEntreprises.length,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching clients by month:", error);
+    return { success: false, error: "Échec du chargement des données" };
+  }
+}
 
 export async function createClientEntreprise(data: {
   nom_entreprise: string;

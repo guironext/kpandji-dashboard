@@ -8,7 +8,6 @@ import {
   Car,
   UserCheck,
   FileText,
-  Eye,
   Calendar,
   Receipt,
   ClipboardList,
@@ -19,7 +18,7 @@ import {
   Target,
   CalendarRange,
   KeyRound,
-  Files,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -39,6 +38,7 @@ const navCategories = [
       { id: 2, icon: <Target className={iconClass} />, label: "Objectifs", href: "/responsablecommercial/objectifs" },
       { id: 3, icon: <CalendarRange className={iconClass} />, label: "Calendrier Sortie", href: "/responsablecommercial/calendrier-sortie" },
       { id: 4, icon: <KeyRound className={iconClass} />, label: "Reservation Véhicule", href: "/responsablecommercial/reservation-vehicule" },
+      { id: 5, icon: <Activity className={iconClass} />, label: "Performences", href: "/responsablecommercial/performences" },
     ],
   },
   {
@@ -47,9 +47,9 @@ const navCategories = [
     color: "#0ea5e9",
     bg: "#0ea5e91a", // sky-500 @ 10% opacity
     items: [
-      { id: 5, icon: <Car className={iconClass} />, label: "Modèles Voitures", href: "/responsablecommercial/ajouter-modele" },
-      { id: 6, icon: <Package className={iconClass} />, label: "Accessoires", href: "/responsablecommercial/ajouter-accessoires" },
-      { id: 7, icon: <Warehouse className={iconClass} />, label: "Stock disponible", href: "/responsablecommercial/stock-disponible" },
+      { id: 6, icon: <Car className={iconClass} />, label: "Modèles Voitures", href: "/responsablecommercial/ajouter-modele" },
+      { id: 7, icon: <Package className={iconClass} />, label: "Accessoires", href: "/responsablecommercial/ajouter-accessoires" },
+      { id: 8, icon: <Warehouse className={iconClass} />, label: "Goodies-Brochures", href: "/responsablecommercial/goodies-brochures" },
     ],
   },
   {
@@ -58,8 +58,8 @@ const navCategories = [
     color: "#22c55e",
     bg: "#22c55e1a", // green-500 @ 10% opacity
     items: [
-      { id: 8, icon: <UserCheck className={iconClass} />, label: "Prospects", href: "/responsablecommercial/prospects" },
-      { id: 9, icon: <Users className={iconClass} />, label: "Clients", href: "/responsablecommercial/clients" },
+      { id: 9, icon: <UserCheck className={iconClass} />, label: "Prospects", href: "/responsablecommercial/prospects" },
+      { id: 10, icon: <Users className={iconClass} />, label: "Clients", href: "/responsablecommercial/clients" },
     ],
   },
   {
@@ -68,9 +68,9 @@ const navCategories = [
     color: "#f59e0b",
     bg: "#f59e0b1a", // amber-500 @ 10% opacity
     items: [
-      { id: 10, icon: <Calendar className={iconClass} />, label: "Rendez-vous", href: "/responsablecommercial/rendez-vous" },
-      { id: 11, icon: <ClipboardList className={iconClass} />, label: "Rapport Rendez-vous", href: "/responsablecommercial/rapport-rendez-vous" },
-      { id: 12, icon: <Eye className={iconClass} />, label: "Suivi Rendez-vous", href: "/responsablecommercial/suivi-rendez-vous" },
+      { id: 11, icon: <Calendar className={iconClass} />, label: "Coût Rendez-vous", href: "/responsablecommercial/cout-rendez-vous" },
+      { id: 12, icon: <ClipboardList className={iconClass} />, label: "Rapport Rendez-vous", href: "/responsablecommercial/rapport-rendez-vous" },
+      
     ],
   },
   {
@@ -79,8 +79,8 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 13, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
-      { id: 14, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
+      { id: 14, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
+      { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
     ],
   },
   {
@@ -89,11 +89,10 @@ const navCategories = [
     color: "#ec4899",
     bg: "#ec48991a", // pink-500 @ 10% opacity
     items: [
-      { id: 15, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
-      { id: 16, icon: <Files className={iconClass} />, label: "Proformas-multi", href: "/responsablecommercial/profoma-multi" },
-      { id: 17, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
-      { id: 18, icon: <FileCheck className={iconClass} />, label: "Bon pour Acquis", href: "/responsablecommercial/bon-pour-acquis" },
-      { id: 19, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
+      { id: 16, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
+      { id: 18, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
+      { id: 19, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
+      { id: 20, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },
 ];
@@ -152,7 +151,7 @@ const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
 
                 return (
                   <Link
-                    key={item.id}
+                    key={item.href}
                     href={item.href}
                     className={clsx(
                       "group flex items-center text-gray-700 duration-200 ease-in-out transform px-3 py-2.5 rounded-xl",
