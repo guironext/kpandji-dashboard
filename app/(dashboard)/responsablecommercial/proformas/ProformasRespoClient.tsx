@@ -183,8 +183,8 @@ export default function ProformasRespoClient() {
           a.commercialName.localeCompare(b.commercialName)
         );
         setCommercialGroups(groups);
-        if (groups.length > 0 && !selectedCommercialId) {
-          setSelectedCommercialId(groups[0].commercialId);
+        if (groups.length > 0) {
+          setSelectedCommercialId((prev) => prev || groups[0].commercialId);
         }
       }
       if (accessoiresResult.success && accessoiresResult.data) {

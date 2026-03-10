@@ -1239,6 +1239,16 @@ model GoodiesBrochures {
   updatedAt DateTime @updatedAt
 }
 
+model GoodiesBrochuresAttribution {
+  id String @id @default(uuid())
+  goodiesBrochuresId String
+  attribution_commercial String
+  quantite_attribuee Int @default(0)
+  destination String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum StatutCalendrierSortie {
   EN_ATTENTE
   CONFIRME

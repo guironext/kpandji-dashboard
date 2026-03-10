@@ -38,28 +38,36 @@ import {
 import {
   createGoodiesBrochures,
   updateGoodiesBrochures,
-  updateGoodiesBrochuresAttribution,
+  createGoodiesBrochuresAttribution,
+  addQuantityToGoodiesBrochures,
   deleteGoodiesBrochures,
   getAllGoodiesBrochures,
+  getAllGoodiesBrochuresAttributions,
   type GoodiesBrochuresItem,
+  type GoodiesBrochuresAttributionItem,
 } from "@/lib/actions/goodies-brochures";
 import { toast } from "sonner";
-import { Plus, Package, X, Pencil, Trash2, Layers, Loader2, UserPlus } from "lucide-react";
+import { Plus, Package, X, Pencil, Trash2, Layers, Loader2, UserPlus, PackagePlus } from "lucide-react";
 
 export default function GoodiesBrochuresPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GoodiesBrochuresItem | null>(null);
   const [attributionDialogOpen, setAttributionDialogOpen] = useState(false);
-  const [attributionItem, setAttributionItem] = useState<GoodiesBrochuresItem | null>(null);
   const [attributionFormData, setAttributionFormData] = useState({
+    goodiesBrochuresId: "",
     attribution_commercial: "",
-    quantite_attribuee: "0",
     destination: "",
+    quantite_attribuee: "",
   });
+  const [addQuantityDialogOpen, setAddQuantityDialogOpen] = useState(false);
+  const [addQuantityItem, setAddQuantityItem] = useState<GoodiesBrochuresItem | null>(null);
+  const [addQuantityValue, setAddQuantityValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [goodies, setGoodies] = useState<GoodiesBrochuresItem[]>([]);
   const [loadingGoodies, setLoadingGoodies] = useState(true);
+  const [attributions, setAttributions] = useState<GoodiesBrochuresAttributionItem[]>([]);
+  const [loadingAttributions, setLoadingAttributions] = useState(true);
 
   const loadGoodies = useCallback(async () => {
     setLoadingGoodies(true);
@@ -70,9 +78,19 @@ export default function GoodiesBrochuresPage() {
     setLoadingGoodies(false);
   }, []);
 
+  const loadAttributions = useCallback(async () => {
+    setLoadingAttributions(true);
+    const result = await getAllGoodiesBrochuresAttributions();
+    if (result.success && result.data) {
+      setAttributions(result.data);
+    }
+    setLoadingAttributions(false);
+  }, []);
+
   useEffect(() => {
     loadGoodies();
-  }, [loadGoodies]);
+    loadAttributions();
+  }, [loadGoodies, loadAttributions]);
   const CATEGORIES = [
     "Gadgets Grands Publics",
     "Gadgets Luxe",
@@ -103,16 +121,6 @@ export default function GoodiesBrochuresPage() {
     setEditingItem(null);
   };
 
-  const openAttributionDialog = (item: GoodiesBrochuresItem) => {
-    setAttributionItem(item);
-    setAttributionFormData({
-      attribution_commercial: item.attribution_commercial || "",
-      quantite_attribuee: String(item.quantite_attribuee),
-      destination: item.destination || "",
-    });
-    setAttributionDialogOpen(true);
-  };
-
   const openEditDialog = (item: GoodiesBrochuresItem) => {
     setEditingItem(item);
     setFormData({
@@ -125,6 +133,46 @@ export default function GoodiesBrochuresPage() {
       contact_artisan: item.contact_artisan || "",
     });
     setEditDialogOpen(true);
+  };
+
+  const openAddQuantityDialog = (item: GoodiesBrochuresItem) => {
+    setAddQuantityItem(item);
+    setAddQuantityValue("");
+    setAddQuantityDialogOpen(true);
+  };
+
+  const openAttributionDialog = (item?: GoodiesBrochuresItem) => {
+    setAttributionFormData({
+      goodiesBrochuresId: item?.id ?? "",
+      attribution_commercial: "",
+      destination: "",
+      quantite_attribuee: "",
+    });
+    setAttributionDialogOpen(true);
+  };
+
+  const handleAddQuantitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addQuantityItem) return;
+
+    const quantity = Number(addQuantityValue) || 0;
+    if (quantity <= 0) {
+      toast.error("La quantité doit être supérieure à 0");
+      return;
+    }
+
+    setLoading(true);
+    const result = await addQuantityToGoodiesBrochures(addQuantityItem.id, quantity);
+    if (result.success) {
+      toast.success(result.message);
+      setAddQuantityDialogOpen(false);
+      setAddQuantityItem(null);
+      setAddQuantityValue("");
+      loadGoodies();
+    } else {
+      toast.error(result.message);
+    }
+    setLoading(false);
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -180,27 +228,36 @@ export default function GoodiesBrochuresPage() {
 
   const handleAttributionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!attributionItem) return;
+    if (!attributionFormData.goodiesBrochuresId) {
+      toast.error("Veuillez sélectionner un goodie");
+      return;
+    }
 
     const quantiteAttribuee = Number(attributionFormData.quantite_attribuee) || 0;
-    if (quantiteAttribuee > attributionItem.quantite) {
-      toast.error(`La quantité attribuée ne peut pas dépasser ${attributionItem.quantite}`);
+    if (quantiteAttribuee <= 0) {
+      toast.error("La quantité doit être supérieure à 0");
+      return;
+    }
+
+    const selectedGoodie = goodies.find((g) => g.id === attributionFormData.goodiesBrochuresId);
+    if (selectedGoodie && quantiteAttribuee > selectedGoodie.quantite_restante) {
+      toast.error(`Quantité disponible insuffisante (restant : ${selectedGoodie.quantite_restante})`);
       return;
     }
 
     setLoading(true);
 
-    const result = await updateGoodiesBrochuresAttribution(attributionItem.id, {
-      attribution_commercial: attributionFormData.attribution_commercial || undefined,
-      quantite_attribuee: quantiteAttribuee,
+    const result = await createGoodiesBrochuresAttribution({
+      goodiesBrochuresId: attributionFormData.goodiesBrochuresId,
+      attribution_commercial: attributionFormData.attribution_commercial,
       destination: attributionFormData.destination || undefined,
+      quantite_attribuee: quantiteAttribuee,
     });
 
     if (result.success) {
       toast.success(result.message);
       setAttributionDialogOpen(false);
-      setAttributionItem(null);
-      setAttributionFormData({ attribution_commercial: "", quantite_attribuee: "0", destination: "" });
+      setAttributionFormData({ goodiesBrochuresId: "", attribution_commercial: "", destination: "", quantite_attribuee: "" });
       loadGoodies();
     } else {
       toast.error(result.message);
@@ -689,14 +746,95 @@ export default function GoodiesBrochuresPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Add Quantity Dialog */}
+      <Dialog
+        open={addQuantityDialogOpen}
+        onOpenChange={(open) => {
+          setAddQuantityDialogOpen(open);
+          if (!open) {
+            setAddQuantityItem(null);
+            setAddQuantityValue("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden" showCloseButton={false}>
+          <div className="relative bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5">
+            <button
+              type="button"
+              onClick={() => setAddQuantityDialogOpen(false)}
+              className="absolute right-4 top-4 rounded-md p-1.5 text-white/90 transition-colors hover:bg-white/20 hover:text-white"
+              aria-label="Fermer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                <PackagePlus className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  Ajouter au stock
+                </DialogTitle>
+                <DialogDescription className="text-white/90 text-sm mt-0.5">
+                  {addQuantityItem?.nom}
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleAddQuantitySubmit}>
+            <div className="px-6 py-5 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="add_quantite" className="text-sm font-medium">
+                  Quantité à ajouter
+                </Label>
+                <Input
+                  id="add_quantite"
+                  type="number"
+                  min="1"
+                  placeholder="Ex: 10"
+                  value={addQuantityValue}
+                  onChange={(e) => setAddQuantityValue(e.target.value)}
+                  className="h-10"
+                />
+                {addQuantityItem && (
+                  <p className="text-xs text-muted-foreground">
+                    Stock actuel : {addQuantityItem.quantite} · Restant : {addQuantityItem.quantite_restante}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t bg-muted/30 px-6 py-4">
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddQuantityDialogOpen(false)}
+                  disabled={loading}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {loading ? "Enregistrement..." : "OK"}
+                </Button>
+              </DialogFooter>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Attribution Dialog */}
       <Dialog
         open={attributionDialogOpen}
         onOpenChange={(open) => {
           setAttributionDialogOpen(open);
           if (!open) {
-            setAttributionItem(null);
-            setAttributionFormData({ attribution_commercial: "", quantite_attribuee: "0", destination: "" });
+            setAttributionFormData({ goodiesBrochuresId: "", attribution_commercial: "", destination: "", quantite_attribuee: "" });
           }
         }}
       >
@@ -719,7 +857,7 @@ export default function GoodiesBrochuresPage() {
                   Attribution
                 </DialogTitle>
                 <DialogDescription className="text-white/90 text-sm mt-0.5">
-                  {attributionItem?.nom}
+                  Attribuer des goodies à un commercial
                 </DialogDescription>
               </div>
             </div>
@@ -728,8 +866,30 @@ export default function GoodiesBrochuresPage() {
           <form onSubmit={handleAttributionSubmit}>
             <div className="px-6 py-5 space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="attribution_goodie" className="text-sm font-medium">
+                  Goodie / Brochure
+                </Label>
+                <Select
+                  value={attributionFormData.goodiesBrochuresId}
+                  onValueChange={(value) =>
+                    setAttributionFormData({ ...attributionFormData, goodiesBrochuresId: value })
+                  }
+                >
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Sélectionner un goodie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {goodies.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.nom} (restant : {g.quantite_restante})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="attribution_commercial" className="text-sm font-medium">
-                  Attribution commercial
+                  Raison                                                                                                       de l&apos;attribution
                 </Label>
                 <Input
                   id="attribution_commercial"
@@ -742,14 +902,27 @@ export default function GoodiesBrochuresPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="quantite_attribuee" className="text-sm font-medium">
-                  Quantité attribuée
+                <Label htmlFor="attribution_destination" className="text-sm font-medium">
+                  Destinataire
                 </Label>
                 <Input
-                  id="quantite_attribuee"
+                  id="attribution_destination"
+                  placeholder="Destination"
+                  value={attributionFormData.destination}
+                  onChange={(e) =>
+                    setAttributionFormData({ ...attributionFormData, destination: e.target.value })
+                  }
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="attribution_quantite" className="text-sm font-medium">
+                  Quantité
+                </Label>
+                <Input
+                  id="attribution_quantite"
                   type="number"
-                  min="0"
-                  max={attributionItem?.quantite ?? 0}
+                  min="1"
                   placeholder="0"
                   value={attributionFormData.quantite_attribuee}
                   onChange={(e) =>
@@ -757,25 +930,14 @@ export default function GoodiesBrochuresPage() {
                   }
                   className="h-10"
                 />
-                {attributionItem && (
-                  <p className="text-xs text-muted-foreground">
-                    Quantité totale en stock : {attributionItem.quantite} · Restant : {attributionItem.quantite_restante}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="destination" className="text-sm font-medium">
-                  Destinataire
-                </Label>
-                <Input
-                  id="destination"
-                  placeholder="Destinataire"
-                  value={attributionFormData.destination}
-                  onChange={(e) =>
-                    setAttributionFormData({ ...attributionFormData, destination: e.target.value })
-                  }
-                  className="h-10"
-                />
+                {(() => {
+                  const sel = goodies.find((g) => g.id === attributionFormData.goodiesBrochuresId);
+                  return sel ? (
+                    <p className="text-xs text-muted-foreground">
+                      Restant : {sel.quantite_restante}
+                    </p>
+                  ) : null;
+                })()}
               </div>
             </div>
 
@@ -891,6 +1053,15 @@ export default function GoodiesBrochuresPage() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                              aria-label="Ajouter au stock"
+                              onClick={() => openAddQuantityDialog(item)}
+                            >
+                              <PackagePlus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                               aria-label="Modifier"
                               onClick={() => openEditDialog(item)}
                             >
@@ -906,6 +1077,69 @@ export default function GoodiesBrochuresPage() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Table of attributions */}
+        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="border-b bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Liste des attributions</CardTitle>
+                <CardDescription>
+                  {attributions.length} attribution{attributions.length !== 1 ? "s" : ""}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingAttributions ? (
+              <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+                <Loader2 className="h-12 w-12 animate-spin mb-4" />
+                <p>Chargement des attributions...</p>
+              </div>
+            ) : attributions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <UserPlus className="w-12 h-12 mb-4 opacity-50" />
+                <p className="font-medium text-foreground">Aucune attribution</p>
+                <p className="text-sm mt-1">Les attributions apparaîtront ici.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="px-4 py-3 font-semibold">Date</TableHead>
+                      <TableHead className="px-4 py-3 font-semibold">Goodie</TableHead>
+                      <TableHead className="px-4 py-3 font-semibold">Commercial</TableHead>
+                      <TableHead className="px-4 py-3 font-semibold">Destination</TableHead>
+                      <TableHead className="px-4 py-3 text-right font-semibold">Quantité</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attributions.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {new Date(item.createdAt).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 font-medium">{item.goodieNom}</TableCell>
+                        <TableCell className="px-4 py-3">{item.attribution_commercial}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">{item.destination || "—"}</TableCell>
+                        <TableCell className="px-4 py-3 text-right tabular-nums font-medium">
+                          {item.quantite_attribuee}
                         </TableCell>
                       </TableRow>
                     ))}
