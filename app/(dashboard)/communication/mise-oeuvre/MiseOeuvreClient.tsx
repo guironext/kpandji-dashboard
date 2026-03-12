@@ -1,18 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -21,280 +9,128 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getPlanActionsByProjectId,
-  createPlanAction,
-  updatePlanAction,
-  deletePlanAction,
-  type PlanActionItem,
-} from "@/lib/actions/communication-plan-action";
-import { getAssignmentsByProjectId } from "@/lib/actions/communication-plan-action-actor";
-import { getActorsByProject, type CommunicationProjectActor } from "@/lib/actions/communication-actor";
-import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
-import { toast } from "sonner";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
-  Calendar,
-  Plus,
-  Trash2,
-  Edit2,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  PlayCircle,
-  CheckSquare,
-  Sparkles,
-  Save,
-} from "lucide-react";
-import { format, addDays, differenceInDays, startOfDay, min, max } from "date-fns";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
+import {
+  getPlanActionsWithActorsByProjectId,
+  type PlanActionWithActors,
+} from "@/lib/actions/communication-plan-action";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Loader2, GanttChart, Users, Sparkles } from "lucide-react";
 
-function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromDatetimeLocal(s: string): Date {
-  return new Date(s);
-}
+const BAR_COLORS = [
+  "bg-violet-500",
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-rose-500",
+  "bg-sky-500",
+  "bg-cyan-500",
+  "bg-fuchsia-500",
+  "bg-teal-500",
+];
 
 type Props = {
   projects: CommunicationProjectListItem[];
-  initialActions: PlanActionItem[];
-  selectedProjectId: string | null;
 };
 
-export default function MiseOeuvreClient({
-  projects,
-  initialActions,
-  selectedProjectId: initialProjectId,
-}: Props) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    initialProjectId ?? (projects[0]?.id ?? null)
-  );
-  const [actions, setActions] = useState<PlanActionItem[]>(initialActions);
-  const [actors, setActors] = useState<CommunicationProjectActor[]>([]);
-  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
-  const [loading, setLoading] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [, setHasUnsavedCompleted] = useState(false);
-  const [savingCompleted, setSavingCompleted] = useState(false);
-  const [saveCompletedDone, setSaveCompletedDone] = useState(false);
-  const [form, setForm] = useState({
-    title: "",
-    startDate: "",
-    endDate: "",
+function GanttDateAxis({
+  range,
+}: {
+  range: { min: number; max: number; span: number };
+}) {
+  const ticks = 6;
+  const tickDates = Array.from({ length: ticks }, (_, i) => {
+    const t = range.min + (range.span * i) / (ticks - 1);
+    return new Date(t);
   });
+  const minDate = format(new Date(range.min), "dd MMM yyyy", { locale: fr });
+  const maxDate = format(new Date(range.max), "dd MMM yyyy", { locale: fr });
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-xs text-slate-500">
+        <span>{minDate}</span>
+        <span>{maxDate}</span>
+      </div>
+      <div className="grid grid-cols-6 gap-2 text-[11px] font-medium text-slate-600">
+        {tickDates.map((d, i) => (
+          <span
+            key={i}
+            className={
+              i === 0
+                ? "text-left"
+                : i === ticks - 1
+                  ? "text-right"
+                  : "text-center"
+            }
+          >
+            {format(d, "dd MMM", { locale: fr })}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function MiseOeuvreClient({ projects }: Props) {
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projects[0]?.id ?? null
+  );
+  const [actions, setActions] = useState<PlanActionWithActors[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedProjectId) {
       setActions([]);
-      setActors([]);
-      setAssignments({});
       return;
     }
     setLoading(true);
-    Promise.all([
-      getPlanActionsByProjectId(selectedProjectId),
-      getActorsByProject(selectedProjectId),
-      getAssignmentsByProjectId(selectedProjectId),
-    ])
-      .then(([actionsRes, actorsRes, assignmentsRes]) => {
-        setActions(actionsRes.success ? actionsRes.actions : []);
-        setActors(actorsRes.success ? actorsRes.actors : []);
-        setAssignments(assignmentsRes.success ? assignmentsRes.assignments : {});
-        setHasUnsavedCompleted(false);
-        setSaveCompletedDone(false);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error loading data:", error);
-        toast.error("Erreur lors du chargement. Veuillez réessayer.");
-        setActions([]);
-        setActors([]);
-        setAssignments({});
-        setLoading(false);
-      });
+    getPlanActionsWithActorsByProjectId(selectedProjectId).then((res) => {
+      setActions(res.success ? res.actions : []);
+      setLoading(false);
+    });
   }, [selectedProjectId]);
 
-  const resetForm = () => {
-    setForm({ title: "", startDate: "", endDate: "" });
-    setIsAdding(false);
-    setEditingId(null);
-  };
+  const chartRange = useMemo(() => {
+    if (actions.length === 0) return null;
+    const starts = actions.map((a) => new Date(a.startDate).getTime());
+    const ends = actions.map((a) => new Date(a.endDate).getTime());
+    const min = Math.min(...starts);
+    const max = Math.max(...ends);
+    const span = max - min || 1;
+    return { min, max, span };
+  }, [actions]);
 
-  const handleAdd = () => {
-    const now = new Date();
-    const start = new Date(now);
-    const end = addDays(now, 1);
-    setForm({
-      title: "",
-      startDate: toDatetimeLocal(start),
-      endDate: toDatetimeLocal(end),
-    });
-    setIsAdding(true);
-    setEditingId(null);
-  };
-
-  const handleEdit = (action: PlanActionItem) => {
-    setForm({
-      title: action.title,
-      startDate: toDatetimeLocal(new Date(action.startDate)),
-      endDate: toDatetimeLocal(new Date(action.endDate)),
-    });
-    setEditingId(action.id);
-    setIsAdding(false);
-  };
-
-  const handleSaveNew = async () => {
-    if (!selectedProjectId || !form.title.trim()) {
-      toast.error("Veuillez sélectionner un projet et saisir un intitulé.");
-      return;
-    }
-    if (!form.startDate || !form.endDate) {
-      toast.error("Veuillez renseigner les dates de début et de fin.");
-      return;
-    }
-    const startDate = fromDatetimeLocal(form.startDate);
-    const endDate = fromDatetimeLocal(form.endDate);
-    if (endDate < startDate) {
-      toast.error("La date de fin doit être après la date de début.");
-      return;
-    }
-    try {
-      const res = await createPlanAction(selectedProjectId, {
-        title: form.title.trim(),
-        startDate,
-        endDate,
-        completed: false,
-      });
-      if (res.success) {
-        setActions((prev) => [...prev, res.action].sort((a, b) => a.orderIndex - b.orderIndex));
-        resetForm();
-        toast.success("Action ajoutée.");
-      } else {
-        toast.error(res.error || "Erreur lors de la création de l'action.");
-      }
-    } catch (error) {
-      console.error("Error creating action:", error);
-      toast.error("Erreur lors de la création. Veuillez réessayer.");
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !form.title.trim() || !form.startDate || !form.endDate) return;
-    const startDate = fromDatetimeLocal(form.startDate);
-    const endDate = fromDatetimeLocal(form.endDate);
-    if (endDate < startDate) {
-      toast.error("La date de fin doit être après la date de début.");
-      return;
-    }
-    try {
-      const res = await updatePlanAction(editingId, {
-        title: form.title.trim(),
-        startDate,
-        endDate,
-      });
-      if (res.success) {
-        setActions((prev) =>
-          prev.map((a) => (a.id === editingId ? res.action : a))
-        );
-        resetForm();
-        toast.success("Action mise à jour.");
-      } else {
-        toast.error(res.error || "Erreur lors de la mise à jour de l'action.");
-      }
-    } catch (error) {
-      console.error("Error updating action:", error);
-      toast.error("Erreur lors de la mise à jour. Veuillez réessayer.");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await deletePlanAction(id);
-      if (res.success) {
-        setActions((prev) => prev.filter((a) => a.id !== id));
-        if (editingId === id) resetForm();
-        toast.success("Action supprimée.");
-      } else {
-        toast.error(res.error || "Erreur lors de la suppression de l'action.");
-      }
-    } catch (error) {
-      console.error("Error deleting action:", error);
-      toast.error("Erreur lors de la suppression. Veuillez réessayer.");
-    }
-  };
-
-  const handleToggleCompleted = (id: string, completed: boolean) => {
-    setActions((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, completed } : a))
-    );
-    setHasUnsavedCompleted(true);
-    setSaveCompletedDone(false);
-  };
-
-  const handleEnregistrerCompleted = async () => {
-    const checkedActions = actions.filter((a) => a.completed);
-    if (checkedActions.length === 0) {
-      toast.error("Cochez au moins une action à enregistrer.");
-      return;
-    }
-    setSavingCompleted(true);
-    try {
-      // Save only checked actions as completed in the database
-      const results = await Promise.all(
-        checkedActions.map((action) =>
-          updatePlanAction(action.id, { completed: true })
-        )
-      );
-      const failed = results.filter((r) => !r.success);
-      if (failed.length > 0) {
-        toast.error(
-          `${failed.length} action(s) non enregistrée(s). Veuillez réessayer.`
-        );
-      } else {
-        setHasUnsavedCompleted(false);
-        setSaveCompletedDone(true);
-        toast.success(
-          `${checkedActions.length} action(s) enregistrée(s) comme terminée(s).`
-        );
-      }
-    } catch (error) {
-      console.error("Error saving completed actions:", error);
-      toast.error("Erreur lors de l'enregistrement. Veuillez réessayer.");
-    } finally {
-      setSavingCompleted(false);
-    }
-  };
-
-  const selectedProject = projects.find((p) => p.id === selectedProjectId);
-  const completedCount = actions.filter((a) => a.completed).length;
-  const pendingCount = actions.filter((a) => !a.completed).length;
-
-  // Gantt: actors grouped by action
-  const actorIdToActor = Object.fromEntries(actors.map((a) => [a.id, a]));
-  const ganttGroups: { action: PlanActionItem; actors: CommunicationProjectActor[] }[] = actions.map(
-    (action) => {
-      const actorIds = assignments[action.id] ?? [];
-      const actorsForAction = actorIds
-        .map((id) => actorIdToActor[id])
-        .filter((a): a is CommunicationProjectActor => !!a)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      return { action, actors: actorsForAction };
-    }
-  );
-  const hasGanttData = ganttGroups.some((g) => g.actors.length > 0);
-  const allDates = actions.flatMap((a) => [
-    startOfDay(new Date(a.startDate)),
-    startOfDay(new Date(a.endDate)),
-  ]);
-  const ganttStart = allDates.length ? min(allDates) : new Date();
-  const ganttEnd = allDates.length ? max(allDates) : addDays(new Date(), 7);
-  const totalDays = Math.max(1, differenceInDays(ganttEnd, ganttStart) + 1);
-  const dayWidth = 32;
+  const status = useMemo(() => {
+    const now = Date.now();
+    const upcoming = actions.filter((a) => new Date(a.startDate).getTime() > now).length;
+    const active = actions.filter(
+      (a) =>
+        new Date(a.startDate).getTime() <= now &&
+        new Date(a.endDate).getTime() >= now
+    ).length;
+    const done = actions.filter((a) => new Date(a.endDate).getTime() < now).length;
+    return { upcoming, active, done };
+  }, [actions]);
 
   return (
     <div className="space-y-8 p-6">
+      {/* Hero header */}
       <div className="relative overflow-hidden rounded-2xl border bg-white/70 shadow-sm backdrop-blur">
         <div
           className="absolute inset-0 opacity-80"
@@ -311,17 +147,17 @@ export default function MiseOeuvreClient({
                 <Sparkles className="size-4 text-violet-600" />
                 Mise en œuvre
               </div>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 flex items-center gap-3">
+              <h1 className="mt-3 flex items-center gap-3 text-3xl font-semibold tracking-tight text-slate-900">
                 <span className="inline-flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-sm">
-                  <PlayCircle className="size-5" />
+                  <GanttChart className="size-5" />
                 </span>
-                Suivi des Actions
+                Plan d&apos;action
               </h1>
               <p className="mt-2 max-w-2xl text-slate-600">
-                Suivez l&apos;avancement de toutes les actions de votre projet. Cochez les actions terminées pour suivre votre progression.
+                Sélectionnez un projet pour visualiser la planification des actions, les acteurs
+                assignés et le diagramme de Gantt.
               </p>
             </div>
-
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
               <Badge variant="secondary" className="rounded-full bg-white/60">
                 {projects.length} projet(s)
@@ -331,13 +167,14 @@ export default function MiseOeuvreClient({
               </Badge>
               {selectedProjectId && actions.length > 0 && (
                 <>
-                  <Badge variant="secondary" className="rounded-full bg-emerald-100 text-emerald-700">
-                    <CheckCircle2 className="size-3 mr-1" />
-                    Terminées: {completedCount}
+                  <Badge variant="secondary" className="rounded-full bg-white/60">
+                    En cours: {status.active}
                   </Badge>
-                  <Badge variant="secondary" className="rounded-full bg-amber-100 text-amber-700">
-                    <Clock className="size-3 mr-1" />
-                    En cours: {pendingCount}
+                  <Badge variant="secondary" className="rounded-full bg-white/60">
+                    À venir: {status.upcoming}
+                  </Badge>
+                  <Badge variant="secondary" className="rounded-full bg-white/60">
+                    Terminées: {status.done}
                   </Badge>
                 </>
               )}
@@ -346,14 +183,15 @@ export default function MiseOeuvreClient({
         </div>
       </div>
 
+      {/* Project selection */}
       <Card className="bg-white/70 backdrop-blur">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="size-5" />
+            <GanttChart className="size-5" />
             Projet
           </CardTitle>
           <CardDescription>
-            Sélectionnez le projet pour lequel vous souhaitez suivre les actions.
+            Choisissez le projet dont vous souhaitez visualiser le plan d&apos;action.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -361,432 +199,148 @@ export default function MiseOeuvreClient({
             <div className="rounded-xl border border-dashed bg-slate-50 p-5 text-slate-600">
               <div className="font-medium text-slate-800">Aucun projet trouvé.</div>
               <div className="mt-1 text-sm">
-                Créez d&apos;abord un projet dans <span className="font-medium">Communication → Projets</span>,
-                puis revenez ici pour suivre les actions.
+                Créez d&apos;abord un projet dans{" "}
+                <span className="font-medium">Communication → Projets</span>, puis revenez ici.
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <Select
-                value={selectedProjectId ?? ""}
-                onValueChange={(v) => setSelectedProjectId(v || null)}
-              >
-                <SelectTrigger className="w-full lg:max-w-xl">
-                  <SelectValue placeholder="Choisir un projet..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedProjectId && (
-                <Button
-                  onClick={handleAdd}
-                  className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700"
-                >
-                  <Plus className="size-4" />
-                  Nouvelle action
-                </Button>
-              )}
-            </div>
+            <Select
+              value={selectedProjectId ?? ""}
+              onValueChange={(v) => setSelectedProjectId(v || null)}
+            >
+              <SelectTrigger className="w-full max-w-xl border-2 border-slate-200">
+                <SelectValue placeholder="Choisir un projet..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </CardContent>
       </Card>
 
+      {/* Actions table */}
       {selectedProjectId && (
-        <>
-        <Card className="bg-white/70 backdrop-blur">
+        <Card className="overflow-hidden bg-white/70 backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckSquare className="size-5" />
-              Actions
-              {selectedProject && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  — {selectedProject.name}
-                </span>
-              )}
+              <Users className="size-5" />
+              Actions & planification
             </CardTitle>
             <CardDescription>
-              Liste de toutes les actions du projet. Cochez les actions terminées.
+              Vue d&apos;ensemble des actions, acteurs assignés et calendrier.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-0">
             {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground py-8">
+              <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
                 <Loader2 className="size-5 animate-spin" />
                 Chargement des actions...
               </div>
+            ) : actions.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-gradient-to-br from-violet-50/50 to-cyan-50/50 p-12 text-center">
+                <GanttChart className="mx-auto size-12 text-slate-300" />
+                <p className="mt-3 font-medium text-slate-700">Aucune action pour ce projet</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Créez des actions dans le plan d&apos;action pour les visualiser ici.
+                </p>
+              </div>
             ) : (
-              <>
-                {actions.length === 0 && !isAdding ? (
-                  <div className="rounded-xl border border-dashed bg-gradient-to-br from-violet-50/70 to-cyan-50/70 p-6">
-                    <div className="flex flex-col gap-2">
-                      <div className="font-medium text-slate-900">Aucune action pour ce projet.</div>
-                      <div className="text-sm text-slate-600">
-                        Ajoutez la première action pour commencer le suivi.
-                      </div>
-                      <Button
-                        onClick={handleAdd}
-                        className="mt-2 w-fit gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700"
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200/80 bg-slate-50/80 hover:bg-slate-50/80">
+                      <TableHead className="w-[22%] px-6 py-4 font-semibold text-slate-700">
+                        Actions
+                      </TableHead>
+                      <TableHead className="w-[22%] px-6 py-4 font-semibold text-slate-700">
+                        Acteurs
+                      </TableHead>
+                      <TableHead className="min-w-[320px] px-6 py-4 font-semibold text-slate-700">
+                        Diagramme de Gantt
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {chartRange && (
+                      <TableRow className="border-b-0 bg-slate-50/50">
+                        <TableCell colSpan={2} className="py-0" />
+                        <TableCell className="px-6 py-6">
+                          <GanttDateAxis range={chartRange} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {actions.map((action, idx) => (
+                      <TableRow
+                        key={action.id}
+                        className="border-slate-100 transition-colors hover:bg-slate-50/50"
                       >
-                        <Plus className="size-4" />
-                        Ajouter une action
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="space-y-3">
-                  {actions.map((action) => (
-                    <div
-                      key={action.id}
-                      className={`group flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-sm transition hover:shadow-md ${
-                        action.completed
-                          ? "bg-emerald-50/70 border-emerald-200"
-                          : "bg-white/70 border-slate-200"
-                      }`}
-                    >
-                      {editingId === action.id ? (
-                        <div className="flex flex-wrap items-end gap-3 w-full">
-                          <div className="flex-1 min-w-[200px]">
-                            <Label>Intitulé</Label>
-                            <Input
-                              value={form.title}
-                              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                              placeholder="Ex. Lancement campagne réseaux sociaux"
-                              className="mt-1"
+                        <TableCell className="px-6 py-4 font-medium text-slate-800 align-top">
+                          {action.title}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 align-top">
+                          {action.assignedActors.length > 0 ? (
+                            <ul className="space-y-1">
+                              {action.assignedActors.map(({ actor }) => (
+                                <li key={actor.id} className="text-sm text-slate-600">
+                                  {actor.name}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="text-sm text-slate-400">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 align-top">
+                          {chartRange && (
+                            <GanttBar
+                              action={action}
+                              range={chartRange}
+                              color={BAR_COLORS[idx % BAR_COLORS.length]}
                             />
-                          </div>
-                          <div className="min-w-[180px]">
-                            <Label>Début</Label>
-                            <Input
-                              type="datetime-local"
-                              value={form.startDate}
-                              onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div className="min-w-[180px]">
-                            <Label>Fin</Label>
-                            <Input
-                              type="datetime-local"
-                              value={form.endDate}
-                              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={handleSaveEdit}
-                              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700"
-                            >
-                              Enregistrer
-                            </Button>
-                            <Button variant="outline" onClick={resetForm}>
-                              Annuler
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Checkbox
-                              checked={action.completed}
-                              onCheckedChange={(checked) =>
-                                handleToggleCompleted(action.id, checked === true)
-                              }
-                              className="h-5 w-5"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div
-                                className={`font-medium truncate ${
-                                  action.completed
-                                    ? "text-emerald-700 line-through"
-                                    : "text-slate-900"
-                                }`}
-                              >
-                                {action.title}
-                              </div>
-                              <div className="text-xs text-slate-600 mt-1 flex flex-wrap gap-2">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="size-3" />
-                                  Début:{" "}
-                                  {format(new Date(action.startDate), "dd MMM yyyy, HH:mm", {
-                                    locale: fr,
-                                  })}
-                                </span>
-                                <span className="text-slate-400">•</span>
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 className="size-3" />
-                                  Fin:{" "}
-                                  {format(new Date(action.endDate), "dd MMM yyyy, HH:mm", {
-                                    locale: fr,
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(action)}
-                            >
-                              <Edit2 className="size-4 mr-1" />
-                              Modifier
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleDelete(action.id)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {isAdding ? (
-                  <div className="rounded-xl border border-dashed border-violet-300 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-4">
-                    <div className="flex flex-wrap items-end gap-3">
-                      <div className="flex-1 min-w-[200px]">
-                        <Label>Intitulé</Label>
-                        <Input
-                          value={form.title}
-                          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                          placeholder="Ex. Lancement campagne réseaux sociaux"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="min-w-[180px]">
-                        <Label>Début</Label>
-                        <Input
-                          type="datetime-local"
-                          value={form.startDate}
-                          onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="min-w-[180px]">
-                        <Label>Fin</Label>
-                        <Input
-                          type="datetime-local"
-                          value={form.endDate}
-                          onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSaveNew}
-                          className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700"
-                        >
-                          Ajouter l&apos;action
-                        </Button>
-                        <Button variant="outline" onClick={resetForm}>
-                          Annuler
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {actions.length > 0 && (
-                  <div className="flex justify-end pt-4 border-t">
-                    <Button
-                      onClick={handleEnregistrerCompleted}
-                      disabled={
-                        savingCompleted ||
-                        saveCompletedDone ||
-                        actions.filter((a) => a.completed).length === 0
-                      }
-                      className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50"
-                    >
-                      {savingCompleted ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Save className="size-4" />
-                      )}
-                      Enregistrer
-                    </Button>
-                  </div>
-                )}
-              </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Gantt: actors by action with timeline */}
-        {selectedProjectId && actions.length > 0 && (
-          <Card className="bg-white/70 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="size-5" />
-                Planning Gantt — Acteurs par action
-              </CardTitle>
-              <CardDescription>
-                Acteurs classés par action affectée. Périodes des actions en orange sur la timeline.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {loading ? (
-                <div className="flex items-center gap-2 text-muted-foreground py-8">
-                  <Loader2 className="size-5 animate-spin" />
-                  Chargement...
-                </div>
-              ) : !hasGanttData ? (
-                <div className="rounded-xl border border-dashed bg-slate-50 p-6 text-center text-slate-600">
-                  Aucun acteur affecté aux actions. Affectez des acteurs dans{" "}
-                  <span className="font-medium">Acteurs et Rôles</span>.
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="w-full min-w-[600px] border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50/80">
-                          <th className="sticky left-0 z-10 min-w-[200px] bg-slate-50/95 px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                            Action / Acteur
-                          </th>
-                          <th
-                            className="px-2 py-2 text-center text-xs font-medium text-slate-600"
-                            style={{ width: totalDays * dayWidth }}
-                          >
-                            Timeline
-                          </th>
-                        </tr>
-                        <tr className="border-b border-slate-200 bg-slate-50/80">
-                          <th className="sticky left-0 z-10 min-w-[200px] bg-slate-50/95" />
-                          <th
-                            className="px-0 py-1"
-                            style={{ width: totalDays * dayWidth }}
-                          >
-                            <div className="flex">
-                              {Array.from({ length: totalDays }, (_, i) => {
-                                const d = addDays(ganttStart, i);
-                                return (
-                                  <div
-                                    key={i}
-                                    className="flex-shrink-0 border-r border-slate-100 px-0.5 text-[10px] text-slate-500"
-                                    style={{ width: dayWidth }}
-                                  >
-                                    {format(d, "dd/MM")}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </th>
-                        </tr>
-                      </thead>
-                      {ganttGroups.map(({ action, actors }) => {
-                        if (actors.length === 0) return null;
-                        const start = startOfDay(new Date(action.startDate));
-                        const end = startOfDay(new Date(action.endDate));
-                        const left =
-                          (differenceInDays(start, ganttStart) / totalDays) * 100;
-                        const width =
-                          (Math.max(1, differenceInDays(end, start) + 1) /
-                            totalDays) *
-                          100;
-                        return (
-                          <tbody key={action.id}>
-                            <tr className="border-b border-slate-200 bg-amber-50/50">
-                              <td className="sticky left-0 z-10 min-w-[200px] bg-amber-50/95 px-4 py-2 font-semibold text-amber-900">
-                                {action.title}
-                                <span className="ml-2 text-xs font-normal text-amber-700">
-                                  ({format(start, "dd MMM", { locale: fr })} →{" "}
-                                  {format(end, "dd MMM", { locale: fr })})
-                                </span>
-                              </td>
-                              <td
-                                className="relative px-0 py-2 align-middle"
-                                style={{ width: totalDays * dayWidth }}
-                              >
-                                <div className="relative h-6 w-full overflow-hidden">
-                                  <div
-                                    className="absolute left-0 top-0 h-full rounded-md bg-amber-500/90 shadow-sm"
-                                    style={{
-                                      left: `${left}%`,
-                                      width: `${width}%`,
-                                      minWidth: "4px",
-                                    }}
-                                    title={`${action.title} ${format(start, "dd/MM")} → ${format(end, "dd/MM")}`}
-                                  />
-                                </div>
-                              </td>
-                            </tr>
-                            {actors.map((actor) => (
-                              <tr
-                                key={`${actor.id}-${action.id}`}
-                                className="border-b border-slate-100 hover:bg-slate-50/50"
-                              >
-                                <td className="sticky left-0 z-10 min-w-[200px] bg-white/95 pl-8 pr-4 py-2 text-sm text-slate-700">
-                                  {actor.name}
-                                </td>
-                                <td
-                                  className="relative px-0 py-2 align-middle"
-                                  style={{ width: totalDays * dayWidth }}
-                                >
-                                  <div className="relative h-6 w-full overflow-hidden">
-                                    <div
-                                      className="absolute left-0 top-0 h-full rounded-md bg-amber-500/90 shadow-sm"
-                                      style={{
-                                        left: `${left}%`,
-                                        width: `${width}%`,
-                                        minWidth: "4px",
-                                      }}
-                                      title={`${action.title} — ${actor.name} ${format(start, "dd/MM")} → ${format(end, "dd/MM")}`}
-                                    />
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        );
-                      })}
-                    </table>
-                  </div>
-
-                  {/* Actions list in green at bottom */}
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
-                    <h4 className="mb-3 text-sm font-semibold text-emerald-800">
-                      Actions du projet
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {actions.map((action) => (
-                        <div
-                          key={action.id}
-                          className="rounded-lg border border-emerald-300 bg-emerald-100 text-emerald-800 px-3 py-2 text-sm font-medium"
-                        >
-                          {action.title}
-                          <span className="ml-2 text-xs text-emerald-600">
-                            {format(new Date(action.startDate), "dd MMM", {
-                              locale: fr,
-                            })}{" "}
-                            →{" "}
-                            {format(new Date(action.endDate), "dd MMM", {
-                              locale: fr,
-                            })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        </>
       )}
+    </div>
+  );
+}
+
+function GanttBar({
+  action,
+  range,
+  color,
+}: {
+  action: PlanActionWithActors;
+  range: { min: number; max: number; span: number };
+  color: string;
+}) {
+  const start = new Date(action.startDate).getTime();
+  const end = new Date(action.endDate).getTime();
+  const left = ((start - range.min) / range.span) * 100;
+  const width = ((end - start) / range.span) * 100;
+
+  return (
+    <div className="relative h-9 rounded-lg bg-slate-100/80 overflow-hidden border border-slate-200/60">
+      <div
+        className={`absolute top-1 bottom-1 rounded-md ${color} shadow-sm hover:shadow-md transition-all cursor-default`}
+        style={{
+          left: `${Math.max(0, left)}%`,
+          width: `${Math.max(3, Math.min(100 - left, width))}%`,
+        }}
+        title={`${action.title} — ${format(new Date(action.startDate), "dd MMM HH:mm", { locale: fr })} → ${format(new Date(action.endDate), "dd MMM HH:mm", { locale: fr })}`}
+      />
     </div>
   );
 }

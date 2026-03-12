@@ -15,6 +15,10 @@ export type PlanActionItem = {
   updatedAt: Date;
 };
 
+export type PlanActionWithActors = PlanActionItem & {
+  assignedActors: { actor: { id: string; name: string; department: string; job: string } }[];
+};
+
 export type PlanActionInput = {
   title: string;
   startDate: Date;
@@ -50,6 +54,31 @@ export async function getPlanActionsByProjectId(
     return { success: true, actions };
   } catch (error) {
     console.error("getPlanActionsByProjectId error:", error);
+    return { success: false, actions: [] };
+  }
+}
+
+export async function getPlanActionsWithActorsByProjectId(
+  projectId: string
+): Promise<
+  | { success: true; actions: PlanActionWithActors[] }
+  | { success: false; actions: [] }
+> {
+  try {
+    const actions = (await prisma.communicationPlanAction.findMany({
+      where: { projectId },
+      orderBy: { orderIndex: "asc" },
+      include: {
+        assignedActors: {
+          include: {
+            actor: { select: { id: true, name: true, department: true, job: true } },
+          },
+        },
+      },
+    })) as PlanActionWithActors[];
+    return { success: true, actions };
+  } catch (error) {
+    console.error("getPlanActionsWithActorsByProjectId error:", error);
     return { success: false, actions: [] };
   }
 }

@@ -42,6 +42,8 @@ import {
   ChevronRight,
   Building2,
   Briefcase,
+  Pencil,
+  Send,
 } from "lucide-react";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
 import type { CommunicationProjectActor } from "@/lib/actions/communication-actor";
@@ -656,12 +658,21 @@ export default function ActeursRolesClient({
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800">
                                 {index + 1}
                               </div>
+                              
                             </div>
+
                             <div className="min-w-0 flex-1 space-y-4">
+                             
                               <div>
+                                <div className="flex items-center justify-between mx-3">
                                 <h4 className="font-semibold text-stone-900">
                                   {action.title}
                                 </h4>
+                                <Button variant="ghost" size="icon">
+                                  
+                                  <Send className="h-4 w-4 text-amber-700 hover:text-amber-800" />
+                                </Button>
+                                </div>
                                 <div className="mt-1 flex flex-wrap gap-4 text-sm text-stone-500">
                                   <span className="flex items-center gap-1.5">
                                     <Calendar className="h-4 w-4" />
