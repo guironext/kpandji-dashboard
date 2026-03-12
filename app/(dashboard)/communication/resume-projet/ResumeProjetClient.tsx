@@ -154,6 +154,18 @@ export default function ResumeProjetClient({ projects }: Props) {
     return Math.round(num).toLocaleString("fr-FR");
   };
 
+  const textWithLineBreaks = (text: string): TextRun[] => {
+    const lines = String(text || "").split("\n");
+    const result: TextRun[] = [];
+    lines.forEach((line, i) => {
+      result.push(new TextRun({ text: line }));
+      if (i < lines.length - 1) {
+        result.push(new TextRun({ break: 1 }));
+      }
+    });
+    return result;
+  };
+
   const exportToWord = async () => {
     if (!project) {
       toast.error("Aucun projet sélectionné");
@@ -178,6 +190,7 @@ export default function ResumeProjetClient({ projects }: Props) {
                 heading: HeadingLevel.TITLE,
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 400 },
+                
               }),
               new Paragraph({
                 text: `Résumé du projet - ${formatDate(new Date())}`,
@@ -202,19 +215,21 @@ export default function ResumeProjetClient({ projects }: Props) {
                     new Paragraph({
                       children: [
                         new TextRun({ text: "Contexte: ", bold: true }),
-                        new TextRun({ text: project.diagnosticContext || "Non renseigné" }),
+                        ...textWithLineBreaks(project.diagnosticContext || "Non renseigné"),
                       ],
                       spacing: { after: 100 },
                     }),
+                    new Paragraph({ text: "" }),
                     ...(project.diagnosticTarget
                       ? [
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Cible: ", bold: true }),
-                              new TextRun({ text: project.diagnosticTarget }),
+                              ...textWithLineBreaks(project.diagnosticTarget),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.diagnosticEnvironment
@@ -222,10 +237,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Environnement: ", bold: true }),
-                              new TextRun({ text: project.diagnosticEnvironment }),
+                              ...textWithLineBreaks(project.diagnosticEnvironment),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.diagnosticForces
@@ -233,10 +249,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Forces/Faiblesses: ", bold: true }),
-                              new TextRun({ text: project.diagnosticForces }),
+                              ...textWithLineBreaks(project.diagnosticForces),
                             ],
                             spacing: { after: 200 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                   ]
@@ -252,10 +269,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                     new Paragraph({
                       children: [
                         new TextRun({ text: "Objectifs: ", bold: true }),
-                        new TextRun({ text: project.objectives }),
+                        ...textWithLineBreaks(project.objectives),
                       ],
                       spacing: { after: 200 },
                     }),
+                    new Paragraph({ text: "" }),
                   ]
                 : []),
 
@@ -271,10 +289,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Positionnement: ", bold: true }),
-                              new TextRun({ text: project.strategyPositioning }),
+                              ...textWithLineBreaks(project.strategyPositioning),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.strategyTargets
@@ -282,10 +301,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Cibles prioritaires: ", bold: true }),
-                              new TextRun({ text: project.strategyTargets }),
+                              ...textWithLineBreaks(project.strategyTargets),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.strategyChannels
@@ -293,10 +313,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Canaux: ", bold: true }),
-                              new TextRun({ text: project.strategyChannels }),
+                              ...textWithLineBreaks(project.strategyChannels),
                             ],
                             spacing: { after: 200 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                   ]
@@ -314,10 +335,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Actions: ", bold: true }),
-                              new TextRun({ text: project.actionPlan }),
+                              ...textWithLineBreaks(project.actionPlan),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.actionSupports
@@ -325,10 +347,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Supports: ", bold: true }),
-                              new TextRun({ text: project.actionSupports }),
+                              ...textWithLineBreaks(project.actionSupports),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.actionCalendar
@@ -336,10 +359,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Calendrier: ", bold: true }),
-                              new TextRun({ text: project.actionCalendar }),
+                              ...textWithLineBreaks(project.actionCalendar),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.actionBudget
@@ -347,10 +371,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Budget: ", bold: true }),
-                              new TextRun({ text: project.actionBudget }),
+                              ...textWithLineBreaks(project.actionBudget),
                             ],
                             spacing: { after: 200 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                   ]
@@ -368,10 +393,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Création des contenus: ", bold: true }),
-                              new TextRun({ text: project.implementationContent }),
+                              ...textWithLineBreaks(project.implementationContent),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.implementationLaunch
@@ -379,10 +405,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Lancement: ", bold: true }),
-                              new TextRun({ text: project.implementationLaunch }),
+                              ...textWithLineBreaks(project.implementationLaunch),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.implementationTeams
@@ -390,10 +417,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Coordination des équipes: ", bold: true }),
-                              new TextRun({ text: project.implementationTeams }),
+                              ...textWithLineBreaks(project.implementationTeams),
                             ],
                             spacing: { after: 200 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                   ]
@@ -411,10 +439,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Mesure d'efficacité: ", bold: true }),
-                              new TextRun({ text: project.evaluationMetrics }),
+                              ...textWithLineBreaks(project.evaluationMetrics),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.evaluationComparison
@@ -422,10 +451,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Comparaison avec objectifs: ", bold: true }),
-                              new TextRun({ text: project.evaluationComparison }),
+                              ...textWithLineBreaks(project.evaluationComparison),
                             ],
                             spacing: { after: 100 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                     ...(project.evaluationAdjustments
@@ -433,10 +463,11 @@ export default function ResumeProjetClient({ projects }: Props) {
                           new Paragraph({
                             children: [
                               new TextRun({ text: "Ajustements: ", bold: true }),
-                              new TextRun({ text: project.evaluationAdjustments }),
+                              ...textWithLineBreaks(project.evaluationAdjustments),
                             ],
                             spacing: { after: 200 },
                           }),
+                          new Paragraph({ text: "" }),
                         ]
                       : []),
                   ]
@@ -457,13 +488,13 @@ export default function ResumeProjetClient({ projects }: Props) {
                         new DocxTableRow({
                           children: [
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Action", heading: HeadingLevel.HEADING_3 })],
+                              children: [new Paragraph({ text: "Action", heading: HeadingLevel.HEADING_3, spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Date de début" })],
+                              children: [new Paragraph({ text: "Date de début", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Date de fin" })],
+                              children: [new Paragraph({ text: "Date de fin", spacing: { before: 120, after: 120 } })],
                             }),
                           ],
                         }),
@@ -472,13 +503,13 @@ export default function ResumeProjetClient({ projects }: Props) {
                             new DocxTableRow({
                               children: [
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: action.title })],
+                                  children: [new Paragraph({ text: action.title, spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: formatDateTime(action.startDate) })],
+                                  children: [new Paragraph({ text: formatDateTime(action.startDate), spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: formatDateTime(action.endDate) })],
+                                  children: [new Paragraph({ text: formatDateTime(action.endDate), spacing: { before: 120, after: 120 } })],
                                 }),
                               ],
                             })
@@ -508,13 +539,13 @@ export default function ResumeProjetClient({ projects }: Props) {
                         new DocxTableRow({
                           children: [
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Nom", heading: HeadingLevel.HEADING_3 })],
+                              children: [new Paragraph({ text: "Nom", heading: HeadingLevel.HEADING_3, spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Département" })],
+                              children: [new Paragraph({ text: "Département", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Poste" })],
+                              children: [new Paragraph({ text: "Poste", spacing: { before: 120, after: 120 } })],
                             }),
                           ],
                         }),
@@ -523,13 +554,13 @@ export default function ResumeProjetClient({ projects }: Props) {
                             new DocxTableRow({
                               children: [
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: actor.name })],
+                                  children: [new Paragraph({ text: actor.name, spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: actor.department })],
+                                  children: [new Paragraph({ text: actor.department, spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: actor.job })],
+                                  children: [new Paragraph({ text: actor.job, spacing: { before: 120, after: 120 } })],
                                 }),
                               ],
                             })
@@ -559,16 +590,16 @@ export default function ResumeProjetClient({ projects }: Props) {
                         new DocxTableRow({
                           children: [
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Désignation", heading: HeadingLevel.HEADING_3 })],
+                              children: [new Paragraph({ text: "Désignation", heading: HeadingLevel.HEADING_3, spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Prix unitaire" })],
+                              children: [new Paragraph({ text: "Prix unitaire", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Quantité" })],
+                              children: [new Paragraph({ text: "Quantité", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "Montant" })],
+                              children: [new Paragraph({ text: "Montant", spacing: { before: 120, after: 120 } })],
                             }),
                           ],
                         }),
@@ -577,16 +608,16 @@ export default function ResumeProjetClient({ projects }: Props) {
                             new DocxTableRow({
                               children: [
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: item.designation })],
+                                  children: [new Paragraph({ text: item.designation, spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: formatNumber(item.prixUnitaire) + " FCFA" })],
+                                  children: [new Paragraph({ text: formatNumber(item.prixUnitaire) + " FCFA", spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: String(item.quantite) })],
+                                  children: [new Paragraph({ text: String(item.quantite), spacing: { before: 120, after: 120 } })],
                                 }),
                                 new DocxTableCell({
-                                  children: [new Paragraph({ text: formatNumber(item.montant) + " FCFA" })],
+                                  children: [new Paragraph({ text: formatNumber(item.montant) + " FCFA", spacing: { before: 120, after: 120 } })],
                                 }),
                               ],
                             })
@@ -594,13 +625,13 @@ export default function ResumeProjetClient({ projects }: Props) {
                         new DocxTableRow({
                           children: [
                             new DocxTableCell({
-                              children: [new Paragraph({ children: [new TextRun({ text: "TOTAL", bold: true })] })],
+                              children: [new Paragraph({ children: [new TextRun({ text: "TOTAL", bold: true })], spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "" })],
+                              children: [new Paragraph({ text: "", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
-                              children: [new Paragraph({ text: "" })],
+                              children: [new Paragraph({ text: "", spacing: { before: 120, after: 120 } })],
                             }),
                             new DocxTableCell({
                               children: [
@@ -613,6 +644,7 @@ export default function ResumeProjetClient({ projects }: Props) {
                                       bold: true,
                                     }),
                                   ],
+                                  spacing: { before: 120, after: 120 },
                                 }),
                               ],
                             }),
@@ -986,14 +1018,14 @@ export default function ResumeProjetClient({ projects }: Props) {
                         )}
                         {project.actionSupports && (
                           <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Supports: </span>
-                            <span className="text-slate-600">{project.actionSupports}</span>
+                            <span className="font-semibold text-slate-700">Supports: </span><br/>
+                            <span className="text-slate-600">{project.actionSupports} </span><br/>
                           </div>
                         )}
                         {project.actionCalendar && (
                           <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Calendrier: </span>
-                            <span className="text-slate-600">{project.actionCalendar}</span>
+                            <span className="font-semibold text-slate-700">Calendrier: </span><br/>
+                            <span className="text-slate-600">{project.actionCalendar} </span><br/>
                           </div>
                         )}
                         {project.actionBudget && (

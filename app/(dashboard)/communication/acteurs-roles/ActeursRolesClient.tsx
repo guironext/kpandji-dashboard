@@ -19,21 +19,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Plus,
   Trash2,
   Users,
-  Building2,
-  Briefcase,
   Loader2,
   UserPlus,
-  Sparkles,
   FolderKanban,
   XCircle,
+  Calendar,
+  ChevronRight,
+  Building2,
+  Briefcase,
 } from "lucide-react";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
 import type { CommunicationProjectActor } from "@/lib/actions/communication-actor";
+import type { PlanActionItem } from "@/lib/actions/communication-plan-action";
+import {
+  getPlanActionsByProjectId,
+} from "@/lib/actions/communication-plan-action";
+import {
+  assignActorsToAction,
+  getAssignmentsByProjectId,
+} from "@/lib/actions/communication-plan-action-actor";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface ActeursRolesClientProps {
@@ -45,20 +66,27 @@ export default function ActeursRolesClient({
 }: ActeursRolesClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [actors, setActors] = useState<CommunicationProjectActor[]>([]);
+  const [planActions, setPlanActions] = useState<PlanActionItem[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
   const [isLoadingActors, setIsLoadingActors] = useState(false);
+  const [isLoadingActions, setIsLoadingActions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     department: "",
     job: "",
   });
 
-  // Load actors when project is selected
   useEffect(() => {
     if (selectedProjectId) {
       loadActors(selectedProjectId);
+      loadPlanActions(selectedProjectId);
+      loadAssignments(selectedProjectId);
     } else {
       setActors([]);
+      setPlanActions([]);
+      setAssignments({});
     }
   }, [selectedProjectId]);
 
@@ -68,7 +96,7 @@ export default function ActeursRolesClient({
       const response = await fetch(
         `/api/communication/actors?projectId=${projectId}`
       );
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = "Erreur lors du chargement des acteurs";
@@ -78,7 +106,6 @@ export default function ActeursRolesClient({
         } catch {
           errorMessage = `Erreur ${response.status}: ${errorText || response.statusText}`;
         }
-        console.error("Error loading actors:", errorMessage);
         toast.error(errorMessage);
         setActors([]);
         return;
@@ -93,14 +120,38 @@ export default function ActeursRolesClient({
       }
     } catch (error) {
       console.error("Error loading actors:", error);
-      const errorMessage =
+      toast.error(
         error instanceof Error
           ? `Erreur réseau: ${error.message}`
-          : "Erreur lors du chargement des acteurs. Vérifiez votre connexion.";
-      toast.error(errorMessage);
+          : "Erreur lors du chargement des acteurs."
+      );
       setActors([]);
     } finally {
       setIsLoadingActors(false);
+    }
+  };
+
+  const loadPlanActions = async (projectId: string) => {
+    setIsLoadingActions(true);
+    try {
+      const res = await getPlanActionsByProjectId(projectId);
+      setPlanActions(res.success ? res.actions : []);
+    } catch (error) {
+      console.error("Error loading plan actions:", error);
+      toast.error("Erreur lors du chargement des actions.");
+      setPlanActions([]);
+    } finally {
+      setIsLoadingActions(false);
+    }
+  };
+
+  const loadAssignments = async (projectId: string) => {
+    try {
+      const res = await getAssignmentsByProjectId(projectId);
+      setAssignments(res.success ? res.assignments : {});
+    } catch (error) {
+      console.error("Error loading assignments:", error);
+      setAssignments({});
     }
   };
 
@@ -160,18 +211,18 @@ export default function ActeursRolesClient({
       if (data.success) {
         toast.success("Acteur ajouté avec succès");
         setFormData({ name: "", department: "", job: "" });
-        // Reload actors
+        setDialogOpen(false);
         await loadActors(selectedProjectId);
       } else {
         toast.error(data.error || "Erreur lors de l'ajout de l'acteur");
       }
     } catch (error) {
       console.error("Error adding actor:", error);
-      const errorMessage =
+      toast.error(
         error instanceof Error
           ? `Erreur réseau: ${error.message}`
-          : "Erreur lors de l'ajout de l'acteur. Vérifiez votre connexion.";
-      toast.error(errorMessage);
+          : "Erreur lors de l'ajout de l'acteur."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -185,9 +236,7 @@ export default function ActeursRolesClient({
     try {
       const response = await fetch(
         `/api/communication/actors?actorId=${actorId}&projectId=${selectedProjectId}`,
-        {
-          method: "DELETE",
-        }
+        { method: "DELETE" }
       );
 
       if (!response.ok) {
@@ -207,190 +256,192 @@ export default function ActeursRolesClient({
 
       if (data.success) {
         toast.success("Acteur supprimé avec succès");
-        // Reload actors
         await loadActors(selectedProjectId);
+        await loadAssignments(selectedProjectId);
       } else {
         toast.error(data.error || "Erreur lors de la suppression de l'acteur");
       }
     } catch (error) {
       console.error("Error deleting actor:", error);
-      const errorMessage =
+      toast.error(
         error instanceof Error
           ? `Erreur réseau: ${error.message}`
-          : "Erreur lors de la suppression de l'acteur. Vérifiez votre connexion.";
-      toast.error(errorMessage);
+          : "Erreur lors de la suppression de l'acteur."
+      );
     }
+  };
+
+  const handleAssignActors = async (
+    actionId: string,
+    actorIds: string[]
+  ) => {
+    const res = await assignActorsToAction({ actionId, actorIds });
+    if (res.success) {
+      toast.success("Acteurs affectés avec succès");
+      setAssignments((prev) => ({ ...prev, [actionId]: actorIds }));
+    } else {
+      toast.error(res.error || "Erreur lors de l'affectation des acteurs");
+    }
+  };
+
+  const handleActorCheckChange = (
+    actionId: string,
+    actorId: string,
+    checked: boolean
+  ) => {
+    const current = assignments[actionId] ?? [];
+    const next = checked
+      ? [...current, actorId]
+      : current.filter((id) => id !== actorId);
+    setAssignments((prev) => ({ ...prev, [actionId]: next }));
+    handleAssignActors(actionId, next);
   };
 
   const selectedProject = initialProjects.find(
     (p) => p.id === selectedProjectId
   );
 
-  // Generate avatar color based on name
   const getAvatarColor = (name: string) => {
     const colors = [
-      "bg-gradient-to-br from-violet-500 to-purple-600",
-      "bg-gradient-to-br from-cyan-500 to-teal-600",
-      "bg-gradient-to-br from-rose-500 to-pink-600",
-      "bg-gradient-to-br from-amber-500 to-orange-600",
-      "bg-gradient-to-br from-emerald-500 to-green-600",
-      "bg-gradient-to-br from-sky-500 to-blue-600",
+      "bg-amber-500/90",
+      "bg-teal-500/90",
+      "bg-rose-500/90",
+      "bg-indigo-500/90",
+      "bg-emerald-500/90",
     ];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-500/20">
-              <Users className="h-7 w-7 text-white" />
-            </div>
+    <div className="min-h-screen bg-stone-50/80">
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-stone-200/80 bg-white">
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 mb-4">
+                <Users className="h-3.5 w-3.5" />
+                Gestion des équipes
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
                 Acteurs et Rôles
               </h1>
-              <p className="text-slate-600 mt-1.5 text-lg">
-                Gérez les acteurs et leurs responsabilités pour vos projets de communication
+              <p className="mt-2 max-w-2xl text-base text-stone-600">
+                Gérez les acteurs de vos projets et affectez-les aux actions du
+                plan de communication.
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Project Selection Card */}
-        <Card className="mb-6 border-2 border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <FolderKanban className="h-5 w-5 text-violet-600" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-xl text-slate-800">
-                  Sélectionner un projet
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Choisissez un projet actif pour gérer ses acteurs et leurs rôles
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={selectedProjectId}
-              onValueChange={setSelectedProjectId}
-            >
-              <SelectTrigger className="w-full h-12 text-base border-2 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-lg">
-                <SelectValue placeholder="Sélectionner un projet actif..." />
-              </SelectTrigger>
-              <SelectContent>
-                {initialProjects.length === 0 ? (
-                  <div className="p-4 text-center text-slate-500">
-                    <XCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>Aucun projet actif disponible</p>
-                  </div>
-                ) : (
-                  initialProjects.map((project) => (
-                    <SelectItem
-                      key={project.id}
-                      value={project.id}
-                      className="py-3 cursor-pointer"
-                    >
-                      <div className="flex flex-col gap-1">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Project selector */}
+        <div className="mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-stone-700">
+                Projet sélectionné
+              </Label>
+              <Select
+                value={selectedProjectId}
+                onValueChange={setSelectedProjectId}
+              >
+                <SelectTrigger className="mt-2 h-12 w-full max-w-md border-stone-200 bg-white text-base shadow-sm transition hover:border-stone-300 focus:ring-amber-500/20 sm:max-w-sm">
+                  <FolderKanban className="h-5 w-5 text-stone-400 mr-2" />
+                  <SelectValue placeholder="Choisir un projet..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {initialProjects.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="rounded-full bg-stone-100 p-4">
+                        <XCircle className="h-8 w-8 text-stone-400" />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-stone-700">
+                        Aucun projet actif
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        Créez un projet dans Communication → Projets
+                      </p>
+                    </div>
+                  ) : (
+                    initialProjects.map((project) => (
+                      <SelectItem
+                        key={project.id}
+                        value={project.id}
+                        className="py-3"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900">
-                            {project.name}
-                          </span>
+                          <span className="font-medium">{project.name}</span>
                           <Badge
                             variant="secondary"
-                            className="bg-emerald-100 text-emerald-700 border-emerald-200"
+                            className="bg-emerald-100 text-emerald-700 text-xs font-normal"
                           >
                             Actif
                           </Badge>
                         </div>
-                        {project.createdBy && (
-                          <span className="text-sm text-slate-500">
-                            Créé par {project.createdBy.firstName}{" "}
-                            {project.createdBy.lastName}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {selectedProjectId && (
-          <>
-            {/* Add Actor Form Card */}
-            <Card className="mb-6 border-l-4 border-l-violet-500 shadow-lg bg-gradient-to-br from-white to-violet-50/30">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg shadow-md">
-                    <UserPlus className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-xl text-slate-800">
-                      Ajouter un acteur
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Ajoutez un nouvel acteur au projet{" "}
-                      <span className="font-semibold text-violet-700">
-                        {selectedProject?.name}
-                      </span>
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedProjectId && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="lg"
+                    className="h-12 gap-2 bg-amber-600 px-6 text-white shadow-sm hover:bg-amber-700"
+                  >
+                    <UserPlus className="h-5 w-5" />
+                    Ajouter un Acteur
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Nouvel acteur</DialogTitle>
+                    <DialogDescription>
+                      Renseignez les informations de l&apos;acteur à ajouter au
+                      projet.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="name"
-                        className="text-slate-700 font-medium flex items-center gap-2"
-                      >
-                        <Users className="h-4 w-4 text-violet-600" />
-                        Nom de l&apos;acteur{" "}
-                        <span className="text-rose-500">*</span>
+                      <Label htmlFor="dialog-name">
+                        Nom <span className="text-rose-500">*</span>
                       </Label>
                       <Input
-                        id="name"
+                        id="dialog-name"
                         placeholder="Ex: Jean Dupont"
                         value={formData.name}
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
                         }
                         required
-                        className="h-11 border-2 border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-lg transition-all"
+                        className="border-stone-200"
                       />
                     </div>
-
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="department"
-                        className="text-slate-700 font-medium flex items-center gap-2"
-                      >
-                        <Building2 className="h-4 w-4 text-cyan-600" />
-                        Département{" "}
-                        <span className="text-rose-500">*</span>
+                      <Label htmlFor="dialog-department">
+                        Département <span className="text-rose-500">*</span>
                       </Label>
                       <Input
-                        id="department"
+                        id="dialog-department"
                         placeholder="Ex: Marketing"
                         value={formData.department}
                         onChange={(e) =>
@@ -400,182 +451,303 @@ export default function ActeursRolesClient({
                           })
                         }
                         required
-                        className="h-11 border-2 border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 rounded-lg transition-all"
+                        className="border-stone-200"
                       />
                     </div>
-
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="job"
-                        className="text-slate-700 font-medium flex items-center gap-2"
-                      >
-                        <Briefcase className="h-4 w-4 text-emerald-600" />
-                        Poste{" "}
-                        <span className="text-rose-500">*</span>
+                      <Label htmlFor="dialog-job">
+                        Poste <span className="text-rose-500">*</span>
                       </Label>
                       <Input
-                        id="job"
+                        id="dialog-job"
                         placeholder="Ex: Responsable Communication"
                         value={formData.job}
                         onChange={(e) =>
                           setFormData({ ...formData, job: e.target.value })
                         }
                         required
-                        className="h-11 border-2 border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-lg transition-all"
+                        className="border-stone-200"
                       />
                     </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-base"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Ajout en cours...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="mr-2 h-5 w-5" />
-                        Ajouter l&apos;acteur
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Actors List Card */}
-            <Card className="border-2 border-slate-200 shadow-lg">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md">
-                      <Users className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl text-slate-800">
-                        Acteurs du projet
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Liste des acteurs associés au projet{" "}
-                        <span className="font-semibold text-emerald-700">
-                          {selectedProject?.name}
-                        </span>
-                      </CardDescription>
-                    </div>
-                  </div>
-                  {actors.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-emerald-100 text-emerald-700 border-emerald-200 px-3 py-1.5 text-sm font-medium"
-                    >
-                      {actors.length} {actors.length === 1 ? "acteur" : "acteurs"}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoadingActors ? (
-                  <div className="flex flex-col items-center justify-center py-16">
-                    <Loader2 className="h-10 w-10 animate-spin text-violet-600 mb-4" />
-                    <p className="text-slate-600 font-medium">
-                      Chargement des acteurs...
-                    </p>
-                  </div>
-                ) : actors.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="inline-flex p-4 bg-slate-100 rounded-full mb-4">
-                      <Users className="h-12 w-12 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                      Aucun acteur ajouté
-                    </h3>
-                    <p className="text-slate-500 max-w-md mx-auto">
-                      Commencez par ajouter un acteur en remplissant le formulaire
-                      ci-dessus
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {actors.map((actor) => (
-                      <div
-                        key={actor.id}
-                        className="group relative p-5 bg-white border-2 border-slate-200 rounded-xl hover:border-violet-300 hover:shadow-lg transition-all duration-200"
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDialogOpen(false)}
+                        className="border-stone-200"
                       >
-                        {/* Avatar */}
-                        <div className="flex items-start gap-4 mb-4">
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Ajout...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Ajouter
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </div>
+
+        {selectedProjectId ? (
+          <div className="grid gap-8 lg:grid-cols-3">
+            {/* Actors column */}
+            <div className="lg:col-span-1">
+              <Card className="border-stone-200/80 bg-white shadow-sm">
+                <CardHeader className="space-y-1 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-stone-900">
+                      Acteurs
+                    </CardTitle>
+                    {actors.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-stone-100 text-stone-900 font-medium"
+                      >
+                        {actors.length}
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription>
+                    {selectedProject?.name}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingActors ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+                      <p className="mt-3 text-sm text-stone-500">
+                        Chargement...
+                      </p>
+                    </div>
+                  ) : actors.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/50 py-12 text-center">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-stone-100">
+                        <Users className="h-7 w-7 text-stone-400" />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-stone-700">
+                        Aucun acteur
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        Ajoutez un acteur pour commencer
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDialogOpen(true)}
+                        className="mt-4 border-stone-200"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Ajouter
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {actors.map((actor) => (
+                        <div
+                          key={actor.id}
+                          className="group flex items-center gap-3 rounded-lg border border-stone-100 bg-white p-3 transition hover:border-stone-200 hover:bg-stone-50/50"
+                        >
                           <div
                             className={cn(
-                              "flex items-center justify-center w-14 h-14 rounded-xl text-white font-bold text-lg shadow-md",
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white",
                               getAvatarColor(actor.name)
                             )}
                           >
                             {getInitials(actor.name)}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-slate-900 text-lg mb-1 truncate">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-stone-900">
                               {actor.name}
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                              <Badge
-                                variant="secondary"
-                                className="bg-cyan-50 text-cyan-700 border-cyan-200 text-xs"
-                              >
-                                <Building2 className="h-3 w-3 mr-1" />
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-stone-500">
+                              <span className="flex items-center gap-1">
+                                <Building2 className="h-3 w-3" />
                                 {actor.department}
-                              </Badge>
+                              </span>
+                              <span>·</span>
+                              <span className="flex items-center gap-1 truncate">
+                                <Briefcase className="h-3 w-3 shrink-0" />
+                                {actor.job}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(actor.id)}
+                            className="h-8 w-8 shrink-0 text-stone-400 opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Actions assignation column */}
+            <div className="lg:col-span-2">
+              <Card className="border-stone-200/80 bg-white shadow-sm">
+                <CardHeader className="space-y-1 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-stone-900">
+                      Affectation aux actions
+                    </CardTitle>
+                    {planActions.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-stone-100 text-stone-900 font-medium"
+                      >
+                        {planActions.length} action(s)
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription>
+                    Sélectionnez les acteurs pour chaque action du plan
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingActions ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+                      <p className="mt-3 text-sm text-stone-500">
+                        Chargement des actions...
+                      </p>
+                    </div>
+                  ) : planActions.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/50 py-12 text-center">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-stone-100">
+                        <Calendar className="h-7 w-7 text-stone-400" />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-stone-700">
+                        Aucune action du plan
+                      </p>
+                      <p className="mt-1 max-w-sm mx-auto text-sm text-stone-500">
+                        Créez des actions dans la section Mise en œuvre pour les
+                        affecter aux acteurs.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {planActions.map((action, index) => (
+                        <div
+                          key={action.id}
+                          className="relative rounded-xl border border-stone-200/80 bg-white p-4 shadow-sm transition hover:shadow-md"
+                        >
+                          <div className="flex gap-4">
+                            <div className="flex shrink-0">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800">
+                                {index + 1}
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-4">
+                              <div>
+                                <h4 className="font-semibold text-stone-900">
+                                  {action.title}
+                                </h4>
+                                <div className="mt-1 flex flex-wrap gap-4 text-sm text-stone-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <Calendar className="h-4 w-4" />
+                                    {format(
+                                      new Date(action.startDate),
+                                      "dd MMM yyyy",
+                                      { locale: fr }
+                                    )}
+                                  </span>
+                                  <ChevronRight className="h-4 w-4 text-stone-300" />
+                                  <span>
+                                    {format(
+                                      new Date(action.endDate),
+                                      "dd MMM yyyy",
+                                      { locale: fr }
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="mb-2 block text-xs font-medium uppercase tracking-wider text-stone-500">
+                                  Acteurs affectés
+                                </Label>
+                                {actors.length === 0 ? (
+                                  <p className="text-sm text-stone-500">
+                                    Aucun acteur disponible
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {actors.map((actor) => (
+                                      <label
+                                        key={actor.id}
+                                        className={cn(
+                                          "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition",
+                                          (assignments[action.id] ?? []).includes(
+                                            actor.id
+                                          )
+                                            ? "border-amber-300 bg-amber-50 text-amber-900"
+                                            : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50"
+                                        )}
+                                      >
+                                        <Checkbox
+                                          checked={
+                                            (assignments[action.id] ?? []).includes(
+                                              actor.id
+                                            )
+                                          }
+                                          onCheckedChange={(checked) =>
+                                            handleActorCheckChange(
+                                              action.id,
+                                              actor.id,
+                                              checked === true
+                                            )
+                                          }
+                                        />
+                                        <span className="font-medium">
+                                          {actor.name}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-
-                        {/* Job */}
-                        <div className="flex items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
-                          <Briefcase className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                          <p className="text-sm text-slate-700 font-medium line-clamp-2">
-                            {actor.job}
-                          </p>
-                        </div>
-
-                        {/* Delete Button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(actor.id)}
-                          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 border border-destructive/20 hover:border-destructive/40 transition-all"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Empty State when no project selected */}
-        {!selectedProjectId && initialProjects.length > 0 && (
-          <Card className="border-2 border-dashed border-slate-300 bg-slate-50/50">
-            <CardContent className="py-16">
-              <div className="text-center">
-                <div className="inline-flex p-4 bg-violet-100 rounded-full mb-4">
-                  <Sparkles className="h-10 w-10 text-violet-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                  Sélectionnez un projet pour commencer
-                </h3>
-                <p className="text-slate-500 max-w-md mx-auto">
-                  Choisissez un projet actif dans le menu déroulant ci-dessus pour
-                  gérer ses acteurs et leurs rôles
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 py-24">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-stone-100">
+              <FolderKanban className="h-10 w-10 text-stone-400" />
+            </div>
+            <h3 className="mt-6 text-lg font-semibold text-stone-900">
+              Sélectionnez un projet
+            </h3>
+            <p className="mt-2 max-w-sm text-center text-sm text-stone-500">
+              Choisissez un projet actif dans le menu ci-dessus pour gérer ses
+              acteurs et les affecter aux actions.
+            </p>
+          </div>
         )}
       </div>
     </div>

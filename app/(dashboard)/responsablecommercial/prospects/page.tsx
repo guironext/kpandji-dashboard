@@ -34,6 +34,7 @@ import {
   Users,
   Briefcase,
   BarChart3,
+  Factory,
 } from 'lucide-react';
 import {
   BarChart,
@@ -477,6 +478,14 @@ export default function ProspectsPage() {
                                 <span className="truncate">{client.localisation}</span>
                               </div>
                             )}
+                            {client.secteur_activite && (
+                              <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                                  <Factory className="h-4 w-4 text-slate-500" />
+                                </div>
+                                <span className="truncate">{client.secteur_activite}</span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
                                 <Briefcase className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -572,12 +581,21 @@ export default function ProspectsPage() {
                                 <span className="truncate">{ce.email}</span>
                               </div>
                             )}
+                            
                             {ce.localisation && (
                               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
                                   <MapPin className="h-4 w-4 text-slate-500" />
                                 </div>
                                 <span className="truncate">{ce.localisation}</span>
+                              </div>
+                            )}
+                            {ce.secteur_activite && (
+                              <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                                  <Factory className="h-4 w-4 text-slate-500" />
+                                </div>
+                                <span className="truncate">{ce.secteur_activite}</span>
                               </div>
                             )}
                             <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">

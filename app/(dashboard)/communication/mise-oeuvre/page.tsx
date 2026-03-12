@@ -7,15 +7,14 @@ export default async function MiseOeuvrePage() {
   const projects = projectsResult.success ? projectsResult.projects : [];
   const firstProjectId = projects[0]?.id ?? null;
   const initialActions = firstProjectId
-    ? (() => getPlanActionsByProjectId(firstProjectId))()
-    : null;
+    ? (await getPlanActionsByProjectId(firstProjectId))
+    : { success: false as const, actions: [] };
   const initialActionsResolved =
-    initialActions && (await initialActions).success ? (await initialActions).actions : [];
+    initialActions.success ? initialActions.actions : [];
 
   return (
     <div className="min-h-full bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.14),transparent)] bg-slate-50">
       <div className="relative min-h-full">
-        {/* Decorative gradient orbs */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
           <div className="absolute -left-40 top-0 h-80 w-80 rounded-full bg-violet-300/25 blur-3xl" />
           <div className="absolute right-0 top-1/4 h-96 w-96 rounded-full bg-amber-200/20 blur-3xl" />

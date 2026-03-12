@@ -194,6 +194,14 @@ model BonDeCommande {
   Facture       Facture  @relation(fields: [factureId], references: [id])
 }
 
+model BonPourAccord {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  numero_bon_pour_accord String
+  factureId String @unique
+  Facture Facture @relation(fields: [factureId], references: [id])
+}
 model Client_entreprise {
   id                           String              @id
   nom_entreprise               String
@@ -483,6 +491,7 @@ model Facture {
   bon_pour_acquis        Boolean            @default(false)
   Accessoire             Accessoire[]
   BonDeCommande          BonDeCommande?
+  BonPourAccord         BonPourAccord?
   Commande               Commande[]
   Client_entreprise      Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   Client                 Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -1006,31 +1015,46 @@ model CommunicationProject {
 }
 
 model CommunicationPlanAction {
-  id         String               @id @default(uuid())
+  id         String                          @id @default(uuid())
   projectId  String
   title      String
   startDate  DateTime
   endDate    DateTime
-  orderIndex Int                  @default(0)
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  completed  Boolean              @default(false)
-  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  orderIndex Int                             @default(0)
+  createdAt  DateTime                        @default(now())
+  updatedAt  DateTime                        @updatedAt
+  completed  Boolean                         @default(false)
+  project    CommunicationProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedActors CommunicationPlanActionActor[]
 
   @@index([projectId])
 }
 
 model CommunicationProjectActor {
-  id         String               @id @default(uuid())
+  id         String                          @id @default(uuid())
   projectId  String
   name       String
   department String
   job        String
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  project    CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime                        @default(now())
+  updatedAt  DateTime                        @updatedAt
+  project    CommunicationProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedActions CommunicationPlanActionActor[]
 
   @@index([projectId])
+}
+
+model CommunicationPlanActionActor {
+  id        String                   @id @default(uuid())
+  actionId  String
+  actorId   String
+  createdAt DateTime                 @default(now())
+  action    CommunicationPlanAction  @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  actor     CommunicationProjectActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([actionId, actorId])
+  @@index([actionId])
+  @@index([actorId])
 }
 
 model CommunicationBudgetItem {

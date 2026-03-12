@@ -56,9 +56,9 @@ const isDirecteurGeneralRoute = createRouteMatcher([
 	"/directeurgeneral",
 	"/directeurgeneral/(.*)",
 ]);
-const isClientelleRoute = createRouteMatcher([
-	"/clientelle",
-	"/clientelle/(.*)",
+const isClienteleRoute = createRouteMatcher([
+	"/clientele",
+	"/clientele/(.*)",
 ]);
 const isComptableRoute = createRouteMatcher(["/comptable", "/comptable/(.*)"]);
 const isConcessionnaireRoute = createRouteMatcher([
@@ -72,6 +72,14 @@ const isSuperviseurRoute = createRouteMatcher([
 const isCommunicationRoute = createRouteMatcher([
 	"/communication",
 	"/communication/(.*)",
+]);
+const isInfographieRoute = createRouteMatcher([
+	"/infographie",
+	"/infographie/(.*)",
+]);
+const isCommunityManagerRoute = createRouteMatcher([
+	"/communityManager",
+	"/communityManager/(.*)",
 ]);
 
 const ROLE_REDIRECTS: Record<string, string> = {
@@ -91,10 +99,12 @@ const ROLE_REDIRECTS: Record<string, string> = {
 	LOGISTIQUE: "/logistique",
 	FINANCE: "/finance",
 	DIRECTEUR_GENERAL: "/directeurgeneral",
-	CLIENTELLE: "/clientelle",
+	CLIENTELLE: "/clientele",
 	COMPTABLE: "/comptable",
 	CONCESSIONAIRE: "/concessionnaire",
 	SUPERVISEUR: "/superviseur",
+	INFORGRAPHIE: "/infographie",
+	COMMUNITY_MANAGER: "/communityManager",
 };
 
 function getRedirectForRole(role: string | undefined): string | null {
@@ -119,10 +129,12 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isLogistiqueRoute, role: "LOGISTIQUE" },
 	{ match: isFinanceRoute, role: "FINANCE" },
 	{ match: isDirecteurGeneralRoute, role: "DIRECTEUR_GENERAL" },
-	{ match: isClientelleRoute, role: "CLIENTELLE" },
+	{ match: isClienteleRoute, role: "CLIENTELLE" },
 	{ match: isComptableRoute, role: "COMPTABLE" },
 	{ match: isConcessionnaireRoute, role: "CONCESSIONAIRE" },
 	{ match: isSuperviseurRoute, role: "SUPERVISEUR" },
+	{ match: isInfographieRoute, role: "INFORGRAPHIE" },
+	{ match: isCommunityManagerRoute, role: "COMMUNITY_MANAGER" },
 ];
 
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
@@ -205,10 +217,6 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 			}
 			return NextResponse.redirect(new URL("/", req.url));
 		}
-	}
-
-	if (userId) {
-		return NextResponse.next();
 	}
 
 	return NextResponse.next();

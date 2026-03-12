@@ -352,6 +352,12 @@ const OnboardingForm = ({
                                   <SelectItem value="COMMUNICATION">
                                     Communication
                                   </SelectItem>
+                                  <SelectItem value="INFORGRAPHIE">
+                                    Infographie
+                                  </SelectItem>
+                                  <SelectItem value="COMMUNITY_MANAGER">
+                                    Community Manager
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />

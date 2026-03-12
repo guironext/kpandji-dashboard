@@ -27,6 +27,8 @@ import {
   deletePlanAction,
   type PlanActionItem,
 } from "@/lib/actions/communication-plan-action";
+import { getAssignmentsByProjectId } from "@/lib/actions/communication-plan-action-actor";
+import { getActorsByProject, type CommunicationProjectActor } from "@/lib/actions/communication-actor";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
 import { toast } from "sonner";
 import {
@@ -42,7 +44,7 @@ import {
   Sparkles,
   Save,
 } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { format, addDays, differenceInDays, startOfDay, min, max } from "date-fns";
 import { fr } from "date-fns/locale";
 
 function toDatetimeLocal(d: Date): string {
@@ -69,6 +71,8 @@ export default function MiseOeuvreClient({
     initialProjectId ?? (projects[0]?.id ?? null)
   );
   const [actions, setActions] = useState<PlanActionItem[]>(initialActions);
+  const [actors, setActors] = useState<CommunicationProjectActor[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,20 +88,30 @@ export default function MiseOeuvreClient({
   useEffect(() => {
     if (!selectedProjectId) {
       setActions([]);
+      setActors([]);
+      setAssignments({});
       return;
     }
     setLoading(true);
-    getPlanActionsByProjectId(selectedProjectId)
-      .then((res) => {
-        setActions(res.success ? res.actions : []);
+    Promise.all([
+      getPlanActionsByProjectId(selectedProjectId),
+      getActorsByProject(selectedProjectId),
+      getAssignmentsByProjectId(selectedProjectId),
+    ])
+      .then(([actionsRes, actorsRes, assignmentsRes]) => {
+        setActions(actionsRes.success ? actionsRes.actions : []);
+        setActors(actorsRes.success ? actorsRes.actors : []);
+        setAssignments(assignmentsRes.success ? assignmentsRes.assignments : {});
         setHasUnsavedCompleted(false);
         setSaveCompletedDone(false);
         setLoading(false);
       })
       .catch((error) => {
-        console.error("Error loading actions:", error);
-        toast.error("Erreur lors du chargement des actions. Veuillez réessayer.");
+        console.error("Error loading data:", error);
+        toast.error("Erreur lors du chargement. Veuillez réessayer.");
         setActions([]);
+        setActors([]);
+        setAssignments({});
         setLoading(false);
       });
   }, [selectedProjectId]);
@@ -257,6 +271,28 @@ export default function MiseOeuvreClient({
   const completedCount = actions.filter((a) => a.completed).length;
   const pendingCount = actions.filter((a) => !a.completed).length;
 
+  // Gantt: actors grouped by action
+  const actorIdToActor = Object.fromEntries(actors.map((a) => [a.id, a]));
+  const ganttGroups: { action: PlanActionItem; actors: CommunicationProjectActor[] }[] = actions.map(
+    (action) => {
+      const actorIds = assignments[action.id] ?? [];
+      const actorsForAction = actorIds
+        .map((id) => actorIdToActor[id])
+        .filter((a): a is CommunicationProjectActor => !!a)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return { action, actors: actorsForAction };
+    }
+  );
+  const hasGanttData = ganttGroups.some((g) => g.actors.length > 0);
+  const allDates = actions.flatMap((a) => [
+    startOfDay(new Date(a.startDate)),
+    startOfDay(new Date(a.endDate)),
+  ]);
+  const ganttStart = allDates.length ? min(allDates) : new Date();
+  const ganttEnd = allDates.length ? max(allDates) : addDays(new Date(), 7);
+  const totalDays = Math.max(1, differenceInDays(ganttEnd, ganttStart) + 1);
+  const dayWidth = 32;
+
   return (
     <div className="space-y-8 p-6">
       <div className="relative overflow-hidden rounded-2xl border bg-white/70 shadow-sm backdrop-blur">
@@ -362,6 +398,7 @@ export default function MiseOeuvreClient({
       </Card>
 
       {selectedProjectId && (
+        <>
         <Card className="bg-white/70 backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -586,6 +623,169 @@ export default function MiseOeuvreClient({
             )}
           </CardContent>
         </Card>
+
+        {/* Gantt: actors by action with timeline */}
+        {selectedProjectId && actions.length > 0 && (
+          <Card className="bg-white/70 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="size-5" />
+                Planning Gantt — Acteurs par action
+              </CardTitle>
+              <CardDescription>
+                Acteurs classés par action affectée. Périodes des actions en orange sur la timeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {loading ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-8">
+                  <Loader2 className="size-5 animate-spin" />
+                  Chargement...
+                </div>
+              ) : !hasGanttData ? (
+                <div className="rounded-xl border border-dashed bg-slate-50 p-6 text-center text-slate-600">
+                  Aucun acteur affecté aux actions. Affectez des acteurs dans{" "}
+                  <span className="font-medium">Acteurs et Rôles</span>.
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full min-w-[600px] border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/80">
+                          <th className="sticky left-0 z-10 min-w-[200px] bg-slate-50/95 px-4 py-3 text-left text-sm font-semibold text-slate-700">
+                            Action / Acteur
+                          </th>
+                          <th
+                            className="px-2 py-2 text-center text-xs font-medium text-slate-600"
+                            style={{ width: totalDays * dayWidth }}
+                          >
+                            Timeline
+                          </th>
+                        </tr>
+                        <tr className="border-b border-slate-200 bg-slate-50/80">
+                          <th className="sticky left-0 z-10 min-w-[200px] bg-slate-50/95" />
+                          <th
+                            className="px-0 py-1"
+                            style={{ width: totalDays * dayWidth }}
+                          >
+                            <div className="flex">
+                              {Array.from({ length: totalDays }, (_, i) => {
+                                const d = addDays(ganttStart, i);
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex-shrink-0 border-r border-slate-100 px-0.5 text-[10px] text-slate-500"
+                                    style={{ width: dayWidth }}
+                                  >
+                                    {format(d, "dd/MM")}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      {ganttGroups.map(({ action, actors }) => {
+                        if (actors.length === 0) return null;
+                        const start = startOfDay(new Date(action.startDate));
+                        const end = startOfDay(new Date(action.endDate));
+                        const left =
+                          (differenceInDays(start, ganttStart) / totalDays) * 100;
+                        const width =
+                          (Math.max(1, differenceInDays(end, start) + 1) /
+                            totalDays) *
+                          100;
+                        return (
+                          <tbody key={action.id}>
+                            <tr className="border-b border-slate-200 bg-amber-50/50">
+                              <td className="sticky left-0 z-10 min-w-[200px] bg-amber-50/95 px-4 py-2 font-semibold text-amber-900">
+                                {action.title}
+                                <span className="ml-2 text-xs font-normal text-amber-700">
+                                  ({format(start, "dd MMM", { locale: fr })} →{" "}
+                                  {format(end, "dd MMM", { locale: fr })})
+                                </span>
+                              </td>
+                              <td
+                                className="relative px-0 py-2 align-middle"
+                                style={{ width: totalDays * dayWidth }}
+                              >
+                                <div className="relative h-6 w-full overflow-hidden">
+                                  <div
+                                    className="absolute left-0 top-0 h-full rounded-md bg-amber-500/90 shadow-sm"
+                                    style={{
+                                      left: `${left}%`,
+                                      width: `${width}%`,
+                                      minWidth: "4px",
+                                    }}
+                                    title={`${action.title} ${format(start, "dd/MM")} → ${format(end, "dd/MM")}`}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                            {actors.map((actor) => (
+                              <tr
+                                key={`${actor.id}-${action.id}`}
+                                className="border-b border-slate-100 hover:bg-slate-50/50"
+                              >
+                                <td className="sticky left-0 z-10 min-w-[200px] bg-white/95 pl-8 pr-4 py-2 text-sm text-slate-700">
+                                  {actor.name}
+                                </td>
+                                <td
+                                  className="relative px-0 py-2 align-middle"
+                                  style={{ width: totalDays * dayWidth }}
+                                >
+                                  <div className="relative h-6 w-full overflow-hidden">
+                                    <div
+                                      className="absolute left-0 top-0 h-full rounded-md bg-amber-500/90 shadow-sm"
+                                      style={{
+                                        left: `${left}%`,
+                                        width: `${width}%`,
+                                        minWidth: "4px",
+                                      }}
+                                      title={`${action.title} — ${actor.name} ${format(start, "dd/MM")} → ${format(end, "dd/MM")}`}
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        );
+                      })}
+                    </table>
+                  </div>
+
+                  {/* Actions list in green at bottom */}
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-emerald-800">
+                      Actions du projet
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {actions.map((action) => (
+                        <div
+                          key={action.id}
+                          className="rounded-lg border border-emerald-300 bg-emerald-100 text-emerald-800 px-3 py-2 text-sm font-medium"
+                        >
+                          {action.title}
+                          <span className="ml-2 text-xs text-emerald-600">
+                            {format(new Date(action.startDate), "dd MMM", {
+                              locale: fr,
+                            })}{" "}
+                            →{" "}
+                            {format(new Date(action.endDate), "dd MMM", {
+                              locale: fr,
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
     </div>
   );

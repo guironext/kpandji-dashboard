@@ -66,8 +66,12 @@ function serializeFacture(facture: unknown) {
     })),
     clientId: (f.clientId as string) || null,
     clientEntrepriseId: (f.clientEntrepriseId as string) || null,
+    userId: (f.userId as string) || "",
     commandes: f.Commande || [],
     paiements: f.Paiement || [],
+    bonPourAccord: f.BonPourAccord
+      ? { numero: (f.BonPourAccord as { numero_bon_pour_accord: string }).numero_bon_pour_accord }
+      : null,
   };
 }
 
@@ -97,6 +101,75 @@ export async function getAllFactures() {
     return { success: true, data: serializedFactures };
   } catch (error) {
     console.error("Error fetching factures:", error);
+    return { success: false, error: "Failed to fetch factures" };
+  }
+}
+
+export async function getAllFacturesForBonPourAccord() {
+  try {
+    const factures = await prisma.facture.findMany({
+      where: {
+        clientEntrepriseId: { not: null },
+      },
+      include: {
+        Client: true,
+        Client_entreprise: true,
+        User: true,
+        Voiture: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        FactureLigne: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        Accessoire: true,
+        BonPourAccord: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serializedFactures = (factures as unknown[]).map(serializeFacture);
+
+    return { success: true, data: serializedFactures };
+  } catch (error) {
+    console.error("Error fetching factures for bon pour accord:", error);
+    return { success: false, error: "Failed to fetch factures" };
+  }
+}
+
+export async function getAllFacturesForResponsableCommercial() {
+  try {
+    const factures = await prisma.facture.findMany({
+      where: {
+        BonDeCommande: { isNot: null },
+      },
+      include: {
+        Client: true,
+        Client_entreprise: true,
+        User: true,
+        Voiture: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        FactureLigne: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        Accessoire: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serializedFactures = (factures as unknown[]).map(serializeFacture);
+
+    return { success: true, data: serializedFactures };
+  } catch (error) {
+    console.error("Error fetching all factures for responsable commercial:", error);
     return { success: false, error: "Failed to fetch factures" };
   }
 }

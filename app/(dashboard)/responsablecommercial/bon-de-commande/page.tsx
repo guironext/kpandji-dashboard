@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-// import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -13,18 +12,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Printer, FileDown } from "lucide-react";
 import { Document, Packer, Paragraph, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
-import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
+import { getAllFacturesForResponsableCommercial, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { generateNextNumero, getBonDeCommandeByFactureId } from "@/lib/actions/bondecommande";
 import { updateClient } from "@/lib/actions/client";
 import { updateClientEntreprise } from "@/lib/actions/client_entreprise";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
-import { useAuth } from "@clerk/nextjs";
 
 
 type Facture = {
@@ -97,11 +102,13 @@ type Facture = {
     image?: string;
   }>;
   user: {
+    id?: string;
     firstName: string;
     lastName: string;
     email: string;
     telephone?: string;
   } | null;
+  userId?: string;
 };
 
 function formatDateDDMMYYYY(value: string | number | Date | null | undefined) {
@@ -114,26 +121,20 @@ function formatDateDDMMYYYY(value: string | number | Date | null | undefined) {
   return `${day}${month}${year}`;
 }
 
-// Function to get accessoire image by name
 function getAccessoireImage(
   accessoireNom: string | null | undefined,
   accessoiresList: Array<{ id: string; nom: string; image?: string | null }>
 ) {
   if (!accessoireNom) return null;
-  
-  // Extract the first accessoire name from "Name (x2)" or "Name1, Name2" format
   const name = accessoireNom.split(",")[0]?.split(" (x")[0]?.trim();
-  
   const matched = accessoiresList.find((acc) => acc.nom === name);
-  
   return matched?.image || null;
 }
 
 export default function Page() {
-  // const router = useRouter();
-  const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
+  const [selectedCommercialId, setSelectedCommercialId] = useState<string>("all");
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<
     Array<{ id: string; nom: string; image?: string | null }>
@@ -143,54 +144,66 @@ export default function Page() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!clerkId) return;
-      
-      console.log("=== FETCHING DATA ===");
       const [facturesResult, accessoiresResult] = await Promise.all([
-        getFacturesByUser(clerkId),
+        getAllFacturesForResponsableCommercial(),
         getAllAccessoires(),
       ]);
-      
-      console.log("Factures result:", facturesResult);
-      console.log("Accessoires result:", accessoiresResult);
-      
+
       if (facturesResult.success && facturesResult.data) {
         setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
-        console.log("Raw accessoires data:", JSON.stringify(accessoiresResult.data, null, 2));
-        console.log("Accessoires count:", accessoiresResult.data.length);
-        accessoiresResult.data.forEach((acc: { id: string; nom: string; image?: string | null }, index) => {
-          console.log(`Accessoire ${index + 1}:`, {
-            id: acc.id,
-            nom: acc.nom,
-            image: acc.image,
-            hasImage: !!acc.image
-          });
-        });
         setAccessoires(accessoiresResult.data);
-      } else {
-        console.error("Failed to fetch accessoires:", accessoiresResult);
       }
     };
     fetchData();
-  }, [clerkId]);
+  }, []);
 
-  // Use factures directly:
-  const totalPages = Math.ceil(factures.length / itemsPerPage);
+  // Unique commercials from factures
+  const uniqueCommercials = Array.from(
+    new Map(
+      factures
+        .filter((f) => (f.userId || (f.user as { id?: string })?.id) && f.user)
+        .map((f) => {
+          const uid = f.userId || (f.user as { id?: string })?.id || "";
+          return [
+            uid,
+            {
+              id: uid,
+              label: `${f.user?.firstName || ""} ${f.user?.lastName || ""}`.trim() || f.user?.email || uid,
+            },
+          ];
+        })
+    ).values()
+  );
+
+  // Filter factures by selected commercial
+  const filteredFactures =
+    selectedCommercialId === "all"
+      ? factures
+      : factures.filter(
+          (f) =>
+            (f.userId || (f.user as { id?: string })?.id) === selectedCommercialId
+        );
+
+  const totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = factures.slice(startIndex, endIndex);
+  const currentData = filteredFactures.slice(startIndex, endIndex);
 
-  // Fetch numero when current facture changes
+  // Reset to page 1 when commercial filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCommercialId]);
+
   useEffect(() => {
     const fetchNumero = async () => {
-      if (factures.length === 0) {
+      if (filteredFactures.length === 0) {
         setNumero("");
         return;
       }
-      
-      const currentFacture = factures.slice(startIndex, endIndex)[0];
+
+      const currentFacture = filteredFactures.slice(startIndex, endIndex)[0];
       if (!currentFacture) {
         setNumero("");
         return;
@@ -205,7 +218,7 @@ export default function Page() {
     };
 
     fetchNumero();
-  }, [factures, currentPage, startIndex, endIndex]);
+  }, [filteredFactures, currentPage, startIndex, endIndex]);
 
   const goToNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -223,35 +236,26 @@ export default function Page() {
     if (result.success && result.data) {
       setNumero(result.data.numero);
       toast.success(`Numéro généré: ${result.data.numero}`);
-      
-      // Update client status to CLIENT if successful
+
       if (currentFacture.clientId) {
         try {
-          const clientUpdateResult = await updateClient(currentFacture.clientId, {
+          await updateClient(currentFacture.clientId, {
             status_client: "CLIENT"
           });
-          if (!clientUpdateResult.success) {
-            console.error("Failed to update client status:", clientUpdateResult.error);
-          }
         } catch (error) {
           console.error("Error updating client status:", error);
         }
       }
-      
-      // Update client_entreprise status to CLIENT if successful
+
       if (currentFacture.clientEntrepriseId) {
         try {
-          const clientEntrepriseUpdateResult = await updateClientEntreprise(currentFacture.clientEntrepriseId, {
+          await updateClientEntreprise(currentFacture.clientEntrepriseId, {
             status_client: "CLIENT"
           });
-          if (!clientEntrepriseUpdateResult.success) {
-            console.error("Failed to update client_entreprise status:", clientEntrepriseUpdateResult.error);
-          }
         } catch (error) {
           console.error("Error updating client_entreprise status:", error);
         }
       }
-      
     } else {
       toast.error("Erreur lors de la génération du numéro");
     }
@@ -263,7 +267,7 @@ export default function Page() {
 
   const handleDelete = async () => {
     const currentFacture = currentData[0];
-    if (!currentFacture || !clerkId) return;
+    if (!currentFacture) return;
 
     if (
       confirm(
@@ -275,17 +279,21 @@ export default function Page() {
       const result = await deleteFacture(currentFacture.id);
       if (result.success) {
         toast.success("Bon de commande supprimé avec succès");
-        // Refresh the list
-        const updatedFactures = await getFacturesByUser(clerkId);
-        if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as unknown as Facture[]);
-          // Adjust current page if needed
-          if (
-            currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)
-          ) {
-            setCurrentPage(
-              Math.max(1, Math.ceil(updatedFactures.data.length / itemsPerPage))
-            );
+        const updatedResult = await getAllFacturesForResponsableCommercial();
+        if (updatedResult.success && updatedResult.data) {
+          const updated = updatedResult.data as unknown as Facture[];
+          setFactures(updated);
+          const filtered =
+            selectedCommercialId === "all"
+              ? updated
+              : updated.filter(
+                  (f) =>
+                    (f.userId || (f.user as { id?: string })?.id) ===
+                    selectedCommercialId
+                );
+          const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+          if (currentPage > newTotalPages) {
+            setCurrentPage(Math.max(1, newTotalPages));
           }
         }
       } else {
@@ -520,11 +528,31 @@ export default function Page() {
         }}
       />
 
-      <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
-        <div className="bg-white rounded-lg shadow-2xl px-4 py-8">
-          <div className="flex w-full justify-between mb-6 print-hide">
-            <div className="flex gap-4">
-              
+      <div className="flex flex-col w-full min-h-0 bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <div className="flex flex-col flex-1 min-h-0 bg-white rounded-lg shadow-2xl px-4 py-8">
+          <div className="flex shrink-0 w-full justify-between mb-6 print-hide">
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <label htmlFor="commercial-filter" className="text-sm font-semibold text-gray-700">
+                  Commercial :
+                </label>
+                <Select
+                  value={selectedCommercialId}
+                  onValueChange={(v) => setSelectedCommercialId(v)}
+                >
+                  <SelectTrigger id="commercial-filter" className="w-[220px]">
+                    <SelectValue placeholder="Tous les commerciaux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les commerciaux</SelectItem>
+                    {uniqueCommercials.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 onClick={handleDelete}
                 disabled={currentData.length === 0}
@@ -546,7 +574,6 @@ export default function Page() {
               >
                 Apport Initial
               </Button>
-
             </div>
             <div className="flex gap-2">
               <Button
@@ -567,7 +594,8 @@ export default function Page() {
             </div>
           </div>
 
-          <div id="printable-area">
+          <div className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-260px)] print:max-h-none print:overflow-visible">
+            <div id="printable-area">
             <div className="flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3">
               <div>
                 <Image
@@ -588,95 +616,90 @@ export default function Page() {
               </div>
             </div>
 
-           <div className="flex justify-between items-center">
-
+            <div className="flex justify-between items-center">
               <div></div>
-           <div className="flex flex-col items-center justify-center ">
-              <h1 className="text-xl font-bold text-orange-800 border-2 border-black px-4 py-2 rounded-lg shadow-lg">
-                BON DE COMMANDE
-              </h1>
-              {showApportInitial && (
-                <h1 className="text-sm font-bold text-black  py-2 "> En Apport Initial 60% du Montant Total TTC </h1>
-              )}
-            </div>
+              <div className="flex flex-col items-center justify-center ">
+                <h1 className="text-xl font-bold text-orange-800 border-2 border-black px-4 py-2 rounded-lg shadow-lg">
+                  BON DE COMMANDE
+                </h1>
+                {showApportInitial && (
+                  <h1 className="text-sm font-bold text-black  py-2 "> En Apport Initial 60% du Montant Total TTC </h1>
+                )}
+              </div>
 
-            <div className="flex justify-end  ">
-              <div className="flex gap-2 items-center">
-              <h1 className="text-xl font-bold text-orange-800 ">
-                NUMERO:
-              </h1>
-              <h1 className="text-lg font-bold text-black ">
-                {numero || "______"}
-              </h1>
+              <div className="flex justify-end  ">
+                <div className="flex gap-2 items-center">
+                  <h1 className="text-xl font-bold text-orange-800 ">
+                    NUMERO:
+                  </h1>
+                  <h1 className="text-lg font-bold text-black ">
+                    {numero || "______"}
+                  </h1>
+                </div>
               </div>
             </div>
 
-
-           </div>
-
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
-                <div className="w-full flex items-center justify-between">
-
-
-                  {/* Company Information Section */}
-                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2 ">
-                  <h2 className="text-sm font-bold text-blue-800 mb-3">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Entreprise :</p>
-                      <p>KPANDJI AUTOMOBILES</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Adresse :</p>
-                      <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Téléphone :</p>
-                      <p>+225 01 01 04 77 03</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Email :</p>
-                      <p>info@kpandji.com</p>
-                    </div>
-                    
-                  </div>
+                {/* Commercial badge - shows who created this bon de commande */}
+                <div className="mb-3 print-hide">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                    Commercial : {facture.user?.firstName} {facture.user?.lastName}
+                  </span>
                 </div>
 
-                {/* Client Information Section */}
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 ">
-                  <h2 className="text-sm font-bold text-orange-800 mb-3">2️⃣ Informations du client</h2>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Nom du client / Entreprise :</p>
-                      <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
-                    </div>
-                    {facture.client?.entreprise && (
+                <div className="w-full flex items-center justify-between">
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2 ">
+                    <h2 className="text-sm font-bold text-blue-800 mb-3">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
                       <div className="flex gap-2">
                         <p className="font-semibold">Entreprise :</p>
-                        <p>{facture.client.entreprise}</p>
+                        <p>KPANDJI AUTOMOBILES</p>
                       </div>
-                    )}
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Téléphone :</p>
-                      <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Adresse :</p>
+                        <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Téléphone :</p>
+                        <p>+225 01 01 04 77 03</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Email :</p>
+                        <p>info@kpandji.com</p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Email :</p>
-                      <p>{facture.client?.email || facture.clientEntreprise?.email || "__________________________"}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Adresse :</p>
-                      <p>{facture.client?.localisation || facture.clientEntreprise?.localisation || "_________________________________________"}</p>
+                  </div>
+
+                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 ">
+                    <h2 className="text-sm font-bold text-orange-800 mb-3">2️⃣ Informations du client</h2>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Nom du client / Entreprise :</p>
+                        <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
+                      </div>
+                      {facture.client?.entreprise && (
+                        <div className="flex gap-2">
+                          <p className="font-semibold">Entreprise :</p>
+                          <p>{facture.client.entreprise}</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Téléphone :</p>
+                        <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Email :</p>
+                        <p>{facture.client?.email || facture.clientEntreprise?.email || "__________________________"}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Adresse :</p>
+                        <p>{facture.client?.localisation || facture.clientEntreprise?.localisation || "_________________________________________"}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-
-
-                </div>
-
-                {/* Order Details Section */}
                 <div className="mb-2">
                   <h2 className="text-sm font-bold text-gray-800 mb-1">3️⃣ Détails du bon de commande</h2>
                   <Table className="rounded-lg overflow-hidden text-xs">
@@ -740,31 +763,21 @@ export default function Page() {
                                     </p>
                                   )}
                                   <div className="flex gap-y-2">
-
-                                  {ligne.couleur && (
-                                    <p className="text-[8px] font-normal text-blue-700 mr-2">
-                                     <b className="font-semibold mr-1"> 
-                                      Couleur: 
-                                      </b> 
-                                       {ligne.couleur} /
-                                    </p>
-                                  )}
-                                  {ligne.transmission && (
-                                    <p className="text-[8px] font-normal text-blue-700 mr-2">
-                                      <b className="font-semibold mr-1"> 
-                                      Transmission: 
-                                      </b> 
-                                       {ligne.transmission} /
-                                    </p>
-                                  )}
-                                  {ligne.motorisation && (
-                                    <p className="text-[8px] font-normal text-blue-700">
-                                      <b className="font-semibold mr-1"> 
-                                      Motorisation: 
-                                      </b> 
-                                       {ligne.motorisation} /
-                                    </p>
-                                  )}
+                                    {ligne.couleur && (
+                                      <p className="text-[8px] font-normal text-blue-700 mr-2">
+                                        <b className="font-semibold mr-1">Couleur:</b> {ligne.couleur} /
+                                      </p>
+                                    )}
+                                    {ligne.transmission && (
+                                      <p className="text-[8px] font-normal text-blue-700 mr-2">
+                                        <b className="font-semibold mr-1">Transmission:</b> {ligne.transmission} /
+                                      </p>
+                                    )}
+                                    {ligne.motorisation && (
+                                      <p className="text-[8px] font-normal text-blue-700">
+                                        <b className="font-semibold mr-1">Motorisation:</b> {ligne.motorisation} /
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -782,7 +795,6 @@ export default function Page() {
                         ));
                       })}
 
-                      {/* Accessories */}
                       {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => (
                         <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
                           <TableCell className="text-black font-semibold text-center">
@@ -820,8 +832,7 @@ export default function Page() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      
-                      {/* Legacy single accessoire support */}
+
                       {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
                         <TableRow className="bg-white border-b border-orange-200">
                           <TableCell className="text-black font-semibold text-center">
@@ -834,11 +845,7 @@ export default function Page() {
                                   facture.accessoire_nom,
                                   accessoires as Array<{ id: string; nom: string; image?: string | null }>
                                 );
-                                
-                                if (!imagePath) {
-                                  return null;
-                                }
-                                
+                                if (!imagePath) return null;
                                 return (
                                   <Image
                                     src={imagePath}
@@ -905,7 +912,6 @@ export default function Page() {
                   </Table>
                 </div>
 
-                {/* Order Conditions Section */}
                 <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-2">
                   <h2 className="text-sm font-bold text-gray-800 mb-3">4️⃣ Conditions de commande</h2>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -939,7 +945,6 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Signatures Section */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <div className="border-2 border-gray-400 rounded-lg p-2">
                     <h3 className="text-xs font-bold text-black mb-2">Direction</h3>
@@ -950,11 +955,9 @@ export default function Page() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
-                        
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Cachet :</p>
-                        
                       </div>
                     </div>
                   </div>
@@ -967,17 +970,14 @@ export default function Page() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
-                        
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Cachet :</p>
-                        
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex flex-col items-center w-full justify-center bg-blue-50 rounded-b-lg text-xs border-t-2 border-orange-800 text-black p-4 mt-4">
                   <p className="font-thin text-center">
                     Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
@@ -994,15 +994,15 @@ export default function Page() {
               </div>
             ))}
 
-            {factures.length === 0 && (
+            {filteredFactures.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-lg text-gray-600">Aucun bon de commande trouvé</p>
               </div>
             )}
+            </div>
           </div>
 
-          {/* Bottom Pagination Controls */}
-          <div className="flex justify-center items-center gap-4 mt-6 print-hide">
+          <div className="flex shrink-0 justify-center items-center gap-4 mt-6 print-hide">
             <Button
               onClick={goToPrevPage}
               disabled={currentPage === 1}

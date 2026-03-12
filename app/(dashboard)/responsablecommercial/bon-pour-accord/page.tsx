@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-// import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -12,19 +11,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Printer, FileDown } from "lucide-react";
 import { Document, Packer, Paragraph, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
-import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
+import { getAllFacturesForBonPourAccord, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import { generateNextNumero, getBonDeCommandeByFactureId } from "@/lib/actions/bondecommande";
-import { updateClient } from "@/lib/actions/client";
-import { updateClientEntreprise } from "@/lib/actions/client_entreprise";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
-import { useAuth } from "@clerk/nextjs";
 
 
 type Facture = {
@@ -97,11 +99,14 @@ type Facture = {
     image?: string;
   }>;
   user: {
+    id?: string;
     firstName: string;
     lastName: string;
     email: string;
     telephone?: string;
   } | null;
+  userId?: string;
+  bonPourAccord?: { numero: string } | null;
 };
 
 function formatDateDDMMYYYY(value: string | number | Date | null | undefined) {
@@ -114,98 +119,80 @@ function formatDateDDMMYYYY(value: string | number | Date | null | undefined) {
   return `${day}${month}${year}`;
 }
 
-// Function to get accessoire image by name
 function getAccessoireImage(
   accessoireNom: string | null | undefined,
   accessoiresList: Array<{ id: string; nom: string; image?: string | null }>
 ) {
   if (!accessoireNom) return null;
-  
-  // Extract the first accessoire name from "Name (x2)" or "Name1, Name2" format
   const name = accessoireNom.split(",")[0]?.split(" (x")[0]?.trim();
-  
   const matched = accessoiresList.find((acc) => acc.nom === name);
-  
   return matched?.image || null;
 }
 
 export default function Page() {
-  // const router = useRouter();
-  const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
+  const [selectedCommercialId, setSelectedCommercialId] = useState<string>("all");
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<
     Array<{ id: string; nom: string; image?: string | null }>
   >([]);
-  const [numero, setNumero] = useState<string>("");
   const [showApportInitial, setShowApportInitial] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!clerkId) return;
-      
-      console.log("=== FETCHING DATA ===");
       const [facturesResult, accessoiresResult] = await Promise.all([
-        getFacturesByUser(clerkId),
+        getAllFacturesForBonPourAccord(),
         getAllAccessoires(),
       ]);
-      
-      console.log("Factures result:", facturesResult);
-      console.log("Accessoires result:", accessoiresResult);
-      
+
       if (facturesResult.success && facturesResult.data) {
         setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
-        console.log("Raw accessoires data:", JSON.stringify(accessoiresResult.data, null, 2));
-        console.log("Accessoires count:", accessoiresResult.data.length);
-        accessoiresResult.data.forEach((acc: { id: string; nom: string; image?: string | null }, index) => {
-          console.log(`Accessoire ${index + 1}:`, {
-            id: acc.id,
-            nom: acc.nom,
-            image: acc.image,
-            hasImage: !!acc.image
-          });
-        });
         setAccessoires(accessoiresResult.data);
-      } else {
-        console.error("Failed to fetch accessoires:", accessoiresResult);
       }
     };
     fetchData();
-  }, [clerkId]);
+  }, []);
 
-  // Use factures directly:
-  const totalPages = Math.ceil(factures.length / itemsPerPage);
+  const facturesWithNumero = factures.filter((f) => f.bonPourAccord?.numero);
+
+  const uniqueCommercials = Array.from(
+    new Map(
+      facturesWithNumero
+        .filter((f) => (f.userId || (f.user as { id?: string })?.id) && f.user)
+        .map((f) => {
+          const uid = f.userId || (f.user as { id?: string })?.id || "";
+          return [
+            uid,
+            {
+              id: uid,
+              label: `${f.user?.firstName || ""} ${f.user?.lastName || ""}`.trim() || (f.user?.email ?? "") || uid,
+            },
+          ];
+        })
+    ).values()
+  );
+
+  const filteredFactures =
+    selectedCommercialId === "all"
+      ? facturesWithNumero
+      : facturesWithNumero.filter(
+          (f) =>
+            (f.userId || (f.user as { id?: string })?.id) === selectedCommercialId
+        );
+
+  const totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = factures.slice(startIndex, endIndex);
+  const currentData = filteredFactures.slice(startIndex, endIndex);
 
-  // Fetch numero when current facture changes
   useEffect(() => {
-    const fetchNumero = async () => {
-      if (factures.length === 0) {
-        setNumero("");
-        return;
-      }
-      
-      const currentFacture = factures.slice(startIndex, endIndex)[0];
-      if (!currentFacture) {
-        setNumero("");
-        return;
-      }
-
-      const result = await getBonDeCommandeByFactureId(currentFacture.id);
-      if (result.success && result.data) {
-        setNumero(result.data.numero);
-      } else {
-        setNumero("");
-      }
-    };
-
-    fetchNumero();
-  }, [factures, currentPage, startIndex, endIndex]);
+    setCurrentPage(1);
+  }, [selectedCommercialId]);
+  const currentFacture = currentData[0];
+  const numero = currentFacture?.bonPourAccord?.numero ?? "";
 
   const goToNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -215,77 +202,38 @@ export default function Page() {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleGenerateNumero = async () => {
-    const currentFacture = currentData[0];
-    if (!currentFacture) return;
-
-    const result = await generateNextNumero(currentFacture.id);
-    if (result.success && result.data) {
-      setNumero(result.data.numero);
-      toast.success(`Numéro généré: ${result.data.numero}`);
-      
-      // Update client status to CLIENT if successful
-      if (currentFacture.clientId) {
-        try {
-          const clientUpdateResult = await updateClient(currentFacture.clientId, {
-            status_client: "CLIENT"
-          });
-          if (!clientUpdateResult.success) {
-            console.error("Failed to update client status:", clientUpdateResult.error);
-          }
-        } catch (error) {
-          console.error("Error updating client status:", error);
-        }
-      }
-      
-      // Update client_entreprise status to CLIENT if successful
-      if (currentFacture.clientEntrepriseId) {
-        try {
-          const clientEntrepriseUpdateResult = await updateClientEntreprise(currentFacture.clientEntrepriseId, {
-            status_client: "CLIENT"
-          });
-          if (!clientEntrepriseUpdateResult.success) {
-            console.error("Failed to update client_entreprise status:", clientEntrepriseUpdateResult.error);
-          }
-        } catch (error) {
-          console.error("Error updating client_entreprise status:", error);
-        }
-      }
-      
-    } else {
-      toast.error("Erreur lors de la génération du numéro");
-    }
-  };
-
   const handlePrint = () => {
     window.print();
   };
 
   const handleDelete = async () => {
-    const currentFacture = currentData[0];
-    if (!currentFacture || !clerkId) return;
+    const facture = currentData[0];
+    if (!facture) return;
 
     if (
       confirm(
-        `Êtes-vous sûr de vouloir supprimer ce bon de commande (${currentFacture.id.slice(
-          -7
-        )}) ?`
+        `Êtes-vous sûr de vouloir supprimer ce bon pour accord (${facture.id.slice(-7)}) ?`
       )
     ) {
-      const result = await deleteFacture(currentFacture.id);
+      const result = await deleteFacture(facture.id);
       if (result.success) {
-        toast.success("Bon de commande supprimé avec succès");
-        // Refresh the list
-        const updatedFactures = await getFacturesByUser(clerkId);
-        if (updatedFactures.success && updatedFactures.data) {
-          setFactures(updatedFactures.data as unknown as Facture[]);
-          // Adjust current page if needed
-          if (
-            currentPage > Math.ceil(updatedFactures.data.length / itemsPerPage)
-          ) {
-            setCurrentPage(
-              Math.max(1, Math.ceil(updatedFactures.data.length / itemsPerPage))
-            );
+        toast.success("Bon pour accord supprimé avec succès");
+        const updatedResult = await getAllFacturesForBonPourAccord();
+        if (updatedResult.success && updatedResult.data) {
+          const data = (updatedResult.data as unknown as Facture[]).filter(
+            (f) => f.bonPourAccord?.numero
+          );
+          setFactures(updatedResult.data as unknown as Facture[]);
+          const filtered =
+            selectedCommercialId === "all"
+              ? data
+              : data.filter(
+                  (f) =>
+                    (f.userId || (f.user as { id?: string })?.id) === selectedCommercialId
+                );
+          const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+          if (currentPage > newTotalPages) {
+            setCurrentPage(Math.max(1, newTotalPages));
           }
         }
       } else {
@@ -297,7 +245,7 @@ export default function Page() {
   const handleExportToWord = async () => {
     const facture = currentData[0];
     if (!facture) {
-      toast.error("Aucun bon de commande à exporter");
+      toast.error("Aucun bon pour accord à exporter");
       return;
     }
 
@@ -409,7 +357,7 @@ export default function Page() {
       const docChildren: (Paragraph | DocxTable)[] = [
         new Paragraph({ text: "KPANDJI AUTOMOBILES", alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
         new Paragraph({ text: "Constructeur et Assembleur Automobile", alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-        new Paragraph({ text: "BON DE COMMANDE", alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
+        new Paragraph({ text: "BON POUR ACCORD", alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
       ];
 
       if (showApportInitial) {
@@ -424,24 +372,24 @@ export default function Page() {
         new Paragraph({ text: "Téléphone : +225 01 01 04 77 03" }),
         new Paragraph({ text: "Email : info@kpandji.com", spacing: { after: 200 } }),
         new Paragraph({ text: "2️⃣ Informations du client", spacing: { before: 100, after: 100 } }),
-        new Paragraph({ text: `Nom du client / Entreprise : ${facture.client?.nom || facture.clientEntreprise?.nom_entreprise}` }),
-        new Paragraph({ text: `Téléphone : ${facture.client?.telephone || facture.clientEntreprise?.telephone || ""}` }),
-        new Paragraph({ text: `Email : ${facture.client?.email || facture.clientEntreprise?.email || "__________________________"}` }),
-        new Paragraph({ text: `Adresse : ${facture.client?.localisation || facture.clientEntreprise?.localisation || "_________________________________________"}`, spacing: { after: 200 } }),
-        new Paragraph({ text: "3️⃣ Détails du bon de commande", spacing: { before: 100, after: 100 } }),
+        new Paragraph({ text: `Nom du client / Entreprise : ${facture.clientEntreprise?.nom_entreprise}` }),
+        new Paragraph({ text: `Téléphone : ${facture.clientEntreprise?.telephone || ""}` }),
+        new Paragraph({ text: `Email : ${facture.clientEntreprise?.email || "__________________________"}` }),
+        new Paragraph({ text: `Adresse : ${facture.clientEntreprise?.localisation || "_________________________________________"}`, spacing: { after: 200 } }),
+        new Paragraph({ text: "3️⃣ Détails du bon pour accord", spacing: { before: 100, after: 100 } }),
         new DocxTable({ rows: tableRows, width: { size: 100, type: "pct" } }),
         new Paragraph({ text: "4️⃣ Conditions de commande", spacing: { before: 300, after: 100 } }),
-        new Paragraph({ text: `Date du bon de commande : ${formatDateDDMMYYYY(facture.date_facture)}` }),
+        new Paragraph({ text: `Date du bon pour accord : ${formatDateDDMMYYYY(facture.date_facture)}` }),
         new Paragraph({ text: `Date d'échéance : ${formatDateDDMMYYYY(facture.date_echeance)}` }),
         new Paragraph({ text: "Mode de paiement : Virement bancaire / Chèque / Cache" }),
         new Paragraph({ text: "Délai de livraison : 4 mois" }),
         new Paragraph({ text: "Lieu de livraison : KPANDJI Automobiles - Abidjan" }),
         new Paragraph({ text: "Validité : 15 jours à compter de la date d'émission", spacing: { after: 200 } }),
-        new Paragraph({ text: "Remarque : Ce bon de commande vaut engagement d'achat ferme une fois signé par le client.", spacing: { after: 300 } }),
+        new Paragraph({ text: "Remarque : Ce bon pour accord vaut engagement d'achat ferme une fois signé par le client.", spacing: { after: 300 } }),
         new Paragraph({ text: "Direction", spacing: { before: 100 } }),
         new Paragraph({ text: `Nom : ${facture.user?.firstName || ""} ${facture.user?.lastName || ""}` }),
         new Paragraph({ text: "Client", spacing: { before: 200 } }),
-        new Paragraph({ text: `Nom : ${facture.client?.nom || facture.clientEntreprise?.nom_entreprise}` }),
+        new Paragraph({ text: `Nom : ${facture.clientEntreprise?.nom_entreprise}` }),
         new Paragraph({ text: "Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03", alignment: AlignmentType.CENTER, spacing: { before: 300 } }),
         new Paragraph({ text: "Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46", alignment: AlignmentType.CENTER }),
         new Paragraph({ text: "kpandjiautomobiles@gmail.com / www.kpandji.com", alignment: AlignmentType.CENTER }),
@@ -457,7 +405,7 @@ export default function Page() {
       });
 
       const blob = await Packer.toBlob(doc);
-      const fileName = `Bon_Commande_${numero || facture.id.slice(-7)}_${format(new Date(), "yyyy-MM-dd")}.docx`;
+      const fileName = `Bon_Pour_Accord_${numero || facture.id.slice(-7)}_${format(new Date(), "yyyy-MM-dd")}.docx`;
       saveAs(blob, fileName);
       toast.success("Document exporté en Word");
     } catch (error) {
@@ -523,8 +471,23 @@ export default function Page() {
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl px-4 py-8">
           <div className="flex w-full justify-between mb-6 print-hide">
-            <div className="flex gap-4">
-              
+            <div className="flex gap-4 items-center">
+              <Select
+                value={selectedCommercialId}
+                onValueChange={(v) => setSelectedCommercialId(v)}
+              >
+                <SelectTrigger id="commercial-filter" className="w-[220px]">
+                  <SelectValue placeholder="Tous les commerciaux" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les commerciaux</SelectItem>
+                  {uniqueCommercials.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 onClick={handleDelete}
                 disabled={currentData.length === 0}
@@ -533,20 +496,12 @@ export default function Page() {
                 SUPPRIMER
               </Button>
               <Button
-                onClick={handleGenerateNumero}
-                disabled={!!numero}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                GÉNÉRER NUMÉRO
-              </Button>
-              <Button
                 onClick={() => setShowApportInitial(true)}
                 disabled={showApportInitial}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Apport Initial
               </Button>
-
             </div>
             <div className="flex gap-2">
               <Button
@@ -588,97 +543,83 @@ export default function Page() {
               </div>
             </div>
 
-           <div className="flex justify-between items-center">
-
+            <div className="flex justify-between items-center">
               <div></div>
-           <div className="flex flex-col items-center justify-center ">
-              <h1 className="text-xl font-bold text-orange-800 border-2 border-black px-4 py-2 rounded-lg shadow-lg">
-                BON DE COMMANDE
-              </h1>
-              {showApportInitial && (
-                <h1 className="text-sm font-bold text-black  py-2 "> En Apport Initial 60% du Montant Total TTC </h1>
-              )}
-            </div>
-
-            <div className="flex justify-end  ">
-              <div className="flex gap-2 items-center">
-              <h1 className="text-xl font-bold text-orange-800 ">
-                NUMERO:
-              </h1>
-              <h1 className="text-lg font-bold text-black ">
-                {numero || "______"}
-              </h1>
+              <div className="flex flex-col items-center justify-center ">
+                <h1 className="text-xl font-bold text-orange-800 border-2 border-black px-4 py-2 rounded-lg shadow-lg">
+                  BON POUR ACCORD
+                </h1>
+                {showApportInitial && (
+                  <h1 className="text-sm font-bold text-black py-2">En Apport Initial 60% du Montant Total TTC</h1>
+                )}
+              </div>
+              <div className="flex justify-end ">
+                <div className="flex gap-2 items-center">
+                  <h1 className="text-xl font-bold text-orange-800 ">NUMERO:</h1>
+                  <h1 className="text-lg font-bold text-black ">{numero || "______"}</h1>
+                  {numero && (
+                    <span className="text-xs text-gray-500 print-hide">(généré par commercial)</span>
+                  )}
+                </div>
               </div>
             </div>
-
-
-           </div>
 
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
                 <div className="w-full flex items-center justify-between">
-
-
-                  {/* Company Information Section */}
-                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2 ">
-                  <h2 className="text-sm font-bold text-blue-800 mb-3">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Entreprise :</p>
-                      <p>KPANDJI AUTOMOBILES</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Adresse :</p>
-                      <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Téléphone :</p>
-                      <p>+225 01 01 04 77 03</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Email :</p>
-                      <p>info@kpandji.com</p>
-                    </div>
-                    
-                  </div>
-                </div>
-
-                {/* Client Information Section */}
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 ">
-                  <h2 className="text-sm font-bold text-orange-800 mb-3">2️⃣ Informations du client</h2>
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Nom du client / Entreprise :</p>
-                      <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
-                    </div>
-                    {facture.client?.entreprise && (
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2 ">
+                    <h2 className="text-sm font-bold text-blue-800 mb-3">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
                       <div className="flex gap-2">
                         <p className="font-semibold">Entreprise :</p>
-                        <p>{facture.client.entreprise}</p>
+                        <p>KPANDJI AUTOMOBILES</p>
                       </div>
-                    )}
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Téléphone :</p>
-                      <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Adresse :</p>
+                        <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Téléphone :</p>
+                        <p>+225 01 01 04 77 03</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Email :</p>
+                        <p>info@kpandji.com</p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Email :</p>
-                      <p>{facture.client?.email || facture.clientEntreprise?.email || "__________________________"}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Adresse :</p>
-                      <p>{facture.client?.localisation || facture.clientEntreprise?.localisation || "_________________________________________"}</p>
+                  </div>
+
+                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 ">
+                    <h2 className="text-sm font-bold text-orange-800 mb-3">2️⃣ Informations du client</h2>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Nom du client / Entreprise :</p>
+                        <p>{facture.clientEntreprise?.nom_entreprise}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Téléphone :</p>
+                        <p>{facture.clientEntreprise?.telephone}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Email :</p>
+                        <p>{facture.clientEntreprise?.email || "__________________________"}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <p className="font-semibold">Adresse :</p>
+                        <p>{facture.clientEntreprise?.localisation || "_________________________________________"}</p>
+                      </div>
+                      {facture.user && (
+                        <div className="flex gap-2 mt-2 pt-2 border-t border-orange-200">
+                          <p className="font-semibold">Commercial :</p>
+                          <p>{facture.user.firstName} {facture.user.lastName}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-
-
-                </div>
-
-                {/* Order Details Section */}
                 <div className="mb-2">
-                  <h2 className="text-sm font-bold text-gray-800 mb-1">3️⃣ Détails du bon de commande</h2>
+                  <h2 className="text-sm font-bold text-gray-800 mb-1">3️⃣ Détails du bon pour accord</h2>
                   <Table className="rounded-lg overflow-hidden text-xs">
                     <TableHeader>
                       <TableRow className="bg-blue-100 border-b-2 border-blue-600">
@@ -704,8 +645,7 @@ export default function Page() {
                                   montant_ligne: factureItem.montant_ht,
                                   transmission: "",
                                   motorisation: "",
-                                  voitureModel:
-                                    factureItem.voiture?.voitureModel || null,
+                                  voitureModel: factureItem.voiture?.voitureModel || null,
                                 },
                               ];
 
@@ -718,9 +658,7 @@ export default function Page() {
                                 : "bg-orange-50 hover:bg-orange-100 border-b border-orange-200"
                             }
                           >
-                            <TableCell className="text-black font-semibold text-center">
-                              {index + 1}
-                            </TableCell>
+                            <TableCell className="text-black font-semibold text-center">{index + 1}</TableCell>
                             <TableCell className="text-black">
                               <div className="flex gap-3">
                                 {ligne.voitureModel?.image ? (
@@ -740,38 +678,26 @@ export default function Page() {
                                     </p>
                                   )}
                                   <div className="flex gap-y-2">
-
-                                  {ligne.couleur && (
-                                    <p className="text-[8px] font-normal text-blue-700 mr-2">
-                                     <b className="font-semibold mr-1"> 
-                                      Couleur: 
-                                      </b> 
-                                       {ligne.couleur} /
-                                    </p>
-                                  )}
-                                  {ligne.transmission && (
-                                    <p className="text-[8px] font-normal text-blue-700 mr-2">
-                                      <b className="font-semibold mr-1"> 
-                                      Transmission: 
-                                      </b> 
-                                       {ligne.transmission} /
-                                    </p>
-                                  )}
-                                  {ligne.motorisation && (
-                                    <p className="text-[8px] font-normal text-blue-700">
-                                      <b className="font-semibold mr-1"> 
-                                      Motorisation: 
-                                      </b> 
-                                       {ligne.motorisation} /
-                                    </p>
-                                  )}
+                                    {ligne.couleur && (
+                                      <p className="text-[8px] font-normal text-blue-700 mr-2">
+                                        <b className="font-semibold mr-1">Couleur:</b> {ligne.couleur} /
+                                      </p>
+                                    )}
+                                    {ligne.transmission && (
+                                      <p className="text-[8px] font-normal text-blue-700 mr-2">
+                                        <b className="font-semibold mr-1">Transmission:</b> {ligne.transmission} /
+                                      </p>
+                                    )}
+                                    {ligne.motorisation && (
+                                      <p className="text-[8px] font-normal text-blue-700">
+                                        <b className="font-semibold mr-1">Motorisation:</b> {ligne.motorisation} /
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-black text-center text-sm">
-                              {ligne.nbr_voiture}
-                            </TableCell>
+                            <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
                             <TableCell className="text-right text-black text-sm">
                               {formatNumberWithSpaces(Number(ligne.prix_unitaire))}
                             </TableCell>
@@ -782,7 +708,6 @@ export default function Page() {
                         ));
                       })}
 
-                      {/* Accessories */}
                       {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => (
                         <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
                           <TableCell className="text-black font-semibold text-center">
@@ -809,9 +734,7 @@ export default function Page() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-black text-center text-xs">
-                            {accessoire.quantity || 1}
-                          </TableCell>
+                          <TableCell className="text-black text-center text-xs">{accessoire.quantity || 1}</TableCell>
                           <TableCell className="text-right text-black text-xs">
                             {formatNumberWithSpaces(accessoire.prix)}
                           </TableCell>
@@ -820,8 +743,7 @@ export default function Page() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      
-                      {/* Legacy single accessoire support */}
+
                       {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
                         <TableRow className="bg-white border-b border-orange-200">
                           <TableCell className="text-black font-semibold text-center">
@@ -834,11 +756,7 @@ export default function Page() {
                                   facture.accessoire_nom,
                                   accessoires as Array<{ id: string; nom: string; image?: string | null }>
                                 );
-                                
-                                if (!imagePath) {
-                                  return null;
-                                }
-                                
+                                if (!imagePath) return null;
                                 return (
                                   <Image
                                     src={imagePath}
@@ -859,19 +777,14 @@ export default function Page() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-black text-center text-sm">
-                            {facture.accessoire_nbr || 1}
-                          </TableCell>
+                          <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">
-                            {(
-                              (facture.accessoire_prix || 0) /
-                              (facture.accessoire_nbr || 1)
-                            )
+                            {((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1))
                               .toLocaleString()
                               .replace(/,/g, " ")}
                           </TableCell>
                           <TableCell className="text-black text-right text-sm">
-                            {formatNumberWithSpaces((facture.accessoire_prix || 0))}
+                            {formatNumberWithSpaces(facture.accessoire_prix || 0)}
                           </TableCell>
                         </TableRow>
                       )}
@@ -905,12 +818,11 @@ export default function Page() {
                   </Table>
                 </div>
 
-                {/* Order Conditions Section */}
                 <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-2">
                   <h2 className="text-sm font-bold text-gray-800 mb-3">4️⃣ Conditions de commande</h2>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex gap-2">
-                      <p className="font-semibold">Date du bon de commande :</p>
+                      <p className="font-semibold">Date du bon pour accord :</p>
                       <p>{formatDateDDMMYYYY(facture.date_facture)}</p>
                     </div>
                     <div className="flex gap-2">
@@ -935,26 +847,25 @@ export default function Page() {
                     </div>
                   </div>
                   <div className="mt-3 p-2 bg-green-50 border border-green-300 rounded">
-                    <p className="text-xs"><span className="font-bold">Remarque :</span> Ce bon de commande vaut engagement d&apos;achat ferme une fois signé par le client.</p>
+                    <p className="text-xs">
+                      <span className="font-bold">Remarque :</span> Ce bon pour accord vaut engagement d&apos;achat ferme une fois signé par le client.
+                    </p>
                   </div>
                 </div>
 
-                {/* Signatures Section */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <div className="border-2 border-gray-400 rounded-lg p-2">
                     <h3 className="text-xs font-bold text-black mb-2">Direction</h3>
                     <div className="space-y-2">
-                      <div className="flex gap-2 items-center text-white">
+                      <div className="flex gap-2 items-center">
                         <p className="text-xs font-semibold mb-1">Nom :</p>
-                        <p className="text-white">{facture.user?.firstName} {facture.user?.lastName}</p>
+                        <p className="text-black">{facture.user?.firstName} {facture.user?.lastName}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
-                        
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Cachet :</p>
-                        
                       </div>
                     </div>
                   </div>
@@ -963,21 +874,18 @@ export default function Page() {
                     <div className="space-y-2">
                       <div className="flex gap-2 items-center">
                         <p className="text-xs font-semibold mb-1">Nom :</p>
-                        <p className="text-black">{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
+                        <p className="text-black">{facture.clientEntreprise?.nom_entreprise}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
-                        
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Cachet :</p>
-                        
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex flex-col items-center w-full justify-center bg-blue-50 rounded-b-lg text-xs border-t-2 border-orange-800 text-black p-4 mt-4">
                   <p className="font-thin text-center">
                     Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
@@ -994,14 +902,13 @@ export default function Page() {
               </div>
             ))}
 
-            {factures.length === 0 && (
+            {filteredFactures.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-lg text-gray-600">Aucun bon de commande trouvé</p>
+                <p className="text-lg text-gray-600">Aucun bon pour accord trouvé (tous les bons des commerciaux)</p>
               </div>
             )}
           </div>
 
-          {/* Bottom Pagination Controls */}
           <div className="flex justify-center items-center gap-4 mt-6 print-hide">
             <Button
               onClick={goToPrevPage}
@@ -1013,28 +920,26 @@ export default function Page() {
             </Button>
 
             <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (pageNum) => (
-                  <div
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        setCurrentPage(pageNum);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
-                      currentPage === pageNum
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {pageNum}
-                  </div>
-                )
-              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <div
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setCurrentPage(pageNum);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
+                    currentPage === pageNum
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {pageNum}
+                </div>
+              ))}
             </div>
 
             <Button
