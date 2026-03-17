@@ -489,6 +489,7 @@ model Facture {
   accessoire_prix        Decimal?
   accessoire_subtotal    Decimal?
   bon_pour_acquis        Boolean            @default(false)
+  notes_proforma         String?
   Accessoire             Accessoire[]
   BonDeCommande          BonDeCommande?
   BonPourAccord         BonPourAccord?

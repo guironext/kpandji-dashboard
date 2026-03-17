@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +116,23 @@ export default function CalendrierSortiePage() {
   );
   const events: CalendarEvent[] = filteredReservations.map(reservationToEvent);
   const todayCount = countTodayEvents(events);
+
+  const prevEventsDigestRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const digest = events.map((e) => `${e.id}:${e.resource.statut}`).join("|");
+    if (prevEventsDigestRef.current === null) {
+      prevEventsDigestRef.current = digest;
+      return;
+    }
+    if (prevEventsDigestRef.current !== digest) {
+      prevEventsDigestRef.current = digest;
+      toast.info("Calendrier mis à jour", {
+        position: "top-center",
+        description: `${events.length} réservation${events.length !== 1 ? "s" : ""} affichée${events.length !== 1 ? "s" : ""}`,
+      });
+    }
+  }, [events]);
 
   if (!isLoaded || loading) {
     return (

@@ -1680,7 +1680,7 @@ const ProspectsPage = () => {
 							<div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
 								<User className="h-5 w-5 text-blue-600" />
 							</div>
-							<span className="text-xl font-semibold">Modifier le client</span>
+							<span className="text-xl font-semibold">Modifier le Prospect</span>
 						</DialogTitle>
 					</DialogHeader>
 
@@ -1689,7 +1689,7 @@ const ProspectsPage = () => {
 						<div className="space-y-4">
 							<h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
 								<User className="h-5 w-5 text-blue-600" />
-								Informations du client
+								Informations du Prospect
 							</h3>
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">

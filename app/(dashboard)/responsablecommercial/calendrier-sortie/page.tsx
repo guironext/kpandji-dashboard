@@ -61,11 +61,18 @@ const CalendrierSortieCalendar = dynamic(
   }
 );
 
-const CALENDAR_STATUTS = [
+const CALENDAR_STATUTS_DEFAULT = [
   "EN_ATTENTE",
   "CONFIRME",
   "DEPLACE",
   "EN_COURS",
+] as const;
+
+const STATUT_BADGES = [
+  { value: "EN_ATTENTE", label: "En attente", className: "bg-amber-100 text-amber-800" },
+  { value: "CONFIRME", label: "Confirmé", className: "bg-blue-100 text-blue-800" },
+  { value: "DEPLACE", label: "Déplacé", className: "bg-orange-100 text-orange-800" },
+  { value: "EN_COURS", label: "En cours", className: "bg-indigo-100 text-indigo-800" },
 ] as const;
 
 function getClientOrCompanyName(rv: ReservationVehicule): string | null {
@@ -125,6 +132,35 @@ export default function CalendrierSortiePage() {
   const [editAccompagnant, setEditAccompagnant] = useState("");
   const [editCoutTransport, setEditCoutTransport] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [calendarStatuts, setCalendarStatuts] = useState<string[]>(
+    [...CALENDAR_STATUTS_DEFAULT]
+  );
+  const isInitialMount = React.useRef(true);
+
+  const toggleStatut = useCallback((statut: string) => {
+    setCalendarStatuts((prev) =>
+      prev.includes(statut)
+        ? prev.filter((s) => s !== statut)
+        : [...prev, statut]
+    );
+  }, []);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const count = calendarStatuts.length;
+    const labels = STATUT_BADGES.filter((b) => calendarStatuts.includes(b.value))
+      .map((b) => b.label)
+      .join(", ");
+    toast.info(
+      count > 0
+        ? `Filtre mis à jour : ${labels}`
+        : "Aucun statut sélectionné — toutes les réservations sont masquées",
+      { position: "top-center" }
+    );
+  }, [calendarStatuts]);
 
   const fetchReservations = useCallback(async () => {
     if (!user?.id) return;
@@ -208,7 +244,7 @@ export default function CalendrierSortiePage() {
   };
 
   const filteredByStatut = reservations.filter((r) =>
-    CALENDAR_STATUTS.includes(r.statut as (typeof CALENDAR_STATUTS)[number])
+    calendarStatuts.includes(r.statut)
   );
 
   const uniqueUsers = Array.from(
@@ -317,11 +353,24 @@ export default function CalendrierSortiePage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap text-xs">
-                  <span className="text-stone-500 font-medium">Statuts :</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">En attente</span>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">Confirmé</span>
-                  <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">Déplacé</span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">En cours</span>
+                  <span className="text-stone-500 font-medium">Statuts (cliquez pour filtrer) :</span>
+                  {STATUT_BADGES.map((badge) => {
+                    const isActive = calendarStatuts.includes(badge.value);
+                    return (
+                      <button
+                        key={badge.value}
+                        type="button"
+                        onClick={() => toggleStatut(badge.value)}
+                        className={`px-2 py-0.5 rounded-full transition-all cursor-pointer border ${
+                          isActive
+                            ? `${badge.className} border-transparent`
+                            : "bg-stone-100 text-stone-400 border-stone-200 hover:bg-stone-200 hover:text-stone-500"
+                        }`}
+                      >
+                        {badge.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

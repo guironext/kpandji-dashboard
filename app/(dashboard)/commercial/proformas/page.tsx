@@ -14,8 +14,25 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
-import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
+import { getFacturesByUser, deleteFacture, updateProformaNotes } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getUserSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
@@ -75,6 +92,15 @@ const escapeHtml = (value?: string | null) => {
 };
 
 const escapeAttr = (value?: string | null) => escapeHtml(value);
+
+// Currency conversion: 1 unit of target = rate CFA (e.g. 1 USD = 600 CFA)
+const CURRENCIES = [
+  { code: "XOF", label: "Francs CFA (FCFA)", rate: 1, symbol: "FCFA" },
+  { code: "USD", label: "Dollars américains (USD)", rate: 600, symbol: "USD" },
+  { code: "EUR", label: "Euros (EUR)", rate: 655, symbol: "EUR" },
+  { code: "GBP", label: "Livres sterling (GBP)", rate: 760, symbol: "GBP" },
+  { code: "CNY", label: "Yuan chinois (CNY)", rate: 85, symbol: "CNY" },
+] as const;
 
 type Facture = {
   id: string;
@@ -149,6 +175,7 @@ type Facture = {
     email: string;
     telephone?: string;
   } | null;
+  notes_proforma?: string | null;
 };
 
 function getAccessoireImage(
@@ -186,7 +213,27 @@ export default function Page() {
   const [showSignature, setShowSignature] = useState(false);
   const [editedAmountTexts, setEditedAmountTexts] = useState<Record<string, string>>({});
   const [editingAmountText, setEditingAmountText] = useState<string | null>(null);
+  const [notesProforma, setNotesProforma] = useState<Record<string, string>>({});
+  const [savingNotes, setSavingNotes] = useState<string | null>(null);
+  const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<{ code: string; rate: number; symbol: string }>({ code: "XOF", rate: 1, symbol: "FCFA" });
+  const [customExchangeRate, setCustomExchangeRate] = useState<string>("");
+  const [currencyDialogSelection, setCurrencyDialogSelection] = useState("XOF");
   const paginationScrollRef = useRef<HTMLDivElement>(null);
+
+  const convertAmount = (amountCfa: number): number => {
+    if (selectedCurrency.code === "XOF") return amountCfa;
+    const rate = customExchangeRate ? parseFloat(customExchangeRate) : selectedCurrency.rate;
+    if (!rate || isNaN(rate) || rate <= 0) return amountCfa;
+    return amountCfa / rate;
+  };
+
+  const formatAmount = (amountCfa: number): string => {
+    const converted = convertAmount(amountCfa);
+    return formatNumberWithSpaces(Math.round(converted * 100) / 100);
+  };
+
+  const getCurrencyLabel = () => selectedCurrency.symbol;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -276,8 +323,8 @@ export default function Page() {
             ${colorInfo}
           </td>
           <td style="padding: 5px; text-align: center; font-size: 13px;">${ligne.nbr_voiture}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatNumberWithSpaces(Number(ligne.prix_unitaire))}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatNumberWithSpaces(Number(ligne.montant_ligne))}</td>
+          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(Number(ligne.prix_unitaire))}</td>
+          <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatAmount(Number(ligne.montant_ligne))}</td>
         </tr>
       `;
     }).join('');
@@ -302,8 +349,8 @@ export default function Page() {
               ${accessoire.description ? `<div style="font-size: 8px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
             </td>
             <td style="padding: 5px; text-align: center; font-size: 13px;">${accessoire.quantity || 1}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px;">${formatNumberWithSpaces(accessoirePrix)}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatNumberWithSpaces(accessoirePrix * (accessoire.quantity || 1))}</td>
+            <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(accessoirePrix)}</td>
+            <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatAmount(accessoirePrix * (accessoire.quantity || 1))}</td>
           </tr>
         `;
       }).join('');
@@ -324,8 +371,8 @@ export default function Page() {
             ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
           </td>
           <td style="padding: 5px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px;">${((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px; white-space: nowrap;">${(currentFacture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</td>
+          <td style="padding: 5px; text-align: right; font-size: 14px;">${formatAmount((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1))}</td>
+          <td style="padding: 5px; text-align: right; font-size: 14px; white-space: nowrap;">${formatAmount(currentFacture.accessoire_prix || 0)}</td>
         </tr>
       `;
     }
@@ -800,8 +847,8 @@ export default function Page() {
                     <th>Véhicule</th>
                     <th>Description</th>
                     <th class="text-center">Quantité</th>
-                    <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT</th>
-                    <th class="text-right" style="white-space: nowrap;">Total HT FCFA</th>
+                    <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT (${getCurrencyLabel()})</th>
+                    <th class="text-right" style="white-space: nowrap;">Total HT (${getCurrencyLabel()})</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -812,38 +859,38 @@ export default function Page() {
                   <tr>
                     <td colspan="4"></td>
                     <td class="text-right" style="font-weight: 600;">Total HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ht)}</td>
+                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.total_ht)}</td>
                   </tr>
                   ${currentFacture.remise !== 0 ? `
                   <tr>
                     <td colspan="4"></td>
                     <td class="text-right">Remise (${currentFacture.remise}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_remise)}</td>
+                    <td class="text-right" style="white-space: nowrap;">${formatAmount(currentFacture.montant_remise)}</td>
                   </tr>
                   <tr>
                     <td colspan="4"></td>
                     <td class="text-right" style="font-weight: 600;">Montant Net HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_net_ht)}</td>
+                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.montant_net_ht)}</td>
                   </tr>
                   ` : ''}
                   <tr>
                     <td colspan="4"></td>
                     <td class="text-right">TVA(${currentFacture.tva}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatNumberWithSpaces(currentFacture.montant_tva)}</td>
+                    <td class="text-right" style="white-space: nowrap;">${formatAmount(currentFacture.montant_tva)}</td>
                   </tr>
                   <tr class="total-row">
                     <td colspan="4"></td>
                     <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatNumberWithSpaces(currentFacture.total_ttc)}</td>
+                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.total_ttc)}</td>
                   </tr>
                 </tfoot>
               </table>
 
               <div class="amount-text">
                 Arrêter la présente facture à la somme de <span>${(() => {
-                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(currentFacture.total_ttc || 0));
+                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(convertAmount(currentFacture.total_ttc || 0)));
                   return escapeHtml(amountText);
-                })()} francs CFA</span>
+                })()} ${getCurrencyLabel()}</span>
               </div>
 
               <div class="signature-section">
@@ -856,6 +903,10 @@ export default function Page() {
 
               <div class="notes-section">
                 <p class="notes-title">Notes</p>
+                ${(() => {
+                  const notes = notesProforma?.[currentFacture.id] ?? currentFacture.notes_proforma ?? "";
+                  return notes ? `<p style="font-weight: 500; margin-bottom: 8px; white-space: pre-wrap;">${escapeHtml(notes)}</p>` : "";
+                })()}
                 <p style="font-weight: 500;">date d'échéance: ${dateEcheance}</p>
               </div>
             </div>
@@ -995,9 +1046,80 @@ export default function Page() {
     }
   };
 
+  const handleConvertCurrency = () => {
+    setCurrencyDialogSelection(selectedCurrency.code);
+    setShowCurrencyDialog(true);
+  };
+
+  const handleApplyCurrency = () => {
+    const curr = CURRENCIES.find((c) => c.code === currencyDialogSelection);
+    if (!curr) return;
+    const rate = customExchangeRate ? parseFloat(customExchangeRate) : curr.rate;
+    if (curr.code !== "XOF" && (!rate || isNaN(rate) || rate <= 0)) {
+      toast.error("Veuillez entrer un taux de change valide (1 " + curr.symbol + " = X FCFA)");
+      return;
+    }
+    setSelectedCurrency({ code: curr.code, rate: curr.code === "XOF" ? 1 : rate, symbol: curr.symbol });
+    setCustomExchangeRate("");
+    setShowCurrencyDialog(false);
+    toast.success(curr.code === "XOF" ? "Affichage en Francs CFA" : `Devise changée en ${curr.label}`);
+  };
+
   return (
     <>
-     
+      <Dialog open={showCurrencyDialog} onOpenChange={setShowCurrencyDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Convertir les montants</DialogTitle>
+            <DialogDescription>
+              Choisissez une devise pour afficher les montants. Les montants sont convertis depuis les Francs CFA (FCFA).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label>Devise</Label>
+              <Select value={currencyDialogSelection} onValueChange={setCurrencyDialogSelection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une devise" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.label} {c.code !== "XOF" && `(1 ${c.symbol} ≈ ${c.rate} FCFA)`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {currencyDialogSelection !== "XOF" && (
+              <div className="flex flex-col gap-2">
+                <Label>Taux personnalisé (optionnel)</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">1 {CURRENCIES.find((c) => c.code === currencyDialogSelection)?.symbol} =</span>
+                  <Input
+                    type="number"
+                    placeholder={String(CURRENCIES.find((c) => c.code === currencyDialogSelection)?.rate || "")}
+                    value={customExchangeRate}
+                    onChange={(e) => setCustomExchangeRate(e.target.value)}
+                    min={0}
+                    step={0.01}
+                    className="w-28"
+                  />
+                  <span className="text-sm text-muted-foreground">FCFA</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCurrencyDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleApplyCurrency} className="bg-amber-600 hover:bg-amber-700 text-black">
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-2">
@@ -1019,8 +1141,18 @@ export default function Page() {
               </Button>
               <Button onClick={handleSignature} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
                 {showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
-              </Button>
+              </Button >
             </div>
+              <Button 
+              onClick={handleConvertCurrency}
+              className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
+                <span className="text-white">Convertir Devise</span>
+                {selectedCurrency.code !== "XOF" && (
+                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 text-xs">
+                    {selectedCurrency.symbol}
+                  </span>
+                )}
+              </Button>
           </div>
 
           <div id="printable-area">
@@ -1102,8 +1234,8 @@ export default function Page() {
                         <TableHead className="text-black font-bold">Véhicule</TableHead>
                         <TableHead className="text-black font-bold">Description</TableHead>
                         <TableHead className="text-black font-bold text-center">Quantité</TableHead>
-                        <TableHead className="text-black font-bold text-right no-wrap">Prix Unitaire HT FCFA</TableHead>
-                        <TableHead className="text-right text-black font-bold no-wrap">Total HT FCFA</TableHead>
+                        <TableHead className="text-black font-bold text-right no-wrap">Prix Unitaire HT ({getCurrencyLabel()})</TableHead>
+                        <TableHead className="text-right text-black font-bold no-wrap">Total HT ({getCurrencyLabel()})</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1149,8 +1281,8 @@ export default function Page() {
                               )}
                             </TableCell>
                             <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
-                            <TableCell className="text-right text-black text-sm no-wrap">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
-                            <TableCell className="text-black text-right text-sm pr-6 no-wrap">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
+                            <TableCell className="text-right text-black text-sm no-wrap">{formatAmount(Number(ligne.prix_unitaire))}</TableCell>
+                            <TableCell className="text-black text-right text-sm pr-6 no-wrap">{formatAmount(Number(ligne.montant_ligne))}</TableCell>
                           </TableRow>
                         ));
                       })}
@@ -1189,10 +1321,10 @@ export default function Page() {
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
                           <TableCell className="text-right text-black text-sm">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires))}
+                            {formatAmount(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires))}
                           </TableCell>
                           <TableCell className="text-black text-right text-sm pr-6">
-                            {formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires) * (accessoire.quantity || 1))}
+                            {formatAmount(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires) * (accessoire.quantity || 1))}
                           </TableCell>
                         </TableRow>
                       );
@@ -1223,8 +1355,8 @@ export default function Page() {
                             {facture.accessoire_description && <p className="text-[7px] font-normal text-black max-w-80 text-wrap">{facture.accessoire_description}</p>}
                           </TableCell>
                           <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
-                          <TableCell className="text-right text-black text-sm">{((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</TableCell>
-                          <TableCell className="text-black text-right text-sm pr-6">{(facture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</TableCell>
+                          <TableCell className="text-right text-black text-sm">{formatAmount((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1))}</TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">{formatAmount(facture.accessoire_prix || 0)}</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
@@ -1232,32 +1364,32 @@ export default function Page() {
                       <TableRow className="bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.total_ht)}</TableCell>
                       </TableRow>
                       {facture.remise !== 0 && (      
                       <TableRow className="bg-white">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.montant_remise)}</TableCell>
                       </TableRow>
                       )}
                       {facture.remise !== 0 && (
                       <TableRow className="bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">Montant Net HT</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.montant_net_ht)}</TableCell>
                       </TableRow>
                       )}
                       <TableRow className="bg-white">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black">TVA({facture.tva}%)</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_tva)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.montant_tva)}</TableCell>
                       </TableRow>
                       
                       <TableRow className="text-sm bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ttc)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.total_ttc)}</TableCell>
                       </TableRow>
                     </TableFooter>
                   </Table>
@@ -1270,7 +1402,7 @@ export default function Page() {
                       {editingAmountText === facture.id ? (
                         <div className="flex items-center gap-2 flex-1 min-w-[300px]">
                           <Input
-                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))}
+                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))}
                             onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
                             className="flex-1 text-sm font-semibold"
                             placeholder="Saisir la somme en lettres"
@@ -1294,7 +1426,7 @@ export default function Page() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">
-                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))} francs CFA
+                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))} {getCurrencyLabel()}
                           </span>
                           <Button
                             size="sm"
@@ -1304,7 +1436,7 @@ export default function Page() {
                               if (!editedAmountTexts[facture.id]) {
                                 setEditedAmountTexts({
                                   ...editedAmountTexts,
-                                  [facture.id]: numberToFrench(Math.floor(facture.total_ttc || 0))
+                                  [facture.id]: numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))
                                 });
                               }
                             }}
@@ -1318,7 +1450,38 @@ export default function Page() {
                   </div>
 
                   <div className="flex w-full justify-between mt-5 px-8">
-                    <div></div>
+                    <div className="flex flex-col gap-2 flex-1 max-w-md">
+                      <label className="text-sm font-medium text-gray-700">Notes / Commentaires</label>
+                      <Textarea
+                        value={notesProforma[facture.id] ?? facture.notes_proforma ?? ""}
+                        onChange={(e) => setNotesProforma((prev) => ({ ...prev, [facture.id]: e.target.value }))}
+                        placeholder="Ajouter des notes ou commentaires..."
+                        className="min-h-[80px] focus-visible:ring-amber-500 focus-visible:border-amber-500 print:border print:border-gray-400"
+                        rows={3}
+                      />
+                      <Button
+                        size="sm"
+                        className="w-fit bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold print-hide"
+                        disabled={savingNotes === facture.id}
+                        onClick={async () => {
+                          setSavingNotes(facture.id);
+                          const notes = notesProforma[facture.id] ?? facture.notes_proforma ?? "";
+                          const result = await updateProformaNotes(facture.id, notes);
+                          setSavingNotes(null);
+                          if (result.success) {
+                            toast.success("Notes enregistrées");
+                            const updatedFactures = await getFacturesByUser(clerkId!);
+                            if (updatedFactures.success && updatedFactures.data) {
+                              setFactures(updatedFactures.data as unknown as Facture[]);
+                            }
+                          } else {
+                            toast.error(result.error || "Erreur lors de l'enregistrement des notes");
+                          }
+                        }}
+                      >
+                        {savingNotes === facture.id ? "Enregistrement..." : "Enregistrer les notes"}
+                      </Button>
+                    </div>
                     <div className="flex flex-col items-center gap-4">
                       <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
                       {showSignature && signatureImage && (

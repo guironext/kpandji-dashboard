@@ -50,6 +50,7 @@ function serializeFacture(facture: unknown) {
       ? Number(f.accessoire_subtotal)
       : null,
     bon_pour_acquis: (f.bon_pour_acquis as boolean) ?? false,
+    notes_proforma: (f.notes_proforma as string) || null,
     lignes: lignes.map((ligne) => ({
       ...ligne,
       prix_unitaire: ligne.prix_unitaire ? Number(ligne.prix_unitaire) : 0,
@@ -988,6 +989,22 @@ export async function updateFacture(
   } catch (error) {
     console.error("Error updating facture:", error);
     return { success: false, error: "Failed to update facture" };
+  }
+}
+
+export async function updateProformaNotes(factureId: string, notes: string) {
+  try {
+    await executeWithRetry(async () => {
+      await prisma.$executeRaw`
+        UPDATE "Facture" SET notes_proforma = ${notes || null}, "updatedAt" = NOW() WHERE id = ${factureId}
+      `;
+    });
+    revalidatePath("/commercial/proformas");
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error updating proforma notes:", error);
+    return { success: false, error: message };
   }
 }
 
