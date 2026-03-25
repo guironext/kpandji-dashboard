@@ -480,141 +480,148 @@ export default function Page() {
         }}
       />
 
-      <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
-        <div className="bg-white rounded-lg shadow-2xl px-4 py-8">
-          <div className="flex w-full justify-between mb-6 print-hide">
-            <div className="flex gap-4">
+      <div className="flex flex-col w-full min-w-0 max-w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <div className="bg-white rounded-lg shadow-2xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 min-w-0">
+          <div className="flex flex-col gap-4 mb-6 print-hide sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <Button
                 onClick={handleDelete}
                 disabled={currentData.length === 0}
-                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 SUPPRIMER
               </Button>
               <Button
                 onClick={handleGenerateNumero}
                 disabled={!!numero}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 GÉNÉRER NUMÉRO
               </Button>
               <Button
                 onClick={() => setShowApportInitial(true)}
                 disabled={showApportInitial}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
                 Apport Initial
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={handleExportToWord}
                 disabled={currentData.length === 0}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
-                <FileDown className="w-5 h-5 mr-2" />
-                EXPORT TO WORD
+                <FileDown className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 shrink-0" />
+                EXPORT<span className="hidden sm:inline"> TO WORD</span>
               </Button>
               <Button
                 onClick={handlePrint}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
               >
-                <Printer className="w-5 h-5 mr-2" />
+                <Printer className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 shrink-0" />
                 IMPRIMER
               </Button>
             </div>
           </div>
 
-          <div id="printable-area">
-            <div className="flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3">
-              <div>
-                <Image
+          <div id="printable-area" className="min-w-0">
+            <div className="flex w-full flex-col gap-3 border-b-2 border-orange-800 pb-4 mb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative shrink-0 min-h-[40px] min-w-[48px]">
+                {/* eslint-disable-next-line @next/next/no-img-element -- public/logo.png */}
+                <img
                   src="/logo.png"
-                  alt="Logo"
-                  width={60}
-                  height={30}
-                  priority
+                  alt="KPANDJI AUTOMOBILES"
+                  width={120}
+                  height={60}
+                  loading="eager"
+                  decoding="async"
+                  className="block object-contain object-left"
+                  style={{ height: "clamp(40px, 8vw, 52px)", width: "auto", maxWidth: "140px" }}
                 />
               </div>
-              <div className="flex flex-col justify-center -mb-10">
-                <h1 className="text-2xl font-bold text-orange-900">
+              <div className="flex flex-col justify-center sm:-mb-10 sm:text-right">
+                <h1 className="text-lg font-bold text-orange-900 sm:text-2xl">
                   KPANDJI AUTOMOBILES
                 </h1>
-                <p className="text-sm text-black font-normal">
+                <p className="text-xs text-black font-normal sm:text-sm">
                   Constructeur et Assembleur Automobile
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-between items-center">
-              <div></div>
-              <div className="flex flex-col items-center justify-center ">
-                <h1 className="text-xl font-bold text-orange-800 border-2 border-black px-4 py-2 rounded-lg shadow-lg">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="hidden sm:block sm:w-24 shrink-0" aria-hidden />
+              <div className="flex flex-col items-center justify-center order-first sm:order-none">
+                <h1 className="text-base font-bold text-orange-800 border-2 border-black px-3 py-2 rounded-lg shadow-lg sm:text-xl sm:px-4">
                   BON POUR ACCORD
                 </h1>
                 {showApportInitial && (
-                  <h1 className="text-sm font-bold text-black py-2">En Apport Initial 60% du Montant Total TTC</h1>
+                  <p className="mt-2 text-center text-xs font-bold text-black sm:text-sm">
+                    En Apport Initial 60% du Montant Total TTC
+                  </p>
                 )}
               </div>
-              <div className="flex justify-end ">
-                <div className="flex gap-2 items-center">
-                  <h1 className="text-xl font-bold text-orange-800 ">NUMERO:</h1>
-                  <h1 className="text-lg font-bold text-black ">{numero || "______"}</h1>
+              <div className="flex w-full justify-center sm:w-auto sm:justify-end sm:shrink-0">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+                  <span className="text-base font-bold text-orange-800 sm:text-xl">NUMERO:</span>
+                  <span className="text-base font-bold text-black sm:text-lg break-all">{numero || "______"}</span>
                 </div>
               </div>
             </div>
 
             {currentData.map((facture: Facture) => (
               <div key={facture.id}>
-                <div className="w-full flex items-center justify-between">
-                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2 ">
-                    <h2 className="text-sm font-bold text-blue-800 mb-3">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
-                    <div className="grid grid-cols-1 gap-2 text-xs">
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Entreprise :</p>
-                        <p>KPANDJI AUTOMOBILES</p>
+                <div className="mt-4 flex w-full flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-4">
+                  <div className="min-w-0 flex-1 bg-blue-50 border-2 border-blue-300 rounded-lg p-2 sm:p-3">
+                    <h2 className="text-xs font-bold text-blue-800 mb-3 sm:text-sm">1️⃣ Informations de l&apos;entreprise (fournisseur)</h2>
+                    <div className="grid grid-cols-1 gap-2 text-[11px] sm:text-xs">
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Entreprise :</p>
+                        <p className="min-w-0 break-words">KPANDJI AUTOMOBILES</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Adresse :</p>
-                        <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Adresse :</p>
+                        <p className="min-w-0 break-words">Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Téléphone :</p>
-                        <p>+225 01 01 04 77 03</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Téléphone :</p>
+                        <p className="min-w-0 break-words">+225 01 01 04 77 03</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Email :</p>
-                        <p>info@kpandji.com</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Email :</p>
+                        <p className="min-w-0 break-all">info@kpandji.com</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 ">
-                    <h2 className="text-sm font-bold text-orange-800 mb-3">2️⃣ Informations du client</h2>
-                    <div className="grid grid-cols-1 gap-2 text-xs">
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Nom du client / Entreprise :</p>
-                        <p>{facture.clientEntreprise?.nom_entreprise}</p>
+                  <div className="min-w-0 flex-1 bg-orange-50 border-2 border-orange-300 rounded-lg p-3 sm:p-4">
+                    <h2 className="text-xs font-bold text-orange-800 mb-3 sm:text-sm">2️⃣ Informations du client</h2>
+                    <div className="grid grid-cols-1 gap-2 text-[11px] sm:text-xs">
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Nom du client / Entreprise :</p>
+                        <p className="min-w-0 break-words">{facture.clientEntreprise?.nom_entreprise}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Téléphone :</p>
-                        <p>{facture.clientEntreprise?.telephone}</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Téléphone :</p>
+                        <p className="min-w-0 break-words">{facture.clientEntreprise?.telephone}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Email :</p>
-                        <p>{facture.clientEntreprise?.email || "__________________________"}</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Email :</p>
+                        <p className="min-w-0 break-all">{facture.clientEntreprise?.email || "__________________________"}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <p className="font-semibold">Adresse :</p>
-                        <p>{facture.clientEntreprise?.localisation || "_________________________________________"}</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                        <p className="shrink-0 font-semibold">Adresse :</p>
+                        <p className="min-w-0 break-words">{facture.clientEntreprise?.localisation || "_________________________________________"}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-2">
-                  <h2 className="text-sm font-bold text-gray-800 mb-1">3️⃣ Détails du bon pour accord</h2>
-                  <Table className="rounded-lg overflow-hidden text-xs">
+                <div className="mb-2 min-w-0">
+                  <h2 className="text-xs font-bold text-gray-800 mb-2 sm:text-sm">3️⃣ Détails du bon pour accord</h2>
+                  <div className="-mx-1 overflow-x-auto rounded-lg border border-transparent px-1 sm:mx-0 sm:px-0">
+                  <Table className="w-full min-w-[600px] rounded-lg overflow-hidden text-[10px] sm:text-xs lg:min-w-0">
                     <TableHeader>
                       <TableRow className="bg-blue-100 border-b-2 border-blue-600">
                         <TableHead className="text-black font-bold text-center">N°</TableHead>
@@ -653,21 +660,21 @@ export default function Page() {
                             }
                           >
                             <TableCell className="text-black font-semibold text-center">{index + 1}</TableCell>
-                            <TableCell className="text-black">
-                              <div className="flex gap-3">
+                            <TableCell className="text-black min-w-0">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                                 {ligne.voitureModel?.image ? (
                                   <Image
                                     src={ligne.voitureModel.image}
                                     alt={ligne.voitureModel.model || "Vehicle"}
                                     width={80}
                                     height={60}
-                                    className="object-contain rounded"
+                                    className="mx-auto h-auto w-16 shrink-0 object-contain rounded sm:mx-0 sm:w-20"
                                   />
                                 ) : null}
                                 <div className="flex flex-col gap-y-1">
                                   <p className="font-semibold">{ligne.voitureModel?.model || "N/A"}</p>
                                   {ligne.voitureModel?.description && (
-                                    <p className="text-[8px] text-wrap max-w-5xl font-normal text-black ">
+                                    <p className="text-[8px] text-wrap font-normal text-black sm:max-w-5xl">
                                       {ligne.voitureModel.description}
                                     </p>
                                   )}
@@ -707,15 +714,15 @@ export default function Page() {
                           <TableCell className="text-black font-semibold text-center">
                             {(facture.lignes ? facture.lignes.length : 0) + accIndex + 1}
                           </TableCell>
-                          <TableCell className="text-black">
-                            <div className="flex gap-3">
+                          <TableCell className="text-black min-w-0">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                               {accessoire.image ? (
                                 <Image
                                   src={accessoire.image}
                                   alt={accessoire.nom || "Accessoire"}
                                   width={80}
                                   height={60}
-                                  className="object-contain rounded"
+                                  className="mx-auto h-auto w-16 shrink-0 object-contain rounded sm:mx-0 sm:w-20"
                                 />
                               ) : null}
                               <div className="flex flex-col gap-y-1">
@@ -743,8 +750,8 @@ export default function Page() {
                           <TableCell className="text-black font-semibold text-center">
                             {facture.lignes ? facture.lignes.length + 1 : 1}
                           </TableCell>
-                          <TableCell className="text-black">
-                            <div className="flex gap-3">
+                          <TableCell className="text-black min-w-0">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                               {(() => {
                                 const imagePath = getAccessoireImage(
                                   facture.accessoire_nom,
@@ -757,7 +764,7 @@ export default function Page() {
                                     alt={facture.accessoire_nom || "Accessoire"}
                                     width={80}
                                     height={60}
-                                    className="object-contain rounded"
+                                    className="mx-auto h-auto w-16 shrink-0 object-contain rounded sm:mx-0 sm:w-20"
                                   />
                                 );
                               })()}
@@ -810,34 +817,35 @@ export default function Page() {
                       </TableRow>
                     </TableFooter>
                   </Table>
+                  </div>
                 </div>
 
-                <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-2">
-                  <h2 className="text-sm font-bold text-gray-800 mb-3">4️⃣ Conditions de commande</h2>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Date du bon pour accord :</p>
-                      <p>{formatDateDDMMYYYY(facture.date_facture)}</p>
+                <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-3 sm:p-4 mb-2">
+                  <h2 className="text-xs font-bold text-gray-800 mb-3 sm:text-sm">4️⃣ Conditions de commande</h2>
+                  <div className="grid grid-cols-1 gap-3 text-[11px] sm:grid-cols-2 sm:gap-2 sm:text-xs">
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                      <p className="shrink-0 font-semibold">Date du bon pour accord :</p>
+                      <p className="min-w-0 break-words">{formatDateDDMMYYYY(facture.date_facture)}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Date d&apos;échéance :</p>
-                      <p>{formatDateDDMMYYYY(facture.date_echeance)}</p>
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                      <p className="shrink-0 font-semibold">Date d&apos;échéance :</p>
+                      <p className="min-w-0 break-words">{formatDateDDMMYYYY(facture.date_echeance)}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Mode de paiement :</p>
-                      <p>Virement bancaire / Chèque / Cache</p>
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2 sm:col-span-2">
+                      <p className="shrink-0 font-semibold">Mode de paiement :</p>
+                      <p className="min-w-0 break-words">Virement bancaire / Chèque / Cache</p>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Délai de livraison :</p>
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                      <p className="shrink-0 font-semibold">Délai de livraison :</p>
                       <p>4 mois</p>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Lieu de livraison :</p>
-                      <p>KPANDJI Automobiles - Abidjan</p>
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2">
+                      <p className="shrink-0 font-semibold">Lieu de livraison :</p>
+                      <p className="min-w-0 break-words">KPANDJI Automobiles - Abidjan</p>
                     </div>
-                    <div className="flex gap-2">
-                      <p className="font-semibold">Validité :</p>
-                      <p>15 jours à compter de la date d&apos;émission</p>
+                    <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-2 sm:col-span-2">
+                      <p className="shrink-0 font-semibold">Validité :</p>
+                      <p className="min-w-0 break-words">15 jours à compter de la date d&apos;émission</p>
                     </div>
                   </div>
                   <div className="mt-3 p-2 bg-green-50 border border-green-300 rounded">
@@ -847,13 +855,13 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div className="border-2 border-gray-400 rounded-lg p-2">
+                <div className="grid grid-cols-1 gap-3 mb-2 sm:grid-cols-2 sm:gap-2">
+                  <div className="border-2 border-gray-400 rounded-lg p-2 sm:p-3">
                     <h3 className="text-xs font-bold text-black mb-2">Direction</h3>
                     <div className="space-y-2">
-                      <div className="flex gap-2 items-center text-white">
-                        <p className="text-xs font-semibold mb-1">Nom :</p>
-                        <p className="text-white">{facture.user?.firstName} {facture.user?.lastName}</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
+                        <p className="text-xs font-semibold">Nom :</p>
+                        <p className="text-xs text-black break-words">{facture.user?.firstName} {facture.user?.lastName}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
@@ -863,12 +871,12 @@ export default function Page() {
                       </div>
                     </div>
                   </div>
-                  <div className="border-2 border-gray-400 rounded-lg p-2">
+                  <div className="border-2 border-gray-400 rounded-lg p-2 sm:p-3">
                     <h3 className="text-xs font-bold text-black mb-2">Client</h3>
                     <div className="space-y-2">
-                      <div className="flex gap-2 items-center">
-                        <p className="text-xs font-semibold mb-1">Nom :</p>
-                        <p className="text-black">{facture.clientEntreprise?.nom_entreprise}</p>
+                      <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2">
+                        <p className="text-xs font-semibold">Nom :</p>
+                        <p className="text-xs text-black break-words">{facture.clientEntreprise?.nom_entreprise}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold mb-1">Signature :</p>
@@ -880,16 +888,16 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center w-full justify-center bg-blue-50 rounded-b-lg text-xs border-t-2 border-orange-800 text-black p-4 mt-4">
-                  <p className="font-thin text-center">
+                <div className="flex flex-col items-center w-full justify-center bg-blue-50 rounded-b-lg text-[10px] border-t-2 border-orange-800 text-black p-3 mt-4 sm:text-xs sm:p-4">
+                  <p className="max-w-prose font-thin text-center leading-relaxed px-1">
                     Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
                     Tel : 00225 01 01 04 77 03
                   </p>
-                  <p className="font-thin text-center">
+                  <p className="max-w-prose font-thin text-center leading-relaxed px-1">
                     Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC
                     :2213233 – ECOBANK : CI059 01046 121659429001 46
                   </p>
-                  <p className="font-thin text-center">
+                  <p className="max-w-prose font-thin text-center leading-relaxed px-1">
                     kpandjiautomobiles@gmail.com / www.kpandji.com
                   </p>
                 </div>
@@ -903,17 +911,18 @@ export default function Page() {
             )}
           </div>
 
-          <div className="flex justify-center items-center gap-4 mt-6 print-hide">
+          <div className="mt-6 flex flex-col items-stretch justify-center gap-4 print-hide sm:flex-row sm:flex-wrap sm:items-center">
             <Button
               onClick={goToPrevPage}
               disabled={currentPage === 1}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
+              className="order-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold sm:order-1"
             >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Page Précédente
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 shrink-0" />
+              <span className="hidden sm:inline">Page Précédente</span>
+              <span className="sm:hidden">Précédent</span>
             </Button>
 
-            <div className="flex items-center gap-2">
+            <div className="order-1 flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:order-2 sm:gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <div
                   key={pageNum}
@@ -925,7 +934,7 @@ export default function Page() {
                       setCurrentPage(pageNum);
                     }
                   }}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
+                  className={`min-w-[2.25rem] px-3 py-1.5 text-sm rounded-lg font-semibold transition-all cursor-pointer sm:px-4 sm:py-2 ${
                     currentPage === pageNum
                       ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -939,10 +948,11 @@ export default function Page() {
             <Button
               onClick={goToNextPage}
               disabled={currentPage === totalPages}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
+              className="order-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
             >
-              Page Suivante
-              <ChevronRight className="w-5 h-5 ml-2" />
+              <span className="hidden sm:inline">Page Suivante</span>
+              <span className="sm:hidden">Suivant</span>
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 shrink-0" />
             </Button>
           </div>
         </div>

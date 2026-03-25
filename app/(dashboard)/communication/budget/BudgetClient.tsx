@@ -47,6 +47,7 @@ import {
   DollarSign,
   AlertCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Fonction pour formater les nombres avec séparateurs de milliers (sans décimales)
 function formatNumber(num: number): string {
@@ -58,6 +59,7 @@ type Props = {
   initialItems: CommunicationBudgetItem[];
   selectedProjectId: string | null;
   error?: string | null;
+  embedded?: boolean;
 };
 
 export default function BudgetClient({
@@ -65,6 +67,7 @@ export default function BudgetClient({
   initialItems,
   selectedProjectId: initialProjectId,
   error,
+  embedded,
 }: Props) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     initialProjectId ?? (projects[0]?.id ?? null)
@@ -220,7 +223,8 @@ export default function BudgetClient({
   const total = items.reduce((sum, item) => sum + item.montant, 0);
 
   return (
-    <div className="space-y-8 p-6">
+    <div className={cn("space-y-8", embedded ? "p-4 sm:p-6" : "p-6")}>
+      {!embedded && (
       <div className="relative overflow-hidden rounded-2xl border bg-white/70 shadow-sm backdrop-blur">
         <div
           className="absolute inset-0 opacity-80"
@@ -253,6 +257,7 @@ export default function BudgetClient({
           </div>
         </div>
       </div>
+      )}
 
       {error && (
         <Card className="border-2 border-red-300 shadow-xl bg-white/90 backdrop-blur-sm">

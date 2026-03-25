@@ -522,48 +522,50 @@ export default function Page() {
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl px-4 py-8">
-          <div className="flex w-full justify-between mb-6 print-hide">
-            <div className="flex gap-4">
-              
-              <Button
-                onClick={handleDelete}
-                disabled={currentData.length === 0}
-                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                SUPPRIMER
-              </Button>
-              <Button
-                onClick={handleGenerateNumero}
-                disabled={!!numero}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                GÉNÉRER NUMÉRO
-              </Button>
-              <Button
-                onClick={() => setShowApportInitial(true)}
-                disabled={showApportInitial}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Apport Initial
-              </Button>
-
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleExportToWord}
-                disabled={currentData.length === 0}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileDown className="w-5 h-5 mr-2" />
-                EXPORT TO WORD
-              </Button>
-              <Button
-                onClick={handlePrint}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Printer className="w-5 h-5 mr-2" />
-                IMPRIMER
-              </Button>
+          <div className="mb-6 print-hide w-full min-w-0">
+            <div className="overflow-x-auto overscroll-x-contain pb-2 [-webkit-overflow-scrolling:touch] scroll-smooth">
+              <div className="flex flex-nowrap justify-between items-center gap-3 sm:gap-4 w-max max-w-none min-w-0">
+                <div className="flex gap-2 sm:gap-4 shrink-0">
+                  <Button
+                    onClick={handleDelete}
+                    disabled={currentData.length === 0}
+                    className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    SUPPRIMER
+                  </Button>
+                  <Button
+                    onClick={handleGenerateNumero}
+                    disabled={!!numero}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    GÉNÉRER NUMÉRO
+                  </Button>
+                  <Button
+                    onClick={() => setShowApportInitial(true)}
+                    disabled={showApportInitial}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    Apport Initial
+                  </Button>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    onClick={handleExportToWord}
+                    disabled={currentData.length === 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    <FileDown className="w-5 h-5 mr-2 shrink-0" />
+                    EXPORT TO WORD
+                  </Button>
+                  <Button
+                    onClick={handlePrint}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    <Printer className="w-5 h-5 mr-2 shrink-0" />
+                    IMPRIMER
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1001,50 +1003,54 @@ export default function Page() {
             )}
           </div>
 
-          {/* Bottom Pagination Controls */}
-          <div className="flex justify-center items-center gap-4 mt-6 print-hide">
-            <Button
-              onClick={goToPrevPage}
-              disabled={currentPage === 1}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Page Précédente
-            </Button>
+          {/* Bottom Pagination Controls — horizontal scroll when many pages */}
+          <div className="mt-6 print-hide w-full min-w-0">
+            <div className="overflow-x-auto overscroll-x-contain pb-2 [-webkit-overflow-scrolling:touch] scroll-smooth">
+              <div className="flex flex-nowrap justify-center items-center gap-3 sm:gap-4 w-max max-w-none mx-auto px-2">
+                <Button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-2" />
+                  Page Précédente
+                </Button>
 
-            <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (pageNum) => (
-                  <div
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        setCurrentPage(pageNum);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
-                      currentPage === pageNum
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {pageNum}
-                  </div>
-                )
-              )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <div
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            setCurrentPage(pageNum);
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer shrink-0 ${
+                          currentPage === pageNum
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        {pageNum}
+                      </div>
+                    )
+                  )}
+                </div>
+
+                <Button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
+                >
+                  Page Suivante
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+              </div>
             </div>
-
-            <Button
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
-            >
-              Page Suivante
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
           </div>
         </div>
       </div>

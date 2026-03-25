@@ -306,6 +306,71 @@
   border-radius: 3px;
 }
 
+/* Calendrier sortie — responsive toolbar & dense month on small screens */
+@media (max-width: 639px) {
+  .calendrier-sortie-wrapper .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .calendrier-sortie-wrapper .rbc-toolbar-label {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    padding: 0.25rem 0;
+  }
+
+  .calendrier-sortie-wrapper .rbc-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .calendrier-sortie-wrapper .rbc-toolbar button {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.5rem;
+    line-height: 1.1;
+  }
+
+  .calendrier-sortie-wrapper .rbc-header {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calendrier-sortie-wrapper .rbc-month-view .rbc-row-content {
+    min-height: 0;
+  }
+
+  .calendrier-sortie-wrapper .rbc-date-cell {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.15rem;
+  }
+
+  .calendrier-sortie-wrapper .rbc-month-view {
+    min-width: 320px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .calendrier-sortie-wrapper .rbc-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .calendrier-sortie-wrapper .rbc-toolbar-label {
+    flex: 1 1 100%;
+    text-align: center;
+    order: -1;
+  }
+}
+
 /* Programme congé - reduced height, scrollable cells */
 .programme-conge-calendar .rbc-month-row {
   min-height: 72px !important;

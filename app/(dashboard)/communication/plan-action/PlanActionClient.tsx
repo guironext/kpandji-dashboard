@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const BAR_COLORS = [
   "bg-violet-500",
@@ -66,12 +67,14 @@ type Props = {
   projects: CommunicationProjectListItem[];
   initialActions: PlanActionItem[];
   selectedProjectId: string | null;
+  embedded?: boolean;
 };
 
 export default function PlanActionClient({
   projects,
   initialActions,
   selectedProjectId: initialProjectId,
+  embedded,
 }: Props) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     initialProjectId ?? (projects[0]?.id ?? null)
@@ -223,7 +226,8 @@ export default function PlanActionClient({
   }, [actions]);
 
   return (
-    <div className="space-y-8 p-6">
+    <div className={cn("space-y-8", embedded ? "p-4 sm:p-6" : "p-6")}>
+      {!embedded && (
       <div className="relative overflow-hidden rounded-2xl border bg-white/70 shadow-sm backdrop-blur">
         <div
           className="absolute inset-0 opacity-80"
@@ -278,6 +282,7 @@ export default function PlanActionClient({
           </div>
         </div>
       </div>
+      )}
 
       <Card className="bg-white/70 backdrop-blur">
         <CardHeader>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -108,20 +108,59 @@ function EventComponent({ event }: { event: CalendarEvent }) {
   );
 }
 
+type ViewName = "month" | "week" | "work_week" | "day" | "agenda";
+
 type Props = {
   events: CalendarEvent[];
 };
 
+function useCalendarHeight() {
+  const [height, setHeight] = useState(560);
+
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const reserved = w < 640 ? 200 : w < 1024 ? 240 : 280;
+      const target = h - reserved;
+      setHeight(Math.max(360, Math.min(820, target)));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+
+  return height;
+}
+
 export function CalendrierSortieCalendar({ events }: Props) {
+  const calendarHeight = useCalendarHeight();
+  const [view, setView] = useState<ViewName>("month");
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => {
+      if (mq.matches) setView("month");
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   return (
-    <div className="relative w-full min-h-[500px] calendrier-sortie-wrapper">
+    <div
+      className="relative w-full min-h-[360px] sm:min-h-[480px] calendrier-sortie-wrapper"
+      style={{ height: calendarHeight }}
+    >
       <Calendar
         localizer={localizer}
         events={events}
         startAccessor="start"
         endAccessor="end"
         titleAccessor="title"
-        style={{ height: 700 }}
+        style={{ height: "100%" }}
+        view={view}
+        onView={(next: string) => setView(next as ViewName)}
         showAllEvents
         culture="fr-FR"
         messages={{

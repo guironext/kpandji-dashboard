@@ -143,26 +143,26 @@ export default function CalendrierSortiePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4 md:p-6 gap-4 pb-8">
+    <div className="flex flex-col min-h-screen p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 pb-6 sm:pb-8">
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden shadow-sm border-border/80">
-        <CardHeader className="flex-shrink-0 px-6 pt-6 pb-4 space-y-0">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <CalendarDays className="h-6 w-6 text-primary" />
+        <CardHeader className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <div className="flex items-start sm:items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                  <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold tracking-tight">
+                <div className="min-w-0">
+                  <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                     Calendrier des sorties
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-snug">
                     Réservations véhicule — en attente, confirmées, déplacées, en cours
                   </p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {events.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="px-3 py-1.5 text-sm font-medium bg-primary/10 text-primary border-primary/20">
@@ -191,8 +191,8 @@ export default function CalendrierSortiePage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden px-6 pb-6">
-          <div className="flex-1 min-h-0 max-h-[calc(100vh-14rem)] rounded-xl border-2 border-border bg-card overflow-y-auto overflow-x-auto pb-8 custom-scrollbar">
+        <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="flex-1 min-h-0 max-h-[calc(100dvh-8.5rem)] sm:max-h-[calc(100vh-14rem)] rounded-xl border-2 border-border bg-card overflow-y-auto overflow-x-auto pb-4 sm:pb-8 [-webkit-overflow-scrolling:touch] overscroll-contain custom-scrollbar">
             <CalendrierSortieCalendar events={events} />
           </div>
         </CardContent>

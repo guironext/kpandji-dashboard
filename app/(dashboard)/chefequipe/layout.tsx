@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile overlay */}
       <div
         className={clsx(
-          "lg:hidden fixed inset-0 z-30 bg-black bg-opacity-50 transition-opacity",
+          "lg:hidden fixed inset-0 z-30 bg-white/65 backdrop-blur-sm transition-opacity",
           isSidebarOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none",

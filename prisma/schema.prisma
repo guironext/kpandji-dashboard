@@ -195,13 +195,14 @@ model BonDeCommande {
 }
 
 model BonPourAccord {
-  id String @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
   numero_bon_pour_accord String
-  factureId String @unique
-  Facture Facture @relation(fields: [factureId], references: [id])
+  factureId              String   @unique
+  Facture                Facture  @relation(fields: [factureId], references: [id])
 }
+
 model Client_entreprise {
   id                           String              @id
   nom_entreprise               String
@@ -328,7 +329,7 @@ model Correction {
   RapportCorrection RapportCorrection[]
   SparePart         SparePart[]
   Tool              Tool[]
-}                                             
+}
 
 model CourrieAvantage {
   id               String    @id
@@ -346,33 +347,33 @@ model CourrieAvantage {
 }
 
 model Employee {
-  id           String         @id
-  nom          String
-  prenoms      String
-  numro_matricule String?
-  contact      String
-  bloodType    String?
-  specialite   String
-  poste        String?
-  email        String?
-  adresse      String?
-  image        String?
-  personne_urgence String?
+  id                         String                     @id
+  nom                        String
+  prenoms                    String
+  numro_matricule            String?
+  contact                    String
+  bloodType                  String?
+  specialite                 String
+  poste                      String?
+  email                      String?
+  adresse                    String?
+  image                      String?
+  personne_urgence           String?
   telephone_personne_urgence String?
-  relation_personne_urgence String?
-  date_Embauche DateTime?
-  date_Depart   DateTime?
-  status       StatusEmployee @default(ACTIVE)
-  userId       String
-  User         User           @relation(fields: [userId], references: [id])
-  Equipe                 Equipe[]
-  EquipeMembre           EquipeMembre[]
-  LocalBuy               LocalBuy[]
-  Teste                  Teste[]
-  Pointage               Pointage[]
-  Nomination_vote_Employee Nomination_vote_Employee[]
-  Permission             Permission[]
-  CongeAnnuel            CongeAnnuel[]
+  relation_personne_urgence  String?
+  date_Embauche              DateTime?
+  date_Depart                DateTime?
+  status                     StatusEmployee             @default(ACTIVE)
+  userId                     String
+  User                       User                       @relation(fields: [userId], references: [id])
+  Equipe                     Equipe[]
+  EquipeMembre               EquipeMembre[]
+  LocalBuy                   LocalBuy[]
+  Teste                      Teste[]
+  Pointage                   Pointage[]
+  Nomination_vote_Employee   Nomination_vote_Employee[]
+  Permission                 Permission[]
+  CongeAnnuel                CongeAnnuel[]
 }
 
 enum StatusEmployee {
@@ -387,41 +388,41 @@ enum StatusEmployee {
   CONGE_ANNUEL
   CONGE_MATERNITE
   CONGE_PATERNITE
-
 }
 
 model Pointage {
-  id String @id
-  date DateTime
+  id           String   @id
+  date         DateTime
   heure_entree DateTime
   heure_sortie DateTime
-  employeeId String
-  Employee Employee @relation(fields: [employeeId], references: [id])
+  employeeId   String
+  Employee     Employee @relation(fields: [employeeId], references: [id])
 }
 
-model Nomination_vote_Employee{
-  id String @id
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  employeeId String
-  datedebut DateTime
-  datefin DateTime
-  titre String
+model Nomination_vote_Employee {
+  id          String   @id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  employeeId  String
+  datedebut   DateTime
+  datefin     DateTime
+  titre       String
   description String
-  Employee Employee @relation(fields: [employeeId], references: [id])
+  Employee    Employee @relation(fields: [employeeId], references: [id])
 }
 
 model Permission {
-  id String @id
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  employeeId String
-  datedebut DateTime
-  datefin DateTime
-  titre StatusPermission
+  id          String           @id
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  employeeId  String
+  datedebut   DateTime
+  datefin     DateTime
+  titre       StatusPermission
   description String
-  Employee Employee @relation(fields: [employeeId], references: [id])
+  Employee    Employee         @relation(fields: [employeeId], references: [id])
 }
+
 enum StatusPermission {
   EN_ATTENTE
   VALIDE
@@ -431,15 +432,16 @@ enum StatusPermission {
 }
 
 model CongeAnnuel {
-  id String @id
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String            @id
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
   employeeId String
-  datedebut DateTime
-  datefin DateTime
-  status StatusCongeAnnuel @default(EN_ATTENTE)
-  Employee Employee @relation(fields: [employeeId], references: [id])
+  datedebut  DateTime
+  datefin    DateTime
+  status     StatusCongeAnnuel @default(EN_ATTENTE)
+  Employee   Employee          @relation(fields: [employeeId], references: [id])
 }
+
 enum StatusCongeAnnuel {
   EN_ATTENTE
   VALIDE
@@ -492,7 +494,7 @@ model Facture {
   notes_proforma         String?
   Accessoire             Accessoire[]
   BonDeCommande          BonDeCommande?
-  BonPourAccord         BonPourAccord?
+  BonPourAccord          BonPourAccord?
   Commande               Commande[]
   Client_entreprise      Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   Client                 Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -719,7 +721,7 @@ model RapportRendezVous {
   degre_interet             String?
   decision_attendue         String?
   devis_offre_remise        Boolean                     @default(false)
-  propositions_faites      String?
+  propositions_faites       String?
   reference_offre           String?
   financement_propose       String?
   assurance_entretien       Boolean                     @default(false)
@@ -967,6 +969,7 @@ model Voiture {
   Conteneur           Conteneur?            @relation(fields: [conteneurId], references: [id])
   RendezVous          RendezVous?           @relation(fields: [rendezVousId], references: [id])
   VoitureModel        VoitureModel?         @relation(fields: [voitureModelId], references: [id])
+  VoitureSAV          VoitureSAV[]
 }
 
 model VoitureModel {
@@ -1016,41 +1019,41 @@ model CommunicationProject {
 }
 
 model CommunicationPlanAction {
-  id         String                          @id @default(uuid())
-  projectId  String
-  title      String
-  startDate  DateTime
-  endDate    DateTime
-  orderIndex Int                             @default(0)
-  createdAt  DateTime                        @default(now())
-  updatedAt  DateTime                        @updatedAt
-  completed  Boolean                         @default(false)
-  project    CommunicationProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String                         @id @default(uuid())
+  projectId      String
+  title          String
+  startDate      DateTime
+  endDate        DateTime
+  orderIndex     Int                            @default(0)
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+  completed      Boolean                        @default(false)
+  project        CommunicationProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignedActors CommunicationPlanActionActor[]
 
   @@index([projectId])
 }
 
 model CommunicationProjectActor {
-  id         String                          @id @default(uuid())
-  projectId  String
-  name       String
-  department String
-  job        String
-  createdAt  DateTime                        @default(now())
-  updatedAt  DateTime                        @updatedAt
-  project    CommunicationProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String                         @id @default(uuid())
+  projectId       String
+  name            String
+  department      String
+  job             String
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  project         CommunicationProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignedActions CommunicationPlanActionActor[]
 
   @@index([projectId])
 }
 
 model CommunicationPlanActionActor {
-  id        String                   @id @default(uuid())
+  id        String                    @id @default(uuid())
   actionId  String
   actorId   String
-  createdAt DateTime                 @default(now())
-  action    CommunicationPlanAction  @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  createdAt DateTime                  @default(now())
+  action    CommunicationPlanAction   @relation(fields: [actionId], references: [id], onDelete: Cascade)
   actor     CommunicationProjectActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
   @@unique([actionId, actorId])
@@ -1248,31 +1251,188 @@ model NumeroCourrier {
 }
 
 model GoodiesBrochures {
-  id String @id @default(uuid())
-  nom String
-  description String?
-  categorie String?
-  quantite Int @default(0)
-  prix_achat Decimal? @default(0) @db.Decimal(18, 2)
-  origine_artisan String?
-  contact_artisan String?
+  id                     String   @id @default(uuid())
+  nom                    String
+  description            String?
+  categorie              String?
+  quantite               Int      @default(0)
+  prix_achat             Decimal? @default(0) @db.Decimal(18, 2)
+  origine_artisan        String?
+  contact_artisan        String?
   attribution_commercial String?
-  quantite_attribuee Int @default(0)
-  quantite_restante Int @default(0)
-  destination String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  quantite_attribuee     Int      @default(0)
+  quantite_restante      Int      @default(0)
+  destination            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model GoodiesBrochuresAttribution {
-  id String @id @default(uuid())
-  goodiesBrochuresId String
+  id                     String   @id @default(uuid())
+  goodiesBrochuresId     String
   attribution_commercial String
-  quantite_attribuee Int @default(0)
-  destination String?
+  quantite_attribuee     Int      @default(0)
+  destination            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model ClientSAV {
+  id               String       @id @default(uuid())
+  nom              String
+  prenom           String
+  email            String?
+  contact          String
+  entreprise       String?
+  localisation     String?
+  secteur_activite String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  VoitureSAV       VoitureSAV[]
+}
+
+model VoitureSAV {
+  id                String              @id @default(uuid())
+  model             String
+  motorisation      Motorisation
+  transmission      Transmission
+  couleur           String
+  nbr_portes        String
+  immatriculation   String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  statut            StatutVoitureSAV    @default(ARRIVE)
+  voitureId         String
+  Voiture           Voiture             @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+  diagnosticArrivee DiagnosticArrivee[]
+  Reparation        Reparation[]
+  clientSAVId       String
+  ClientSAV         ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
+}
+
+enum StatutVoitureSAV {
+  ARRIVE
+  EN_TRAITEMENT
+  TESTE
+  TERMINE
+  ANNULE
+}
+
+model CatergorieDiagnostic {
+  id                String              @id @default(uuid())
+  nom               String
+  description       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  diagnosticArrivee DiagnosticArrivee[]
+  DetailDiagnostic  DetailDiagnostic[]
+}
+
+model DetailDiagnostic {
+  id                     String               @id @default(uuid())
+  nom                    String
+  description            String?
+  prix_unitaire          Decimal?             @default(0) @db.Decimal(18, 2)
+  diagnosticArriveeId    String?
+  diagnosticArrivee      DiagnosticArrivee?   @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
+  reparationId           String?
+  reparation             Reparation?          @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  catergorieDiagnosticId String
+  catergorieDiagnostic   CatergorieDiagnostic @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
+  PieceSAV               PieceSAV[]
+}
+
+model DiagnosticArrivee {
+  id                     String               @id @default(uuid())
+  voitureSAVId           String
+  voitureSAV             VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  catergorieDiagnosticId String
+  catergorieDiagnostic   CatergorieDiagnostic @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
+  DetailDiagnostic       DetailDiagnostic[]
+  PieceSAV               PieceSAV[]
+}
+
+model PieceSAV {
+  id                String   @id @default(uuid())
+  nom               String
+  model_voiture     String?
+  marque_piece      String?
+  part_code         String?
+  description       String?
+  prix_achat        Decimal? @default(0)
+  prix_vente        Decimal? @default(0)
+  quantite_sortie   Int      @default(0)
+  quantite_entree   Int      @default(0)
+  quantite_restante Int      @default(0)
+  quantite_initiale Int      @default(0)
+
+  reparationId String?
+  reparation   Reparation? @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+
+  diagnosticArriveeId String?
+  diagnosticArrivee   DiagnosticArrivee? @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
+
+  detailDiagnosticId   String?
+  detailDiagnostic     DetailDiagnostic? @relation(fields: [detailDiagnosticId], references: [id], onDelete: SetNull)
+  /// Quantité sortie réservée à cette ligne de diagnostic (même ligne que detailDiagnosticId)
+  quantiteSortieDetail Int               @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([detailDiagnosticId])
 }
+
+model Reparation {
+  id                   String   @id @default(uuid())
+  categorie_reparation String
+  detail_reparation    String?
+  quantite             Int      @default(0)
+  prix_unitaire        Decimal?
+  horaire_travail_prix      Decimal?
+  horaire_travail_duration String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  voitureSAVId     String
+  voitureSAV       VoitureSAV         @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  statut           StatutReparation   @default(EN_TRAITEMENT)
+  DetailDiagnostic DetailDiagnostic[]
+  PieceSAV         PieceSAV[]
+  FactureProformaSAV FactureProformaSAV[]
+}
+
+enum StatutReparation {
+  EN_ATTENTE
+  EN_TRAITEMENT
+  TESTE
+  TERMINE
+  ANNULE
+}
+
+model FactureProformaSAV {
+  id             String        @id @default(uuid())
+  numero_facture String
+  date_facture   DateTime
+  montant_ht     Decimal       @default(0) @db.Decimal(18, 2)
+  statut_facture StatusFacture @default(EN_ATTENTE)
+  remise         Decimal       @default(0) @db.Decimal(18, 2)
+  
+  montant_net_ht Decimal  @db.Decimal(18, 2)
+  tva            Decimal? @db.Decimal(18, 2)
+  montant_tva    Decimal  @default(0) @db.Decimal(18, 2)
+  total_ttc      Decimal  @default(0) @db.Decimal(18, 2)
+  avance_payee   Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  reparationId   String
+  reparation     Reparation @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+}
+
 
 enum StatutCalendrierSortie {
   EN_ATTENTE

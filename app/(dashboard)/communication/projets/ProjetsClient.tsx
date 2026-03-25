@@ -58,8 +58,10 @@ const STEPS = [
 
 export default function ProjetsClient({
   initialProjects,
+  embedded,
 }: {
   initialProjects: CommunicationProjectListItem[];
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
@@ -173,22 +175,27 @@ export default function ProjetsClient({
   const progressValue = (step / 6) * 100;
 
   return (
-    <div className="relative mx-auto max-w-5xl px-4 py-6 sm:px-6 md:py-8 lg:px-8">
-      {/* Header */}
-      <header className="mb-8 md:mb-10">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/25 border-0 font-medium">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              Plan de communication
-            </Badge>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
-              Projets de communication
-            </h1>
-            <p className="max-w-xl text-sm text-slate-600 sm:text-base">
-              Créez et pilotez vos projets en 6 étapes : diagnostic, objectifs, stratégie, plan d&apos;action, mise en œuvre et évaluation.
-            </p>
-          </div>
+    <div className={cn("relative mx-auto", embedded ? "px-4 py-4 sm:px-6" : "max-w-5xl px-4 py-6 sm:px-6 md:py-8 lg:px-8")}>
+      {/* Header - compact when embedded */}
+      <header className={embedded ? "mb-4" : "mb-8 md:mb-10"}>
+        <div className={cn(
+          "flex flex-col gap-4",
+          embedded ? "items-end" : "sm:flex-row sm:items-end sm:justify-between"
+        )}>
+          {!embedded && (
+            <div className="space-y-2">
+              <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/25 border-0 font-medium">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                Plan de communication
+              </Badge>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
+                Projets de communication
+              </h1>
+              <p className="max-w-xl text-sm text-slate-600 sm:text-base">
+                Créez et pilotez vos projets en 6 étapes : diagnostic, objectifs, stratégie, plan d&apos;action, mise en œuvre et évaluation.
+              </p>
+            </div>
+          )}
           <Button
             onClick={handleStartCreate}
             size="lg"

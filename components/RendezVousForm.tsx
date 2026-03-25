@@ -158,17 +158,17 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
           Nouveau Rendez-vous
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader className="space-y-4 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
-              <Calendar className="h-6 w-6 text-white" />
+      <DialogContent className="flex max-h-[min(90dvh,100vh)] min-h-0 w-[calc(100%-1rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:w-full">
+        <DialogHeader className="shrink-0 space-y-3 border-b border-gray-100 px-4 pb-4 pt-6 sm:space-y-4 sm:px-6 sm:pb-6">
+          <div className="flex items-start gap-3 sm:items-center">
+            <div className="shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-2">
+              <Calendar className="h-5 w-5 text-white sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <DialogTitle className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1 pr-8">
+              <DialogTitle className="text-left text-xl font-bold text-gray-900 sm:text-2xl">
                 Créer un nouveau rendez-vous
               </DialogTitle>
-              <DialogDescription className="text-gray-600 mt-1">
+              <DialogDescription className="mt-1 text-left text-gray-600">
                 Planifiez un rendez-vous avec un de vos clients
               </DialogDescription>
             </div>
@@ -176,13 +176,18 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6">
+              <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:space-y-6 sm:p-6">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-blue-600" />
                 Date et heure
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="date"
@@ -221,7 +226,7 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 space-y-6">
+            <div className="space-y-4 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 p-4 sm:space-y-6 sm:p-6">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <User className="h-5 w-5 text-blue-600" />
                 Sélection du client
@@ -306,23 +311,24 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
                 )}
               />
             </div>
+              </div>
+            </div>
 
-
-            <DialogFooter className="pt-6 border-t border-gray-200">
-              <div className="flex gap-3 w-full">
+            <DialogFooter className="shrink-0 border-t border-gray-200 bg-background px-4 py-4 sm:px-6 sm:py-6">
+              <div className="flex w-full flex-col gap-3 sm:flex-row">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsOpen(false)}
                   disabled={isSubmitting}
-                  className="flex-1 border-gray-200 hover:bg-gray-50"
+                  className="w-full border-gray-200 hover:bg-gray-50 sm:flex-1"
                 >
                   Annuler
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 sm:flex-1"
                 >
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Créer le rendez-vous

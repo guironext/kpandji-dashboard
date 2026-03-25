@@ -1,21 +1,56 @@
 import { getCommunicationProjects } from "@/lib/actions/communication-project";
-import ProjetsClient from "./ProjetsClient";
+import { getPlanActionsByProjectId } from "@/lib/actions/communication-plan-action";
+import { getBudgetItemsByProjectId } from "@/lib/actions/communication-budget";
+import type { CommunicationBudgetItem } from "@/lib/actions/communication-budget";
+import type { PlanActionItem } from "@/lib/actions/communication-plan-action";
+import ProjetsTabsClient from "./ProjetsTabsClient";
 
 export default async function ProjetsPage() {
-  const result = await getCommunicationProjects();
-  const projects = result.success && result.projects ? result.projects : [];
+  try {
+    const projectsResult = await getCommunicationProjects();
+    const projects = projectsResult.success && projectsResult.projects ? projectsResult.projects : [];
 
-  return (
-    <div className="min-h-full bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),transparent)] bg-slate-50">
-      <div className="relative min-h-full">
-        {/* Decorative gradient orbs - subtle */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute -left-40 top-0 h-72 w-72 rounded-full bg-violet-300/20 blur-3xl" />
-          <div className="absolute right-0 top-1/4 h-96 w-96 rounded-full bg-amber-200/15 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-cyan-300/15 blur-3xl" />
+    const firstProjectId = projects[0]?.id ?? null;
+    let initialPlanActions: PlanActionItem[] = [];
+    let initialBudgetItems: CommunicationBudgetItem[] = [];
+    let budgetError: string | null = null;
+
+    if (firstProjectId) {
+      const [planResult, budgetResult] = await Promise.all([
+        getPlanActionsByProjectId(firstProjectId),
+        getBudgetItemsByProjectId(firstProjectId),
+      ]);
+      if (planResult.success && planResult.actions) {
+        initialPlanActions = planResult.actions;
+      }
+      if (budgetResult.success && "items" in budgetResult) {
+        initialBudgetItems = budgetResult.items;
+      } else if (!budgetResult.success) {
+        budgetError = budgetResult.error ?? null;
+      }
+    }
+
+    return (
+      <ProjetsTabsClient
+        projects={projects}
+        initialPlanActions={initialPlanActions}
+        initialBudgetItems={initialBudgetItems}
+        budgetError={budgetError}
+      />
+    );
+  } catch (error) {
+    console.error("ProjetsPage error:", error);
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center p-8">
+        <div className="rounded-xl border-2 border-red-200 bg-red-50 p-6 max-w-md">
+          <h2 className="text-lg font-bold text-red-800">Erreur serveur</h2>
+          <p className="mt-2 text-sm text-red-700">{message}</p>
+          <p className="mt-2 text-xs text-red-600">
+            Vérifiez DATABASE_URL dans .env et que la base de données est accessible.
+          </p>
         </div>
-        <ProjetsClient initialProjects={projects} />
       </div>
-    </div>
-  );
+    );
+  }
 }

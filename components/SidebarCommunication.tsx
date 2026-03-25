@@ -35,32 +35,12 @@ const navItems = [
   },
   {
     id: 3,
-    icon: <ClipboardList className="w-5 h-5" />,
-    label: "Plan d'action",
-    href: "/communication/plan-action",
+    icon: <FileText className="w-5 h-5" />,
+    label: "Objectifs Mensuels",
+    href: "/communication/objectifs-mensuels",
     category: "operations"
   },
-  {
-    id: 4,
-    icon: <Users className="w-5 h-5" />,
-    label: "Acteurs et Rôles",
-    href: "/communication/acteurs-roles",
-    category: "operations"
-  },
-  {
-    id: 5,
-    icon: <Calculator className="w-5 h-5" />,
-    label: "Budget",
-    href: "/communication/budget",
-    category: "operations"
-  },
-  {
-    id: 6,
-    icon: <BookOpen className="w-5 h-5" />,
-    label: "Resumé Projets",  
-    href: "/communication/resume-projet",
-    category: "Documentation"
-  },
+ 
   {
     id: 7,
     icon: <Settings className="w-5 h-5" />,

@@ -309,8 +309,8 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
     <div className="space-y-6">
       {/* Enhanced Filters and Controls */}
       <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-        <div className="px-6 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="px-4 py-4 sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-200">
                 <Filter className="h-5 w-5 text-blue-600" />
@@ -318,11 +318,11 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
               <h3 className="text-lg font-semibold text-gray-900">Filtres et tri</h3>
             </div>
             
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Statut:</label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:min-w-[12rem] sm:flex-row sm:items-center sm:gap-2">
+                <label className="text-sm font-medium text-gray-700 shrink-0">Statut:</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] border-gray-200 bg-white">
+                  <SelectTrigger className="w-full min-w-0 border-gray-200 bg-white sm:w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -336,10 +336,10 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Trier par:</label>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:min-w-[12rem] sm:flex-row sm:items-center sm:gap-2">
+                <label className="text-sm font-medium text-gray-700 shrink-0">Trier par:</label>
                 <Select value={sortBy} onValueChange={(value: 'date' | 'statut') => setSortBy(value)}>
-                  <SelectTrigger className="w-[150px] border-gray-200 bg-white">
+                  <SelectTrigger className="w-full min-w-0 border-gray-200 bg-white sm:w-[150px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -353,7 +353,7 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
                 variant="outline"
                 size="sm"
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="border-gray-200 bg-white hover:bg-gray-50"
+                className="w-full shrink-0 border-gray-200 bg-white hover:bg-gray-50 sm:w-auto"
               >
                 {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
                 {sortOrder === 'asc' ? 'Croissant' : 'Décroissant'}
@@ -379,7 +379,7 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4 p-6">
+          <div className="space-y-4 p-4 sm:p-6">
             {filteredAndSortedRendezVous.map((rendezVous) => {
               const clientInfo = getClientInfo(rendezVous);
               const statusInfo = statusConfig[rendezVous.statut];
@@ -387,8 +387,8 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
 
               return (
                 <div key={rendezVous.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
-                  <div className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                  <div className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex-1 space-y-4">
                         {/* Date and Time */}
                         <div className="flex items-center gap-6">
@@ -410,14 +410,14 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
                             </div>
                             <div className="flex-1">
                               <h3 className="font-semibold text-gray-900 text-lg">{clientInfo.name}</h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
+                              <div className="flex flex-col gap-1 text-sm text-gray-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+                                <span className="flex min-w-0 items-center gap-1 break-all">
+                                  <Clock className="h-4 w-4 shrink-0" />
                                   {clientInfo.contact}
                                 </span>
                                 {clientInfo.email && (
-                                  <span className="flex items-center gap-1">
-                                    <span>•</span>
+                                  <span className="flex min-w-0 items-center gap-1 break-all">
+                                    <span className="hidden sm:inline">•</span>
                                     {clientInfo.email}
                                   </span>
                                 )}
@@ -429,28 +429,28 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
 
                       {/* Status and Actions */}
                       <div className="flex flex-col gap-4 lg:items-end">
-                        <div className="flex flex-col items-end gap-3">
-                          <div className="flex items-center gap-2">
+                        <div className="flex w-full flex-col gap-3 sm:items-end">
+                          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                             <button 
                               onClick={() => handleEditClick(rendezVous)}
-                              className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                              className="flex w-full items-center justify-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors sm:w-auto">
                               <PencilIcon className="h-4 w-4" />
                               Modifier
                             </button>
-                            <Badge className={`${statusInfo.color} border-0 px-4 py-2 text-sm font-medium`}>
+                            <Badge className={`${statusInfo.color} border-0 px-4 py-2 text-sm font-medium inline-flex w-full justify-center sm:w-auto`}>
                               {statusInfo.label}
                             </Badge>
                           </div>
 
                           {/* Status Update */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-gray-500 font-medium">Modifier statut:</label>
+                          <div className="flex w-full flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+                            <label className="text-xs text-gray-500 font-medium shrink-0">Modifier statut:</label>
                             <Select
                               value={rendezVous.statut}
                               onValueChange={(value) => handleStatusUpdate(rendezVous.id, value)}
                               disabled={updatingStatus === rendezVous.id}
                             >
-                              <SelectTrigger className="w-[160px] h-9 text-sm border-gray-200">
+                              <SelectTrigger className="h-9 w-full min-w-0 text-sm border-gray-200 sm:w-[160px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -473,7 +473,7 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex items-center gap-2 text-xs font-medium text-gray-900 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-900 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
                           onClick={() => handleReservationClick(rendezVous)}
                           disabled={rendezVous.statut !== 'CONFIRME'}
                         >
@@ -604,7 +604,7 @@ export function RendezVousList({ rendezVous, onUpdate, clerkUserId: clerkUserIdP
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="dateReservation">Date de réservation *</Label>
                 <Input

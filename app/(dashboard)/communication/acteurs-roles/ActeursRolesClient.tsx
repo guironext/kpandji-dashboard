@@ -61,10 +61,12 @@ import { cn } from "@/lib/utils";
 
 interface ActeursRolesClientProps {
   initialProjects: CommunicationProjectListItem[];
+  embedded?: boolean;
 }
 
 export default function ActeursRolesClient({
   initialProjects,
+  embedded,
 }: ActeursRolesClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [actors, setActors] = useState<CommunicationProjectActor[]>([]);
@@ -324,8 +326,8 @@ export default function ActeursRolesClient({
       .slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-stone-50/80">
-      {/* Hero */}
+    <div className={cn(embedded ? "" : "min-h-screen bg-stone-50/80")}>
+      {!embedded && (
       <div className="relative overflow-hidden border-b border-stone-200/80 bg-white">
         <div
           className="absolute inset-0 opacity-[0.03]"
@@ -351,8 +353,9 @@ export default function ActeursRolesClient({
           </div>
         </div>
       </div>
+      )}
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={cn("mx-auto", embedded ? "max-w-full px-4 py-4 sm:px-6" : "max-w-7xl px-4 py-8 sm:px-6 lg:px-8")}>
         {/* Project selector */}
         <div className="mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

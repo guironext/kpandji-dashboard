@@ -40,6 +40,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
                 width={40}
                 height={40}
                 className="h-8 w-auto"
+                priority
               />
               <div className="hidden sm:block">
                 <h1 className="text-lg font-semibold text-gray-900">Kpandji Management</h1>
