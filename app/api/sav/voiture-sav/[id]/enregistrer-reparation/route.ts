@@ -118,25 +118,22 @@ export async function POST(
 
     try {
       // Batch transaction (non-interactive) — compatible Neon pooler / PgBouncer (évite P2028).
-      await prisma.$transaction(
-        [
-          prisma.detailDiagnostic.updateMany({
-            where: { id: { in: allDetails.map((d) => d.id) } },
-            data: { reparationId: rep.id },
-          }),
-          ...pieceRows.map((p) =>
-            prisma.$executeRaw(
-              Prisma.sql`
-                UPDATE "PieceSAV"
-                SET "reparationId" = ${rep.id},
-                    "updatedAt" = CURRENT_TIMESTAMP
-                WHERE id = ${p.id}
-              `
-            )
-          ),
-        ],
-        { timeout: 30_000 }
-      );
+      await prisma.$transaction([
+        prisma.detailDiagnostic.updateMany({
+          where: { id: { in: allDetails.map((d) => d.id) } },
+          data: { reparationId: rep.id },
+        }),
+        ...pieceRows.map((p) =>
+          prisma.$executeRaw(
+            Prisma.sql`
+              UPDATE "PieceSAV"
+              SET "reparationId" = ${rep.id},
+                  "updatedAt" = CURRENT_TIMESTAMP
+              WHERE id = ${p.id}
+            `
+          )
+        ),
+      ]);
     } catch (e) {
       await prisma.reparation.delete({ where: { id: rep.id } }).catch(() => {});
       throw e;

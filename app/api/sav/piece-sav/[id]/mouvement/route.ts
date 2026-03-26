@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClientKnownRequestError } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
 import {
   pieceSAVFindByIdRaw,
@@ -11,6 +10,12 @@ import {
 export const dynamic = "force-dynamic";
 
 type MouvementType = "ENTREE" | "SORTIE";
+
+function prismaKnownRequestCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  const c = (error as { code?: unknown }).code;
+  return typeof c === "string" ? c : undefined;
+}
 
 export async function POST(
   request: NextRequest,
@@ -294,9 +299,9 @@ export async function POST(
   } catch (error) {
     console.error("API piece-sav mouvement POST error:", error);
 
+    const code = prismaKnownRequestCode(error);
     const unreachable =
-      (error instanceof PrismaClientKnownRequestError &&
-        (error.code === "P1001" || error.code === "P1017")) ||
+      (code === "P1001" || code === "P1017") ||
       (error instanceof Error &&
         /Can't reach database server|connection.*refused|getaddrinfo|timed out/i.test(
           error.message
