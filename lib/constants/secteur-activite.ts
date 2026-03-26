@@ -1,6 +1,8 @@
 export const SECTEUR_ACTIVITE_OPTIONS = [
 	"Secteur Public",
 	"Agro-Industrie",
+	"Artisanat",
+	"Industrie",
 	"Mines & Énergie",
 	"Services & Finance",
 	"BTP & Infrastructures",

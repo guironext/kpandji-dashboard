@@ -138,8 +138,10 @@ function buildLineRows(rep: ReparationRow): LineRow[] {
         });
       }
 
-      const piece = rep.PieceSAV?.find((p) => p.detailDiagnosticId === det.id);
-      if (piece) {
+      const piecesForDet = (rep.PieceSAV ?? [])
+        .filter((p) => p.detailDiagnosticId === det.id)
+        .sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" }));
+      for (const piece of piecesForDet) {
         const q = Math.max(0, piece.quantiteSortieDetail ?? 0);
         const pv = toNum(piece.prix_vente);
         const total = pv * q;
@@ -158,8 +160,9 @@ function buildLineRows(rep: ReparationRow): LineRow[] {
 
   const usedPieceIds = new Set<string>();
   for (const det of rep.DetailDiagnostic ?? []) {
-    const piece = rep.PieceSAV?.find((p) => p.detailDiagnosticId === det.id);
-    if (piece) usedPieceIds.add(piece.id);
+    for (const p of rep.PieceSAV ?? []) {
+      if (p.detailDiagnosticId === det.id) usedPieceIds.add(p.id);
+    }
   }
   const orphanPieces = (rep.PieceSAV ?? []).filter((p) => !usedPieceIds.has(p.id));
 
@@ -201,8 +204,9 @@ function totalHtFromLines(lines: LineRow[]): number {
 function getOrphanPieces(rep: ReparationRow): PieceSAVRow[] {
   const used = new Set<string>();
   for (const det of rep.DetailDiagnostic ?? []) {
-    const p = rep.PieceSAV?.find((x) => x.detailDiagnosticId === det.id);
-    if (p) used.add(p.id);
+    for (const p of rep.PieceSAV ?? []) {
+      if (p.detailDiagnosticId === det.id) used.add(p.id);
+    }
   }
   return (rep.PieceSAV ?? []).filter((p) => !used.has(p.id));
 }
@@ -531,7 +535,11 @@ export default function ProformaSavClient() {
                         </TableHeader>
                         <TableBody>
                           {block.details.map((det) => {
-                            const piece = currentRep.PieceSAV?.find((p) => p.detailDiagnosticId === det.id);
+                            const piecesForDet = (currentRep.PieceSAV ?? [])
+                              .filter((p) => p.detailDiagnosticId === det.id)
+                              .sort((a, b) =>
+                                a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" })
+                              );
                             const puDet = toNum(det.prix_unitaire);
                             const rows: ReactNode[] = [];
 
@@ -562,7 +570,7 @@ export default function ProformaSavClient() {
                               </TableRow>
                             );
 
-                            if (piece) {
+                            for (const piece of piecesForDet) {
                               const q = Math.max(0, piece.quantiteSortieDetail ?? 0);
                               const pv = toNum(piece.prix_vente);
                               const lineTot = pv * q;
@@ -673,6 +681,13 @@ export default function ProformaSavClient() {
                 <span className="tabular-nums">{formatNumberWithSpaces(totalTtc)} FCFA</span>
               </div>
             </div>
+            <div className="flex flex-col  items-start p-4 rounded-3xl border-1 border-slate-300 w-1/2">
+             <span className="font-bold text-black">Note:</span> <br/>
+             <span className="font-thin text-black">
+              Sur la facture finale, il vous sera ajouter les frais des horaires-travail.
+             </span>
+            </div>
+            
 
             <div className="mt-8 pt-4 border-t border-slate-200 text-[10px] text-slate-600 text-center space-y-1">
               <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>

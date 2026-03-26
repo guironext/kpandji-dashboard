@@ -1383,8 +1383,6 @@ model PieceSAV {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([detailDiagnosticId])
 }
 
 model Reparation {

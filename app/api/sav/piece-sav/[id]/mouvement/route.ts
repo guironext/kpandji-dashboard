@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { PrismaClientKnownRequestError } from "@prisma/client";
+import { executeWithRetry, prisma } from "@/lib/prisma";
 import {
   pieceSAVFindByIdRaw,
-  pieceSAVOccupiedByDetailRaw,
+  pieceSAVSwapDiagnosticReplaceRaw,
   pieceSAVUpdateDiagnosticSortieRaw,
   pieceSAVUpdateReparationSortieRaw,
 } from "@/lib/pieceSavMouvementSql";
@@ -46,7 +46,9 @@ export async function POST(
       );
     }
 
-    const existing = await prisma.pieceSAV.findUnique({ where: { id: targetPieceId } });
+    const existing = await executeWithRetry(() =>
+      prisma.pieceSAV.findUnique({ where: { id: targetPieceId } })
+    );
     if (!existing) {
       return NextResponse.json(
         { success: false, error: "Pièce introuvable" },
@@ -237,69 +239,36 @@ export async function POST(
         return NextResponse.json({ success: true, data: piece });
       }
 
-      await prisma.$transaction(async (tx) => {
-        const newSortieOld = oldPiece.quantite_sortie - oldQty;
-        const newRestOld = oldPiece.quantite_restante + oldQty;
-        await tx.$executeRaw(
-          Prisma.sql`
-            UPDATE "PieceSAV"
-            SET "quantite_sortie" = ${newSortieOld},
-                "quantite_restante" = ${newRestOld},
-                "diagnosticArriveeId" = NULL,
-                "detailDiagnosticId" = NULL,
-                "quantiteSortieDetail" = 0,
-                "reparationId" = NULL,
-                "updatedAt" = CURRENT_TIMESTAMP
-            WHERE id = ${replacePieceId}
-          `
-        );
-
-        const freshRows = await tx.$queryRaw<
-          Array<{ quantite_restante: number; quantite_sortie: number }>
-        >(
-          Prisma.sql`
-            SELECT "quantite_restante", "quantite_sortie" FROM "PieceSAV" WHERE id = ${targetPieceId} LIMIT 1
-          `
-        );
-        const fresh = freshRows[0];
+      const newSortieOld = oldPiece.quantite_sortie - oldQty;
+      const newRestOld = oldPiece.quantite_restante + oldQty;
+      const swapped = await pieceSAVSwapDiagnosticReplaceRaw({
+        replacePieceId,
+        newSortieOld,
+        newRestOld,
+        targetPieceId,
+        n,
+        diagnosticArriveeId: diagnosticArriveeIdResolved,
+        detailDiagnosticId,
+      });
+      if (swapped === 0) {
+        const fresh = await pieceSAVFindByIdRaw(targetPieceId);
         if (!fresh) {
-          throw new Error("Pièce cible introuvable");
-        }
-        if (fresh.quantite_restante < n) {
-          throw new Error(
-            `Stock insuffisant sur la nouvelle pièce (restant : ${fresh.quantite_restante})`
+          return NextResponse.json(
+            { success: false, error: "Pièce cible introuvable" },
+            { status: 404 }
           );
         }
-
-        await tx.$executeRaw(
-          Prisma.sql`
-            UPDATE "PieceSAV"
-            SET "quantite_sortie" = ${fresh.quantite_sortie + n},
-                "quantite_restante" = ${fresh.quantite_restante - n},
-                "diagnosticArriveeId" = ${diagnosticArriveeIdResolved},
-                "detailDiagnosticId" = ${detailDiagnosticId},
-                "quantiteSortieDetail" = ${n},
-                "reparationId" = NULL,
-                "updatedAt" = CURRENT_TIMESTAMP
-            WHERE id = ${targetPieceId}
-          `
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Stock insuffisant sur la nouvelle pièce (restant : ${fresh.quantite_restante})`,
+          },
+          { status: 400 }
         );
-      });
+      }
 
       const piece = await prisma.pieceSAV.findUnique({ where: { id: targetPieceId } });
       return NextResponse.json({ success: true, data: piece });
-    }
-
-    const occupied = await pieceSAVOccupiedByDetailRaw(detailDiagnosticId);
-    if (occupied) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Cette ligne de diagnostic a déjà une pièce affectée. Utilisez « Changer la pièce » pour modifier.",
-        },
-        { status: 409 }
-      );
     }
 
     if (existing.quantite_restante < n) {
@@ -324,6 +293,26 @@ export async function POST(
     return NextResponse.json({ success: true, data: piece });
   } catch (error) {
     console.error("API piece-sav mouvement POST error:", error);
+
+    const unreachable =
+      (error instanceof PrismaClientKnownRequestError &&
+        (error.code === "P1001" || error.code === "P1017")) ||
+      (error instanceof Error &&
+        /Can't reach database server|connection.*refused|getaddrinfo|timed out/i.test(
+          error.message
+        ));
+
+    if (unreachable) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Base de données injoignable. Vérifiez que le projet Neon est démarré (non en pause), votre connexion réseau et la variable DATABASE_URL.",
+        },
+        { status: 503 }
+      );
+    }
+
     const msg =
       error instanceof Error ? error.message : "Erreur lors du mouvement";
     const isStock = msg.includes("Stock insuffisant");

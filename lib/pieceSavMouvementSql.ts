@@ -27,19 +27,6 @@ export async function pieceSAVFindByIdRaw(
   return rows[0] ?? null;
 }
 
-export async function pieceSAVOccupiedByDetailRaw(
-  detailDiagnosticId: string
-): Promise<{ id: string } | null> {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`
-      SELECT id FROM "PieceSAV"
-      WHERE "detailDiagnosticId" = ${detailDiagnosticId}
-      LIMIT 1
-    `
-  );
-  return rows[0] ?? null;
-}
-
 export async function pieceSAVUpdateReparationSortieRaw(
   id: string,
   quantite_sortie: number,
@@ -101,4 +88,54 @@ export async function pieceSAVUpdateDiagnosticSortieRaw(
       WHERE id = ${id}
     `
   );
+}
+
+/**
+ * Remplace la pièce liée au diagnostic (ancienne ligne déliée + nouvelle ligne mise à jour)
+ * en **une seule** instruction SQL (pas de transaction interactive), compatible PgBouncer / Neon pooler.
+ */
+export async function pieceSAVSwapDiagnosticReplaceRaw(params: {
+  replacePieceId: string;
+  newSortieOld: number;
+  newRestOld: number;
+  targetPieceId: string;
+  n: number;
+  diagnosticArriveeId: string;
+  detailDiagnosticId: string;
+}): Promise<number> {
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`
+      WITH cleared AS (
+        UPDATE "PieceSAV"
+        SET "quantite_sortie" = ${params.newSortieOld},
+            "quantite_restante" = ${params.newRestOld},
+            "diagnosticArriveeId" = NULL,
+            "detailDiagnosticId" = NULL,
+            "quantiteSortieDetail" = 0,
+            "reparationId" = NULL,
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE id = ${params.replacePieceId}
+        RETURNING id
+      ),
+      tgt AS (
+        SELECT "quantite_restante", "quantite_sortie"
+        FROM "PieceSAV"
+        WHERE id = ${params.targetPieceId}
+        FOR UPDATE
+      )
+      UPDATE "PieceSAV" AS p
+      SET "quantite_sortie" = tgt."quantite_sortie" + ${params.n},
+          "quantite_restante" = tgt."quantite_restante" - ${params.n},
+          "diagnosticArriveeId" = ${params.diagnosticArriveeId},
+          "detailDiagnosticId" = ${params.detailDiagnosticId},
+          "quantiteSortieDetail" = ${params.n},
+          "reparationId" = NULL,
+          "updatedAt" = CURRENT_TIMESTAMP
+      FROM tgt
+      WHERE p.id = ${params.targetPieceId}
+        AND tgt."quantite_restante" >= ${params.n}
+      RETURNING p.id
+    `
+  );
+  return rows.length;
 }

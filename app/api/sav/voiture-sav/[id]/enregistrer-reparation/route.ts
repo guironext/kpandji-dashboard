@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
-import { pieceSAVAttachReparationOnlyRaw } from "@/lib/pieceSavMouvementSql";
 
 export const dynamic = "force-dynamic";
 
@@ -106,38 +105,51 @@ export async function POST(
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const rep = await tx.reparation.create({
-        data: {
-          voitureSAVId,
-          categorie_reparation,
-          detail_reparation: detail_reparation || null,
-          quantite: qtyTotal,
-          prix_unitaire: prixSum.gt(0) ? prixSum : null,
-          statut: "TERMINE",
-        },
-      });
-
-      await tx.detailDiagnostic.updateMany({
-        where: { id: { in: allDetails.map((d) => d.id) } },
-        data: { reparationId: rep.id },
-      });
-
-      for (const p of pieceRows) {
-        await pieceSAVAttachReparationOnlyRaw(p.id, rep.id, tx);
-      }
-
-      return rep;
+    const rep = await prisma.reparation.create({
+      data: {
+        voitureSAVId,
+        categorie_reparation,
+        detail_reparation: detail_reparation || null,
+        quantite: qtyTotal,
+        prix_unitaire: prixSum.gt(0) ? prixSum : null,
+        statut: "TERMINE",
+      },
     });
 
+    try {
+      // Batch transaction (non-interactive) — compatible Neon pooler / PgBouncer (évite P2028).
+      await prisma.$transaction(
+        [
+          prisma.detailDiagnostic.updateMany({
+            where: { id: { in: allDetails.map((d) => d.id) } },
+            data: { reparationId: rep.id },
+          }),
+          ...pieceRows.map((p) =>
+            prisma.$executeRaw(
+              Prisma.sql`
+                UPDATE "PieceSAV"
+                SET "reparationId" = ${rep.id},
+                    "updatedAt" = CURRENT_TIMESTAMP
+                WHERE id = ${p.id}
+              `
+            )
+          ),
+        ],
+        { timeout: 30_000 }
+      );
+    } catch (e) {
+      await prisma.reparation.delete({ where: { id: rep.id } }).catch(() => {});
+      throw e;
+    }
+
     const reparation = await prisma.reparation.findUnique({
-      where: { id: result.id },
+      where: { id: rep.id },
     });
 
     return NextResponse.json({
       success: true,
       alreadySaved: false,
-      data: { reparationId: result.id, reparation },
+      data: { reparationId: rep.id, reparation },
     });
   } catch (error) {
     console.error("API enregistrer-reparation POST error:", error);

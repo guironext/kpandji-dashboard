@@ -12,7 +12,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Car, User, Wrench, ClipboardList } from "lucide-react";
+import {
+  Loader2,
+  Car,
+  User,
+  Wrench,
+  ClipboardList,
+  Palette,
+  Gauge,
+  Cog,
+  CheckCircle2,
+  Package,
+  Hash,
+  ListChecks,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -116,12 +130,22 @@ async function fetchPiecesStock(): Promise<PieceStockOption[]> {
   return json.data || [];
 }
 
-function findPieceForDetail(
+function findPiecesForDetail(
   voiture: VoitureSAVRow,
   detailId: string
-): PieceSAVLink | null {
+): PieceSAVLink[] {
+  const out: PieceSAVLink[] = [];
   for (const da of voiture.diagnosticArrivee ?? []) {
-    const p = da.PieceSAV?.find((x) => x.detailDiagnosticId === detailId);
+    for (const p of da.PieceSAV ?? []) {
+      if (p.detailDiagnosticId === detailId) out.push(p);
+    }
+  }
+  return out.sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" }));
+}
+
+function findPieceById(voiture: VoitureSAVRow, pieceId: string): PieceSAVLink | null {
+  for (const da of voiture.diagnosticArrivee ?? []) {
+    const p = da.PieceSAV?.find((x) => x.id === pieceId);
     if (p) return p;
   }
   return null;
@@ -156,9 +180,13 @@ function buildDetailOptions(voiture: VoitureSAVRow) {
 function DiagnosticSection({
   voiture,
   onDetailRowClick,
+  onAddAnotherPiece,
+  onEditPiece,
 }: {
   voiture: VoitureSAVRow;
   onDetailRowClick: (detailId: string) => void;
+  onAddAnotherPiece: (detailId: string) => void;
+  onEditPiece: (detailId: string, pieceId: string) => void;
 }) {
   const diagnostics = voiture.diagnosticArrivee ?? [];
 
@@ -219,8 +247,8 @@ function DiagnosticSection({
                     </TableHeader>
                     <TableBody>
                       {details.map((d, i) => {
-                        const piece = da.PieceSAV?.find((p) => p.detailDiagnosticId === d.id);
-                        const hasPiece = Boolean(piece);
+                        const pieces = findPiecesForDetail(voiture, d.id);
+                        const hasPiece = pieces.length > 0;
                         return (
                           <TableRow
                             key={d.id}
@@ -239,22 +267,49 @@ function DiagnosticSection({
                             )}
                           >
                             <TableCell className="font-medium text-slate-900">
-                              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="flex flex-col gap-2">
                                 <span>{d.nom}</span>
-                                {hasPiece && piece ? (
-                                  <span className="text-xs font-normal text-slate-600">
-                                    <span className="text-teal-700 font-medium">
-                                      {piece.nom}
-                                      {piece.part_code ? ` (${piece.part_code})` : ""}
-                                    </span>
-                                    <span className="text-teal-600">
-                                      {" "}
-                                      — Changer la pièce
-                                    </span>
+                                {hasPiece ? (
+                                  <span className="flex flex-col gap-2 text-xs font-normal text-slate-600">
+                                    {pieces.map((piece) => (
+                                      <span
+                                        key={piece.id}
+                                        className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                                      >
+                                        <span className="text-teal-700 font-medium">
+                                          {piece.nom}
+                                          {piece.part_code ? ` (${piece.part_code})` : ""}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEditPiece(d.id, piece.id);
+                                          }}
+                                        >
+                                          Changer la pièce
+                                        </Button>
+                                      </span>
+                                    ))}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 w-fit"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onAddAnotherPiece(d.id);
+                                      }}
+                                    >
+                                      Autre pièce
+                                    </Button>
                                   </span>
                                 ) : (
                                   <span className="text-xs font-normal text-teal-600">
-                                    — Cliquer pour sortir une pièce
+                                    — Cliquer pour Ajouter une pièce
                                   </span>
                                 )}
                               </span>
@@ -286,6 +341,7 @@ export default function VoitureReparationClient() {
   const [sortieQty, setSortieQty] = useState("1");
   const [sortieDetailId, setSortieDetailId] = useState("");
   const [sortieReplacePieceId, setSortieReplacePieceId] = useState<string | null>(null);
+  const [sortieAddAnother, setSortieAddAnother] = useState(false);
   const [sortieSubmitting, setSortieSubmitting] = useState(false);
   const [enregistrerVoitureId, setEnregistrerVoitureId] = useState<string | null>(null);
 
@@ -315,12 +371,35 @@ export default function VoitureReparationClient() {
     void loadPieces();
   }, [loadPieces]);
 
-  const openSortieDialog = (voiture: VoitureSAVRow, presetDetailId: string | null) => {
+  const openSortieDialog = (
+    voiture: VoitureSAVRow,
+    presetDetailId: string | null,
+    opts?: { addAnother?: boolean; replacePieceId?: string }
+  ) => {
     setSortieVoiture(voiture);
     setSortiePresetDetailId(presetDetailId);
     setSortieDetailId(presetDetailId ?? "");
-    if (presetDetailId) {
-      const ex = findPieceForDetail(voiture, presetDetailId);
+
+    if (!presetDetailId) {
+      setSortiePieceId("");
+      setSortieQty("1");
+      setSortieReplacePieceId(null);
+      setSortieAddAnother(false);
+      setSortieOpen(true);
+      return;
+    }
+
+    if (opts?.addAnother) {
+      setSortiePieceId("");
+      setSortieQty("1");
+      setSortieReplacePieceId(null);
+      setSortieAddAnother(true);
+      setSortieOpen(true);
+      return;
+    }
+
+    if (opts?.replacePieceId) {
+      const ex = findPieceById(voiture, opts.replacePieceId);
       if (ex) {
         setSortiePieceId(ex.id);
         setSortieQty(String(ex.quantiteSortieDetail > 0 ? ex.quantiteSortieDetail : 1));
@@ -330,17 +409,13 @@ export default function VoitureReparationClient() {
         setSortieQty("1");
         setSortieReplacePieceId(null);
       }
-    } else {
-      setSortiePieceId("");
-      setSortieQty("1");
-      setSortieReplacePieceId(null);
+      setSortieAddAnother(false);
+      setSortieOpen(true);
+      return;
     }
-    setSortieOpen(true);
-  };
 
-  useEffect(() => {
-    if (!sortieOpen || !sortieVoiture || !sortieDetailId || sortiePresetDetailId) return;
-    const ex = findPieceForDetail(sortieVoiture, sortieDetailId);
+    const pieces = findPiecesForDetail(voiture, presetDetailId);
+    const ex = pieces[0];
     if (ex) {
       setSortiePieceId(ex.id);
       setSortieQty(String(ex.quantiteSortieDetail > 0 ? ex.quantiteSortieDetail : 1));
@@ -350,7 +425,26 @@ export default function VoitureReparationClient() {
       setSortieQty("1");
       setSortieReplacePieceId(null);
     }
-  }, [sortieOpen, sortieVoiture, sortieDetailId, sortiePresetDetailId]);
+    setSortieAddAnother(false);
+    setSortieOpen(true);
+  };
+
+  const syncPieceStateForDetailLine = useCallback(
+    (voiture: VoitureSAVRow, detailId: string) => {
+      const pieces = findPiecesForDetail(voiture, detailId);
+      const ex = pieces[0];
+      if (ex) {
+        setSortiePieceId(ex.id);
+        setSortieQty(String(ex.quantiteSortieDetail > 0 ? ex.quantiteSortieDetail : 1));
+        setSortieReplacePieceId(ex.id);
+      } else {
+        setSortiePieceId("");
+        setSortieQty("1");
+        setSortieReplacePieceId(null);
+      }
+    },
+    []
+  );
 
   const detailOptions = useMemo(() => {
     if (!sortieVoiture) return [];
@@ -381,7 +475,9 @@ export default function VoitureReparationClient() {
       return;
     }
 
-    const alloc = findPieceForDetail(sortieVoiture, sortieDetailId);
+    const alloc = sortieReplacePieceId
+      ? findPieceById(sortieVoiture, sortieReplacePieceId)
+      : null;
     const samePieceEdit =
       Boolean(sortieReplacePieceId) &&
       sortiePieceId === sortieReplacePieceId &&
@@ -461,163 +557,288 @@ export default function VoitureReparationClient() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+      <div className="flex min-h-[55vh] flex-col items-center justify-center px-4">
         <div className="relative">
-          <div className="h-16 w-16 rounded-2xl bg-teal-100 flex items-center justify-center shadow-inner">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-100 shadow-inner ring-1 ring-teal-200/60">
             <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
           </div>
-          <div className="absolute -inset-2 rounded-2xl bg-gradient-to-r from-teal-400/30 to-emerald-500/30 blur-xl animate-pulse" />
+          <div className="absolute -inset-3 rounded-[1.35rem] bg-gradient-to-r from-teal-400/25 to-emerald-500/25 blur-2xl animate-pulse" />
         </div>
-        <p className="mt-6 text-sm font-medium text-slate-500">Chargement des réparations…</p>
+        <p className="mt-7 text-sm font-medium tracking-tight text-slate-600">
+          Chargement des réparations…
+        </p>
+        <p className="mt-1 text-xs text-slate-400">Véhicules en traitement et diagnostics</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-12">
-      <Dialog open={sortieOpen} onOpenChange={setSortieOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {sortieIsEdit ? "Changer la pièce ou la quantité" : "Sortie de pièce pour le diagnostic"}
-            </DialogTitle>
-            <DialogDescription>
-              {sortieIsEdit
-                ? "Modifiez la pièce ou la quantité sortie pour cette ligne. Le stock (quantite_restante) est ajusté (y compris si vous changez de référence)."
-                : "Choisissez la pièce en stock, la quantité à sortir (quantite_sortie) et la ligne de diagnostic. Le stock (quantite_restante) sera mis à jour automatiquement."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="piece-sav">Pièce (stock)</Label>
-              <Select value={sortiePieceId} onValueChange={setSortiePieceId}>
-                <SelectTrigger id="piece-sav" className="w-full">
-                  <SelectValue placeholder="Sélectionner une pièce" />
-                </SelectTrigger>
-                <SelectContent>
-                  {piecesStock.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nom}
-                      {p.part_code ? ` (${p.part_code})` : ""} — restant : {p.quantite_restante}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="min-h-screen pb-16">
+      <Dialog
+        open={sortieOpen}
+        onOpenChange={(open) => {
+          setSortieOpen(open);
+          if (!open) setSortieAddAnother(false);
+        }}
+      >
+        <DialogContent className="flex max-h-[min(90dvh,calc(100dvh-1.5rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg [&_[data-slot=dialog-close]]:z-10 [&_[data-slot=dialog-close]]:top-3.5 [&_[data-slot=dialog-close]]:right-3.5 [&_[data-slot=dialog-close]]:rounded-lg [&_[data-slot=dialog-close]]:bg-slate-100/90 [&_[data-slot=dialog-close]]:hover:bg-slate-200/90">
+          <div
+            className="h-1 shrink-0 bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-600"
+            aria-hidden
+          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+            <div className="p-6 pb-4 pt-5">
+              <DialogHeader className="space-y-0 text-left">
+                <div className="flex gap-3.5 pr-8">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-600/20 ring-1 ring-white/20">
+                    <Package className="h-5 w-5" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <DialogTitle className="text-left text-xl font-semibold tracking-tight text-slate-900">
+                      {sortieAddAnother
+                        ? "Ajouter une autre pièce"
+                        : sortieIsEdit
+                          ? "Modifier la sortie de pièce"
+                          : "Sortie de pièce — diagnostic"}
+                    </DialogTitle>
+                    <DialogDescription className="text-left text-sm leading-relaxed text-slate-600">
+                      {sortieAddAnother
+                        ? "Choisissez une autre référence en stock pour cette même ligne de diagnostic. Les sorties précédentes restent inchangées."
+                        : sortieIsEdit
+                          ? "Changez la référence ou la quantité : le stock est recalculé automatiquement, y compris si vous remplacez la pièce."
+                          : "Indiquez la pièce en stock, la quantité et la ligne de diagnostic concernée. Les quantités disponibles sont mises à jour automatiquement."}
+                    </DialogDescription>
+                  </div>
+                </div>
+                {sortieVoiture && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/90 bg-slate-50/90 px-3 py-2.5 text-xs text-slate-700 ring-1 ring-slate-950/[0.04]">
+                    <Car className="h-3.5 w-3.5 shrink-0 text-teal-600" />
+                    <span className="font-medium text-slate-800">{sortieVoiture.model}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="font-mono text-[11px] font-semibold tracking-tight text-slate-700">
+                      {sortieVoiture.immatriculation}
+                    </span>
+                  </div>
+                )}
+              </DialogHeader>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="qty-sortie">Quantité sortie</Label>
-              <Input
-                id="qty-sortie"
-                type="number"
-                min={1}
-                step={1}
-                value={sortieQty}
-                onChange={(e) => setSortieQty(e.target.value)}
-              />
+
+            <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50 px-6 py-5">
+              <div className="grid gap-5">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="piece-sav"
+                  className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  <Package className="h-3.5 w-3.5 text-teal-600" />
+                  Pièce en stock
+                </Label>
+                <Select value={sortiePieceId} onValueChange={setSortiePieceId}>
+                  <SelectTrigger
+                    id="piece-sav"
+                    className="h-11 w-full border-slate-200 bg-white shadow-sm transition-[box-shadow,border-color] hover:border-slate-300 focus:ring-teal-500/20"
+                  >
+                    <SelectValue placeholder="Choisir une pièce…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[min(280px,50vh)]">
+                    {piecesStock.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="font-medium">{p.nom}</span>
+                        {p.part_code ? (
+                          <span className="text-slate-500"> ({p.part_code})</span>
+                        ) : null}
+                        <span className="text-slate-500">
+                          {" "}
+                          — restant : {p.quantite_restante}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPiece && (
+                  <p className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <span className="inline-flex rounded-md bg-white px-1.5 py-0.5 font-medium text-teal-800 ring-1 ring-teal-200/80">
+                      Stock restant : {selectedPiece.quantite_restante}
+                    </span>
+                    {selectedPiece.model_voiture && (
+                      <span className="text-slate-500">· {selectedPiece.model_voiture}</span>
+                    )}
+                  </p>
+                )}
+                {piecesStock.length === 0 && (
+                  <p className="rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Aucune pièce en stock — ajoutez des références dans la gestion SAV.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="qty-sortie"
+                  className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  <Hash className="h-3.5 w-3.5 text-teal-600" />
+                  Quantité sortie
+                </Label>
+                <Input
+                  id="qty-sortie"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={sortieQty}
+                  onChange={(e) => setSortieQty(e.target.value)}
+                  className="h-11 max-w-[140px] border-slate-200 bg-white font-medium shadow-sm tabular-nums focus-visible:ring-teal-500/25"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="detail-dx"
+                  className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  <ListChecks className="h-3.5 w-3.5 text-teal-600" />
+                  Ligne de diagnostic
+                </Label>
+                <Select
+                  value={sortieDetailId}
+                  onValueChange={(id) => {
+                    setSortieDetailId(id);
+                    if (sortiePresetDetailId || !sortieVoiture) return;
+                    syncPieceStateForDetailLine(sortieVoiture, id);
+                  }}
+                  disabled={Boolean(sortiePresetDetailId)}
+                >
+                  <SelectTrigger
+                    id="detail-dx"
+                    className={cn(
+                      "h-11 w-full border-slate-200 bg-white shadow-sm transition-[box-shadow,border-color] hover:border-slate-300 focus:ring-teal-500/20",
+                      sortiePresetDetailId && "cursor-not-allowed opacity-90"
+                    )}
+                  >
+                    <SelectValue placeholder="Sélectionner une ligne…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[min(280px,50vh)]">
+                    {detailOptions.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {sortiePresetDetailId && (
+                  <p className="flex items-start gap-1.5 text-xs leading-snug text-teal-800">
+                    <span className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                    Ligne verrouillée : vous avez ouvert la sortie depuis cette ligne.
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="detail-dx">Ligne de diagnostic (DetailDiagnostic)</Label>
-              <Select
-                value={sortieDetailId}
-                onValueChange={setSortieDetailId}
-                disabled={Boolean(sortiePresetDetailId)}
-              >
-                <SelectTrigger id="detail-dx" className="w-full">
-                  <SelectValue placeholder="Sélectionner un détail" />
-                </SelectTrigger>
-                <SelectContent>
-                  {detailOptions.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {sortiePresetDetailId && (
-                <p className="text-xs text-slate-500">
-                  Détail imposé depuis la ligne sur laquelle vous avez cliqué.
-                </p>
-              )}
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setSortieOpen(false)} disabled={sortieSubmitting}>
+
+          <DialogFooter className="shrink-0 gap-2 border-t border-slate-200/90 bg-white px-6 py-4 sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 border-slate-200 sm:min-w-[100px]"
+              onClick={() => setSortieOpen(false)}
+              disabled={sortieSubmitting}
+            >
               Annuler
             </Button>
             <Button
-              className="bg-teal-600 hover:bg-teal-700"
+              type="button"
+              className="h-10 min-w-[140px] bg-gradient-to-r from-teal-600 to-emerald-600 font-semibold text-white shadow-md transition-[box-shadow,filter] hover:from-teal-700 hover:to-emerald-700 hover:shadow-lg disabled:opacity-60"
               onClick={() => void submitSortie()}
               disabled={sortieSubmitting || detailOptions.length === 0 || piecesStock.length === 0}
             >
               {sortieSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enregistrement…
                 </>
               ) : (
-                "Valider la sortie"
+                sortieIsEdit ? "Enregistrer les changements" : "Valider la sortie"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <div className="relative -mx-6 -mt-6 mb-8 overflow-hidden rounded-b-[1.75rem] bg-gradient-to-br from-teal-600 via-emerald-600 to-teal-700 px-6 pt-10 pb-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.2),transparent)]" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-emerald-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-              <Wrench className="h-4 w-4 text-teal-100" />
+      <div className="relative -mx-6 -mt-6 mb-10 overflow-hidden rounded-b-[1.75rem] bg-gradient-to-br from-teal-700 via-emerald-700 to-teal-800 px-6 pt-10 pb-10 sm:pt-12 sm:pb-11">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(255,255,255,0.22),transparent)]" />
+        <div className="absolute -right-32 -bottom-24 h-72 w-72 rounded-full bg-emerald-400/15 blur-3xl" />
+        <div className="absolute -left-20 top-1/2 h-56 w-56 -translate-y-1/2 rounded-full bg-teal-400/10 blur-3xl" />
+        <div className="relative mx-auto max-w-5xl">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-sm ring-1 ring-white/20 backdrop-blur-sm">
+              <Wrench className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-semibold text-teal-100/95 uppercase tracking-widest">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-100/95">
               Atelier SAV
             </span>
+            {voitures.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/20">
+                {voitures.length} en cours
+              </span>
+            )}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-[2.25rem] sm:leading-tight">
             Voiture en réparation
           </h1>
-          <p className="mt-3 text-lg text-teal-100/90 max-w-xl">
-            Véhicules au statut <span className="font-semibold">EN TRAITEMENT</span> avec leurs
-            diagnostics d&apos;arrivée.
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-teal-100/90 sm:text-lg">
+            <span className="font-semibold text-white">EN TRAITEMENT</span>
+            {" — "}
+            suivez les diagnostics d&apos;arrivée et les sorties de pièces pour chaque véhicule.
           </p>
-          {voitures.length > 0 && (
-            <p className="mt-4 text-sm text-teal-200/90">
-              {voitures.length} véhicule{voitures.length > 1 ? "s" : ""} en cours
-            </p>
-          )}
         </div>
       </div>
 
       {voitures.length === 0 ? (
-        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 px-6 py-8">
-            <CardContent className="flex flex-col items-center text-center py-12">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200/80">
-                <Car className="h-10 w-10 text-slate-400" />
-              </div>
-              <h3 className="mt-6 text-xl font-semibold text-slate-700">
-                Aucun véhicule en traitement
-              </h3>
-              <p className="mt-2 text-slate-500 max-w-md">
-                Les voitures dont le statut est <span className="font-medium text-slate-600">EN_TRAITEMENT</span>{" "}
-                apparaîtront ici avec leurs diagnostics.
-              </p>
-            </CardContent>
-          </div>
-        </Card>
+        <div className="mx-auto max-w-lg">
+          <Card className="overflow-hidden rounded-2xl border border-slate-200/90 shadow-sm ring-1 ring-slate-950/5">
+            <div className="bg-gradient-to-b from-slate-50 via-white to-teal-50/30 px-6 py-10 sm:py-12">
+              <CardContent className="flex flex-col items-center px-0 text-center">
+                <div className="relative">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-teal-400/30 to-emerald-400/20 blur-lg" />
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-slate-200/80">
+                    <Car className="h-10 w-10 text-slate-400" />
+                  </div>
+                </div>
+                <h3 className="mt-7 text-xl font-semibold tracking-tight text-slate-800">
+                  Aucun véhicule en traitement
+                </h3>
+                <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
+                  Les véhicules au statut{" "}
+                  <span className="font-medium text-slate-700">EN_TRAITEMENT</span> apparaîtront ici
+                  avec leurs diagnostics d&apos;arrivée.
+                </p>
+              </CardContent>
+            </div>
+          </Card>
+        </div>
       ) : (
         <Tabs
           key={voitures.map((v) => v.id).join(",")}
           defaultValue={voitures[0]?.id}
-          className="w-full"
+          className="mx-auto w-full max-w-5xl"
         >
-          <div className="mb-6">
+          <div className="mb-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Sélectionner un véhicule
+            </p>
             <TabsList
               className={cn(
-                "inline-flex flex-nowrap gap-2 h-auto p-2 rounded-2xl",
-                "bg-slate-100/90 border border-slate-200/80 shadow-sm",
-                "overflow-x-auto overflow-y-hidden max-w-full"
+                "inline-flex h-auto w-full flex-nowrap justify-start gap-2 rounded-2xl p-2",
+                "border border-slate-200/90 bg-slate-100/80 shadow-sm ring-1 ring-slate-950/5",
+                "overflow-x-auto overflow-y-hidden max-w-full [scrollbar-width:thin]",
+                "snap-x snap-mandatory sm:snap-none"
               )}
             >
               {voitures.map((v) => (
@@ -625,20 +846,24 @@ export default function VoitureReparationClient() {
                   key={v.id}
                   value={v.id}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-xl px-5 py-3.5 min-w-[200px]",
-                    "text-left whitespace-nowrap",
-                    "data-[state=active]:bg-white data-[state=active]:text-teal-800",
-                    "data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80",
-                    "data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-200/60"
+                    "flex min-w-[min(100%,220px)] flex-shrink-0 snap-start flex-col items-start gap-1 rounded-xl px-4 py-3.5 sm:min-w-[min(100%,240px)] sm:px-5",
+                    "text-left transition-[box-shadow,transform,background-color] duration-200",
+                    "data-[state=active]:bg-white data-[state=active]:text-teal-900",
+                    "data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/90",
+                    "data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-200/70"
                   )}
                 >
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <User className="h-3.5 w-3.5 shrink-0" />
-                    {[v.ClientSAV?.nom, v.ClientSAV?.prenom].filter(Boolean).join(" ") || "—"}
+                  <span className="flex items-center gap-2 text-sm font-semibold leading-tight">
+                    <User className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                    <span className="truncate">
+                      {[v.ClientSAV?.nom, v.ClientSAV?.prenom].filter(Boolean).join(" ") || "—"}
+                    </span>
                   </span>
                   <span className="flex items-center gap-2 text-xs font-medium text-slate-500">
                     <Car className="h-3 w-3 shrink-0" />
-                    {v.model} • {v.immatriculation}
+                    <span className="truncate">
+                      {v.model} · {v.immatriculation}
+                    </span>
                   </span>
                 </TabsTrigger>
               ))}
@@ -651,66 +876,140 @@ export default function VoitureReparationClient() {
             const enregistrerBusy = enregistrerVoitureId === v.id;
             const canEnregistrer = hasDetailLines && !saved;
             return (
-              <TabsContent key={v.id} value={v.id} className="mt-0 focus-visible:ring-0 space-y-6">
-                <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-6 text-sm">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Immatriculation
-                      </p>
-                      <p className="font-mono font-semibold text-slate-900">{v.immatriculation}</p>
+              <TabsContent key={v.id} value={v.id} className="mt-0 focus-visible:ring-0 space-y-8">
+                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
+                  <div className="bg-gradient-to-br from-slate-50 via-white to-teal-50/40 px-5 py-5 sm:px-6 sm:py-6">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-600/25 ring-1 ring-white/30">
+                          <Car className="h-7 w-7" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-800/90">
+                            Client & véhicule
+                          </p>
+                          <p className="mt-1 truncate text-lg font-semibold tracking-tight text-slate-900">
+                            {[v.ClientSAV?.nom, v.ClientSAV?.prenom].filter(Boolean).join(" ") || "—"}
+                          </p>
+                          <p className="mt-0.5 truncate text-sm text-slate-600">
+                            {v.model}
+                            <span className="text-slate-400"> · </span>
+                            <span className="font-mono text-slate-700">{v.immatriculation}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                        <Badge
+                          variant="outline"
+                          className="border-teal-200/80 bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-900"
+                        >
+                          {v.statut}
+                        </Badge>
+                        {saved && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Réparation enregistrée
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Couleur
-                      </p>
-                      <p className="font-medium text-slate-800">{v.couleur}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider" />
-                      <Badge className="bg-teal-100 text-teal-800 border-teal-200">{v.statut}</Badge>
+
+                    <Separator className="my-5 bg-slate-200/90" />
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                      {[
+                        {
+                          icon: Car,
+                          label: "Immatriculation",
+                          value: v.immatriculation,
+                          mono: true,
+                        },
+                        {
+                          icon: Palette,
+                          label: "Couleur",
+                          value: v.couleur || "—",
+                        },
+                        {
+                          icon: Gauge,
+                          label: "Motorisation",
+                          value: v.motorisation || "—",
+                        },
+                        {
+                          icon: Cog,
+                          label: "Transmission",
+                          value: v.transmission || "—",
+                        },
+                      ].map(({ icon: Icon, label, value, mono }) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-slate-100/90 bg-white/80 px-3 py-3 shadow-sm ring-1 ring-slate-950/[0.03]"
+                        >
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                            <Icon className="h-3 w-3 opacity-70" />
+                            {label}
+                          </div>
+                          <p
+                            className={cn(
+                              "mt-1.5 text-sm font-semibold leading-snug text-slate-900",
+                              mono && "font-mono text-[13px] tracking-tight"
+                            )}
+                          >
+                            {value}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full font-semibold shadow-md transition-all duration-300 mt-4 border-0",
-                      saved
-                        ? "bg-slate-400 text-white cursor-not-allowed hover:bg-slate-400 hover:scale-100"
-                        : "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white hover:shadow-lg transform hover:scale-[1.02]"
+
+                  <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "h-11 w-full font-semibold shadow-sm transition-all duration-200 sm:h-12",
+                        saved
+                          ? "cursor-not-allowed border-slate-200 bg-slate-300 text-white hover:bg-slate-300"
+                          : "border-0 bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md hover:from-teal-700 hover:to-emerald-700 hover:shadow-lg"
+                      )}
+                      disabled={!canEnregistrer || enregistrerBusy}
+                      onClick={() => void enregistrerReparation(v.id)}
+                    >
+                      {enregistrerBusy ? (
+                        <>
+                          <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                          Enregistrement…
+                        </>
+                      ) : saved ? (
+                        "Réparation enregistrée"
+                      ) : (
+                        "Enregistrer la réparation"
+                      )}
+                    </Button>
+                    {saved && (
+                      <p className="mt-3 text-center text-xs text-emerald-700">
+                        Les données de réparation sont enregistrées.
+                      </p>
                     )}
-                    disabled={!canEnregistrer || enregistrerBusy}
-                    onClick={() => void enregistrerReparation(v.id)}
-                  >
-                    {enregistrerBusy ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-                        Enregistrement…
-                      </>
-                    ) : saved ? (
-                      "Réparation enregistrée"
-                    ) : (
-                      "Enregistrer la réparation"
+                    {!hasDetailLines && (
+                      <p className="mt-3 text-center text-xs text-amber-800">
+                        Ajoutez d&apos;abord des lignes de diagnostic pour lier une sortie de pièce.
+                      </p>
                     )}
-                  </Button>
-                  {saved && (
-                    <p className="mt-2 text-xs text-center text-emerald-700">
-                      Les données de réparation sont enregistrées.
-                    </p>
-                  )}
-                  {!hasDetailLines && (
-                    <p className="mt-2 text-xs text-center text-amber-700">
-                      Ajoutez d&apos;abord des lignes de diagnostic pour lier une sortie de pièce.
-                    </p>
-                  )}
-                  {piecesStock.length === 0 && (
-                    <p className="mt-1 text-xs text-center text-amber-700">
-                      Aucune pièce en stock — enregistrez des pièces dans la gestion SAV.
-                    </p>
-                  )}
+                    {piecesStock.length === 0 && (
+                      <p className="mt-2 text-center text-xs text-amber-800">
+                        Aucune pièce en stock — enregistrez des pièces dans la gestion SAV.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <DiagnosticSection voiture={v} onDetailRowClick={(id) => openSortieDialog(v, id)} />
+                <DiagnosticSection
+                  voiture={v}
+                  onDetailRowClick={(id) => openSortieDialog(v, id)}
+                  onAddAnotherPiece={(detailId) => openSortieDialog(v, detailId, { addAnother: true })}
+                  onEditPiece={(detailId, pieceId) =>
+                    openSortieDialog(v, detailId, { replacePieceId: pieceId })
+                  }
+                />
               </TabsContent>
             );
           })}
