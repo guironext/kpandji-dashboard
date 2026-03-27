@@ -1,5 +1,6 @@
 "use server";
 
+import type { StatusBonDeCommande } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function generateNextNumero(factureId: string) {
@@ -81,6 +82,39 @@ export async function getBonDeCommandeByFactureId(factureId: string) {
     return {
       success: false,
       error: "Failed to fetch BonDeCommande"
+    };
+  }
+}
+
+export async function updateBonDeCommandeStatus(
+  factureId: string,
+  status: StatusBonDeCommande
+) {
+  try {
+    const existing = await prisma.bonDeCommande.findUnique({
+      where: { factureId }
+    });
+    if (!existing) {
+      return {
+        success: false,
+        error: "Aucun bon de commande pour cette facture"
+      };
+    }
+
+    const bonDeCommande = await prisma.bonDeCommande.update({
+      where: { factureId },
+      data: {
+        status_bon_de_commande: status,
+        updatedAt: new Date()
+      }
+    });
+
+    return { success: true, data: bonDeCommande };
+  } catch (error) {
+    console.error("Error updating BonDeCommande status:", error);
+    return {
+      success: false,
+      error: "Échec de la mise à jour du statut"
     };
   }
 }

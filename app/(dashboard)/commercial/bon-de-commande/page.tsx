@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Printer, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, FileDown, ClipboardList } from "lucide-react";
 import { Document, Packer, Paragraph, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
@@ -23,7 +23,7 @@ import { generateNextNumero, getBonDeCommandeByFactureId } from "@/lib/actions/b
 import { updateClient } from "@/lib/actions/client";
 import { updateClientEntreprise } from "@/lib/actions/client_entreprise";
 import { toast } from "sonner";
-import { formatNumberWithSpaces } from "@/lib/utils";
+import { cn, formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 
 
@@ -114,6 +114,60 @@ function formatDateDDMMYYYY(value: string | number | Date | null | undefined) {
   return `${day}${month}${year}`;
 }
 
+/** Maps Prisma `BonDeCommande.status_bon_de_commande` to UI label + styles */
+function bonDeCommandeStatusPresentation(status: string | null) {
+  if (!status) {
+    return {
+      label: "Non défini",
+      hint: "Générez un numéro pour créer le bon",
+      className:
+        "border-dashed border-slate-300 bg-slate-50/90 text-slate-500",
+    };
+  }
+  const map: Record<
+    string,
+    { label: string; hint?: string; className: string }
+  > = {
+    EN_ATTENTE: {
+      label: "En attente",
+      hint: "En cours de traitement",
+      className:
+        "border-amber-400/80 bg-gradient-to-br from-amber-100 to-orange-50 text-amber-950 shadow-sm ring-1 ring-amber-200/70",
+    },
+    SOUS_RESERVE: {
+      label: "Sous réserve",
+      hint: "Réservation active",
+      className:
+        "border-emerald-500/90 bg-gradient-to-br from-emerald-600 to-green-700 text-white shadow-md shadow-emerald-900/25",
+    },
+    VALIDE: {
+      label: "Validé",
+      hint: "Bon confirmé",
+      className:
+        "border-emerald-800/80 bg-gradient-to-br from-emerald-800 to-emerald-950 text-emerald-50 shadow-md",
+    },
+    VALIDE_APPORT_INITIAL: {
+      label: "Validé — apport initial",
+      hint: "Avec apport 60 %",
+      className:
+        "border-teal-500/90 bg-gradient-to-br from-teal-600 to-cyan-800 text-white shadow-md shadow-teal-900/20",
+    },
+    ANNULE: {
+      label: "Annulé",
+      hint: "Bon annulé",
+      className:
+        "border-red-400/80 bg-gradient-to-br from-red-50 to-rose-100 text-red-950 ring-1 ring-red-200/80",
+    },
+  };
+  const found = map[status];
+  if (found) return found;
+  return {
+    label: status.replace(/_/g, " "),
+    className:
+      "border-slate-300 bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/80",
+  };
+}
+
 // Function to get accessoire image by name
 function getAccessoireImage(
   accessoireNom: string | null | undefined,
@@ -139,6 +193,9 @@ export default function Page() {
     Array<{ id: string; nom: string; image?: string | null }>
   >([]);
   const [numero, setNumero] = useState<string>("");
+  const [bonDeCommandeStatus, setBonDeCommandeStatus] = useState<string | null>(
+    null
+  );
   const [showApportInitial, setShowApportInitial] = useState(false);
 
   useEffect(() => {
@@ -199,8 +256,10 @@ export default function Page() {
       const result = await getBonDeCommandeByFactureId(currentFacture.id);
       if (result.success && result.data) {
         setNumero(result.data.numero);
+        setBonDeCommandeStatus(result.data.status_bon_de_commande);
       } else {
         setNumero("");
+        setBonDeCommandeStatus(null);
       }
     };
 
@@ -222,6 +281,10 @@ export default function Page() {
     const result = await generateNextNumero(currentFacture.id);
     if (result.success && result.data) {
       setNumero(result.data.numero);
+      const bonResult = await getBonDeCommandeByFactureId(currentFacture.id);
+      if (bonResult.success && bonResult.data) {
+        setBonDeCommandeStatus(bonResult.data.status_bon_de_commande);
+      }
       toast.success(`Numéro généré: ${result.data.numero}`);
       
       // Update client status to CLIENT if successful
@@ -466,6 +529,8 @@ export default function Page() {
     }
   };
 
+  const statusPres = bonDeCommandeStatusPresentation(bonDeCommandeStatus);
+
   return (
     <>
       <style
@@ -565,6 +630,44 @@ export default function Page() {
                     IMPRIMER
                   </Button>
                 </div>
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-2.5 rounded-xl border px-3 py-2 sm:px-4 sm:py-2.5",
+                    "backdrop-blur-[2px] transition-shadow print:border print:bg-white",
+                    statusPres.className
+                  )}
+                  title={
+                    bonDeCommandeStatus
+                      ? `Statut (base de données) : ${bonDeCommandeStatus}`
+                      : statusPres.hint
+                  }
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                      bonDeCommandeStatus === "SOUS_RESERVE" ||
+                        bonDeCommandeStatus === "VALIDE" ||
+                        bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
+                        ? "bg-white/20 text-white"
+                        : "bg-black/[0.06] text-current"
+                    )}
+                  >
+                    <ClipboardList className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 text-left leading-tight">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-80">
+                      Statut bon de commande
+                    </p>
+                    <p className="text-sm font-bold tracking-tight sm:text-base">
+                      {statusPres.label}
+                    </p>
+                    {statusPres.hint ? (
+                      <p className="mt-0.5 text-[10px] font-medium opacity-75">
+                        {statusPres.hint}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -631,15 +734,15 @@ export default function Page() {
                     </div>
                     <div className="flex gap-2">
                       <p className="font-semibold">Adresse :</p>
-                      <p>Cocody, Riviera Palmerais, Abidjan, Côte d&apos;Ivoire</p>
+                      <p>Cocody, Riviera Palmerais, Rue cabine bleue, Abidjan, Côte d&apos;Ivoire</p>
                     </div>
                     <div className="flex gap-2">
                       <p className="font-semibold">Téléphone :</p>
-                      <p>+225 01 01 04 77 03</p>
+                      <p>+225 07 07 20 22 11 </p>
                     </div>
                     <div className="flex gap-2">
                       <p className="font-semibold">Email :</p>
-                      <p>info@kpandji.com</p>
+                      <p>contact@kpandji.com</p>
                     </div>
                     
                   </div>

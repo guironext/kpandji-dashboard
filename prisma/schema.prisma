@@ -192,6 +192,15 @@ model BonDeCommande {
   factureId     String   @unique
   prefix_numero String
   Facture       Facture  @relation(fields: [factureId], references: [id])
+  status_bon_de_commande StatusBonDeCommande @default(EN_ATTENTE)
+}
+
+enum StatusBonDeCommande {
+  EN_ATTENTE
+  SOUS_RESERVE
+  VALIDE
+  VALIDE_APPORT_INITIAL
+  ANNULE
 }
 
 model BonPourAccord {
@@ -201,6 +210,15 @@ model BonPourAccord {
   numero_bon_pour_accord String
   factureId              String   @unique
   Facture                Facture  @relation(fields: [factureId], references: [id])
+  status_bon_pour_accord StatusBonPourAccord @default(EN_ATTENTE)
+}
+
+enum StatusBonPourAccord {
+  EN_ATTENTE
+  SOUS_RESERVE
+  VALIDE
+  VALIDE_APPORT_INITIAL
+  ANNULE
 }
 
 model Client_entreprise {

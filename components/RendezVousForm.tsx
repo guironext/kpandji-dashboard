@@ -280,7 +280,7 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
                           } />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-[min(25rem,var(--radix-select-content-available-height))]">
                         {clientType === 'CLIENT' ? (
                           clients.map((client) => (
                             <SelectItem key={client.id} value={client.id}>
@@ -301,9 +301,9 @@ export function RendezVousForm({ clerkUserId, onSuccess }: RendezVousFormProps) 
                                   {clientEntreprise.telephone} {clientEntreprise.email && `• ${clientEntreprise.email}`}
                                 </span>
                               </div>
-                            </SelectItem>
+                            </SelectItem> 
                           ))
-                        )}
+                        )}  
                       </SelectContent>
                     </Select>
                     <FormMessage />
