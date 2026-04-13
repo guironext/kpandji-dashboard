@@ -1,6 +1,6 @@
-import MaintenanceClient from "./MaintenanceClient";
+import PersonnelSavClient from "./PersonnelSavClient";
 
-export default function MaintenancePage() {
+export default function PersonnelSavPage() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-b from-primary/[0.04] via-background to-muted/25">
       <div
@@ -8,7 +8,7 @@ export default function MaintenancePage() {
         aria-hidden
       />
       <div className="container relative max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <MaintenanceClient />
+        <PersonnelSavClient />
       </div>
     </div>
   );

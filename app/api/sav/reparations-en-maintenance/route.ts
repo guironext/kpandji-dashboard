@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
+import { StatutReparation } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** Réparations avec diagnostics et pièces pour édition proforma SAV */
+/** Réparations au statut EN_MAINTENANCE avec client, véhicule, diagnostics, pièces et maintenances */
 export async function GET() {
   try {
     const reparations = await executeWithRetry(() =>
       prisma.reparation.findMany({
-        orderBy: { createdAt: "desc" },
+        where: { statut: StatutReparation.EN_MAINTENANCE },
+        orderBy: { updatedAt: "desc" },
         include: {
           voitureSAV: {
             include: {
@@ -19,16 +21,27 @@ export async function GET() {
             orderBy: { createdAt: "asc" },
             include: {
               catergorieDiagnostic: true,
+              PieceSAV: true,
             },
           },
           PieceSAV: true,
+          Maintenance: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              catergorieDiagnostic: true,
+              factureProformaSAVs: {
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
+            },
+          },
         },
       }),
     );
 
     return NextResponse.json({ success: true, data: reparations });
   } catch (error) {
-    console.error("API proforma-reparations GET error:", error);
+    console.error("API reparations-en-maintenance GET error:", error);
     return NextResponse.json(
       {
         success: false,

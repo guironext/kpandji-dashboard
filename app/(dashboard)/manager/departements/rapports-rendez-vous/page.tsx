@@ -28,6 +28,7 @@ import {
 import { RapportAccordion } from "@/components/RapportAccordion";
 import { ExportReportsWrapper } from "@/components/ExportReportsWrapper";
 import { Badge } from "@/components/ui/badge";
+import type { ReportForExcel, ReportsByUserForExcel } from "@/lib/exportRapportExcel";
 
 interface RapportRendezVousData {
   id: string;
@@ -58,6 +59,15 @@ interface RapportRendezVousData {
   Com_Office: boolean;
   Com_Close: boolean;
   devis_offre_remise: boolean;
+  objet_autre?: string | null;
+  modeles_discutes?: unknown;
+  propositions_faites?: string | null;
+  reference_offre?: string | null;
+  financement_propose?: string | null;
+  assurance_entretien?: boolean;
+  reprise_ancien_vehicule?: boolean;
+  suivi_actions?: string | null;
+  actions_suivi?: unknown;
   voiture?: {
     id: string;
     couleur?: string;
@@ -67,51 +77,6 @@ interface RapportRendezVousData {
       model: string;
     };
   } | null;
-}
-
-interface Report {
-  id: string;
-  date_rendez_vous: Date;
-  heure_rendez_vous: string;
-  duree_rendez_vous: string;
-  nom_prenom_client: string;
-  telephone_client: string;
-  email_client: string | null;
-  type_client: string;
-  lieu_rendez_vous: string;
-  lieu_autre: string | null;
-  profession_societe: string | null;
-  degre_interet: string | null;
-  motivations_achat: string | null;
-  points_positifs: string | null;
-  objections_freins: string | null;
-  commentaire_global: string | null;
-  decision_attendue: string | null;
-  Com_Pres: boolean;
-  Com_Drive: boolean;
-  Com_Achat: boolean;
-  Com_Livre: boolean;
-  Com_APV: boolean;
-  Com_Office: boolean;
-  Com_Close: boolean;
-  devis_offre_remise: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  voiture?: {
-    id: string;
-    couleur: string;
-    motorisation: string;
-    transmission: string;
-    voitureModel?: {
-      model: string;
-    };
-  } | null;
-}
-
-interface ReportsByUser {
-  conseiller_commercial: string;
-  totalReports: number;
-  reports: Report[];
 }
 
 const RapportsRendezVousPage = async () => {
@@ -174,11 +139,11 @@ const RapportsRendezVousPage = async () => {
   });
 
   // Convert to array format expected by RapportAccordion
-  const reportsByUser: ReportsByUser[] = Array.from(groupedByCommercial.entries()).map(
+  const reportsByUser: ReportsByUserForExcel[] = Array.from(groupedByCommercial.entries()).map(
     ([conseiller_commercial, reports]) => ({
       conseiller_commercial,
       totalReports: reports.length,
-      reports: reports.map((r): Report => ({
+      reports: reports.map((r): ReportForExcel => ({
         id: r.id,
         date_rendez_vous: r.date_rendez_vous,
         heure_rendez_vous: r.heure_rendez_vous,
@@ -203,7 +168,16 @@ const RapportsRendezVousPage = async () => {
         Com_APV: r.Com_APV,
         Com_Office: r.Com_Office,
         Com_Close: r.Com_Close,
+        objet_autre: r.objet_autre ?? null,
+        modeles_discutes: r.modeles_discutes,
         devis_offre_remise: r.devis_offre_remise,
+        propositions_faites: r.propositions_faites ?? null,
+        reference_offre: r.reference_offre ?? null,
+        financement_propose: r.financement_propose ?? null,
+        assurance_entretien: r.assurance_entretien ?? false,
+        reprise_ancien_vehicule: r.reprise_ancien_vehicule ?? false,
+        suivi_actions: r.suivi_actions ?? null,
+        actions_suivi: r.actions_suivi,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         voiture: r.voiture ? {
@@ -252,9 +226,13 @@ const RapportsRendezVousPage = async () => {
   const withTestDrive = allReports.filter((r) => r.Com_Drive).length;
   
   // Get top performer
-  const topPerformer = reportsByUser.reduce((top, current) =>
-    current.totalReports > top.totalReports ? current : top,
-    reportsByUser[0] || { conseiller_commercial: "N/A", totalReports: 0 }
+  const topPerformer = reportsByUser.reduce(
+    (top, current) => (current.totalReports > top.totalReports ? current : top),
+    reportsByUser[0] ?? {
+      conseiller_commercial: "N/A",
+      totalReports: 0,
+      reports: [],
+    }
   );
 
   // Calculate recent activity (last 30 days)

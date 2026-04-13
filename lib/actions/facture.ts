@@ -68,8 +68,22 @@ function serializeFacture(facture: unknown) {
     clientId: (f.clientId as string) || null,
     clientEntrepriseId: (f.clientEntrepriseId as string) || null,
     userId: (f.userId as string) || "",
-    commandes: f.Commande || [],
-    paiements: f.Paiement || [],
+    commandes: ((f.Commande || []) as Array<Record<string, unknown>>).map(
+      (c) => ({
+        ...c,
+        prix_unitaire:
+          c.prix_unitaire != null ? Number(c.prix_unitaire) : null,
+      }),
+    ),
+    paiements: ((f.Paiement || []) as Array<Record<string, unknown>>).map(
+      (p) => ({
+        ...p,
+        avance_payee:
+          p.avance_payee != null ? Number(p.avance_payee) : 0,
+        reste_payer:
+          p.reste_payer != null ? Number(p.reste_payer) : 0,
+      }),
+    ),
     bonPourAccord: f.BonPourAccord
       ? { numero: (f.BonPourAccord as { numero_bon_pour_accord: string }).numero_bon_pour_accord }
       : null,
@@ -881,8 +895,8 @@ export async function getFactureById(factureId: string) {
 
     const factureWithRecalculatedReste = {
       ...facture,
-      reste_payer: new Decimal(recalculatedRestePayer),
-      avance_payee: new Decimal(totalPaid),
+      reste_payer: recalculatedRestePayer,
+      avance_payee: totalPaid,
     };
 
     return {

@@ -15,7 +15,8 @@ import {
   ShoppingCart,
   Truck,
   Mail,
-  MessageSquare
+  MessageSquare,
+  NotebookIcon
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -30,35 +31,8 @@ const navItems = [
     href: "/comptable",
     category: "main"
   },
-  {
-    id: 2,
-    icon: <CalendarDays className="w-5 h-5" />,
-    label: "Suivi Rendez-vous",
-    href: "/comptable/suivi-rendez-vous",
-    category: "operations"
-  },
-  {
-    id: 3,
-    icon: <TrendingDown className="w-5 h-5" />,
-    label: "Tableau Chute",
-    href: "/comptable/tableau-chute",
-    category: "operations"
-  },
-  {
-    id: 4,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Suivi Bon Commande",
-    href: "/comptable/suivi-bon-commande",
-    category: "operations"
-  },
-
-  {
-    id: 5,
-    icon: <Receipt className="w-5 h-5" />,
-    label: "Suivi Bon Pour Acquis",
-    href: "/comptable/suivi-bon-pour-acquis",
-    category: "operations"
-  },
+ 
+ 
   {
     id: 6,
     icon: <FileSpreadsheet className="w-5 h-5" />,
@@ -67,21 +41,21 @@ const navItems = [
     category: "commandes"
   },
   {
-    id: 12,
+    id: 7,
     icon: <FileSpreadsheet className="w-5 h-5" />,
     label: "Point Paiement",
     href: "/comptable/point-paiement",
     category: "commandes"
   },
   {
-    id: 7,
+    id: 8,
     icon: <PackageCheck className="w-5 h-5" />,
     label: "Commandes",
     href: "/comptable/commandes",
     category: "commandes"
   },
   {
-    id: 8,
+    id: 9,
     icon: <CheckCircle className="w-5 h-5" />,
     label: "Suivi Commandes",
     href: "/comptable/suivi-commandes",
@@ -89,42 +63,49 @@ const navItems = [
   },
 
   {
-    id: 9,
+    id: 10,
     icon: <Truck className="w-5 h-5" />,
     label: "Bon Commande Locaux",
     href: "/comptable/bon-commande-locaux",
     category: "commandes"
   },
   {
-    id: 10,
+    id: 11,
     icon: <ShoppingCart className="w-5 h-5" />,
     label: "Commandes Locaux",
     href: "/comptable/commandes-locaux",
     category: "commandes"
   },
   {
-    id: 11,
+    id: 12,
     icon: <Store className="w-5 h-5" />,
     label: "Clients",
     href: "/comptable/clients",
     category: "partenaires"
   },
   {
-    id: 12,
+    id: 13,
+    icon: <NotebookIcon className="w-5 h-5" />,
+    label: "Bon de Livraison",
+    href: "/comptable/bon-de-livraison",
+    category: "partenaires"
+  },
+  {
+    id: 14,
     icon: <Store className="w-5 h-5" />,
     label: "Fournisseurs Locaux",
     href: "/comptable/fournisseur-locaux",
     category: "partenaires"
   },
   {
-    id: 17,
+    id: 15,
     icon: <Mail className="w-5 h-5" />,
     label: "Numéro Courrier",
     href: "/comptable/numero-courrier",
     category: "Communication"
   },
   {
-    id: 18,
+    id: 16,
     icon: <MessageSquare className="w-5 h-5" />,
     label: "Messages",
     href: "/comptable/messages",

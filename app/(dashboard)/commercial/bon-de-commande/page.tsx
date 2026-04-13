@@ -1085,15 +1085,15 @@ export default function Page() {
                 {/* Footer */}
                 <div className="flex flex-col items-center w-full justify-center bg-blue-50 rounded-b-lg text-xs border-t-2 border-orange-800 text-black p-4 mt-4">
                   <p className="font-thin text-center">
-                    Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
-                    Tel : 00225 01 01 04 77 03
+                    Abidjan, Cocody – Riviéra Palmerais- Rue Cabine Bleue – 06 BP 1255 Abidjan 06 /
+                    Tel : 00225 07 07 20 22 11 
                   </p>
                   <p className="font-thin text-center">
-                    Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC
+                    Email: contact@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC
                     :2213233 – ECOBANK : CI059 01046 121659429001 46
                   </p>
                   <p className="font-thin text-center">
-                    kpandjiautomobiles@gmail.com / www.kpandji.com
+                    contact@kpandji.com / www.kpandji.com
                   </p>
                 </div>
               </div>

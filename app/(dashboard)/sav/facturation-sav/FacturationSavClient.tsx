@@ -9,35 +9,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, PlusIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatNumberWithSpaces } from "@/lib/utils";
 import FactureSavDocumentView from "@/components/sav/FactureSavDocumentView";
 import {
-  buildLineRows,
-  buildPrintFactureSectionsHtml,
+  buildLineRowsFactureTerminee,
+  buildPrintFactureSectionsHtmlFacture,
   escapeAttr,
   escapeHtmlSav,
   totalHtFromLines,
   TVA_RATE_SAV,
+  type MaintenanceSAVFactureRow,
   type ReparationRow,
 } from "@/lib/sav/savFactureLines";
 
 const escapeHtml = escapeHtmlSav;
-
 const TVA_RATE = TVA_RATE_SAV;
 
-export default function ProformaSavClient() {
-  const [reparations, setReparations] = useState<ReparationRow[]>([]);
+type FactureLite = {
+  id: string;
+  numero_facture: string;
+  date_facture: string | Date;
+};
+
+export type ReparationFacturationRow = ReparationRow & {
+  Maintenance?: MaintenanceSAVFactureRow[];
+  FactureProformaSAV?: FactureLite[];
+};
+
+export default function FacturationSavClient() {
+  const [reparations, setReparations] = useState<ReparationFacturationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/sav/proforma-reparations");
+      const res = await fetch("/api/sav/facturation-reparations");
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Chargement impossible");
@@ -57,52 +68,67 @@ export default function ProformaSavClient() {
   const totalPages = Math.max(1, Math.ceil(reparations.length / itemsPerPage));
   const currentRep = reparations[(currentPage - 1) * itemsPerPage];
 
+  const maintenancesMo: MaintenanceSAVFactureRow[] = useMemo(() => {
+    if (!currentRep?.Maintenance?.length) return [];
+    return currentRep.Maintenance;
+  }, [currentRep]);
+
   const lineRows = useMemo(
-    () => (currentRep ? buildLineRows(currentRep) : []),
-    [currentRep]
+    () =>
+      currentRep
+        ? buildLineRowsFactureTerminee(
+            currentRep as ReparationRow,
+            maintenancesMo,
+          )
+        : [],
+    [currentRep, maintenancesMo],
   );
 
   const totalHt = useMemo(() => totalHtFromLines(lineRows), [lineRows]);
-  const montantTva = useMemo(() => Math.round(totalHt * (TVA_RATE / 100) * 100) / 100, [totalHt]);
-  const totalTtc = useMemo(() => Math.round((totalHt + montantTva) * 100) / 100, [totalHt, montantTva]);
+  const montantTva = useMemo(
+    () => Math.round(totalHt * (TVA_RATE / 100) * 100) / 100,
+    [totalHt],
+  );
+  const totalTtc = useMemo(
+    () => Math.round((totalHt + montantTva) * 100) / 100,
+    [totalHt, montantTva],
+  );
+
+  const existingFacture = currentRep?.FactureProformaSAV?.[0];
+  const canEnregistrer =
+    currentRep &&
+    !existingFacture &&
+    currentRep.Maintenance &&
+    currentRep.Maintenance.length > 0;
 
   const goToNextPage = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const goToPrevPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
 
-  const handleActiverMaintenance = async () => {
-    if (!currentRep || maintenanceLoading) return;
-    if (currentRep.statut === "EN_MAINTENANCE") return;
-    setMaintenanceLoading(true);
+  const handleEnregistrerFacture = async () => {
+    if (!currentRep || saving || !canEnregistrer) return;
+    const maintenanceId = currentRep.Maintenance?.[0]?.id?.trim();
+    if (!maintenanceId) {
+      toast.error("Maintenance introuvable pour enregistrer la facture");
+      return;
+    }
+    setSaving(true);
     try {
-      const res = await fetch(`/api/sav/reparation/${currentRep.id}`, {
-        method: "PATCH",
+      const res = await fetch("/api/sav/facture-maintenance", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: "EN_MAINTENANCE" }),
+        body: JSON.stringify({ maintenanceId }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || "Mise à jour impossible");
+        throw new Error(json.error || "Enregistrement impossible");
       }
-      setReparations((prev) =>
-        prev.map((r) =>
-          r.id === currentRep.id ? { ...r, statut: "EN_MAINTENANCE" } : r
-        )
-      );
-      toast.success("Réparation passée en maintenance");
+      toast.success("Facture enregistrée (FactureProformaSAV)");
+      await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
-      setMaintenanceLoading(false);
+      setSaving(false);
     }
-  };
-
-  const getVisiblePages = () => {
-    const maxVisible = 9;
-    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    const endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
-    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
 
   const handlePrint = () => {
@@ -118,21 +144,27 @@ export default function ProformaSavClient() {
 
     const client = currentRep.voitureSAV.ClientSAV;
     const clientName = escapeHtml(`${client.prenom} ${client.nom}`.trim());
-    const rows = buildLineRows(currentRep);
+    const rows = buildLineRowsFactureTerminee(
+      currentRep as ReparationRow,
+      maintenancesMo,
+    );
     const ht = totalHtFromLines(rows);
     const tva = Math.round(ht * (TVA_RATE / 100) * 100) / 100;
     const ttc = Math.round((ht + tva) * 100) / 100;
 
-    const factureSectionsHtml = buildPrintFactureSectionsHtml(currentRep);
+    const factureSectionsHtml = buildPrintFactureSectionsHtmlFacture(
+      currentRep as ReparationRow,
+      maintenancesMo,
+    );
 
     const repId = escapeHtml(currentRep.id.slice(-7));
-    const factureDate = escapeHtml(new Date(currentRep.createdAt).toLocaleDateString());
+    const factureDate = escapeHtml(new Date().toLocaleDateString("fr-FR"));
 
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Proforma SAV — ${repId}</title>
+          <title>Facture SAV — ${repId}</title>
           <meta charset="UTF-8">
           <style>
             @page { size: A4; margin: 8mm; }
@@ -151,12 +183,12 @@ export default function ProformaSavClient() {
             <div><img src="${escapeAttr(typeof window !== "undefined" ? window.location.origin : "")}/logo.png" alt="Logo" style="width: 100px; height: 50px; object-fit: contain;" /></div>
             <div>
               <h1 style="margin:0;font-size:22px;">KPANDJI AUTOMOBILES</h1>
-              <p style="margin:4px 0 0;font-size:12px;">Services Après-Vente — Proforma</p>
+              <p style="margin:4px 0 0;font-size:12px;">Services Après-Vente — Facturation</p>
             </div>
           </div>
           <div style="text-align: right; font-size: 12px;">Date: ${factureDate}</div>
           <div style="text-align: center; margin: 16px 0;">
-            <h1 style="border: 1px solid #000; padding: 8px 16px; display: inline-block; font-size: 16px; margin: 0;">PROFORMA S.A.V.</h1>
+            <h1 style="border: 1px solid #000; padding: 8px 16px; display: inline-block; font-size: 16px; margin: 0;">FACTURE S.A.V.</h1>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
             <div>
@@ -181,10 +213,6 @@ export default function ProformaSavClient() {
               <tr class="total-row" style="background:#ecfdf5;"><td colspan="3" style="padding:10px;"></td><td style="text-align:right;padding:10px;">Total TTC</td><td style="text-align:right;padding:10px;">${formatNumberWithSpaces(ttc)} FCFA</td></tr>
             </tfoot>
           </table>
-          <div style="margin-top:16px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:12px;max-width:50%;font-size:12px;">
-            <div style="font-weight:700;margin-bottom:4px;">Note:</div>
-            <div>Sur la facture finale, il vous sera ajouter les frais des horaires-travail.</div>
-          </div>
           <div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b;text-align:center;line-height:1.5;">
             <p style="margin:0;">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
             <p style="margin:4px 0 0;">Email: info@kpandji.com — www.kpandji.com</p>
@@ -199,10 +227,19 @@ export default function ProformaSavClient() {
     });
   };
 
+  const getVisiblePages = () => {
+    const maxVisible = 9;
+    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-slate-600 text-sm">
-        Chargement des proformas SAV…
+        Chargement des factures SAV…
       </div>
     );
   }
@@ -211,8 +248,8 @@ export default function ProformaSavClient() {
     return (
       <div className="p-6">
         <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-600">
-          Aucune réparation enregistrée. Les proformas apparaissent après enregistrement d&apos;une réparation
-          depuis &quot;Voiture réparation&quot;.
+          Aucune réparation avec maintenance terminée. Les factures apparaissent lorsque la
+          maintenance est au statut « terminée » pour au moins une catégorie.
         </div>
       </div>
     );
@@ -249,35 +286,42 @@ export default function ProformaSavClient() {
               IMPRIMER
             </Button>
           </div>
-          <Button
-            type="button"
-            disabled={!currentRep || maintenanceLoading}
-            onClick={() => void handleActiverMaintenance()}
-            className={cn(
-              "font-semibold border-2 transition-colors",
-              currentRep?.statut === "EN_MAINTENANCE"
-                ? "bg-violet-600 hover:bg-violet-600 text-white border-violet-400 cursor-default"
-                : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500"
-            )}
-          >
-            <PlusIcon className="w-4 h-4" />
-            {currentRep?.statut === "EN_MAINTENANCE"
-              ? "En maintenance"
-              : "Ajouter Maintenance"}
-          </Button>
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+            {existingFacture ? (
+              <span className="text-sm text-slate-600">
+                Facture {existingFacture.numero_facture} —{" "}
+                {new Date(existingFacture.date_facture).toLocaleDateString("fr-FR")}
+              </span>
+            ) : null}
+            <Button
+              type="button"
+              disabled={!canEnregistrer || saving}
+              onClick={() => void handleEnregistrerFacture()}
+              className={cn(
+                "font-semibold border-2",
+                canEnregistrer
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500"
+                  : "bg-slate-300 text-slate-500 border-slate-200 cursor-not-allowed",
+              )}
+            >
+              <FileCheck className="w-4 h-4 mr-2" />
+              {saving ? "Enregistrement…" : "Enregistrer la facture"}
+            </Button>
+          </div>
         </div>
 
         {currentRep && (
-          <div id="printable-proforma-sav">
+          <div id="printable-facturation-sav">
             <FactureSavDocumentView
-              rep={currentRep}
-              documentTitle="PROFORMA S.A.V."
-              servicesSubtitle="Services Après-Vente — Proforma"
+              rep={currentRep as ReparationRow}
+              documentTitle="FACTURE S.A.V."
+              servicesSubtitle="Services Après-Vente — Facturation"
               totalHt={totalHt}
               montantTva={montantTva}
               totalTtc={totalTtc}
               tvaRate={TVA_RATE}
-              showProformaNote
+              factureMainOeuvreParCategorie
+              maintenancesMo={maintenancesMo}
             />
           </div>
         )}

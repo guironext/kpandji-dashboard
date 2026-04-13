@@ -56,7 +56,16 @@ export type RapportRendezVousReportItem = {
   Com_APV: boolean;
   Com_Office: boolean;
   Com_Close: boolean;
+  objet_autre: string | null;
+  modeles_discutes: unknown;
   devis_offre_remise: boolean;
+  propositions_faites: string | null;
+  reference_offre: string | null;
+  financement_propose: string | null;
+  assurance_entretien: boolean;
+  reprise_ancien_vehicule: boolean;
+  suivi_actions: string | null;
+  actions_suivi: unknown;
   createdAt: Date;
   updatedAt: Date;
   voiture?: {
@@ -177,7 +186,16 @@ export async function getRapportRendezVousByObjectifPeriodAndCommercial(clerkUse
           Com_APV: r.Com_APV,
           Com_Office: r.Com_Office,
           Com_Close: r.Com_Close,
+          objet_autre: r.objet_autre,
+          modeles_discutes: r.modeles_discutes,
           devis_offre_remise: r.devis_offre_remise,
+          propositions_faites: r.propositions_faites,
+          reference_offre: r.reference_offre,
+          financement_propose: r.financement_propose,
+          assurance_entretien: r.assurance_entretien,
+          reprise_ancien_vehicule: r.reprise_ancien_vehicule,
+          suivi_actions: r.suivi_actions,
+          actions_suivi: r.actions_suivi,
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
           voiture: r.Voiture

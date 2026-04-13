@@ -45,7 +45,7 @@ type NavCategory =
   | "objectifs"
   | "logistique"
   | "operations"
-  | "reports"
+  | "suivis"
   | "facturation"
   | "communication";
 
@@ -82,7 +82,8 @@ const navItems: NavItem[] = [
   { id: "op-tableau-chute", icon: BarChart3, label: "Tableau de Chute", href: "/commercial/tableau-chute", category: "operations" },
 
   // Rapports
-  { id: "rep-commandes", icon: TrendingUp, label: "Suivi Commandes", href: "/commercial/suivi-commandes", category: "reports" },
+  { id: "rep-commandes", icon: TrendingUp, label: "Suivi Commandes", href: "/commercial/suivi-commandes", category: "operations" },
+  { id: "rep-versement", icon: TrendingUp, label: "Suivi Versement", href: "/commercial/versement", category: "operations" },
 
   // Facturation
   { id: "fac-proformas", icon: FileText, label: "Proformas", href: "/commercial/proformas", category: "facturation" },

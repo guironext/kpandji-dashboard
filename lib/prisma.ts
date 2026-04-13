@@ -23,7 +23,11 @@ function configureDatabaseUrl(): void {
       url.searchParams.set("pool_timeout", "20");
     }
     if (!url.searchParams.has("connect_timeout")) {
-      url.searchParams.set("connect_timeout", "15");
+      // Neon cold start / wake from suspend can exceed a few seconds (Azure regions included).
+      url.searchParams.set(
+        "connect_timeout",
+        url.hostname.includes("neon.tech") ? "60" : "15",
+      );
     }
     if (url.hostname.includes("neon.tech")) {
       if (!url.searchParams.has("sslmode")) {

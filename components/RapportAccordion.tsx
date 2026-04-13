@@ -43,55 +43,10 @@ import {
   Package,
   FileSpreadsheet,
 } from "lucide-react";
-import { downloadExcelForUser } from "@/lib/exportRapportExcel";
-
-interface Report {
-  id: string;
-  date_rendez_vous: Date;
-  heure_rendez_vous: string;
-  duree_rendez_vous: string;
-  nom_prenom_client: string;
-  telephone_client: string;
-  email_client: string | null;
-  type_client: string;
-  lieu_rendez_vous: string;
-  lieu_autre: string | null;
-  profession_societe: string | null;
-  degre_interet: string | null;
-  motivations_achat: string | null;
-  points_positifs: string | null;
-  objections_freins: string | null;
-  commentaire_global: string | null;
-  decision_attendue: string | null;
-  Com_Pres: boolean;
-  Com_Drive: boolean;
-  Com_Achat: boolean;
-  Com_Livre: boolean;
-  Com_APV: boolean;
-  Com_Office: boolean;
-  Com_Close: boolean;
-  devis_offre_remise: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  voiture?: {
-    id: string;
-    couleur: string;
-    motorisation: string;
-    transmission: string;
-    voitureModel?: {
-      model: string;
-    };
-  } | null;
-}
-
-interface ReportsByUser {
-  conseiller_commercial: string;
-  totalReports: number;
-  reports: Report[];
-}
+import { downloadExcelForUser, type ReportsByUserForExcel } from "@/lib/exportRapportExcel";
 
 interface RapportAccordionProps {
-  reportsByUser: ReportsByUser[];
+  reportsByUser: ReportsByUserForExcel[];
 }
 
 export const RapportAccordion = ({ reportsByUser }: RapportAccordionProps) => {

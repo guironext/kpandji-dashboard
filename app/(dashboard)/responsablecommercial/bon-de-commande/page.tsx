@@ -34,15 +34,13 @@ import { format } from "date-fns";
 import {
 	getAllFacturesForResponsableCommercial,
 	deleteFacture,
+
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import {
-	generateNextNumero,
+
 	getBonDeCommandeByFactureId,
-	updateBonDeCommandeStatus,
 } from "@/lib/actions/bondecommande";
-import { updateClient } from "@/lib/actions/client";
-import { updateClientEntreprise } from "@/lib/actions/client_entreprise";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 
@@ -155,10 +153,10 @@ export default function Page() {
 		Array<{ id: string; nom: string; image?: string | null }>
 	>([]);
 	const [numero, setNumero] = useState<string>("");
-	const [bonDeCommandeStatus, setBonDeCommandeStatus] = useState<
-		string | null
-	>(null);
-	const [sousReserveSubmitting, setSousReserveSubmitting] = useState(false);
+	const [bonDeCommandeStatus, setBonDeCommandeStatus] = useState<string | null>(
+		null,
+	);
+
 	const [showApportInitial, setShowApportInitial] = useState(false);
 
 	useEffect(() => {
@@ -245,6 +243,10 @@ export default function Page() {
 		fetchNumero();
 	}, [filteredFactures, currentPage, startIndex, endIndex]);
 
+	useEffect(() => {
+		setShowApportInitial(bonDeCommandeStatus === "VALIDE_APPORT_INITIAL");
+	}, [bonDeCommandeStatus]);
+
 	const goToNextPage = () => {
 		setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 	};
@@ -253,68 +255,17 @@ export default function Page() {
 		setCurrentPage((prev) => Math.max(prev - 1, 1));
 	};
 
-	const handleGenerateNumero = async () => {
-		const currentFacture = currentData[0];
-		if (!currentFacture) return;
-
-		const result = await generateNextNumero(currentFacture.id);
-		if (result.success && result.data) {
-			setNumero(result.data.numero);
-			const bonResult = await getBonDeCommandeByFactureId(currentFacture.id);
-			if (bonResult.success && bonResult.data) {
-				setBonDeCommandeStatus(bonResult.data.status_bon_de_commande);
-			}
-			toast.success(`Numéro généré: ${result.data.numero}`);
-
-			if (currentFacture.clientId) {
-				try {
-					await updateClient(currentFacture.clientId, {
-						status_client: "CLIENT",
-					});
-				} catch (error) {
-					console.error("Error updating client status:", error);
-				}
-			}
-
-			if (currentFacture.clientEntrepriseId) {
-				try {
-					await updateClientEntreprise(currentFacture.clientEntrepriseId, {
-						status_client: "CLIENT",
-					});
-				} catch (error) {
-					console.error("Error updating client_entreprise status:", error);
-				}
-			}
-		} else {
-			toast.error("Erreur lors de la génération du numéro");
-		}
-	};
+	
 
 	const handlePrint = () => {
 		window.print();
 	};
 
-	const handleSousReserve = async () => {
-		const currentFacture = currentData[0];
-		if (!currentFacture) return;
+	
 
-		setSousReserveSubmitting(true);
-		try {
-			const result = await updateBonDeCommandeStatus(
-				currentFacture.id,
-				"SOUS_RESERVE",
-			);
-			if (result.success) {
-				setBonDeCommandeStatus("SOUS_RESERVE");
-				toast.success("Statut mis à jour : SOUS RÉSERVE");
-			} else {
-				toast.error(result.error || "Erreur lors de la mise à jour");
-			}
-		} finally {
-			setSousReserveSubmitting(false);
-		}
-	};
+	
 
+	
 	const handleDelete = async () => {
 		const currentFacture = currentData[0];
 		if (!currentFacture) return;
@@ -824,6 +775,28 @@ export default function Page() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          #printable-area .valide-stamp {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: 0 !important;
+            bottom: auto !important;
+            z-index: 50 !important;
+            pointer-events: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #printable-area .valide-apport-stamp {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            top: auto !important;
+            z-index: 50 !important;
+            pointer-events: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           @page {
             size: A4;
             margin: 10mm 6mm;
@@ -866,26 +839,7 @@ export default function Page() {
 								SUPPRIMER
 							</Button>
 
-							<Button
-								type="button"
-								onClick={handleSousReserve}
-								disabled={
-									currentData.length === 0 ||
-									bonDeCommandeStatus === null ||
-									bonDeCommandeStatus === "SOUS_RESERVE" ||
-									sousReserveSubmitting
-								}
-								className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-								{sousReserveSubmitting ? "…" : "SOUS RESERVE"}
-							</Button>
-
-							<Button className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-								VALIDE{" "}
-							</Button>
-
-							<Button className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-								VALIDE + APPORT INITIAL{" "}
-							</Button>
+							
 						</div>
 						<div className="flex gap-2">
 							<Button
@@ -895,6 +849,7 @@ export default function Page() {
 								<FileDown className="w-5 h-5 mr-2" />
 								EXPORT TO WORD
 							</Button>
+
 							<Button
 								onClick={handlePrint}
 								className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
@@ -906,7 +861,68 @@ export default function Page() {
 
 					<div className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-260px)] print:max-h-none print:overflow-visible">
 						<div id="printable-area" className="relative">
-							<div className="flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3">
+							{bonDeCommandeStatus === "VALIDE" && (
+								<div
+									className="valide-stamp pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center px-2 pt-1"
+									aria-hidden>
+									<span
+										className="inline-block select-none text-center font-black uppercase tracking-[0.12em] text-emerald-800"
+										style={{
+											fontSize: "clamp(2.75rem, 12vw, 5.5rem)",
+											lineHeight: 1.05,
+											transform:
+												"perspective(560px) rotate(-22deg) rotateX(16deg) translateY(4px)",
+											transformOrigin: "center top",
+											textShadow: `
+												0 2px 0 #bbf7d0,
+												0 4px 0 #86efac,
+												0 6px 0 #4ade80,
+												0 8px 0 #22c55e,
+												0 10px 0 #16a34a,
+												0 12px 0 #15803d,
+												0 14px 0 #166534,
+												0 18px 20px rgba(0,0,0,0.3),
+												0 28px 40px rgba(0,0,0,0.18)
+											`,
+										}}>
+										VALIDE
+									</span>
+								</div>
+							)}
+							{bonDeCommandeStatus === "VALIDE_APPORT_INITIAL" && (
+								<div
+									className="valide-apport-stamp-top pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center px-2 pt-1"
+									aria-hidden>
+									<span
+										className="inline-block max-w-[min(100%,42rem)] select-none text-center font-black leading-[1.08] tracking-[0.04em] text-amber-900"
+										style={{
+											fontSize: "clamp(1.35rem, 5.5vw, 2.75rem)",
+											transform:
+												"perspective(560px) rotate(-22deg) rotateX(16deg) translateY(4px)",
+											transformOrigin: "center top",
+											textShadow: `
+												0 2px 0 #fde68a,
+												0 4px 0 #fcd34d,
+												0 6px 0 #fbbf24,
+												0 8px 0 #f59e0b,
+												0 10px 0 #d97706,
+												0 12px 0 #b45309,
+												0 14px 0 #92400e,
+												0 18px 20px rgba(0,0,0,0.3),
+												0 28px 40px rgba(0,0,0,0.18)
+											`,
+										}}>
+										Valide avec apport initial
+									</span>
+								</div>
+							)}
+							<div
+								className={`flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3 ${
+									bonDeCommandeStatus === "VALIDE" ||
+									bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
+										? "pt-14 sm:pt-20 print:pt-12"
+										: ""
+								}`}>
 								<div>
 									<Image
 										src="/logo.png"
@@ -1039,8 +1055,9 @@ export default function Page() {
 
 									<div
 										className={`relative mb-2 ${
-											bonDeCommandeStatus === "SOUS_RESERVE"
-												? "pb-28 sm:pb-36 print:pb-28"
+											bonDeCommandeStatus === "SOUS_RESERVE" ||
+											bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
+												? "pb-28 sm:pb-40 print:pb-32"
 												: ""
 										}`}>
 										<h2 className="text-sm font-bold text-gray-800 mb-1">
@@ -1313,8 +1330,7 @@ export default function Page() {
 										{bonDeCommandeStatus === "SOUS_RESERVE" && (
 											<div
 												className="sous-reserve-stamp pointer-events-none absolute inset-x-0 bottom-0 z-50 flex items-end justify-center px-2 pb-0"
-												aria-hidden
-											>
+												aria-hidden>
 												<span
 													className="inline-block select-none text-center font-black uppercase tracking-[0.12em] text-red-700"
 													style={{

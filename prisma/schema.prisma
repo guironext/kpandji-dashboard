@@ -1344,6 +1344,7 @@ model CatergorieDiagnostic {
   updatedAt         DateTime            @updatedAt
   diagnosticArrivee DiagnosticArrivee[]
   DetailDiagnostic  DetailDiagnostic[]
+  Maintenance       Maintenance[]
 }
 
 model DetailDiagnostic {
@@ -1420,6 +1421,7 @@ model Reparation {
   DetailDiagnostic DetailDiagnostic[]
   PieceSAV         PieceSAV[]
   FactureProformaSAV FactureProformaSAV[]
+  Maintenance Maintenance[]
 }
 
 enum StatutReparation {
@@ -1427,6 +1429,30 @@ enum StatutReparation {
   EN_TRAITEMENT
   TESTE
   TERMINE
+  ANNULE
+  EN_MAINTENANCE
+}
+
+model Maintenance {
+  id String @id @default(uuid())
+  nom String
+  description String?
+  duree_maintenance String?
+  prix_maintenance Decimal?
+  reparationId String
+  reparation Reparation @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  catergorieDiagnosticId String?
+  catergorieDiagnostic CatergorieDiagnostic? @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: SetNull)
+  factureProformaSAVs FactureProformaSAV[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  statut StatutMaintenance @default(EN_ATTENTE)
+}
+
+enum StatutMaintenance {
+  EN_ATTENTE
+  EN_COURS
+  TERMINEE
   ANNULE
 }
 
@@ -1447,6 +1473,30 @@ model FactureProformaSAV {
   updatedAt      DateTime @updatedAt
   reparationId   String
   reparation     Reparation @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  maintenanceId  String
+  maintenance    Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+}
+
+model PersonnelSAV {
+  id                   String               @id @default(uuid())
+  nom                  String
+  prenom               String
+  email                String
+  telephone            String
+  specialite           String
+  groupePersonnelSAVId String
+  groupePersonnelSAV   GroupePersonnelSAV   @relation("PersonnelGroupeMembres", fields: [groupePersonnelSAVId], references: [id], onDelete: Cascade)
+  groupeOuJeSuisChef   GroupePersonnelSAV?  @relation("PersonnelGroupeChef")
+}
+
+model GroupePersonnelSAV {
+  id              String         @id @default(uuid())
+  nom             String
+  chefGroupeId    String?        @unique
+  chefGroupe      PersonnelSAV?  @relation("PersonnelGroupeChef", fields: [chefGroupeId], references: [id], onDelete: SetNull)
+  personnelSAVs   PersonnelSAV[] @relation("PersonnelGroupeMembres")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 

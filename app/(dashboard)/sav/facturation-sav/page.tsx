@@ -1,9 +1,5 @@
-import React from 'react'
+import FacturationSavClient from "./FacturationSavClient";
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function FacturationSavPage() {
+  return <FacturationSavClient />;
 }
-
-export default page

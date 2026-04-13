@@ -74,13 +74,14 @@ const navCategories = [
     ],
   },
   {
-    id: "reports",
-    label: "Rapports",
+    id: "suivis",
+    label: "Suivis",
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
       { id: 14, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
       { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
+      { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Versement", href: "/responsablecommercial/versement" },
     ],
   },
   {

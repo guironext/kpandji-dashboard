@@ -43,10 +43,12 @@ interface RapportRendezVousData {
   degre_interet: string | null;
   decision_attendue: string | null;
   devis_offre_remise: boolean;
+  propositions_faites: string | null;
   reference_offre: string | null;
   financement_propose: string | null;
-  assurance_entretien: string | null;
-  reprise_ancien_vehicule: string | null;
+  assurance_entretien: boolean;
+  reprise_ancien_vehicule: boolean;
+  suivi_actions: string | null;
   actions_suivi: string | null;
   commentaire_global: string | null;
   createdAt: Date;
@@ -78,6 +80,16 @@ interface RapportRendezVousData {
       model: string;
     };
   } | null;
+}
+
+function serializeJsonField(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "string") return v;
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
 }
 
 // Helper function to serialize facture Decimal fields
@@ -748,10 +760,12 @@ export async function getAllRapportRendezVousByUser() {
         degre_interet: string | null;
         decision_attendue: string | null;
         devis_offre_remise: boolean;
+        propositions_faites: string | null;
         reference_offre: string | null;
-        financement_propose: unknown;
-        assurance_entretien: unknown;
-        reprise_ancien_vehicule: unknown;
+        financement_propose: string | null;
+        assurance_entretien: boolean;
+        reprise_ancien_vehicule: boolean;
+        suivi_actions: string | null;
         actions_suivi: unknown;
         commentaire_global: string | null;
         createdAt: Date;
@@ -793,18 +807,20 @@ export async function getAllRapportRendezVousByUser() {
         Com_Office: report.Com_Office as boolean,
         Com_Close: report.Com_Close as boolean,
         objet_autre: report.objet_autre as string | null,
-        modeles_discutes: typeof report.modeles_discutes === 'string' ? report.modeles_discutes : null,
+        modeles_discutes: serializeJsonField(report.modeles_discutes),
         motivations_achat: report.motivations_achat as string | null,
         points_positifs: report.points_positifs as string | null,
         objections_freins: report.objections_freins as string | null,
         degre_interet: report.degre_interet as string | null,
         decision_attendue: report.decision_attendue as string | null,
         devis_offre_remise: report.devis_offre_remise as boolean,
+        propositions_faites: report.propositions_faites as string | null,
         reference_offre: report.reference_offre as string | null,
-        financement_propose: typeof report.financement_propose === 'string' ? report.financement_propose : null,
-        assurance_entretien: typeof report.assurance_entretien === 'string' ? report.assurance_entretien : null,
-        reprise_ancien_vehicule: typeof report.reprise_ancien_vehicule === 'string' ? report.reprise_ancien_vehicule : null,
-        actions_suivi: typeof report.actions_suivi === 'string' ? report.actions_suivi : null,
+        financement_propose: report.financement_propose as string | null,
+        assurance_entretien: Boolean(report.assurance_entretien),
+        reprise_ancien_vehicule: Boolean(report.reprise_ancien_vehicule),
+        suivi_actions: report.suivi_actions as string | null,
+        actions_suivi: serializeJsonField(report.actions_suivi),
         commentaire_global: report.commentaire_global as string | null,
         createdAt: report.createdAt as Date,
         updatedAt: report.updatedAt as Date,

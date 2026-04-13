@@ -12,71 +12,26 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { downloadExcelForAll, downloadExcelForUser } from "@/lib/exportRapportExcel";
-
-interface Report {
-  id: string;
-  date_rendez_vous: Date | string;
-  heure_rendez_vous: string;
-  duree_rendez_vous: string;
-  nom_prenom_client: string;
-  telephone_client: string;
-  email_client: string | null;
-  type_client: string;
-  lieu_rendez_vous: string;
-  degre_interet: string | null;
-  motivations_achat: string | null;
-  points_positifs: string | null;
-  objections_freins: string | null;
-  commentaire_global: string | null;
-}
-
-interface ReportsByUser {
-  conseiller_commercial: string;
-  totalReports: number;
-  reports: Report[];
-}
+import {
+  buildRapportRendezVousExportRow,
+  downloadExcelForAll,
+  downloadExcelForUser,
+  RAPPORT_RENDEZ_VOUS_EXPORT_HEADERS,
+  type ReportsByUserForExcel,
+} from "@/lib/exportRapportExcel";
 
 interface ExportReportsProps {
-  reportsByUser: ReportsByUser[];
+  reportsByUser: ReportsByUserForExcel[];
 }
 
 export const ExportReports = ({ reportsByUser }: ExportReportsProps) => {
   const exportToCSV = () => {
-    const headers = [
-      "Conseiller Commercial",
-      "Date Rendez-vous",
-      "Heure",
-      "Durée",
-      "Client",
-      "Téléphone",
-      "Email",
-      "Type Client",
-      "Lieu",
-      "Degré d'intérêt",
-      "Motivations",
-      "Points Positifs",
-      "Objections",
-      "Commentaire",
-    ];
+    const headers = [...RAPPORT_RENDEZ_VOUS_EXPORT_HEADERS];
 
-    const rows = reportsByUser.flatMap(userGroup =>
-      userGroup.reports.map((report) => [
-        userGroup.conseiller_commercial,
-        new Date(report.date_rendez_vous).toLocaleDateString("fr-FR"),
-        report.heure_rendez_vous,
-        report.duree_rendez_vous,
-        report.nom_prenom_client,
-        report.telephone_client,
-        report.email_client || "",
-        report.type_client,
-        report.lieu_rendez_vous,
-        report.degre_interet || "",
-        report.motivations_achat || "",
-        report.points_positifs || "",
-        report.objections_freins || "",
-        report.commentaire_global || "",
-      ])
+    const rows = reportsByUser.flatMap((userGroup) =>
+      userGroup.reports.map((report) =>
+        buildRapportRendezVousExportRow(report, userGroup.conseiller_commercial)
+      )
     );
 
     const csvContent = [
