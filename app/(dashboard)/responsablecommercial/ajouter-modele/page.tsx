@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createModel, getAllModele, getVoitureModelCountByTransmission } from "@/lib/actions/modele";
+import {
+  createModel,
+  deleteModele,
+  getAllModele,
+  getVoitureModelCountByTransmission,
+  updateModele,
+} from "@/lib/actions/modele";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +32,8 @@ import {
   Grid3X3,
   Calendar,
   ExternalLink,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { PieChart, Pie, Sector, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { PieSectorShapeProps } from "recharts";
@@ -43,6 +51,8 @@ type VoitureModelItem = {
 export default function AjouterModelePage() {
   const [models, setModels] = useState<VoitureModelItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingModel, setEditingModel] = useState<VoitureModelItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [ficheTechFiles, setFicheTechFiles] = useState<File[]>([]);
@@ -87,6 +97,7 @@ export default function AjouterModelePage() {
     setImageFiles([]);
     setFicheTechFiles([]);
     setPreview(null);
+    setEditingModel(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,8 +105,9 @@ export default function AjouterModelePage() {
     setLoading(true);
 
     const allFiles = [...imageFiles, ...ficheTechFiles];
-
-    const result = await createModel(formData, allFiles, ficheTechFiles.length > 0);
+    const result = editingModel
+      ? await updateModele(editingModel.id, formData, allFiles, ficheTechFiles.length > 0)
+      : await createModel(formData, allFiles, ficheTechFiles.length > 0);
 
     if (result.success) {
       toast.success(result.message);
@@ -113,6 +125,43 @@ export default function AjouterModelePage() {
       resetForm();
     }
     setDialogOpen(open);
+  };
+
+  const startEditModel = (model: VoitureModelItem) => {
+    setEditingModel(model);
+    setFormData({
+      model: model.model ?? "",
+      description: model.description ?? "",
+    });
+    setImageFiles([]);
+    setFicheTechFiles([]);
+    setPreview(model.image ?? null);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async (model: VoitureModelItem) => {
+    const ok = window.confirm(`Supprimer le modèle "${model.model}" ? Cette action est irréversible.`);
+    if (!ok) return;
+
+    setDeletingId(model.id);
+    try {
+      const result = await deleteModele(model.id);
+      if (result.success) {
+        toast.success(result.message);
+        await loadModels();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err instanceof Error && err.message
+          ? err.message
+          : "Erreur lors de la suppression du modèle";
+      toast.error(msg);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -153,7 +202,10 @@ export default function AjouterModelePage() {
                   {models.length} {models.length !== 1 ? "modèles" : "modèle"}
                 </Badge>
                 <Button
-                  onClick={() => setDialogOpen(true)}
+                  onClick={() => {
+                    setEditingModel(null);
+                    setDialogOpen(true);
+                  }}
                   size="lg"
                   className="gap-2 shadow-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white border-0"
                 >
@@ -174,10 +226,12 @@ export default function AjouterModelePage() {
                 <div className="h-14 w-1 shrink-0 rounded-full bg-gradient-to-b from-rose-400 to-rose-600" />
                 <div>
                   <DialogTitle className="text-2xl font-bold text-slate-900 tracking-tight">
-                    Nouveau Modèle
+                    {editingModel ? "Modifier le modèle" : "Nouveau Modèle"}
                   </DialogTitle>
                   <DialogDescription className="text-slate-500 mt-1">
-                    Renseignez les informations du véhicule
+                    {editingModel
+                      ? "Mettez à jour les informations du véhicule"
+                      : "Renseignez les informations du véhicule"}
                   </DialogDescription>
                 </div>
               </div>
@@ -298,8 +352,17 @@ export default function AjouterModelePage() {
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Enregistrer
+                      {editingModel ? (
+                        <>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Mettre à jour
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Enregistrer
+                        </>
+                      )}
                     </>
                   )}
                 </Button>
@@ -309,7 +372,7 @@ export default function AjouterModelePage() {
         </Dialog>
 
         {/* Donut chart - VoitureModel by transmission */}
-        <div className="mb-8 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm p-2">
+        <div className="mb-8 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Répartition par transmission</h3>
           <p className="text-sm text-slate-500 mb-6">
             Commandes par type de transmission (modèles avec voitureModel)
@@ -416,6 +479,43 @@ export default function AjouterModelePage() {
                         <Car className="h-16 w-16 text-slate-300" />
                       </div>
                     )}
+                    {/* Delete button */}
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          startEditModel(model);
+                        }}
+                        aria-label={`Modifier ${model.model}`}
+                        className="h-9 w-9 rounded-xl bg-white/95 text-slate-700 shadow-sm backdrop-blur-sm hover:bg-indigo-50 hover:text-indigo-700"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(model);
+                        }}
+                        disabled={deletingId === model.id}
+                        aria-label={`Supprimer ${model.model}`}
+                        className="h-9 w-9 rounded-xl bg-white/95 text-slate-700 shadow-sm backdrop-blur-sm hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
+                      >
+                        {deletingId === model.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                     {/* Date badge */}
                     <div className="absolute left-3 top-3 rounded-lg bg-white/95 px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm">
                       <span className="flex items-center gap-1.5">

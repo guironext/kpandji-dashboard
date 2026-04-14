@@ -68,10 +68,12 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
           {/* Right Section - User Info and Actions */}
           <div className="flex items-center gap-3">
             {/* Notifications */}
-            <button className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+            <button className="relative flex items-center justify-center p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notifications</span>
+
               <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400"></span>
+              
             </button>
 
             {/* Settings */}

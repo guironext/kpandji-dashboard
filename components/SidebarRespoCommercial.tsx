@@ -19,6 +19,7 @@ import {
   CalendarRange,
   KeyRound,
   Activity,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -96,6 +97,16 @@ const navCategories = [
       { id: 20, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },
+  {
+    id: "communication",
+    label: "Communication",
+    color: "#8b5cf6",
+    bg: "#8b5cf61a", // violet-500 @ 10% opacity
+    items: [
+      { id: 21, icon: <Mail className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
+      { id: 22, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
+    ],
+  }
 ];
 
 const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {

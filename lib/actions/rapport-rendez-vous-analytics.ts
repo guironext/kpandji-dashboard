@@ -657,8 +657,19 @@ export type ObjectifCibleByPeriodAndCommercial = {
   commercialName: string;
   userId: string;
   prospectCible: number;
+  /**
+   * Prospects réellement réalisés sur la période (calculé depuis les rapports RDV).
+   */
   prospectReel: number;
+  /**
+   * Valeur stockée en base (historique) — conservée pour comparaison.
+   */
+  prospectReelSaved: number;
   tauxAtteint: number;
+  /**
+   * Taux atteint recalculé à partir du prospectReel calculé.
+   */
+  tauxAtteintCalcule: number;
 };
 
 /**
@@ -699,6 +710,57 @@ export async function getObjectifsCibleByPeriodAndCommercial(clerkUserId?: strin
       },
     });
 
+    const periodRanges = objectifs
+      .filter((o) => o.period)
+      .map((o) => ({
+        periodId: o.period!.id,
+        start: o.period!.objectif_start,
+        end: o.period!.objectif_end,
+      }));
+
+    const minStart = periodRanges.reduce<Date | null>((min, p) => (!min || p.start < min ? p.start : min), null);
+    const maxEnd = periodRanges.reduce<Date | null>((max, p) => (!max || p.end > max ? p.end : max), null);
+
+    const prospectsCountByUserAndPeriod = new Map<string, number>();
+
+    if (minStart && maxEnd && periodRanges.length > 0) {
+      const rapports = await prisma.rapportRendezVous.findMany({
+        where: {
+          RendezVous: {
+            date: {
+              gte: minStart,
+              lte: maxEnd,
+            },
+          },
+        },
+        select: {
+          RendezVous: { select: { date: true } },
+          Client: { select: { userId: true, status_client: true } },
+          Client_entreprise: { select: { userId: true, status_client: true } },
+        },
+      });
+
+      for (const r of rapports) {
+        const d = r.RendezVous?.date;
+        if (!d) continue;
+
+        const clientStatus = r.Client?.status_client;
+        const entrepriseStatus = r.Client_entreprise?.status_client;
+        const status = clientStatus ?? entrepriseStatus ?? "PROSPECT";
+        if (status !== "PROSPECT") continue;
+
+        const userId = r.Client?.userId ?? r.Client_entreprise?.userId ?? null;
+        if (!userId) continue;
+
+        // Find the period this RDV belongs to (periods are expected to not overlap).
+        const period = periodRanges.find((p) => d >= p.start && d <= p.end);
+        if (!period) continue;
+
+        const key = `${userId}-${period.periodId}`;
+        prospectsCountByUserAndPeriod.set(key, (prospectsCountByUserAndPeriod.get(key) ?? 0) + 1);
+      }
+    }
+
     const result: ObjectifCibleByPeriodAndCommercial[] = objectifs
       .filter((o) => o.period)
       .map((o) => {
@@ -717,6 +779,10 @@ export async function getObjectifsCibleByPeriodAndCommercial(clerkUserId?: strin
           ? `${o.user.firstName} ${o.user.lastName}`.trim() || "—"
           : "—";
 
+        const prospectReelCalcule = prospectsCountByUserAndPeriod.get(`${o.userId}-${p.id}`) ?? 0;
+        const tauxAtteintCalcule =
+          o.prospectCible > 0 ? Math.round((prospectReelCalcule / o.prospectCible) * 1000) / 10 : 0;
+
         return {
           id: o.id,
           periodLabel: `${startStr} — ${endStr}`,
@@ -724,8 +790,10 @@ export async function getObjectifsCibleByPeriodAndCommercial(clerkUserId?: strin
           commercialName,
           userId: o.userId,
           prospectCible: o.prospectCible,
-          prospectReel: o.prospectReel,
+          prospectReel: prospectReelCalcule,
+          prospectReelSaved: o.prospectReel,
           tauxAtteint: Number(o.tauxAtteint),
+          tauxAtteintCalcule,
         };
       })
       .sort((a, b) => a.periodLabel.localeCompare(b.periodLabel) || a.commercialName.localeCompare(b.commercialName));

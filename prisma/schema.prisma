@@ -39,6 +39,7 @@ model User {
   Signature                 Signature?
   Tableau_chute             Tableau_chute[]
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
+  Notification Notification[]
 }
 
 model Message {
@@ -1497,6 +1498,29 @@ model GroupePersonnelSAV {
   personnelSAVs   PersonnelSAV[] @relation("PersonnelGroupeMembres")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+
+model Notification {
+  id String @id @default(uuid())
+  title String?
+  message String
+  href String?
+  type NotificationType
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  read Boolean @default(false)
+
+  @@index([userId])
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  URGENT
+  ERROR
 }
 
 

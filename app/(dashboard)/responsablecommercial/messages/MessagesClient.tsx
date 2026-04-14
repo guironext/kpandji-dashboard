@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { addAppNotification } from "@/lib/app-notifications";
 import {
   Send,
   Loader2,
@@ -31,6 +32,7 @@ import {
   Reply,
   X,
   RefreshCw,
+  Bell,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -94,6 +96,7 @@ export default function MessagesClient() {
   const [users, setUsers] = useState<UserOption[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [newMessageCount, setNewMessageCount] = useState(0);
   const [selectedReceiver, setSelectedReceiver] = useState<string>("all");
   const [content, setContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -229,10 +232,23 @@ export default function MessagesClient() {
               !prevIds.has(m.id)
           );
           if (newToMe.length > 0 && !isInitialLoadRef.current) {
+            setNewMessageCount((c) => c + newToMe.length);
             toast.info("Nouveau Message", {
               position: "top-center",
               duration: 5000,
             });
+
+            for (const m of newToMe) {
+              const senderName =
+                `${m.sender.firstName} ${m.sender.lastName}`.trim() || m.sender.email;
+              const preview =
+                m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
+              addAppNotification({
+                type: "message",
+                title: `Nouveau message de ${senderName} — ${preview}`,
+                href: "/responsablecommercial/messages",
+              });
+            }
           }
           data.forEach((m) => knownMessageIdsRef.current.add(m.id));
           setMessages(data);
@@ -467,7 +483,10 @@ export default function MessagesClient() {
                 variant="outline"
                 size="sm"
                 className="gap-2 border-violet-200 hover:bg-violet-100"
-                onClick={() => fetchMessages(currentUserId ?? undefined, { showErrorToast: true })}
+                onClick={() => {
+                  setNewMessageCount(0);
+                  fetchMessages(currentUserId ?? undefined, { showErrorToast: true });
+                }}
                 disabled={isLoadingMessages}
               >
                 {isLoadingMessages ? (
@@ -476,6 +495,20 @@ export default function MessagesClient() {
                   <RefreshCw className="h-4 w-4" />
                 )}
                 Actualiser
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="relative ml-2 border-violet-200 hover:bg-violet-100"
+                onClick={() => setNewMessageCount(0)}
+                aria-label="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {newMessageCount > 0 && (
+                  <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-fuchsia-600 px-1 text-[11px] font-bold leading-none text-white shadow ring-2 ring-white">
+                    {newMessageCount > 99 ? "99+" : newMessageCount}
+                  </span>
+                )}
               </Button>
             </div>
           </CardHeader>

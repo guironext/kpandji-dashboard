@@ -70,6 +70,15 @@ const STATUT_OPTIONS = [
   { value: "TERMINEE", label: "Terminée" },
 ];
 
+const MOYENS_TRANSPORT = [
+  "Djetran",
+  "Banco",
+  "Taxi Compteur",
+  "Yango",
+  "Lathaye",
+  "Autre",
+] as const;
+
 const STATUT_CONFIG: Record<
   string,
   { label: string; color: string; bg: string }
@@ -136,6 +145,7 @@ export default function ReservationVehiculePage() {
   const [editingReservation, setEditingReservation] =
     useState<ReservationVehicule | null>(null);
   const [editStatut, setEditStatut] = useState("");
+  const [editMoyenTransport, setEditMoyenTransport] = useState("");
   const [updating, setUpdating] = useState(false);
 
   const fetchReservations = useCallback(async () => {
@@ -177,6 +187,7 @@ export default function ReservationVehiculePage() {
   const handleModifierClick = (rv: ReservationVehicule) => {
     setEditingReservation(rv);
     setEditStatut(rv.statut);
+    setEditMoyenTransport(rv.moyenTransport || "");
     setEditDialogOpen(true);
   };
 
@@ -192,6 +203,7 @@ export default function ReservationVehiculePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             statut: editStatut,
+            moyenTransport: editMoyenTransport,
             clerkUserId: user?.id,
           }),
           credentials: "same-origin",
@@ -396,12 +408,32 @@ export default function ReservationVehiculePage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifier le statut</DialogTitle>
+            <DialogTitle>Modifier la réservation</DialogTitle>
             <DialogDescription>
-              Choisissez le nouveau statut pour cette réservation.
+              Modifiez le statut et/ou le moyen de transport pour cette réservation.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
+            <div className="grid gap-2 mb-4">
+              <p className="text-sm font-medium text-stone-700">
+                Véhicule / Moyen de transport
+              </p>
+              <Select
+                value={editMoyenTransport}
+                onValueChange={setEditMoyenTransport}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un moyen de transport" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOYENS_TRANSPORT.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Select value={editStatut} onValueChange={setEditStatut}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un statut" />

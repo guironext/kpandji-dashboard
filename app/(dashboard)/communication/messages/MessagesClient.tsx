@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { addAppNotification } from "@/lib/app-notifications";
 import {
   Send,
   Loader2,
@@ -238,6 +239,11 @@ export default function MessagesClient() {
               toast.info(`Nouveau message de ${senderName}`, {
                 description: preview,
                 duration: 5000,
+              });
+              addAppNotification({
+                type: "message",
+                title: `Nouveau message de ${senderName} — ${preview}`,
+                href: "/communication/messages",
               });
             }
           }

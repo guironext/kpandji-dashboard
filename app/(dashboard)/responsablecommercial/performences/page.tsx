@@ -1011,19 +1011,26 @@ function ObjectifsCibleTable({
               <td className="px-5 py-3 text-slate-700 text-xs">{o.periodLabel}</td>
               <td className="px-5 py-3 font-medium text-slate-800">{o.commercialName}</td>
               <td className="px-5 py-3 text-right font-medium tabular-nums text-slate-800">{o.prospectCible}</td>
-              <td className="px-5 py-3 text-right tabular-nums text-slate-600">{o.prospectReel}</td>
+              <td className="px-5 py-3 text-right tabular-nums text-slate-600">
+                {o.prospectReel}
+                {o.prospectReelSaved !== o.prospectReel ? (
+                  <span className="ml-2 text-xs text-slate-400">
+                    (base: {o.prospectReelSaved})
+                  </span>
+                ) : null}
+              </td>
               <td className="px-5 py-3 text-right">
                 <Badge
                   variant="outline"
                   className={
-                    o.tauxAtteint >= 100
+                    o.tauxAtteintCalcule >= 100
                       ? "text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium"
-                      : o.tauxAtteint >= 50
+                      : o.tauxAtteintCalcule >= 50
                         ? "text-xs bg-amber-50 text-amber-700 border-amber-200 font-medium"
                         : "text-xs bg-slate-100 text-slate-600 border-slate-200"
                   }
                 >
-                  {o.tauxAtteint.toFixed(1)}%
+                  {o.tauxAtteintCalcule.toFixed(1)}%
                 </Badge>
               </td>
             </tr>

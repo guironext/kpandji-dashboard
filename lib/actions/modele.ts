@@ -5,6 +5,7 @@ import { writeFile, mkdir, readdir, unlink, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
 import { prisma, executeWithRetry } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { put } from "@vercel/blob";
 
 // Schema for model creation - matches VoitureModel from Prisma schema
@@ -411,9 +412,14 @@ export async function updateModele(
 export async function deleteModele(modelId: string): Promise<{ success: boolean; message: string }> {
   try {
     // Get the model first to check if it has associated files
-    const modele = await prisma.voitureModel.findUnique({
-      where: { id: modelId }
-    });
+    const modele = await executeWithRetry(
+      () =>
+        prisma.voitureModel.findUnique({
+          where: { id: modelId },
+        }),
+      3,
+      1000
+    );
 
     if (!modele) {
       return {
@@ -422,10 +428,42 @@ export async function deleteModele(modelId: string): Promise<{ success: boolean;
       };
     }
 
+    // Block deletion with a clear message if referenced elsewhere
+    const [commandeCount, voitureCount, factureLigneCount, stockDisponibleCount, commandeEnAttenteCount] =
+      await Promise.all([
+        prisma.commande.count({ where: { voitureModelId: modelId } }),
+        prisma.voiture.count({ where: { voitureModelId: modelId } }),
+        prisma.factureLigne.count({ where: { voitureModelId: modelId } }),
+        prisma.stockDisponible.count({ where: { voitureModelId: modelId } }),
+        prisma.commandeEnAttente.count({ where: { voitureModelId: modelId } }),
+      ]);
+
+    const totalRefs =
+      commandeCount +
+      voitureCount +
+      factureLigneCount +
+      stockDisponibleCount +
+      commandeEnAttenteCount;
+
+    if (totalRefs > 0) {
+      return {
+        success: false,
+        message:
+          "Impossible de supprimer ce modèle car il est utilisé : " +
+          `commandes(${commandeCount}), voitures(${voitureCount}), lignes de facture(${factureLigneCount}), ` +
+          `stock(${stockDisponibleCount}), commandes en attente(${commandeEnAttenteCount}).`,
+      };
+    }
+
     // Delete model from database
-    await prisma.voitureModel.delete({ 
-      where: { id: modelId } 
-    });
+    await executeWithRetry(
+      () =>
+        prisma.voitureModel.delete({
+          where: { id: modelId },
+        }),
+      3,
+      1000
+    );
     
     // Delete associated files from the externes directory
     try {
@@ -471,6 +509,16 @@ export async function deleteModele(modelId: string): Promise<{ success: boolean;
     };
   } catch (error) {
     console.error("Erreur lors de la suppression du modèle:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2003 = Foreign key constraint failed
+      if (error.code === "P2003") {
+        return {
+          success: false,
+          message:
+            "Impossible de supprimer ce modèle car il est déjà utilisé (commandes, factures, stock, etc.).",
+        };
+      }
+    }
     return {
       success: false,
       message: "Erreur lors de la suppression du modèle",

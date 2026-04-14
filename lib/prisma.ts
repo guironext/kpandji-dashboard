@@ -16,11 +16,14 @@ function configureDatabaseUrl(): void {
   }
   try {
     const url = new URL(raw);
+    const isDev = process.env.NODE_ENV !== "production";
+    // In dev, Next/Turbopack can trigger many concurrent queries (RSC + API + prefetch),
+    // which can easily exhaust a small pool and surface as P2024 / "Failed to fetch".
     if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", "5");
+      url.searchParams.set("connection_limit", isDev ? "10" : "5");
     }
     if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", "20");
+      url.searchParams.set("pool_timeout", isDev ? "60" : "20");
     }
     if (!url.searchParams.has("connect_timeout")) {
       // Neon cold start / wake from suspend can exceed a few seconds (Azure regions included).

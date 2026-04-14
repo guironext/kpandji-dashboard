@@ -5,6 +5,7 @@ import "./globals.css";
 import { ClerkProvider, ClerkFailed } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkFailedOverlay } from "@/components/ClerkFailedOverlay";
+import FloatingNotifications from "@/components/FloatingNotifications";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -85,6 +86,8 @@ export default async function RootLayout({
             </ClerkFailed>
           )}
           {children}
+          
+          <FloatingNotifications />
           <Toaster />
         </body>
       </html>
