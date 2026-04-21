@@ -82,6 +82,10 @@ const isCommunityManagerRoute = createRouteMatcher([
 	"/communityManager",
 	"/communityManager/(.*)",
 ]);
+const isAssistanteRoute = createRouteMatcher([
+	"/assistante",
+	"/assistante/(.*)",
+]);
 
 const ROLE_REDIRECTS: Record<string, string> = {
 	ADMIN: "/admin",
@@ -106,6 +110,7 @@ const ROLE_REDIRECTS: Record<string, string> = {
 	SUPERVISEUR: "/superviseur",
 	INFORGRAPHIE: "/infographie",
 	COMMUNITY_MANAGER: "/communityManager",
+	ASSISTANTE: "/assistante",
 };
 
 function getRedirectForRole(role: string | undefined): string | null {
@@ -136,6 +141,7 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isSuperviseurRoute, role: "SUPERVISEUR" },
 	{ match: isInfographieRoute, role: "INFORGRAPHIE" },
 	{ match: isCommunityManagerRoute, role: "COMMUNITY_MANAGER" },
+	{ match: isAssistanteRoute, role: "ASSISTANTE" },
 ];
 
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
@@ -170,6 +176,7 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	if (isRapportRendezVousApi(req)) return NextResponse.next();
 	if (isFactureApi(req)) return NextResponse.next();
 	if (isReservationVehiculeApi(req)) return NextResponse.next();
+	if (isAssistanteRoute(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {
 		return redirectToSignIn({

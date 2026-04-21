@@ -358,6 +358,9 @@ const OnboardingForm = ({
                                   <SelectItem value="COMMUNITY_MANAGER">
                                     Community Manager
                                   </SelectItem>
+                                  <SelectItem value="ASSISTANTE">
+                                    Assistante
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
