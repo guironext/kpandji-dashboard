@@ -4,6 +4,31 @@ import { prisma, executeWithRetry } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { Decimal } from "@prisma/client/runtime/library";
 
+// Deep-convert Prisma Decimal instances anywhere in the data tree to plain numbers
+function deepStripDecimals<T>(value: T): T {
+  if (value == null) return value;
+  if (value instanceof Date) return value;
+  if (value instanceof Decimal) return Number(value) as unknown as T;
+  // Handle decimal-like objects that may leak from Prisma runtime without instanceof match
+  if (
+    typeof value === "object" &&
+    (value as { constructor?: { name?: string } }).constructor?.name === "Decimal"
+  ) {
+    return Number(value as unknown as Decimal) as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => deepStripDecimals(item)) as unknown as T;
+  }
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = deepStripDecimals(v);
+    }
+    return out as unknown as T;
+  }
+  return value;
+}
+
 // Helper function to convert Decimal fields to numbers
 function serializeFacture(facture: unknown) {
   const f = facture as Record<string, unknown> & {
@@ -85,7 +110,17 @@ function serializeFacture(facture: unknown) {
       }),
     ),
     bonPourAccord: f.BonPourAccord
-      ? { numero: (f.BonPourAccord as { numero_bon_pour_accord: string }).numero_bon_pour_accord }
+      ? {
+          numero: (f.BonPourAccord as { numero_bon_pour_accord: string }).numero_bon_pour_accord,
+          status: (f.BonPourAccord as { status_bon_pour_accord?: string }).status_bon_pour_accord ?? "EN_ATTENTE",
+        }
+      : null,
+    bonDeCommande: f.BonDeCommande
+      ? {
+          numero: (f.BonDeCommande as { numero: string }).numero,
+          prefix_numero: (f.BonDeCommande as { prefix_numero?: string }).prefix_numero,
+          status: (f.BonDeCommande as { status_bon_de_commande?: string }).status_bon_de_commande ?? "EN_ATTENTE",
+        }
       : null,
   };
 }
@@ -185,6 +220,143 @@ export async function getAllFacturesForResponsableCommercial() {
     return { success: true, data: serializedFactures };
   } catch (error) {
     console.error("Error fetching all factures for responsable commercial:", error);
+    return { success: false, error: "Failed to fetch factures" };
+  }
+}
+
+export async function getAllFacturesForComptableValideApportInitial() {
+  try {
+    const factures = await prisma.facture.findMany({
+      where: {
+        BonDeCommande: {
+          is: {
+            status_bon_de_commande: "VALIDE_APPORT_INITIAL",
+          },
+        },
+      },
+      include: {
+        Client: true,
+        Client_entreprise: true,
+        User: true,
+        Voiture: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        FactureLigne: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        Accessoire: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serializedFactures = (factures as unknown[]).map((f) =>
+      deepStripDecimals(serializeFacture(f)),
+    );
+
+    return { success: true, data: serializedFactures };
+  } catch (error) {
+    console.error(
+      "Error fetching factures with VALIDE_APPORT_INITIAL bon de commande:",
+      error,
+    );
+    return { success: false, error: "Failed to fetch factures" };
+  }
+}
+
+export async function getFacturesByBonValideApportInitial() {
+  try {
+    const factures = await prisma.facture.findMany({
+      where: {
+        OR: [
+          {
+            BonDeCommande: {
+              is: {
+                status_bon_de_commande: "VALIDE_APPORT_INITIAL",
+              },
+            },
+          },
+          {
+            BonPourAccord: {
+              is: {
+                status_bon_pour_accord: "VALIDE_APPORT_INITIAL",
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        Client: true,
+        Client_entreprise: true,
+        User: true,
+        Voiture: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        FactureLigne: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        Accessoire: true,
+        BonDeCommande: true,
+        BonPourAccord: true,
+        Commande: {
+          select: {
+            id: true,
+            etapeCommande: true,
+            createdAt: true,
+          },
+        },
+        Paiement: {
+          select: {
+            avance_payee: true,
+          },
+        },
+      },
+      orderBy: [
+        { date_facture: "desc" },
+        { User: { firstName: "asc" } },
+        { User: { lastName: "asc" } },
+      ],
+    });
+
+    // Recalculate reste_payer based on actual payments
+    const facturesWithRecalculatedReste = (factures as unknown[]).map(
+      (facture: unknown) => {
+        const f = facture as Record<string, unknown> & {
+          Paiement?: Array<{ avance_payee: Decimal | number }>;
+          total_ttc: Decimal | number;
+        };
+        const totalPaid = (f.Paiement || []).reduce(
+          (sum: number, paiement) => sum + Number(paiement.avance_payee),
+          0,
+        );
+        const totalTtc = Number(f.total_ttc);
+        const recalculatedRestePayer = Math.max(0, totalTtc - totalPaid);
+
+        return {
+          ...f,
+          reste_payer: new Decimal(recalculatedRestePayer),
+          avance_payee: new Decimal(totalPaid),
+        };
+      },
+    );
+
+    const serializedFactures = facturesWithRecalculatedReste.map((f) =>
+      deepStripDecimals(serializeFacture(f)),
+    );
+
+    return { success: true, data: serializedFactures };
+  } catch (error) {
+    console.error(
+      "Error fetching factures with VALIDE_APPORT_INITIAL bon:",
+      error,
+    );
     return { success: false, error: "Failed to fetch factures" };
   }
 }

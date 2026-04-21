@@ -20,15 +20,21 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Printer, FileDown } from "lucide-react";
-import { Document, Packer, Paragraph, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, AlignmentType } from "docx";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  Table as DocxTable,
+  TableRow as DocxTableRow,
+  TableCell as DocxTableCell,
+  AlignmentType,
+} from "docx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
-import { getAllFacturesForBonPourAccord, deleteFacture } from "@/lib/actions/facture";
-import { updateBonPourAccordStatus } from "@/lib/actions/bonpouraccord";
+import { getAllFacturesForBonPourAccord } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
-
 
 type Facture = {
   id: string;
@@ -157,11 +163,16 @@ export default function Page() {
     fetchData();
   }, []);
 
-  const facturesWithNumero = factures.filter((f) => f.bonPourAccord?.numero);
+  // Only factures whose BonPourAccord is in VALIDE_APPORT_INITIAL status
+  const facturesValide = factures.filter(
+    (f) =>
+      !!f.bonPourAccord?.numero &&
+      f.bonPourAccord?.status === "VALIDE_APPORT_INITIAL"
+  );
 
   const uniqueCommercials = Array.from(
     new Map(
-      facturesWithNumero
+      facturesValide
         .filter((f) => (f.userId || (f.user as { id?: string })?.id) && f.user)
         .map((f) => {
           const uid = f.userId || (f.user as { id?: string })?.id || "";
@@ -169,7 +180,10 @@ export default function Page() {
             uid,
             {
               id: uid,
-              label: `${f.user?.firstName || ""} ${f.user?.lastName || ""}`.trim() || (f.user?.email ?? "") || uid,
+              label:
+                `${f.user?.firstName || ""} ${f.user?.lastName || ""}`.trim() ||
+                (f.user?.email ?? "") ||
+                uid,
             },
           ];
         })
@@ -178,10 +192,11 @@ export default function Page() {
 
   const filteredFactures =
     selectedCommercialId === "all"
-      ? facturesWithNumero
-      : facturesWithNumero.filter(
+      ? facturesValide
+      : facturesValide.filter(
           (f) =>
-            (f.userId || (f.user as { id?: string })?.id) === selectedCommercialId
+            (f.userId || (f.user as { id?: string })?.id) ===
+            selectedCommercialId
         );
 
   const totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
@@ -192,6 +207,7 @@ export default function Page() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCommercialId]);
+
   const currentFacture = currentData[0];
   const numero = currentFacture?.bonPourAccord?.numero ?? "";
   const isValide =
@@ -207,69 +223,6 @@ export default function Page() {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleValider = async () => {
-    const facture = currentData[0];
-    if (!facture) return;
-
-    const result = await updateBonPourAccordStatus(
-      facture.id,
-      "VALIDE_APPORT_INITIAL",
-    );
-    if (result.success) {
-      toast.success("Bon pour accord validé");
-      setFactures((prev) =>
-        prev.map((f) =>
-          f.id === facture.id
-            ? {
-                ...f,
-                bonPourAccord: f.bonPourAccord
-                  ? { ...f.bonPourAccord, status: "VALIDE_APPORT_INITIAL" }
-                  : f.bonPourAccord,
-              }
-            : f,
-        ),
-      );
-    } else {
-      toast.error(result.error || "Erreur lors de la validation");
-    }
-  };
-
-  const handleDelete = async () => {
-    const facture = currentData[0];
-    if (!facture) return;
-
-    if (
-      confirm(
-        `Êtes-vous sûr de vouloir supprimer ce bon pour accord (${facture.id.slice(-7)}) ?`
-      )
-    ) {
-      const result = await deleteFacture(facture.id);
-      if (result.success) {
-        toast.success("Bon pour accord supprimé avec succès");
-        const updatedResult = await getAllFacturesForBonPourAccord();
-        if (updatedResult.success && updatedResult.data) {
-          const data = (updatedResult.data as unknown as Facture[]).filter(
-            (f) => f.bonPourAccord?.numero
-          );
-          setFactures(updatedResult.data as unknown as Facture[]);
-          const filtered =
-            selectedCommercialId === "all"
-              ? data
-              : data.filter(
-                  (f) =>
-                    (f.userId || (f.user as { id?: string })?.id) === selectedCommercialId
-                );
-          const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
-          if (currentPage > newTotalPages) {
-            setCurrentPage(Math.max(1, newTotalPages));
-          }
-        }
-      } else {
-        toast.error("Erreur lors de la suppression");
-      }
-    }
   };
 
   const handleExportToWord = async () => {
@@ -519,28 +472,11 @@ export default function Page() {
                 </SelectContent>
               </Select>
               <Button
-                onClick={handleDelete}
-                disabled={currentData.length === 0}
-                className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowApportInitial((prev) => !prev)}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg"
               >
-                SUPPRIMER
+                {showApportInitial ? "Masquer Apport Initial" : "Apport Initial"}
               </Button>
-              <Button
-                onClick={() => setShowApportInitial(true)}
-                disabled={showApportInitial}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Apport Initial
-              </Button>
-
-              <Button
-                onClick={handleValider}
-                disabled={currentData.length === 0 || isValide}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                VALIDER
-              </Button>
-            
             </div>
             <div className="flex gap-2">
               <Button
@@ -553,6 +489,7 @@ export default function Page() {
               </Button>
               <Button
                 onClick={handlePrint}
+                disabled={currentData.length === 0}
                 className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Printer className="w-5 h-5 mr-2" />
@@ -949,7 +886,9 @@ export default function Page() {
 
             {filteredFactures.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-lg text-gray-600">Aucun bon pour accord trouvé (tous les bons des commerciaux)</p>
+                <p className="text-lg text-gray-600">
+                  Aucun bon pour accord validé (apport initial) trouvé
+                </p>
               </div>
             )}
           </div>
@@ -989,7 +928,7 @@ export default function Page() {
 
             <Button
               onClick={goToNextPage}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || totalPages === 0}
               className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
             >
               Page Suivante

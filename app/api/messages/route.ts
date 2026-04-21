@@ -64,7 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { content, receiverId } = body;
+    const { content, receiverId, receiverIds } = body as {
+      content?: unknown;
+      receiverId?: unknown;
+      receiverIds?: unknown;
+    };
 
     if (!content || typeof content !== "string" || content.trim().length === 0) {
       return NextResponse.json(
@@ -82,7 +86,12 @@ export async function POST(request: NextRequest) {
     const finalReceiverId =
       receiverId === "all" || receiverId === null || receiverId === undefined
         ? null
-        : receiverId;
+        : typeof receiverId === "string"
+          ? receiverId
+          : null;
+
+    const finalReceiverIds =
+      Array.isArray(receiverIds) ? receiverIds.filter((id) => typeof id === "string") : [];
 
     if (!prisma.message) {
       return NextResponse.json(
@@ -94,15 +103,122 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await prisma.message.create({
-      data: {
-        senderId,
-        receiverId: finalReceiverId,
-        content: content.trim(),
-      },
-    });
+    // Create messages (one per recipient, or a broadcast message with receiverId = null)
+    const trimmed = content.trim();
 
-    return NextResponse.json({ success: true });
+    const createdMessages = await (async () => {
+      if (finalReceiverId) {
+        const one = await prisma.message.create({
+          data: { senderId, receiverId: finalReceiverId, content: trimmed },
+          include: { sender: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        });
+        return [one];
+      }
+
+      if (finalReceiverIds.length > 0) {
+        const list = await prisma.$transaction(
+          finalReceiverIds.map((rid) =>
+            prisma.message.create({
+              data: { senderId, receiverId: rid, content: trimmed },
+              include: { sender: { select: { id: true, firstName: true, lastName: true, email: true } } },
+            })
+          )
+        );
+        return list;
+      }
+
+      const broadcast = await prisma.message.create({
+        data: { senderId, receiverId: null, content: trimmed },
+        include: { sender: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      });
+      return [broadcast];
+    })();
+
+    // Persist notifications for recipients
+    const senderName =
+      `${createdMessages[0]!.sender.firstName} ${createdMessages[0]!.sender.lastName}`.trim() ||
+      createdMessages[0]!.sender.email;
+
+    const first20Words = (text: string) => {
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      const out = words.slice(0, 20).join(" ");
+      return words.length > 20 ? `${out}…` : out;
+    };
+
+    const preview = first20Words(trimmed);
+
+    const roleToMessagesPath = (role: string | null | undefined) => {
+      switch (role) {
+        case "COMMUNICATION":
+          return "/communication/messages";
+        case "COMPTABLE":
+          return "/comptable/messages";
+        case "RESPONSABLE_COMMERCIAL":
+          return "/responsablecommercial/messages";
+        default:
+          return "/communication/messages";
+      }
+    };
+
+    // Recipients: per-message receiverId if present, otherwise broadcast to all except sender
+    const directRecipientIds = Array.from(
+      new Set(createdMessages.map((m) => m.receiverId).filter((id): id is string => typeof id === "string" && id.length > 0))
+    );
+
+    if (directRecipientIds.length > 0) {
+      const recipients = await prisma.user.findMany({
+        where: { id: { in: directRecipientIds } },
+        select: { id: true, role: true, firstName: true, lastName: true, email: true },
+      });
+
+      const receiverNameById = new Map(
+        recipients.map((u) => [
+          u.id,
+          (`${u.firstName} ${u.lastName}`.trim() || u.email) as string,
+        ])
+      );
+      const roleById = new Map(recipients.map((u) => [u.id, u.role as unknown as string]));
+
+      await prisma.notification.createMany({
+        data: directRecipientIds.map((rid) => {
+          const msg = createdMessages.find((m) => m.receiverId === rid) ?? createdMessages[0]!;
+          const receiverName = receiverNameById.get(rid) ?? rid;
+          const href = `${roleToMessagesPath(roleById.get(rid))}?messageId=${encodeURIComponent(msg.id)}`;
+          return {
+            type: "MESSAGE",
+            title: "Nouveau message",
+            message: preview,
+            href,
+            senderId,
+            receiverId: rid,
+            read: false,
+          };
+        }),
+      });
+    } else {
+      const recipients = await prisma.user.findMany({
+        where: { id: { not: senderId } },
+        select: { id: true, role: true, firstName: true, lastName: true, email: true },
+      });
+      if (recipients.length > 0) {
+        await prisma.notification.createMany({
+          data: recipients.map((u) => {
+            const href = `${roleToMessagesPath(u.role as unknown as string)}?messageId=${encodeURIComponent(createdMessages[0]!.id)}`;
+            return {
+              type: "MESSAGE",
+              title: "Nouveau message",
+              message: preview,
+              href,
+              senderId,
+              receiverId: u.id,
+              read: false,
+            };
+          }),
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, senderName, messagePreview: preview });
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json(

@@ -26,7 +26,6 @@ export async function getOrCreateUser(clerkId?: string) {
       where: { clerkId: targetClerkId },
     });
 
-    // If user doesn't exist, create it from Clerk data
     if (!dbUser) {
       const clerkUser = await (
         await clerkClient()
@@ -36,31 +35,49 @@ export async function getOrCreateUser(clerkId?: string) {
         return { success: false, error: "User not found in Clerk" };
       }
 
-      // Get email from Clerk user (primary first, then first available)
       const email =
         (clerkUser as { primaryEmailAddress?: { emailAddress?: string } })
           .primaryEmailAddress?.emailAddress ||
         clerkUser.emailAddresses[0]?.emailAddress ||
         `${targetClerkId}@clerk.temp`;
 
-      // Get role from metadata or default to EMPLOYEE
       const role =
         (clerkUser.publicMetadata?.role as UserRole) || UserRole.EMPLOYEE;
 
-      // Create user in database
-      dbUser = await prisma.user.create({
-        data: {
-          clerkId: targetClerkId,
-          email: email,
-          firstName: clerkUser.firstName || "Unknown",
-          lastName: clerkUser.lastName || "User",
-          role: role,
-          department: clerkUser.publicMetadata?.department as
-            | string
-            | undefined,
-          telephone: clerkUser.publicMetadata?.telephone as string | undefined,
-        },
+      // A user with this email might already exist in the DB from a previous
+      // Clerk account. In that case, reconcile by updating the stale clerkId
+      // instead of creating a duplicate (which would violate the unique
+      // constraint on `email`).
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email },
       });
+
+      if (existingByEmail) {
+        dbUser = await prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            clerkId: targetClerkId,
+            firstName: clerkUser.firstName || existingByEmail.firstName,
+            lastName: clerkUser.lastName || existingByEmail.lastName,
+          },
+        });
+      } else {
+        dbUser = await prisma.user.create({
+          data: {
+            clerkId: targetClerkId,
+            email: email,
+            firstName: clerkUser.firstName || "Unknown",
+            lastName: clerkUser.lastName || "User",
+            role: role,
+            department: clerkUser.publicMetadata?.department as
+              | string
+              | undefined,
+            telephone: clerkUser.publicMetadata?.telephone as
+              | string
+              | undefined,
+          },
+        });
+      }
     }
 
     return { success: true, data: dbUser };

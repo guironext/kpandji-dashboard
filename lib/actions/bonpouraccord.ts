@@ -1,5 +1,6 @@
 "use server";
 
+import type { StatusBonPourAccord } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function generateNextNumeroBonPourAccord(factureId: string) {
@@ -69,7 +70,10 @@ export async function getBonPourAccordByFactureId(factureId: string) {
     return {
       success: true,
       data: bonPourAccord
-        ? { numero: bonPourAccord.numero_bon_pour_accord }
+        ? {
+            numero: bonPourAccord.numero_bon_pour_accord,
+            status: bonPourAccord.status_bon_pour_accord,
+          }
         : null,
     };
   } catch (error) {
@@ -77,6 +81,39 @@ export async function getBonPourAccordByFactureId(factureId: string) {
     return {
       success: false,
       error: "Failed to fetch Bon pour Accord",
+    };
+  }
+}
+
+export async function updateBonPourAccordStatus(
+  factureId: string,
+  status: StatusBonPourAccord,
+) {
+  try {
+    const existing = await prisma.bonPourAccord.findUnique({
+      where: { factureId },
+    });
+    if (!existing) {
+      return {
+        success: false,
+        error: "Aucun bon pour accord pour cette facture",
+      };
+    }
+
+    const bonPourAccord = await prisma.bonPourAccord.update({
+      where: { factureId },
+      data: {
+        status_bon_pour_accord: status,
+        updatedAt: new Date(),
+      },
+    });
+
+    return { success: true, data: bonPourAccord };
+  } catch (error) {
+    console.error("Error updating BonPourAccord status:", error);
+    return {
+      success: false,
+      error: "Échec de la mise à jour du statut",
     };
   }
 }

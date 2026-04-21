@@ -335,6 +335,48 @@ export async function getAllPaiementsGroupedByClient() {
       }
     });
 
+    const serializePaiement = (p: unknown) => {
+      const paiement = p as Record<string, unknown> & {
+        avance_payee: Decimal | number;
+        reste_payer: Decimal | number;
+        Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
+        User?: unknown;
+        NumeroEntreeCaisse?: unknown;
+      };
+      const {
+        Facture,
+        User,
+        NumeroEntreeCaisse,
+        Client: _Client,
+        Client_entreprise: _ClientEntreprise,
+        avance_payee,
+        reste_payer,
+        ...rest
+      } = paiement as Record<string, unknown> & {
+        Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
+        User?: unknown;
+        NumeroEntreeCaisse?: unknown;
+        Client?: unknown;
+        Client_entreprise?: unknown;
+        avance_payee: Decimal | number;
+        reste_payer: Decimal | number;
+      };
+      void _Client;
+      void _ClientEntreprise;
+      return {
+        ...rest,
+        avance_payee: Number(avance_payee),
+        reste_payer: Number(reste_payer),
+        facture: {
+          id: Facture.id,
+          date_facture: Facture.date_facture,
+          total_ttc: Number(Facture.total_ttc),
+        },
+        user: User,
+        numeroEntreeCaisse: NumeroEntreeCaisse,
+      };
+    };
+
     // Transform the data
     const clientsData = Object.entries(groupedByClient).map(
       ([clientId, paiements]) => {
@@ -347,27 +389,7 @@ export async function getAllPaiementsGroupedByClient() {
         return {
           clientId,
           client,
-          paiements: paiements.map((p: unknown) => {
-            const paiement = p as Record<string, unknown> & {
-              avance_payee: Decimal | number;
-              reste_payer: Decimal | number;
-              Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
-              User?: unknown;
-              NumeroEntreeCaisse?: unknown;
-            };
-            return {
-              ...paiement,
-              avance_payee: Number(paiement.avance_payee),
-              reste_payer: Number(paiement.reste_payer),
-              facture: {
-                id: paiement.Facture.id,
-                date_facture: paiement.Facture.date_facture,
-                total_ttc: Number(paiement.Facture.total_ttc),
-              },
-              user: paiement.User,
-              numeroEntreeCaisse: paiement.NumeroEntreeCaisse,
-            };
-          }),
+          paiements: paiements.map(serializePaiement),
           totalAmount,
         };
       },
@@ -384,27 +406,7 @@ export async function getAllPaiementsGroupedByClient() {
         return {
           clientEntrepriseId,
           clientEntreprise,
-          paiements: paiements.map((p: unknown) => {
-            const paiement = p as Record<string, unknown> & {
-              avance_payee: Decimal | number;
-              reste_payer: Decimal | number;
-              Facture: { id: string; date_facture: Date; total_ttc: Decimal | number };
-              User?: unknown;
-              NumeroEntreeCaisse?: unknown;
-            };
-            return {
-              ...paiement,
-              avance_payee: Number(paiement.avance_payee),
-              reste_payer: Number(paiement.reste_payer),
-              facture: {
-                id: paiement.Facture.id,
-                date_facture: paiement.Facture.date_facture,
-                total_ttc: Number(paiement.Facture.total_ttc),
-              },
-              user: paiement.User,
-              numeroEntreeCaisse: paiement.NumeroEntreeCaisse,
-            };
-          }),
+          paiements: paiements.map(serializePaiement),
           totalAmount,
         };
       },

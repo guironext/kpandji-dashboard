@@ -1,22 +1,21 @@
 "use client";
 
 import {
-  Home,
+  LayoutDashboard,
   Users,
   Warehouse,
-  CheckCircle,
+  FileText,
+  FileCheck2,
   FileSpreadsheet,
-  CalendarDays,
-  TrendingDown,
+  Receipt,
+  Wallet,
   PackageCheck,
   ClipboardCheck,
-  Receipt,
-  Store,
-  ShoppingCart,
   Truck,
+  ShoppingCart,
+  ScrollText,
   Mail,
   MessageSquare,
-  NotebookIcon
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -26,92 +25,102 @@ import { usePathname } from "next/navigation";
 const navItems = [
   {
     id: 1,
-    icon: <Home className="w-5 h-5" />,
+    icon: <LayoutDashboard className="w-5 h-5" />,
     label: "Dashboard",
     href: "/comptable",
-    category: "main"
+    category: "main",
   },
- 
- 
   {
-    id: 6,
+    id: 2,
+    icon: <FileText className="w-5 h-5" />,
+    label: "Bon de Commande",
+    href: "/comptable/bon-de-commande",
+    category: "commandes",
+  },
+  {
+    id: 3,
+    icon: <FileCheck2 className="w-5 h-5" />,
+    label: "Bon Pour Accord",
+    href: "/comptable/bon-pour-accord",
+    category: "commandes",
+  },
+  {
+    id: 4,
     icon: <FileSpreadsheet className="w-5 h-5" />,
     label: "Factures",
     href: "/comptable/facture",
-    category: "commandes"
+    category: "commandes",
   },
   {
-    id: 7,
-    icon: <FileSpreadsheet className="w-5 h-5" />,
+    id: 5,
+    icon: <Receipt className="w-5 h-5" />,
     label: "Point Paiement",
     href: "/comptable/point-paiement",
-    category: "commandes"
+    category: "commandes",
   },
   {
-    id: 8,
+    id: 6,
     icon: <PackageCheck className="w-5 h-5" />,
     label: "Commandes",
     href: "/comptable/commandes",
-    category: "commandes"
+    category: "commandes",
   },
   {
-    id: 9,
-    icon: <CheckCircle className="w-5 h-5" />,
+    id: 7,
+    icon: <ClipboardCheck className="w-5 h-5" />,
     label: "Suivi Commandes",
     href: "/comptable/suivi-commandes",
-    category: "commandes"
+    category: "commandes",
   },
-
   {
-    id: 10,
+    id: 8,
     icon: <Truck className="w-5 h-5" />,
     label: "Bon Commande Locaux",
     href: "/comptable/bon-commande-locaux",
-    category: "commandes"
+    category: "locaux",
   },
   {
-    id: 11,
+    id: 9,
     icon: <ShoppingCart className="w-5 h-5" />,
     label: "Commandes Locaux",
     href: "/comptable/commandes-locaux",
-    category: "commandes"
+    category: "locaux",
+  },
+  {
+    id: 10,
+    icon: <Wallet className="w-5 h-5" />,
+    label: "Fournisseurs Locaux",
+    href: "/comptable/fournisseur-locaux",
+    category: "locaux",
+  },
+  {
+    id: 11,
+    icon: <Users className="w-5 h-5" />,
+    label: "Clients",
+    href: "/comptable/clients",
+    category: "partenaires",
   },
   {
     id: 12,
-    icon: <Store className="w-5 h-5" />,
-    label: "Clients",
-    href: "/comptable/clients",
-    category: "partenaires"
+    icon: <ScrollText className="w-5 h-5" />,
+    label: "Bon de Livraison",
+    href: "/comptable/bon-de-livraison",
+    category: "partenaires",
   },
   {
     id: 13,
-    icon: <NotebookIcon className="w-5 h-5" />,
-    label: "Bon de Livraison",
-    href: "/comptable/bon-de-livraison",
-    category: "partenaires"
-  },
-  {
-    id: 14,
-    icon: <Store className="w-5 h-5" />,
-    label: "Fournisseurs Locaux",
-    href: "/comptable/fournisseur-locaux",
-    category: "partenaires"
-  },
-  {
-    id: 15,
     icon: <Mail className="w-5 h-5" />,
     label: "Numéro Courrier",
     href: "/comptable/numero-courrier",
-    category: "Communication"
+    category: "communication",
   },
   {
-    id: 16,
+    id: 14,
     icon: <MessageSquare className="w-5 h-5" />,
     label: "Messages",
     href: "/comptable/messages",
-    category: "Communication"
+    category: "communication",
   },
-   
 ];
 
 const SidebarComptable = ({ isOpen }: { isOpen: boolean }) => {
@@ -131,12 +140,10 @@ const SidebarComptable = ({ isOpen }: { isOpen: boolean }) => {
 
   const categoryLabels = {
     main: "Principal",
-    commandes: "Commandes",
-    management: "Gestion",
-    inventory: "Inventaire",
-    operations: "Opérations",
-    reports: "Rapports",
-    settings: "Configuration"
+    commandes: "Commandes & Ventes",
+    locaux: "Achats Locaux",
+    partenaires: "Partenaires",
+    communication: "Communication",
   };
 
   return (

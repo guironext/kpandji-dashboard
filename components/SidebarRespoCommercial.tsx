@@ -80,8 +80,8 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 14, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
-      { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
+      { id: 13, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
+      { id: 14, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
       { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Versement", href: "/responsablecommercial/versement" },
     ],
   },
@@ -92,9 +92,9 @@ const navCategories = [
     bg: "#ec48991a", // pink-500 @ 10% opacity
     items: [
       { id: 16, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
-      { id: 18, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
-      { id: 19, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
-      { id: 20, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
+      { id: 17, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
+      { id: 18, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
+      { id: 19, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },
   {
@@ -103,8 +103,8 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 21, icon: <Mail className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
-      { id: 22, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
+      { id: 20, icon: <Mail className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
+      { id: 21, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
     ],
   }
 ];

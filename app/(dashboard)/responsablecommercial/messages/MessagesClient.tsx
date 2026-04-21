@@ -11,16 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { addAppNotification } from "@/lib/app-notifications";
+import { addPersistedAppNotification } from "@/lib/app-notifications";
 import {
   Send,
   Loader2,
@@ -97,7 +93,9 @@ export default function MessagesClient() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [newMessageCount, setNewMessageCount] = useState(0);
-  const [selectedReceiver, setSelectedReceiver] = useState<string>("all");
+  const [sendToAll, setSendToAll] = useState(true);
+  const [selectedReceiverIds, setSelectedReceiverIds] = useState<string[]>([]);
+  const [receiverSearch, setReceiverSearch] = useState("");
   const [content, setContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [replyContent, setReplyContent] = useState("");
@@ -243,7 +241,7 @@ export default function MessagesClient() {
                 `${m.sender.firstName} ${m.sender.lastName}`.trim() || m.sender.email;
               const preview =
                 m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
-              addAppNotification({
+              addPersistedAppNotification({
                 type: "message",
                 title: `Nouveau message de ${senderName} — ${preview}`,
                 href: "/responsablecommercial/messages",
@@ -270,18 +268,28 @@ export default function MessagesClient() {
 
   const handleSend = async () => {
     if (!clerkId || !content.trim()) return;
+    if (!sendToAll && selectedReceiverIds.length === 0) {
+      toast.error("Sélectionnez au moins un destinataire");
+      return;
+    }
     setIsSending(true);
     try {
+      const receiverIds = selectedReceiverIds;
+
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: content.trim(),
-          receiverId: selectedReceiver === "all" ? null : selectedReceiver,
+          receiverId: sendToAll ? null : receiverIds.length === 1 ? receiverIds[0] : undefined,
+          receiverIds: sendToAll || receiverIds.length <= 1 ? undefined : receiverIds,
         }),
       });
       if (res.ok) {
         setContent("");
+        setReceiverSearch("");
+        setSendToAll(true);
+        setSelectedReceiverIds([]);
         await fetchMessages(currentUserId ?? undefined, { showErrorToast: true });
         toast.success("Message envoyé");
       } else {
@@ -408,35 +416,123 @@ export default function MessagesClient() {
           <CardContent className="space-y-4 pt-6">
             <div>
               <label className="text-sm font-semibold mb-2 block text-violet-800/80">Destinataire</label>
-              <Select
-                value={selectedReceiver}
-                onValueChange={setSelectedReceiver}
-                disabled={isLoadingUsers}
-              >
-                <SelectTrigger className="h-11 border-2 border-violet-200/60 focus:border-violet-400 focus:ring-violet-200">
-                  <SelectValue placeholder="Sélectionner..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    <span className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xs font-bold">
-                        <Users className="h-4 w-4" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={isLoadingUsers}
+                    className="h-11 w-full rounded-md border-2 border-violet-200/60 bg-background px-3 text-left text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {sendToAll
+                          ? "Tous les utilisateurs"
+                          : selectedReceiverIds.length === 0
+                            ? "Sélectionner..."
+                            : `${selectedReceiverIds.length} utilisateur${selectedReceiverIds.length !== 1 ? "s" : ""} sélectionné${selectedReceiverIds.length !== 1 ? "s" : ""}`}
                       </span>
-                      <span className="font-medium">Tous les utilisateurs</span>
-                    </span>
-                  </SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
+                      <Users className="h-4 w-4 text-violet-500" />
+                    </div>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[340px] p-3">
+                  <div className="space-y-3">
+                    <Input
+                      value={receiverSearch}
+                      onChange={(e) => setReceiverSearch(e.target.value)}
+                      placeholder="Rechercher un utilisateur..."
+                      className="h-10"
+                    />
+
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-violet-50"
+                      onClick={() => {
+                        setSendToAll(true);
+                        setSelectedReceiverIds([]);
+                      }}
+                    >
+                      <Checkbox checked={sendToAll} onCheckedChange={() => {}} />
                       <span className="flex items-center gap-2">
-                        <span className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${getAvatarColor(hashToIndex(u.id))} text-white text-xs font-bold shadow-sm`}>
-                          {getInitials(u.firstName, u.lastName, u.email)}
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xs font-bold">
+                          <Users className="h-4 w-4" />
                         </span>
-                        {u.firstName} {u.lastName}
+                        <span className="font-medium">Tous les utilisateurs</span>
                       </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </button>
+
+                    <div className="max-h-64 overflow-auto rounded-md border border-violet-100">
+                      {users
+                        .filter((u) => {
+                          const q = receiverSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim().toLowerCase();
+                          const email = (u.email ?? "").toLowerCase();
+                          return name.includes(q) || email.includes(q);
+                        })
+                        .map((u) => {
+                          const checked = !sendToAll && selectedReceiverIds.includes(u.id);
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              className="flex w-full items-center gap-2 px-2 py-2 text-left hover:bg-violet-50"
+                              onClick={() => {
+                                setSendToAll(false);
+                                setSelectedReceiverIds((prev) =>
+                                  prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                                );
+                              }}
+                            >
+                              <Checkbox checked={checked} onCheckedChange={() => {}} />
+                              <span className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br ${getAvatarColor(hashToIndex(u.id))} text-white text-xs font-bold shadow-sm`}>
+                                {getInitials(u.firstName, u.lastName, u.email)}
+                              </span>
+                              <span className="truncate">
+                                {u.firstName} {u.lastName}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+
+                    {!sendToAll && selectedReceiverIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedReceiverIds.slice(0, 6).map((id) => {
+                          const u = users.find((x) => x.id === id);
+                          const label = u ? `${u.firstName} ${u.lastName}`.trim() : id;
+                          return (
+                            <Badge
+                              key={id}
+                              variant="secondary"
+                              className="gap-1 bg-violet-50 text-violet-700 border border-violet-200"
+                            >
+                              {label || "Utilisateur"}
+                              <button
+                                type="button"
+                                className="ml-1 rounded hover:bg-violet-100"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedReceiverIds((prev) => prev.filter((x) => x !== id));
+                                }}
+                                aria-label={`Retirer ${label}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                        {selectedReceiverIds.length > 6 && (
+                          <Badge variant="secondary" className="bg-violet-50 text-violet-700 border border-violet-200">
+                            +{selectedReceiverIds.length - 6}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <label className="text-sm font-semibold mb-2 block text-violet-800/80">Message</label>
@@ -450,7 +546,7 @@ export default function MessagesClient() {
             </div>
             <Button
               onClick={handleSend}
-              disabled={!content.trim() || isSending}
+              disabled={!content.trim() || isSending || (!sendToAll && selectedReceiverIds.length === 0)}
               className="w-full h-12 font-semibold bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 hover:from-violet-600 hover:via-fuchsia-600 hover:to-cyan-600 text-white shadow-lg shadow-violet-300/40 border-0"
             >
               {isSending ? (

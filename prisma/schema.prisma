@@ -39,7 +39,8 @@ model User {
   Signature                 Signature?
   Tableau_chute             Tableau_chute[]
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
-  Notification Notification[]
+  NotificationsSent         Notification[]              @relation("NotificationsSent")
+  NotificationsReceived     Notification[]              @relation("NotificationsReceived")
 }
 
 model Message {
@@ -195,6 +196,7 @@ model BonDeCommande {
   Facture       Facture  @relation(fields: [factureId], references: [id])
   status_bon_de_commande StatusBonDeCommande @default(EN_ATTENTE)
 }
+//set status_bon_de_commande=VALIDE_APPORT_INITIAL when facture.prix_unitaire*facture.nbr_voiture_commande*0.60 is greater than facture.total_ttc
 
 enum StatusBonDeCommande {
   EN_ATTENTE
@@ -1506,17 +1508,19 @@ model Notification {
   title String?
   message String
   href String?
-  type NotificationType
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type NotificationType @default(INFO)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  senderId String?
+  sender User? @relation("NotificationsSent", fields: [senderId], references: [id], onDelete: SetNull)
+  receiverId String?
+  receiver User? @relation("NotificationsReceived", fields: [receiverId], references: [id], onDelete: SetNull)
   read Boolean @default(false)
 
-  @@index([userId])
 }
 
 enum NotificationType {
+  MESSAGE
   INFO
   SUCCESS
   URGENT

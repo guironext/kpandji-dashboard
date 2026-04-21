@@ -30,39 +30,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  User,
-  Car,
-  Package,
-  Calendar,
-  Palette,
-  DoorClosed,
-  Cog,
-  Zap,
-  Layers,
-} from "lucide-react";
-import {
-  getFacturesByBonValideApportInitial,
-  getFactures,
-  deleteFacture,
-} from "@/lib/actions/facture";
+import { ChevronLeft, ChevronRight, FileText, User, Car, Package, Calendar, Palette, DoorClosed, Cog, Zap, Layers } from "lucide-react";
+import { getFactures, deleteFacture } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import {
-  createCommande,
-  getCommandesDisponibles,
-  attribuerCommande,
-} from "@/lib/actions/commande";
+import { createCommande, getCommandesDisponibles, attribuerCommande } from "@/lib/actions/commande";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 
 const numberToFrench = (num: number): string => {
+  // Vérifier que num est un nombre valide
   if (num === null || num === undefined || isNaN(num) || !isFinite(num)) {
     return "zéro";
   }
-
+  
   const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
   const teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
   const tens = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"];
@@ -164,15 +144,6 @@ type Facture = {
     email: string;
     telephone?: string;
   } | null;
-  bonDeCommande?: {
-    numero: string;
-    prefix_numero?: string;
-    status: string;
-  } | null;
-  bonPourAccord?: {
-    numero: string;
-    status: string;
-  } | null;
   commandes?: Array<{
     id: string;
     etapeCommande: string;
@@ -222,7 +193,6 @@ export default function Page() {
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAttribuerDialogOpen, setIsAttribuerDialogOpen] = useState(false);
   const [commandesDisponibles, setCommandesDisponibles] = useState<CommandeDisponible[]>([]);
@@ -238,19 +208,17 @@ export default function Page() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
       const [facturesResult, accessoiresResult] = await Promise.all([
-        getFacturesByBonValideApportInitial(),
+        getFactures(),
         getAllAccessoires(),
       ]);
-
+      
       if (facturesResult.success && facturesResult.data) {
         setFactures(facturesResult.data as unknown as Facture[]);
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(accessoiresResult.data);
       }
-      setIsLoading(false);
     };
     fetchData();
   }, []);
@@ -260,10 +228,16 @@ export default function Page() {
   const endIndex = startIndex + itemsPerPage;
   const currentData = factures.slice(startIndex, endIndex);
 
-
-  
   const handlePrint = () => {
     window.print();
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  const goToPrevPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
   const handleDelete = async () => {
@@ -417,15 +391,6 @@ export default function Page() {
     }
   };
 
-
-  const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
-
-  const goToPrevPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -461,11 +426,13 @@ export default function Page() {
             size: A4;
             margin: 0 !important;
           }
+          /* Header - first child */
           #printable-area > div:first-child {
             margin-bottom: 5mm !important;
             padding-bottom: 3mm !important;
             page-break-after: avoid;
           }
+          /* Each facture container should start on a new page except the first */
           #printable-area > div:not(:first-child) {
             page-break-before: always;
             page-break-inside: avoid;
@@ -474,6 +441,7 @@ export default function Page() {
             flex-direction: column !important;
             justify-content: space-between !important;
           }
+          /* Footer - stick to bottom */
           .print-footer {
             margin-top: auto !important;
             padding-top: 5mm !important;
@@ -485,7 +453,7 @@ export default function Page() {
 
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-8">
-        <div className="flex w-full justify-between mb-6 print-hide">
+          <div className="flex w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
               <Button 
                 onClick={handlePrint}
@@ -551,340 +519,301 @@ export default function Page() {
             </div>
           </div>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20 text-gray-600 font-semibold">
-              Chargement des factures...
-            </div>
-          ) : factures.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <p className="text-xl font-bold text-gray-800">Aucune facture trouvée</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Aucun Bon de Commande ou Bon Pour Accord n&apos;a le statut <span className="font-semibold text-amber-700">VALIDE_APPORT_INITIAL</span>.
-              </p>
-            </div>
-          ) : (
-            <div id="printable-area">
-              <div className="flex w-full justify-between border-b-4 border-amber-600 pb-4 mb-3">
-                <div>
-                  <Image src="/logo.png" alt="Logo" width={100} height={50} priority />
-                </div>
-                <div className="flex flex-col justify-center -mb-14">
-                  <h1 className="text-2xl font-bold text-black">KPANDJI AUTOMOBILES</h1>
-                  <p className="text-sm text-gray-800 font-thin">Constructeur et Assembleur Automobile</p>
-                </div>
+          <div id="printable-area">
+            <div className="flex w-full justify-between border-b-4 border-amber-600 pb-4 mb-3">
+              <div>
+                <Image src="/logo.png" alt="Logo" width={100} height={50} priority />
               </div>
+              <div className="flex flex-col justify-center -mb-14">
+                <h1 className="text-2xl font-bold text-black">KPANDJI AUTOMOBILES</h1>
+                <p className="text-sm text-gray-800 font-thin">Constructeur et Assembleur Automobile</p>
+              </div>
+            </div>
 
-              {currentData.map((facture: Facture) => (
-                <div key={facture.id}>
-                  <div>
-                    <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
-                      <div className="flex flex-col gap-y-1">
-                        {facture.bonDeCommande && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-700">Bon de Commande:</span>
-                            <span className="font-bold text-black uppercase">
-                              {facture.bonDeCommande.prefix_numero
-                                ? `${facture.bonDeCommande.prefix_numero}-${facture.bonDeCommande.numero}`
-                                : facture.bonDeCommande.numero}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-300 font-semibold">
-                              {facture.bonDeCommande.status}
-                            </span>
-                          </div>
-                        )}
-                        {facture.bonPourAccord && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-700">Bon pour Accord:</span>
-                            <span className="font-bold text-black uppercase">
-                              {facture.bonPourAccord.numero}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-300 font-semibold">
-                              {facture.bonPourAccord.status}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex text-sm text-black gap-x-2">
-                        <p>Date:</p>
-                        <p>{new Date(facture.date_facture).toLocaleDateString()}</p>
-                      </div>
+            {currentData.map((facture: Facture) => (
+              <div key={facture.id}>
+                <div>
+                  <div className="flex items-end justify-between w-full text-sm font-semibold text-gray-600 gap-x-2">
+                    <div></div>
+                    <div className="flex text-sm text-black gap-x-2">
+                      <p>Date:</p>
+                      <p>{new Date(facture.date_facture).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="flex w-full justify-center my-8">
-                    <h1 className="text-xl font-bold text-black border border-black px-4 py-2 rounded-lg">
-                      {facture.status_facture}
-                    </h1>
-                  </div>
+                </div>
+                <div className="flex w-full justify-center my-8">
+                  <h1 className="text-xl font-bold text-black border border-black px-4 py-2 rounded-lg">
+                    {facture.status_facture}
+                  </h1>
+                </div>
 
-                  <div className="flex w-full justify-between mb-6">
-                    <div className="text-black font-semibold text-2xl">
-                      <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
-                        <p>Numéro de Facture:</p>
-                        <p className="uppercase">{facture.id.slice(-7)}</p>
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        <p>Créé par:</p>
-                        <p>{facture.user?.firstName} {facture.user?.lastName}</p>
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        <p>Contact:</p>
-                        <p>{facture.user?.email}</p>
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        <p>Téléphone:</p>
-                        <p>{facture.user?.telephone}</p>
-                      </div>
+                <div className="flex w-full justify-between mb-6">
+                  <div className="text-black font-semibold text-2xl">
+                    <div className="flex text-xs text-gray-900 gap-x-2 font-bold">
+                      <p>Numéro de Facture:</p>
+                      <p className="uppercase">{facture.id.slice(-7)}</p>
                     </div>
-
-                    <div className="text-black font-semibold text-2xl">
-                      <div className="flex text-sm font-semibold gap-2">
-                        <p>Client:</p>
-                        <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        {facture.client?.entreprise && (
-                          <>
-                            <p>Entreprise:</p>
-                            <p>{facture.client.entreprise}</p>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        <p>Téléphone:</p>
-                        <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
-                      </div>
-                      <div className="flex text-xs text-gray-800 gap-x-2">
-                        <p>Localisation:</p>
-                        <p>{facture.client?.localisation || facture.clientEntreprise?.localisation}</p>
-                      </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      <p>Créé par:</p>
+                      <p>{facture.user?.firstName} {facture.user?.lastName}</p>
+                    </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      <p>Contact:</p>
+                      <p>{facture.user?.email}</p>
+                    </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      <p>Téléphone:</p>
+                      <p>{facture.user?.telephone}</p>
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <Table className="rounded-lg overflow-hidden">
-                      <TableHeader>
-                        <TableRow className="bg-green-50 border-b border-black">
-                          <TableHead className="text-black-600 font-bold">#</TableHead>
-                          <TableHead className="text-black-600 font-bold">Véhicule</TableHead>
-                          <TableHead className="text-black-600 font-bold">Description</TableHead>
-                          <TableHead className="text-black-600 font-bold text-center">Quantité</TableHead>
-                          <TableHead className="text-black-600 font-bold text-right">Prix Unitaire HT FCFA</TableHead>
-                          <TableHead className="text-right text-black-600 font-bold">Total HT FCFA</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentData.map((factureItem) => {
-                          const lignes = factureItem.lignes && factureItem.lignes.length > 0
-                            ? factureItem.lignes
-                            : [{
-                                id: "1",
-                                voitureModelId: "",
-                                couleur: "",
-                                nbr_voiture: factureItem.nbr_voiture_commande,
-                                prix_unitaire: factureItem.prix_unitaire,
-                                montant_ligne: factureItem.montant_ht,
-                                transmission: "",
-                                motorisation: "",
-                                voitureModel: factureItem.voiture?.voitureModel || null,
-                              }];
+                  <div className="text-black font-semibold text-2xl">
+                    <div className="flex text-sm font-semibold gap-2">
+                      <p>Client:</p>
+                      <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
+                    </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      {facture.client?.entreprise && (
+                        <>
+                          <p>Entreprise:</p>
+                          <p>{facture.client.entreprise}</p>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      <p>Téléphone:</p>
+                      <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
+                    </div>
+                    <div className="flex text-xs text-gray-800 gap-x-2">
+                      <p>Localisation:</p>
+                      <p>{facture.client?.localisation || facture.clientEntreprise?.localisation}</p>
+                    </div>
+                  </div>
+                </div>
 
-                          return lignes.map((ligne, index) => (
-                            <TableRow key={`${factureItem.id}-${ligne.id}`} className={index % 2 === 0 ? "bg-white border-b border-orange-200" : "bg-white hover:bg-orange-50 border-b border-orange-200"}>
-                              <TableCell className="text-black font-semibold">{index + 1}</TableCell>
-                              <TableCell className="text-black">
-                                {ligne.voitureModel?.image ? (
-                                  <Image src={ligne.voitureModel.image} alt={ligne.voitureModel.model || "Vehicle"} width={100} height={80} />
-                                ) : ("N/A")}
-                              </TableCell>
-                              <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                                {ligne.voitureModel?.model || "N/A"}
-                                <p className="text-[10px] font-light text-black max-w-80 text-wrap">
-                                  {ligne.voitureModel?.description || "N/A"}
-                                </p>
-                                {ligne.couleur && (
-                                  <div>
-                                    <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
-                                    {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
-                                    {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
-                              <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
-                              <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
-                            </TableRow>
-                          ));
-                        })}
+                <div className="mb-4">
+                  <Table className="rounded-lg overflow-hidden">
+                    <TableHeader>
+                      <TableRow className="bg-green-50 border-b border-black">
+                        <TableHead className="text-black-600 font-bold">#</TableHead>
+                        <TableHead className="text-black-600 font-bold">Véhicule</TableHead>
+                        <TableHead className="text-black-600 font-bold">Description</TableHead>
+                        <TableHead className="text-black-600 font-bold text-center">Quantité</TableHead>
+                        <TableHead className="text-black-600 font-bold text-right">Prix Unitaire HT FCFA</TableHead>
+                        <TableHead className="text-right text-black-600 font-bold">Total HT FCFA</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentData.map((factureItem) => {
+                        const lignes = factureItem.lignes && factureItem.lignes.length > 0
+                          ? factureItem.lignes
+                          : [{
+                              id: "1",
+                              voitureModelId: "",
+                              couleur: "",
+                              nbr_voiture: factureItem.nbr_voiture_commande,
+                              prix_unitaire: factureItem.prix_unitaire,
+                              montant_ligne: factureItem.montant_ht,
+                              transmission: "",
+                              motorisation: "",
+                              voitureModel: factureItem.voiture?.voitureModel || null,
+                            }];
 
-                        {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => (
-                          <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
-                            <TableCell className="text-black font-semibold">{(facture.lignes ? facture.lignes.length : 0) + accIndex + 1}</TableCell>
+                        return lignes.map((ligne, index) => (
+                          <TableRow key={`${factureItem.id}-${ligne.id}`} className={index % 2 === 0 ? "bg-white border-b border-orange-200" : "bg-white hover:bg-orange-50 border-b border-orange-200"}>
+                            <TableCell className="text-black font-semibold">{index + 1}</TableCell>
                             <TableCell className="text-black">
-                              {accessoire.image ? (
-                                <Image src={accessoire.image} alt={accessoire.nom || "Accessoire"} width={100} height={80} />
-                              ) : (<div className="text-xs text-white hidden"></div>)}
-                            </TableCell>
-
-                            <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                              {accessoire.nom}
-                              {accessoire.description && <p className="text-[10px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
-                            </TableCell>
-
-                            <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
-                            <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
-                            <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
-                          </TableRow>
-                        ))}
-
-                        {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
-                          <TableRow className="bg-white border-b border-orange-200">
-                            <TableCell className="text-black font-semibold">{facture.lignes ? facture.lignes.length + 1 : 1}</TableCell>
-                            <TableCell className="text-black">
-                              {(() => {
-                                const imagePath = getAccessoireImage(facture.accessoire_nom, accessoires as Array<{ id: string; nom: string; image?: string | null }>);
-                                if (!imagePath) return <div className="text-xs text-gray-500">N/A</div>;
-                                return <Image src={imagePath} alt={facture.accessoire_nom || "Accessoire"} width={100} height={80} className="object-contain" />;
-                              })()}
+                              {ligne.voitureModel?.image ? (
+                                <Image src={ligne.voitureModel.image} alt={ligne.voitureModel.model || "Vehicle"} width={100} height={80} />
+                              ) : ("N/A")}
                             </TableCell>
                             <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                              {facture.accessoire_nom}
-                              {facture.accessoire_description && (
-                                <p className="text-[10px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>
+                              {ligne.voitureModel?.model || "N/A"}
+                              <p className="text-[10px] font-light text-black max-w-80 text-wrap">
+                                {ligne.voitureModel?.description || "N/A"}
+                              </p>
+                              {ligne.couleur && (
+                                <div>
+                                  <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
+                                  {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
+                                  {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
+                                </div>
                               )}
                             </TableCell>
-                            <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
-                            <TableCell className="text-right text-black text-sm">
-                              {((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}
-                            </TableCell>
-                            <TableCell className="text-black text-right text-sm pr-6">
-                              {(facture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}
-                            </TableCell>
+                            <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
+                            <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
+                            <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
                           </TableRow>
-                        )}
-                      </TableBody>
-                      <TableFooter className="text-sm border-t border-b border-black mt-4">
-                        <TableRow className="bg-green-50">
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
-                          <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
-                        </TableRow>
+                        ));
+                      })}
 
-                        {facture.remise !== 0 && (
-                          <TableRow className="bg-white">
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
-                            <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
-                          </TableRow>
-                        )}
-                        {facture.remise !== 0 && (
-                          <TableRow className="bg-green-50">
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-center text-black font-bold"></TableCell>
-                            <TableCell className="text-right text-black">Montant Net HT</TableCell>
-                            <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
-                          </TableRow>
-                        )}
-                        <TableRow className="bg-white">
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-right text-black">TVA({facture.tva}%)</TableCell>
-                          <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_tva)}</TableCell>
-                        </TableRow>
-                        <TableRow className="text-sm bg-green-50">
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-center text-black font-bold"></TableCell>
-                          <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
-                          <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ttc)}</TableCell>
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
+                      {facture.accessoires && facture.accessoires.length > 0 && facture.accessoires.map((accessoire, accIndex) => (
+                        <TableRow key={`${facture.id}-accessoire-${accessoire.id}`} className="bg-white border-b border-orange-200">
+                          <TableCell className="text-black font-semibold">{(facture.lignes ? facture.lignes.length : 0) + accIndex + 1}</TableCell>
+                          <TableCell className="text-black">
+                            {accessoire.image ? (
+                              <Image src={accessoire.image} alt={accessoire.nom || "Accessoire"} width={100} height={80} />
+                            ) : (<div className="text-xs text-white hidden"></div>)}
+                          </TableCell>
+                         
+                          <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
+                            {accessoire.nom}
+                            {accessoire.description && <p className="text-[10px] font-light text-black max-w-80 text-wrap">{accessoire.description}</p>}
+                          </TableCell>
 
-                    <div className="mt-4">
-                      <p className="text-sm font-thin text-black">
-                        Arrêter la présente facture à la somme de{" "}
-                        <span className="font-semibold">{numberToFrench(Math.floor(facture.total_ttc || 0))} francs CFA</span>
-                      </p>
-                    </div>
+                          <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
+                          <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(accessoire.prix)}</TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(accessoire.prix * (accessoire.quantity || 1))}</TableCell>
+                        </TableRow>
+                      ))}
+                      
+                      {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
+                        <TableRow className="bg-white border-b border-orange-200">
+                          <TableCell className="text-black font-semibold">{facture.lignes ? facture.lignes.length + 1 : 1}</TableCell>      
+                          <TableCell className="text-black">
+                            {(() => {
+                              const imagePath = getAccessoireImage(facture.accessoire_nom, accessoires as Array<{ id: string; nom: string; image?: string | null }>);
+                              if (!imagePath) return <div className="text-xs text-gray-500">N/A</div>;
+                              return <Image src={imagePath} alt={facture.accessoire_nom || "Accessoire"} width={100} height={80} className="object-contain" />;
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
+                            {facture.accessoire_nom}
+                            {facture.accessoire_description && (
+                              <p className="text-[10px] font-light text-black max-w-80 text-wrap">{facture.accessoire_description}</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
+                          <TableCell className="text-right text-black text-sm">
+                            {((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}
+                          </TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">
+                            {(facture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                    <TableFooter className="text-sm border-t border-b border-black mt-4">
+                      <TableRow className="bg-green-50">
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
+                        <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
+                      </TableRow>
 
-                    <div className="flex w-full justify-between mt-12 mb-10 px-8">
-                      <div></div>
-                      <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
-                    </div>
+                      {facture.remise !== 0 && (
+                      <TableRow className="bg-white">
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
+                        <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
+                      </TableRow>
+                      )}  
+                      {facture.remise !== 0 && (
+                      <TableRow className="bg-green-50">
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-right text-black">Montant Net HT</TableCell>
+                        <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
+                      </TableRow>
+                      )}
+                      <TableRow className="bg-white">
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-right text-black">TVA({facture.tva}%)</TableCell>
+                        <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_tva)}</TableCell>
+                      </TableRow>
+                      <TableRow className="text-sm bg-green-50">
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-center text-black font-bold"></TableCell>
+                        <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
+                        <TableCell colSpan={5} className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ttc)}</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-thin text-black">
+                      Arrêter la présente facture à la somme de{" "}
+                      <span className="font-semibold">{numberToFrench(Math.floor(facture.total_ttc || 0))} francs CFA</span>
+                    </p>
                   </div>
 
-                  <div className="flex flex-col w-full rounded-b-lg text-[9px]">
-                    <div className="flex flex-col">
-                      <p className="font-bold text-blue-600">Notes</p>
-                      <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
-                    </div>
+                  <div className="flex w-full justify-between mt-12 mb-10 px-8">
+                    <div></div>
+                    <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
                   </div>
+                </div>
 
-                  <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0 mt-auto">
-                    <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
-                      <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
-                      <p className="text-black">60% d&apos;accompte à la commande</p>
-                      <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                      <p className="text-black">SOLDE avant livraison</p>
-                    </div>
-                    <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
-                      <p className="font-thin text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                      <p className="font-thin text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                      <p className="font-thin text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
-                    </div>
+                <div className="flex flex-col w-full rounded-b-lg text-[9px]">
+                  <div className="flex flex-col">
+                    <p className="font-bold text-blue-600">Notes</p>
+                    <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
                   </div>
+                </div>
+
+                {/*footer*/}
+                <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0 mt-auto">
+                  <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
+                    <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
+                    <p className="text-black">60% d&apos;accompte à la commande</p>
+                    <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+                    <p className="text-black">SOLDE avant livraison</p>
+                  </div>
+                  <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
+                    <p className="font-thin text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
+                    <p className="font-thin text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
+                    <p className="font-thin text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-center items-center gap-4 mt-6 print-hide">
+            <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
+              <ChevronLeft className="w-5 h-5 mr-2" />
+              Page Précédente
+            </Button>
+
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <div
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setCurrentPage(pageNum);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
+                    currentPage === pageNum
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {pageNum}
                 </div>
               ))}
             </div>
-          )}
 
-          {factures.length > 0 && (
-            <div className="flex justify-center items-center gap-4 mt-6 print-hide">
-              <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
-                <ChevronLeft className="w-5 h-5 mr-2" />
-                Page Précédente
-              </Button>
-
-              <div className="flex items-center gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <div
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        setCurrentPage(pageNum);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer ${
-                      currentPage === pageNum
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {pageNum}
-                  </div>
-                ))}
-              </div>
-
-              <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
-                Page Suivante
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
-            </div>
-          )}
+            <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
+              Page Suivante
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -905,7 +834,8 @@ export default function Page() {
           </DialogHeader>
 
           <div className="grid gap-5 py-6">
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            {/* Facture & Client Information */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-2 mb-4">
                 <FileText className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-base text-gray-900">Informations Facture & Client</h3>
@@ -932,26 +862,39 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            {/* Vehicle Information */}
+            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-2 mb-4">
                 <Car className="w-5 h-5 text-orange-600" />
                 <h3 className="font-bold text-base text-gray-900">Informations Véhicule</h3>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-gray-500 font-medium">Modèle de Véhicule</Label>
-                <div className="text-base font-bold text-gray-900 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 rounded-lg border-2 border-orange-300">
-                  {currentData[0]?.lignes?.[0]?.voitureModel?.model || currentData[0]?.voiture?.voitureModel?.model || "Non spécifié"}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-500 font-medium">Modèle de Véhicule</Label>
+                  <div className="text-base font-bold text-gray-900 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 rounded-lg border-2 border-orange-300">
+                    {currentData[0]?.lignes?.[0]?.voitureModel?.model || currentData[0]?.voiture?.voitureModel?.model || "Non spécifié"}
+                  </div>
                 </div>
+                {(currentData[0]?.lignes?.[0]?.voitureModel?.description || currentData[0]?.voiture?.voitureModel?.description) && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500 font-medium">Description</Label>
+                    <div className="text-xs text-gray-700 bg-gray-50 px-4 py-3 rounded-lg border border-gray-200 leading-relaxed">
+                      {currentData[0]?.lignes?.[0]?.voitureModel?.description || currentData[0]?.voiture?.voitureModel?.description}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Commande Details Form */}
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 shadow-sm border-2 border-amber-300">
               <div className="flex items-center gap-2 mb-5">
                 <Cog className="w-5 h-5 text-amber-700" />
                 <h3 className="font-bold text-base text-gray-900">Configuration de la Commande</h3>
               </div>
-
+              
               <div className="grid md:grid-cols-2 gap-4">
+                {/* Couleur */}
                 <div className="space-y-2">
                   <Label htmlFor="couleur" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <Palette className="w-4 h-4 text-amber-600" />
@@ -961,63 +904,76 @@ export default function Page() {
                     id="couleur"
                     value={formData.couleur}
                     onChange={(e) => setFormData({ ...formData, couleur: e.target.value })}
-                    className="bg-white border-2 border-amber-300"
+                    className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                     placeholder="Ex: Blanc, Noir, Rouge..."
                     required
                   />
                 </div>
 
+                {/* Nombre de portes */}
                 <div className="space-y-2">
                   <Label htmlFor="nbr_portes" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <DoorClosed className="w-4 h-4 text-amber-600" />
                     Nombre de portes
                   </Label>
-                  <Select value={formData.nbr_portes} onValueChange={(value) => setFormData({ ...formData, nbr_portes: value })}>
-                    <SelectTrigger className="bg-white border-2 border-amber-300">
+                  <Select
+                    value={formData.nbr_portes}
+                    onValueChange={(value) => setFormData({ ...formData, nbr_portes: value })}
+                  >
+                    <SelectTrigger className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2">2 portes</SelectItem>
-                      <SelectItem value="4">4 portes</SelectItem>
-                      <SelectItem value="5">5 portes</SelectItem>
+                      <SelectItem value="2">🚗 2 portes</SelectItem>
+                      <SelectItem value="4">🚙 4 portes</SelectItem>
+                      <SelectItem value="5">🚐 5 portes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Transmission */}
                 <div className="space-y-2">
                   <Label htmlFor="transmission" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <Cog className="w-4 h-4 text-amber-600" />
                     Transmission
                   </Label>
-                  <Select value={formData.transmission} onValueChange={(value: "AUTOMATIQUE" | "MANUEL") => setFormData({ ...formData, transmission: value })}>
-                    <SelectTrigger className="bg-white border-2 border-amber-300">
+                  <Select
+                    value={formData.transmission}
+                    onValueChange={(value: "AUTOMATIQUE" | "MANUEL") => setFormData({ ...formData, transmission: value })}
+                  >
+                    <SelectTrigger className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AUTOMATIQUE">Automatique</SelectItem>
-                      <SelectItem value="MANUEL">Manuel</SelectItem>
+                      <SelectItem value="AUTOMATIQUE">⚙️ Automatique</SelectItem>
+                      <SelectItem value="MANUEL">🔧 Manuel</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Motorisation */}
                 <div className="space-y-2">
                   <Label htmlFor="motorisation" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-600" />
                     Motorisation
                   </Label>
-                  <Select value={formData.motorisation} onValueChange={(value: "ELECTRIQUE" | "ESSENCE" | "DIESEL" | "HYBRIDE") => setFormData({ ...formData, motorisation: value })}>
-                    <SelectTrigger className="bg-white border-2 border-amber-300">
+                  <Select
+                    value={formData.motorisation}
+                    onValueChange={(value: "ELECTRIQUE" | "ESSENCE" | "DIESEL" | "HYBRIDE") => setFormData({ ...formData, motorisation: value })}
+                  >
+                    <SelectTrigger className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ESSENCE">Essence</SelectItem>
-                      <SelectItem value="DIESEL">Diesel</SelectItem>
-                      <SelectItem value="ELECTRIQUE">Électrique</SelectItem>
-                      <SelectItem value="HYBRIDE">Hybride</SelectItem>
+                      <SelectItem value="ESSENCE">⛽ Essence</SelectItem>
+                      <SelectItem value="DIESEL">🛢️ Diesel</SelectItem>
+                      <SelectItem value="ELECTRIQUE">⚡ Électrique</SelectItem>
+                      <SelectItem value="HYBRIDE">🔋 Hybride</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Date de livraison */}
                 <div className="space-y-2">
                   <Label htmlFor="date_livraison" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-amber-600" />
@@ -1028,12 +984,13 @@ export default function Page() {
                     type="date"
                     value={formData.date_livraison}
                     onChange={(e) => setFormData({ ...formData, date_livraison: e.target.value })}
-                    className="bg-white border-2 border-amber-300"
+                    className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                     required
-                    min={new Date().toISOString().split("T")[0]}
+                    min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
+                {/* Étape Commande */}
                 <div className="space-y-2">
                   <Label htmlFor="etapeCommande" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-amber-600" />
@@ -1043,12 +1000,13 @@ export default function Page() {
                     value={formData.etapeCommande}
                     onValueChange={(value: "PROPOSITION" | "VALIDE" | "TRANSITE" | "RENSEIGNEE" | "ARRIVE" | "VERIFIER" | "MONTAGE" | "TESTE" | "PARKING" | "CORRECTION" | "VENTE" | "DECHARGE") => setFormData({ ...formData, etapeCommande: value })}
                   >
-                    <SelectTrigger className="bg-white border-2 border-amber-300">
+                    <SelectTrigger className="bg-white border-2 border-amber-300 focus:border-amber-500 focus:ring-amber-500">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PROPOSITION">Proposition</SelectItem>
-                    </SelectContent>
+                      <SelectContent>
+                        <SelectItem value="PROPOSITION">📋 Proposition</SelectItem>
+                        
+                      </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -1056,10 +1014,17 @@ export default function Page() {
           </div>
 
           <DialogFooter className="border-t-2 border-amber-300 pt-4 gap-3">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-2 border-gray-300">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDialogOpen(false)}
+              className="border-2 border-gray-300 hover:bg-gray-100 font-semibold"
+            >
               Annuler
             </Button>
-            <Button onClick={handleSubmitCommande} className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6">
+            <Button 
+              onClick={handleSubmitCommande} 
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg hover:shadow-xl transition-all px-6"
+            >
               <Package className="w-4 h-4 mr-2" />
               Créer la Commande
             </Button>
@@ -1084,6 +1049,7 @@ export default function Page() {
           </DialogHeader>
 
           <div className="grid gap-5 py-6">
+            {/* Client Information */}
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
               <div className="flex items-center gap-2 mb-4">
                 <User className="w-5 h-5 text-amber-600" />
@@ -1094,16 +1060,18 @@ export default function Page() {
               </div>
             </div>
 
+            {/* Available Commandes */}
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
               <div className="flex items-center gap-2 mb-4">
                 <Car className="w-5 h-5 text-orange-600" />
                 <h3 className="font-bold text-base text-gray-900">Commandes Disponibles</h3>
               </div>
-
+              
               {commandesDisponibles.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                   <p className="font-medium">Aucune commande disponible</p>
+                  <p className="text-sm mt-1">Il n&apos;y a pas de commandes disponibles pour le moment.</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -1114,19 +1082,50 @@ export default function Page() {
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedCommandeId === commande.id
                           ? "border-amber-500 bg-amber-50 shadow-md"
-                          : "border-gray-200 hover:border-amber-300"
+                          : "border-gray-200 hover:border-amber-300 hover:bg-amber-25"
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`w-4 h-4 rounded-full border-2 ${selectedCommandeId === commande.id ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
-                        <h4 className="font-bold text-gray-900">{commande.voitureModel?.model || "Modèle non spécifié"}</h4>
-                      </div>
-                      <div className="ml-6 space-y-1 text-sm text-gray-600">
-                        <div className="flex items-center gap-2"><Palette className="w-3 h-3" /><span>Couleur: <span className="font-medium uppercase">{commande.couleur}</span></span></div>
-                        <div className="flex items-center gap-2"><Cog className="w-3 h-3" /><span>Transmission: <span className="font-medium">{commande.transmission}</span></span></div>
-                        <div className="flex items-center gap-2"><Zap className="w-3 h-3" /><span>Motorisation: <span className="font-medium">{commande.motorisation}</span></span></div>
-                        <div className="flex items-center gap-2"><Calendar className="w-3 h-3" /><span>Date de livraison: <span className="font-medium">{new Date(commande.date_livraison).toLocaleDateString()}</span></span></div>
-                        <div className="flex items-center gap-2"><Layers className="w-3 h-3" /><span>Étape: <span className="font-medium">{commande.etapeCommande}</span></span></div>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              selectedCommandeId === commande.id
+                                ? "border-amber-500 bg-amber-500"
+                                : "border-gray-300"
+                            }`}>
+                              {selectedCommandeId === commande.id && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-gray-900">
+                              {commande.voitureModel?.model || "Modèle non spécifié"}
+                            </h4>
+                          </div>
+                          <div className="ml-6 space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Palette className="w-3 h-3" />
+                              <span>Couleur: <span className="font-medium uppercase">{commande.couleur}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Cog className="w-3 h-3" />
+                              <span>Transmission: <span className="font-medium">{commande.transmission}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-3 h-3" />
+                              <span>Motorisation: <span className="font-medium">{commande.motorisation}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3 h-3" />
+                              <span>Date de livraison: <span className="font-medium">{new Date(commande.date_livraison).toLocaleDateString()}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Layers className="w-3 h-3" />
+                              <span>Étape: <span className="font-medium">{commande.etapeCommande}</span></span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1136,20 +1135,20 @@ export default function Page() {
           </div>
 
           <DialogFooter className="border-t-2 border-amber-300 pt-4 gap-3">
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               onClick={() => {
                 setIsAttribuerDialogOpen(false);
                 setSelectedCommandeId("");
               }}
-              className="border-2 border-gray-300"
+              className="border-2 border-gray-300 hover:bg-gray-100 font-semibold"
             >
               Annuler
             </Button>
-            <Button
+            <Button 
               onClick={handleSubmitAttribution}
               disabled={!selectedCommandeId}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6 disabled:opacity-50"
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg hover:shadow-xl transition-all px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Package className="w-4 h-4 mr-2" />
               Attribuer la Commande

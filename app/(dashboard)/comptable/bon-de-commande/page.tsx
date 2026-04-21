@@ -31,17 +31,9 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
-import {
-	getAllFacturesForResponsableCommercial,
-	deleteFacture,
-
-} from "@/lib/actions/facture";
+import { getAllFacturesForComptableValideApportInitial } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import {
-
-	getBonDeCommandeByFactureId,
-	updateBonDeCommandeStatus,
-} from "@/lib/actions/bondecommande";
+import { getBonDeCommandeByFactureId } from "@/lib/actions/bondecommande";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 
@@ -154,21 +146,18 @@ export default function Page() {
 		Array<{ id: string; nom: string; image?: string | null }>
 	>([]);
 	const [numero, setNumero] = useState<string>("");
-	const [bonDeCommandeStatus, setBonDeCommandeStatus] = useState<string | null>(
-		null,
-	);
-
-	const [showApportInitial, setShowApportInitial] = useState(false);
 
 	useEffect(() => {
 		const fetchData = async () => {
 			const [facturesResult, accessoiresResult] = await Promise.all([
-				getAllFacturesForResponsableCommercial(),
+				getAllFacturesForComptableValideApportInitial(),
 				getAllAccessoires(),
 			]);
 
 			if (facturesResult.success && facturesResult.data) {
 				setFactures(facturesResult.data as unknown as Facture[]);
+			} else if (!facturesResult.success) {
+				toast.error("Erreur lors du chargement des bons de commande");
 			}
 			if (accessoiresResult.success && accessoiresResult.data) {
 				setAccessoires(accessoiresResult.data);
@@ -177,7 +166,6 @@ export default function Page() {
 		fetchData();
 	}, []);
 
-	// Unique commercials from factures
 	const uniqueCommercials = Array.from(
 		new Map(
 			factures
@@ -198,7 +186,6 @@ export default function Page() {
 		).values(),
 	);
 
-	// Filter factures by selected commercial
 	const filteredFactures =
 		selectedCommercialId === "all"
 			? factures
@@ -213,7 +200,6 @@ export default function Page() {
 	const endIndex = startIndex + itemsPerPage;
 	const currentData = filteredFactures.slice(startIndex, endIndex);
 
-	// Reset to page 1 when commercial filter changes
 	useEffect(() => {
 		setCurrentPage(1);
 	}, [selectedCommercialId]);
@@ -234,19 +220,13 @@ export default function Page() {
 			const result = await getBonDeCommandeByFactureId(currentFacture.id);
 			if (result.success && result.data) {
 				setNumero(result.data.numero);
-				setBonDeCommandeStatus(result.data.status_bon_de_commande);
 			} else {
 				setNumero("");
-				setBonDeCommandeStatus(null);
 			}
 		};
 
 		fetchNumero();
 	}, [filteredFactures, currentPage, startIndex, endIndex]);
-
-	useEffect(() => {
-		setShowApportInitial(bonDeCommandeStatus === "VALIDE_APPORT_INITIAL");
-	}, [bonDeCommandeStatus]);
 
 	const goToNextPage = () => {
 		setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -256,68 +236,8 @@ export default function Page() {
 		setCurrentPage((prev) => Math.max(prev - 1, 1));
 	};
 
-	
-
 	const handlePrint = () => {
 		window.print();
-	};
-
-	const handleValider = async () => {
-		const currentFacture = currentData[0];
-		if (!currentFacture) return;
-
-		const result = await updateBonDeCommandeStatus(
-			currentFacture.id,
-			"VALIDE_APPORT_INITIAL",
-		);
-		if (result.success) {
-			toast.success("Bon de commande validé avec apport initial");
-			setBonDeCommandeStatus("VALIDE_APPORT_INITIAL");
-		} else {
-			toast.error(result.error || "Erreur lors de la validation");
-		}
-	};
-
-	
-
-	
-
-	
-	const handleDelete = async () => {
-		const currentFacture = currentData[0];
-		if (!currentFacture) return;
-
-		if (
-			confirm(
-				`Êtes-vous sûr de vouloir supprimer ce bon de commande (${currentFacture.id.slice(
-					-7,
-				)}) ?`,
-			)
-		) {
-			const result = await deleteFacture(currentFacture.id);
-			if (result.success) {
-				toast.success("Bon de commande supprimé avec succès");
-				const updatedResult = await getAllFacturesForResponsableCommercial();
-				if (updatedResult.success && updatedResult.data) {
-					const updated = updatedResult.data as unknown as Facture[];
-					setFactures(updated);
-					const filtered =
-						selectedCommercialId === "all"
-							? updated
-							: updated.filter(
-									(f) =>
-										(f.userId || (f.user as { id?: string })?.id) ===
-										selectedCommercialId,
-								);
-					const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
-					if (currentPage > newTotalPages) {
-						setCurrentPage(Math.max(1, newTotalPages));
-					}
-				}
-			} else {
-				toast.error("Erreur lors de la suppression");
-			}
-		}
 	};
 
 	const handleExportToWord = async () => {
@@ -611,23 +531,15 @@ export default function Page() {
 					spacing: { after: 200 },
 				}),
 				new Paragraph({
-					text: "BON DE COMMANDE",
+					text: "BON DE COMMANDE VALIDE",
 					alignment: AlignmentType.CENTER,
 					spacing: { after: 100 },
 				}),
-			];
-
-			if (showApportInitial) {
-				docChildren.push(
-					new Paragraph({
-						text: "En Apport Initial 60% du Montant Total TTC",
-						alignment: AlignmentType.CENTER,
-						spacing: { after: 200 },
-					}),
-				);
-			}
-
-			docChildren.push(
+				new Paragraph({
+					text: "En Apport Initial 60% du Montant Total TTC",
+					alignment: AlignmentType.CENTER,
+					spacing: { after: 200 },
+				}),
 				new Paragraph({
 					text: `NUMERO: ${numero || "______"}`,
 					alignment: AlignmentType.RIGHT,
@@ -714,7 +626,7 @@ export default function Page() {
 					text: "kpandjiautomobiles@gmail.com / www.kpandji.com",
 					alignment: AlignmentType.CENTER,
 				}),
-			);
+			];
 
 			const doc = new Document({
 				sections: [
@@ -780,29 +692,6 @@ export default function Page() {
           .print-hide {
             display: none !important;
           }
-          /* SOUS RESERVE stamp: always top layer when printing */
-          #printable-area .sous-reserve-stamp {
-            position: absolute !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            top: auto !important;
-            z-index: 50 !important;
-            pointer-events: none !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          #printable-area .valide-stamp {
-            position: absolute !important;
-            left: 0 !important;
-            right: 0 !important;
-            top: 0 !important;
-            bottom: auto !important;
-            z-index: 50 !important;
-            pointer-events: none !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
           @page {
             size: A4;
             margin: 10mm 6mm;
@@ -812,7 +701,7 @@ export default function Page() {
 				}}
 			/>
 
-			<div className="flex flex-col w-full min-h-0 bg-gradient-to-br from-amber-50 via-white to-orange-50">
+			<div className="flex flex-col w-full min-h-0 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-2">
 				<div className="flex flex-col flex-1 min-h-0 bg-white rounded-lg shadow-2xl px-4 py-8">
 					<div className="flex shrink-0 w-full justify-between mb-6 print-hide">
 						<div className="flex gap-4 items-center">
@@ -838,23 +727,9 @@ export default function Page() {
 									</SelectContent>
 								</Select>
 							</div>
-							<Button
-								onClick={handleDelete}
-								disabled={currentData.length === 0}
-								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-								SUPPRIMER
-							</Button>
-							<Button
-								onClick={handleValider}
-								disabled={
-									currentData.length === 0 ||
-									bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
-								}
-								className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-								VALIDER
-							</Button>
-
-							
+							<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 border border-green-300">
+								Statut : Validé avec apport initial
+							</span>
 						</div>
 						<div className="flex gap-2">
 							<Button
@@ -867,6 +742,7 @@ export default function Page() {
 
 							<Button
 								onClick={handlePrint}
+								disabled={currentData.length === 0}
 								className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
 								<Printer className="w-5 h-5 mr-2" />
 								IMPRIMER
@@ -876,40 +752,7 @@ export default function Page() {
 
 					<div className="flex-1 min-h-0 overflow-y-auto max-h-[calc(100vh-260px)] print:max-h-none print:overflow-visible">
 						<div id="printable-area" className="relative">
-							{bonDeCommandeStatus === "VALIDE" && (
-								<div
-									className="valide-stamp pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center px-2 pt-1"
-									aria-hidden>
-									<span
-										className="inline-block select-none text-center font-black uppercase tracking-[0.12em] text-emerald-800"
-										style={{
-											fontSize: "clamp(2.75rem, 12vw, 5.5rem)",
-											lineHeight: 1.05,
-											transform:
-												"perspective(560px) rotate(-22deg) rotateX(16deg) translateY(4px)",
-											transformOrigin: "center top",
-											textShadow: `
-												0 2px 0 #bbf7d0,
-												0 4px 0 #86efac,
-												0 6px 0 #4ade80,
-												0 8px 0 #22c55e,
-												0 10px 0 #16a34a,
-												0 12px 0 #15803d,
-												0 14px 0 #166534,
-												0 18px 20px rgba(0,0,0,0.3),
-												0 28px 40px rgba(0,0,0,0.18)
-											`,
-										}}>
-										VALIDE
-									</span>
-								</div>
-							)}
-							<div
-								className={`flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3 ${
-									bonDeCommandeStatus === "VALIDE"
-										? "pt-14 sm:pt-20 print:pt-12"
-										: ""
-								}`}>
+							<div className="flex w-full justify-between border-b-2 border-orange-800 pb-4 mb-3">
 								<div>
 									<Image
 										src="/logo.png"
@@ -932,22 +775,12 @@ export default function Page() {
 							<div className="flex justify-between items-center">
 								<div></div>
 								<div className="flex flex-col items-center justify-center ">
-									<h1
-										className={`text-xl font-bold border-2 border-black px-4 py-2 rounded-lg shadow-lg ${
-											bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
-												? "bg-green-600 text-white"
-												: "text-orange-800"
-										}`}>
-										{bonDeCommandeStatus === "VALIDE_APPORT_INITIAL"
-											? "BON DE COMMANDE VALIDE"
-											: "BON DE COMMANDE"}
+									<h1 className="text-xl font-bold border-2 border-black px-4 py-2 rounded-lg shadow-lg bg-green-600 text-white">
+										BON DE COMMANDE VALIDE
 									</h1>
-									{showApportInitial && (
-										<h1 className="text-sm font-bold text-black  py-2 ">
-											{" "}
-											En Apport Initial 60% du Montant Total TTC{" "}
-										</h1>
-									)}
+									<h1 className="text-sm font-bold text-black  py-2 ">
+										En Apport Initial 60% du Montant Total TTC
+									</h1>
 								</div>
 
 								<div className="flex justify-end  ">
@@ -964,7 +797,6 @@ export default function Page() {
 
 							{currentData.map((facture: Facture) => (
 								<div key={facture.id}>
-									{/* Commercial badge - shows who created this bon de commande */}
 									<div className="mb-3 print-hide">
 										<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 border border-amber-300">
 											Commercial : {facture.user?.firstName}{" "}
@@ -1047,12 +879,7 @@ export default function Page() {
 										</div>
 									</div>
 
-									<div
-										className={`relative mb-2 ${
-											bonDeCommandeStatus === "SOUS_RESERVE"
-												? "pb-28 sm:pb-40 print:pb-32"
-												: ""
-										}`}>
+									<div className="relative mb-2">
 										<h2 className="text-sm font-bold text-gray-800 mb-1">
 											3️⃣ Détails du bon de commande
 										</h2>
@@ -1320,34 +1147,6 @@ export default function Page() {
 												</TableRow>
 											</TableFooter>
 										</Table>
-										{bonDeCommandeStatus === "SOUS_RESERVE" && (
-											<div
-												className="sous-reserve-stamp pointer-events-none absolute inset-x-0 bottom-0 z-50 flex items-end justify-center px-2 pb-0"
-												aria-hidden>
-												<span
-													className="inline-block select-none text-center font-black uppercase tracking-[0.12em] text-red-700"
-													style={{
-														fontSize: "clamp(2.75rem, 12vw, 5.5rem)",
-														lineHeight: 1.05,
-														transform:
-															"perspective(560px) rotate(-22deg) rotateX(-18deg) translateY(2px)",
-														transformOrigin: "center bottom",
-														textShadow: `
-															0 -2px 0 #fca5a5,
-															0 -4px 0 #f87171,
-															0 -6px 0 #ef4444,
-															0 -8px 0 #dc2626,
-															0 -10px 0 #b91c1c,
-															0 -12px 0 #991b1b,
-															0 -14px 0 #7f1d1d,
-															0 -18px 20px rgba(0,0,0,0.35),
-															0 -28px 40px rgba(0,0,0,0.2)
-														`,
-													}}>
-													SOUS RESERVE
-												</span>
-											</div>
-										)}
 									</div>
 
 									<div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 mb-2">
@@ -1456,7 +1255,7 @@ export default function Page() {
 							{filteredFactures.length === 0 && (
 								<div className="text-center py-12">
 									<p className="text-lg text-gray-600">
-										Aucun bon de commande trouvé
+										Aucun bon de commande validé avec apport initial
 									</p>
 								</div>
 							)}
@@ -1498,7 +1297,7 @@ export default function Page() {
 
 						<Button
 							onClick={goToNextPage}
-							disabled={currentPage === totalPages}
+							disabled={currentPage === totalPages || totalPages === 0}
 							className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold">
 							Page Suivante
 							<ChevronRight className="w-5 h-5 ml-2" />
