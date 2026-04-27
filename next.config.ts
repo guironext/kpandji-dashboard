@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "2mb",
     },
+    // Avoids parallel webpack workers placing server chunks where runtime can't resolve
+    // them (Windows: ./<id>.js vs ./chunks/<id>.js) when loading internal pages/* bundles.
+    webpackBuildWorker: false,
   },
   images: {
     loader: "custom",

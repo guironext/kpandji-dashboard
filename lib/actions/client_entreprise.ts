@@ -939,6 +939,43 @@ export async function getClientEntreprisesByStatus(status: "CLIENT" | "PROSPECT"
   }
 }
 
+export async function getClientEntreprisesByStatusWithCommandes(
+  status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE"
+) {
+  try {
+    const clientEntreprises = await prisma.client_entreprise.findMany({
+      where: {
+        status_client: status,
+        Commande: { some: {} },
+      },
+      include: {
+        User: true,
+        Commande: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            VoitureModel: { select: { model: true } },
+          },
+        },
+      },
+      orderBy: { nom_entreprise: "asc" },
+    });
+
+    return {
+      success: true,
+      data: (clientEntreprises as unknown[]).map((ce: unknown) => {
+        const item = ce as Record<string, unknown> & { User?: unknown };
+        return {
+          ...item,
+          user: item.User,
+        };
+      }),
+    };
+  } catch (error) {
+    console.error("Error fetching client_entreprises by status with commandes:", error);
+    return { success: false, error: "Failed to fetch client_entreprises" };
+  }
+}
+
 export async function getClientEntreprisesByStatusWithVoitures(status: "CLIENT" | "PROSPECT" | "FAVORABLE" | "A_SUIVRE" | "ABANDONNE") {
   try {
     const clientEntreprises = await prisma.client_entreprise.findMany({

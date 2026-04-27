@@ -41,6 +41,8 @@ model User {
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
   NotificationsSent         Notification[]              @relation("NotificationsSent")
   NotificationsReceived     Notification[]              @relation("NotificationsReceived")
+  Agenda                    Agenda[]
+  RapportActiviteAgenda     RapportActiviteAgenda[]
 }
 
 model Message {
@@ -1527,7 +1529,168 @@ enum NotificationType {
   ERROR
 }
 
+model Agenda {
+  id String @id @default(uuid())
+  titre String
+  description String?
+  date DateTime
+  heureDebut DateTime
+  heureFin DateTime
+  lieu String?
+  color String @default("indigo")
+  type AgendaType @default(RENDEZ_VOUS_AVENIR )
+  statut AgendaStatut @default(EN_ATTENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda RapportActiviteAgenda?
+}
 
+
+model RapportActiviteAgenda {
+  id String @id @default(uuid())
+
+  // Legacy JSON blob (kept optional for backward compatibility with existing rows).
+  rapport String?
+
+  // 1. En-tête
+  lieu         String?
+  organisateur String?
+  redacteur    String?
+
+  // 3. Objectif
+  contexte     String?
+  butPrincipal String?
+
+  // 8. Difficultés
+  difficulteProblemes String?
+  difficulteRisques   String?
+
+  // 9. Prochaines étapes
+  actionsFutures String?
+  dateProchaine  DateTime?
+
+  // 10. Conclusion
+  conclusionResume     String?
+  conclusionImpression String?
+  conclusionImportance String?
+
+  // 2. Participants
+  listePresents ListePresent[]
+
+  // Participants inscrits via QR code (auto-inscription sur le terrain).
+  listeParticipantsQrCode ListeParticipantQrCode[]
+
+  // 4. Ordre du jour
+  listeOrdreDuJour ListeOrdreDuJour[]
+
+  // 5. Déroulement des échanges
+  listePointsAbordes ListePointsAbordes[]
+
+  // 6. Décisions prises
+  listeDecisionsPrises ListeDecisionsPrises[]
+
+  // 7. Actions à mener
+  listeActionsAExecuter ListeActionsAExecuter[]
+
+  // Ownership: direct link to the authenticated user who authored the report.
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agendaId String  @unique
+  agenda   Agenda  @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+
+   @@index([userId])
+}
+
+
+model ListePresent {
+  id String @id @default(uuid())
+  nom String
+  prenoms String
+  email String?
+  telephone String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+model ListeParticipantQrCode {
+  id String @id @default(uuid())
+  nom String
+  prenoms String
+  email String?
+  telephone String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+model ListeOrdreDuJour {
+  id String @id @default(uuid())
+  ordreDuJour String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+model ListePointsAbordes {  
+  id String @id @default(uuid())
+  pointAborde String
+  resumePointsAbordes String?
+  problemesPointsAbordes String?
+  propositionsPointsAbordes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+model ListeDecisionsPrises {
+  id String @id @default(uuid())
+  decisionPrise String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+model ListeActionsAExecuter {
+  id String @id @default(uuid())
+  actionAExecuter String
+  responsable String
+  dateExecution DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rapportActiviteAgendaId String
+  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+}
+
+enum AgendaType {
+  RENDEZ_VOUS_AVENIR
+  RENDEZ_VOUS_ANNULE
+  RENDEZ_VOUS_DEPLACE
+  RENDEZ_VOUS_EFFECTUE
+  RENDEZ_VOUS_EN_COURS
+  RENDEZ_VOUS_TERMINEE
+}
+
+enum AgendaStatut {
+  EN_ATTENTE
+  CONFIRME
+  ANNULE
+  DEPLACE
+  EFFECTUE
+  EN_COURS
+  TERMINEE
+}
 enum StatutCalendrierSortie {
   EN_ATTENTE
   CONFIRME
@@ -1568,6 +1731,7 @@ enum UserRole {
   SUPERVISEUR
   COMMUNICATION
   RESPONSABLE_COMMERCIAL
+  ASSISTANTE
 }
 
 enum ChassisFlag {
