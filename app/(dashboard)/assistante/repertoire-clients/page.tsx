@@ -128,9 +128,12 @@ export default async function RepertoireClientsPage() {
     })
   );
 
-  const rows = [...particuliers, ...entreprises].sort((a, b) =>
-    a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" })
-  );
+  const typeOrder = { particulier: 0, entreprise: 1 } as const;
+  const rows = [...particuliers, ...entreprises].sort((a, b) => {
+    const byType = typeOrder[a.kind] - typeOrder[b.kind];
+    if (byType !== 0) return byType;
+    return a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" });
+  });
 
   const nPart = rows.filter((r) => r.kind === "particulier").length;
   const nEnt = rows.filter((r) => r.kind === "entreprise").length;
@@ -215,7 +218,9 @@ export default async function RepertoireClientsPage() {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
                 Annuaire
               </h2>
-              <p className="text-xs text-slate-400">Tri alphabétique par nom</p>
+              <p className="text-xs text-slate-400">
+                Tri par type (particulier, entreprise), puis par nom
+              </p>
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-lg shadow-slate-200/50 backdrop-blur-sm">

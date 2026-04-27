@@ -558,6 +558,25 @@ model Fournisseur {
   Commande      Commande[]
 }
 
+model Partenaire {
+  id            String     @id
+  nom           String
+  email         String?
+  telephone     String?
+  adresse       String?
+  ville         String?
+  code_postal   String?
+  pays          String?
+  type_partenaire TypePartenaire
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+}
+enum TypePartenaire {
+  FOURNISSEUR
+  CLIENT
+  PARTENAIRE
+}
+
 model FournisseurCommandeLocal {
   id              String          @id
   nom             String

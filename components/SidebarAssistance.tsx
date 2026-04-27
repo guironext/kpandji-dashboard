@@ -8,8 +8,6 @@ import {
   Contact,
   UserSearch,
   Briefcase,
-  Store,
-  Globe,
   Warehouse,
   FileTextIcon,
   MessageSquare,
@@ -55,8 +53,7 @@ const navCategories = [
       { id: 9, icon: <Contact className={iconClass} />, label: "Repertoire Clients", href: "/assistante/repertoire-clients" },
       { id: 10, icon: <UserSearch className={iconClass} />, label: "Repertoire Prospects", href: "/assistante/repertoire-prospects" },
       { id: 12, icon: <Briefcase className={iconClass} />, label: "Partenaires", href: "/assistante/repertoire-partenaires" },
-      { id: 13, icon: <Store className={iconClass} />, label: "Fournisseurs Locaux", href: "/assistante/repertoire-fournisseurs-locaux" },
-      { id: 14, icon: <Globe className={iconClass} />, label: "Fournisseurs Inter", href: "/assistante/repertoire-fournisseurs-internationaux" },
+
     ],
   },
 ];
