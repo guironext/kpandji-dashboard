@@ -1692,6 +1692,26 @@ model ListeActionsAExecuter {
   rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
+model Documentation {
+  id String @id @default(uuid())
+  nom String
+  type TypeDocumentation
+  fichier String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TypeDocumentation {
+  AGREMENT
+  ARF
+  RCCM
+  DFE
+  CNPS
+  RIB
+  CATALOGUE
+  PRESENTATION
+  FICHE_TECHNIQUE
+}
 enum AgendaType {
   RENDEZ_VOUS_AVENIR
   RENDEZ_VOUS_ANNULE

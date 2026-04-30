@@ -26,6 +26,11 @@
 .DS_Store
 *.pem
 
+# Local commercial doc uploads (sensitive / large — not versioned)
+/public/externes/commercial-documentation/*
+
+.curl-body.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*

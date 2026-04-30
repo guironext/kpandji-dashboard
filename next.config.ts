@@ -4,7 +4,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "2mb",
+      // Matches commercial documentation uploads (see lib/actions/documentation.ts max 25MB)
+      bodySizeLimit: "25mb",
     },
     // Avoids parallel webpack workers placing server chunks where runtime can't resolve
     // them (Windows: ./<id>.js vs ./chunks/<id>.js) when loading internal pages/* bundles.
