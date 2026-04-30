@@ -11,6 +11,7 @@ import {
   Warehouse,
   FileTextIcon,
   MessageSquare,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -41,6 +42,7 @@ const navCategories = [
       { id: 6, icon: <Mail className={iconClass} />, label: "Courriers", href: "/assistante/numero-courrier" },
       { id: 7, icon: <Send className={iconClass} />, label: "Messages", href: "/assistante/messages" },
       { id: 8, icon: <MessageSquare className={iconClass} />, label: "Suivi Messages", href: "/assistante/suivi-messages" },
+      { id: 9, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/assistante/documentation" },
     ],
 
   },
@@ -50,8 +52,8 @@ const navCategories = [
     color: "#22c55e",
     bg: "#22c55e1a", // green-500 @ 10% opacity
     items: [
-      { id: 9, icon: <Contact className={iconClass} />, label: "Repertoire Clients", href: "/assistante/repertoire-clients" },
-      { id: 10, icon: <UserSearch className={iconClass} />, label: "Repertoire Prospects", href: "/assistante/repertoire-prospects" },
+      { id: 10, icon: <Contact className={iconClass} />, label: "Repertoire Clients", href: "/assistante/repertoire-clients" },
+      { id: 11, icon: <UserSearch className={iconClass} />, label: "Repertoire Prospects", href: "/assistante/repertoire-prospects" },
       { id: 12, icon: <Briefcase className={iconClass} />, label: "Partenaires", href: "/assistante/repertoire-partenaires" },
 
     ],

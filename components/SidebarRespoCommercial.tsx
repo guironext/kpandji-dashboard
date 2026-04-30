@@ -20,6 +20,7 @@ import {
   KeyRound,
   Activity,
   Mail,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -105,6 +106,7 @@ const navCategories = [
     items: [
       { id: 20, icon: <Mail className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
       { id: 21, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
+      { id: 22, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/responsablecommercial/documentation" },
     ],
   }
 ];
