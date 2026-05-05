@@ -22,9 +22,15 @@ const isRendezVousApi = createRouteMatcher(["/api/rendez-vous(.*)"]);
 const isRapportRendezVousApi = createRouteMatcher(["/api/rapport-rendez-vous(.*)"]);
 const isFactureApi = createRouteMatcher(["/api/facture(.*)"]);
 const isReservationVehiculeApi = createRouteMatcher(["/api/reservation-vehicule(.*)"]);
-const isCommercialDocumentationDownloadApi = createRouteMatcher([
-	"/api/commercial-documentation(.*)",
-]);
+
+/** Avoid createRouteMatcher misses for /api/commercial-documentation/:id (must bypass before auth/onboarding redirects). */
+function isCommercialDocumentationDownloadPath(pathname: string): boolean {
+	return (
+		pathname.startsWith("/api/commercial-documentation/") ||
+		pathname === "/api/commercial-documentation" ||
+		pathname.startsWith("/api/documentation/")
+	);
+}
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
@@ -182,7 +188,8 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	if (isRapportRendezVousApi(req)) return NextResponse.next();
 	if (isFactureApi(req)) return NextResponse.next();
 	if (isReservationVehiculeApi(req)) return NextResponse.next();
-	if (isCommercialDocumentationDownloadApi(req)) return NextResponse.next();
+	if (isCommercialDocumentationDownloadPath(req.nextUrl.pathname))
+		return NextResponse.next();
 	if (isAssistanteRoute(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {
