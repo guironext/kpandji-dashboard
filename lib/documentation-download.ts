@@ -8,7 +8,7 @@ export async function downloadCommercialDocumentationFile(
 	});
 
 	const res = await fetch(
-		`/api/documentation/${encodeURIComponent(documentId)}?${q.toString()}`,
+		`/api/commercial-documentation/${encodeURIComponent(documentId)}?${q.toString()}`,
 		{
 			credentials: "include",
 		}

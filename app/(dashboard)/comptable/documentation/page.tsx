@@ -780,11 +780,16 @@ export default function CommercialDocumentationPage() {
                                       toast.error(
                                         "Impossible de télécharger le fichier."
                                       );
-                                      const fallback =
-                                        doc.fileUrl.startsWith("http")
-                                          ? doc.fileUrl
-                                          : `${window.location.origin}${doc.fileUrl.startsWith("/") ? doc.fileUrl : `/${doc.fileUrl}`}`;
-                                      window.open(fallback, "_blank", "noopener,noreferrer");
+                                      if (
+                                        doc.fileUrl.startsWith("http://") ||
+                                        doc.fileUrl.startsWith("https://")
+                                      ) {
+                                        window.open(
+                                          doc.fileUrl,
+                                          "_blank",
+                                          "noopener,noreferrer"
+                                        );
+                                      }
                                     } finally {
                                       setDownloadingId(null);
                                     }
