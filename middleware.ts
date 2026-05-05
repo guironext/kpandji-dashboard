@@ -22,6 +22,7 @@ const isRendezVousApi = createRouteMatcher(["/api/rendez-vous(.*)"]);
 const isRapportRendezVousApi = createRouteMatcher(["/api/rapport-rendez-vous(.*)"]);
 const isFactureApi = createRouteMatcher(["/api/facture(.*)"]);
 const isReservationVehiculeApi = createRouteMatcher(["/api/reservation-vehicule(.*)"]);
+const isDocumentationDownloadApi = createRouteMatcher(["/api/documentation(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
@@ -179,6 +180,7 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	if (isRapportRendezVousApi(req)) return NextResponse.next();
 	if (isFactureApi(req)) return NextResponse.next();
 	if (isReservationVehiculeApi(req)) return NextResponse.next();
+	if (isDocumentationDownloadApi(req)) return NextResponse.next();
 	if (isAssistanteRoute(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {

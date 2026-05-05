@@ -2,9 +2,15 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const LOCAL_DOCS_PREFIX = "/externes/commercial-documentation/";
 
-function resolveAllowedUpstream(rawUrl: string, requestOrigin: string): string | null {
+function resolveAllowedUpstream(
+	rawUrl: string,
+	requestOrigin: string
+): string | null {
 	try {
 		if (rawUrl.startsWith("/")) {
 			if (!rawUrl.startsWith(LOCAL_DOCS_PREFIX)) return null;
@@ -14,7 +20,6 @@ function resolveAllowedUpstream(rawUrl: string, requestOrigin: string): string |
 		const u = new URL(rawUrl);
 		if (u.protocol !== "https:") return null;
 		const h = u.hostname.toLowerCase();
-		// Vercel Blob and related storage hosts (*.public.blob.vercel-storage.com, etc.)
 		if (!h.endsWith(".vercel-storage.com")) return null;
 		return u.href;
 	} catch {
@@ -27,18 +32,21 @@ function asciiFilename(name: string): string {
 	return t.slice(0, 200) || "document";
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(
+	req: NextRequest,
+	context: { params: Promise<{ id: string }> }
+) {
 	const { userId } = await auth();
 	if (!userId) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const id = req.nextUrl.searchParams.get("id");
-	const nameParam = req.nextUrl.searchParams.get("name")?.trim() || "document";
--7
+	const { id } = await context.params;
 	if (!id) {
 		return NextResponse.json({ error: "Missing id" }, { status: 400 });
 	}
+
+	const nameParam = req.nextUrl.searchParams.get("name")?.trim() || "document";
 
 	const doc = await prisma.documentation.findUnique({
 		where: { id },
@@ -48,9 +56,7 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: "Not found" }, { status: 404 });
 	}
 
-	const sourceUrl = doc.fichier;
-
-	const target = resolveAllowedUpstream(sourceUrl, req.nextUrl.origin);
+	const target = resolveAllowedUpstream(doc.fichier, req.nextUrl.origin);
 	if (!target) {
 		return NextResponse.json({ error: "Invalid url" }, { status: 400 });
 	}

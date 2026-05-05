@@ -3,14 +3,16 @@ export async function downloadCommercialDocumentationFile(
 	documentId: string,
 	fileName: string
 ): Promise<void> {
-	const params = new URLSearchParams({
-		id: documentId,
+	const q = new URLSearchParams({
 		name: fileName.trim() || "document",
 	});
 
-	const res = await fetch(`/api/documentation/file?${params.toString()}`, {
-		credentials: "include",
-	});
+	const res = await fetch(
+		`/api/documentation/${encodeURIComponent(documentId)}?${q.toString()}`,
+		{
+			credentials: "include",
+		}
+	);
 
 	if (!res.ok) {
 		throw new Error(`HTTP ${res.status}`);
