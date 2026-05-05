@@ -24,6 +24,9 @@ import {
   Loader2,
   FolderOpen,
   Sparkles,
+  Trash2,
+  AlertTriangle,
+  IdCard,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,6 +46,7 @@ import { cn } from "@/lib/utils";
 import {
   getCommercialDocumentationRecords,
   uploadCommercialDocumentation,
+  deleteCommercialDocumentation,
 } from "@/lib/actions/documentation";
 import { downloadCommercialDocumentationFile } from "@/lib/documentation-download";
 
@@ -56,6 +60,7 @@ const CATEGORIES = [
   { id: "catalogue", label: "Catalogue" },
   { id: "presentation", label: "Presentation" },
   { id: "fiche-technique", label: "Fiche Technique" },
+  { id: "cni", label: "CNI" },
 ] as const;
 
 type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -71,6 +76,7 @@ const TYPE_TO_CATEGORY: Record<string, CategoryId> = {
   CATALOGUE: "catalogue",
   PRESENTATION: "presentation",
   FICHE_TECHNIQUE: "fiche-technique",
+  CNI: "cni",
 };
 
 function fileNameFromPath(fichier: string): string {
@@ -207,6 +213,14 @@ const CATEGORY_PRESENTATION: Record<CategoryId, CategoryPresentation> = {
     iconTint: "bg-lime-600/15 text-lime-900 dark:text-lime-400",
     Icon: Wrench,
   },
+  cni: {
+    description:
+      "Cartes nationales d'identité et pièces d'identification officielles.",
+    gradient:
+      "from-cyan-500/[0.12] via-sky-500/[0.06] to-blue-500/[0.04]",
+    iconTint: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
+    Icon: IdCard,
+  },
 };
 
 type StoredDocument = {
@@ -288,6 +302,8 @@ export default function CommercialDocumentationPage() {
   const [dragActive, setDragActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StoredDocument | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const formId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -365,6 +381,30 @@ export default function CommercialDocumentationPage() {
         block: "start",
       });
     });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const result = await deleteCommercialDocumentation(deleteTarget.id);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      setDeleteTarget(null);
+
+      const refresh = await getCommercialDocumentationRecords();
+      if (refresh.success) {
+        setDocumentsByCategory(groupDocumentsByCategory(refresh.data));
+      }
+    } catch {
+      toast.error("Une erreur est survenue lors de la suppression.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const onDialogDragOver = (e: React.DragEvent) => {
@@ -760,48 +800,67 @@ export default function CommercialDocumentationPage() {
                                   </div>
                                 </div>
 
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    "h-9 shrink-0 gap-2 rounded-xl border-border/70",
-                                    "hover:border-primary/35 hover:bg-primary/5 hover:text-primary"
-                                  )}
-                                  disabled={downloadingId === doc.id}
-                                  onClick={async () => {
-                                    setDownloadingId(doc.id);
-                                    try {
-                                      await downloadCommercialDocumentationFile(
-                                        doc.id,
-                                        doc.fileName
-                                      );
-                                    } catch {
-                                      toast.error(
-                                        "Impossible de télécharger le fichier."
-                                      );
-                                      if (
-                                        doc.fileUrl.startsWith("http://") ||
-                                        doc.fileUrl.startsWith("https://")
-                                      ) {
-                                        window.open(
-                                          doc.fileUrl,
-                                          "_blank",
-                                          "noopener,noreferrer"
+                                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-9 shrink-0 gap-2 rounded-xl border-border/70",
+                                      "hover:border-primary/35 hover:bg-primary/5 hover:text-primary"
+                                    )}
+                                    disabled={downloadingId === doc.id}
+                                    onClick={async () => {
+                                      setDownloadingId(doc.id);
+                                      try {
+                                        await downloadCommercialDocumentationFile(
+                                          doc.id,
+                                          doc.fileName
                                         );
+                                      } catch {
+                                        toast.error(
+                                          "Impossible de télécharger le fichier."
+                                        );
+                                        if (
+                                          doc.fileUrl.startsWith("http://") ||
+                                          doc.fileUrl.startsWith("https://")
+                                        ) {
+                                          window.open(
+                                            doc.fileUrl,
+                                            "_blank",
+                                            "noopener,noreferrer"
+                                          );
+                                        }
+                                      } finally {
+                                        setDownloadingId(null);
                                       }
-                                    } finally {
-                                      setDownloadingId(null);
+                                    }}
+                                  >
+                                    {downloadingId === doc.id ? (
+                                      <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                      <Download className="size-4" />
+                                    )}
+                                    Télécharger
+                                  </Button>
+
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-9 shrink-0 gap-2 rounded-xl border-border/70 text-destructive",
+                                      "hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
+                                    )}
+                                    disabled={
+                                      deleting && deleteTarget?.id === doc.id
                                     }
-                                  }}
-                                >
-                                  {downloadingId === doc.id ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                  ) : (
-                                    <Download className="size-4" />
-                                  )}
-                                  Télécharger
-                                </Button>
+                                    onClick={() => setDeleteTarget(doc)}
+                                  >
+                                    <Trash2 className="size-4" />
+                                    Supprimer
+                                  </Button>
+                                </div>
                               </div>
                             </li>
                           );
@@ -973,6 +1032,93 @@ export default function CommercialDocumentationPage() {
                 </>
               ) : (
                 "Enregistrer"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!deleting}
+          className="gap-0 overflow-hidden border-border/70 p-0 sm:max-w-md"
+        >
+          <div className="border-b border-border/60 bg-gradient-to-br from-destructive/10 via-background to-background px-6 py-7 sm:px-8">
+            <DialogHeader className="space-y-4 text-left sm:text-left">
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+                  <AlertTriangle className="size-6" aria-hidden />
+                </div>
+                <div className="min-w-0 space-y-1.5 pt-1">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">
+                    Supprimer le document ?
+                  </DialogTitle>
+                  <DialogDescription className="text-sm leading-relaxed">
+                    Cette action est définitive. Le fichier sera retiré du
+                    centre documentaire et ne pourra pas être restauré.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
+
+          {deleteTarget && (
+            <div className="px-6 py-5 sm:px-8">
+              <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-4">
+                <div
+                  className={cn(
+                    "flex size-10 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                    extensionBadgeClass(extensionOf(deleteTarget.fileName))
+                  )}
+                >
+                  <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-tighter">
+                    {extensionOf(deleteTarget.fileName)}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate text-sm font-semibold">
+                    {deleteTarget.displayName}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {deleteTarget.fileName}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-3 border-t border-border/60 bg-muted/30 px-6 py-4 sm:border-t sm:bg-transparent">
+            <Button
+              variant="outline"
+              className="h-11 flex-1 rounded-xl sm:flex-none"
+              type="button"
+              disabled={deleting}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              className="h-11 flex-1 items-center gap-2 rounded-xl shadow-md sm:flex-none"
+              type="button"
+              onClick={() => void handleConfirmDelete()}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Suppression…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  Supprimer
+                </>
               )}
             </Button>
           </DialogFooter>

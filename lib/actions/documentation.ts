@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { put } from "@vercel/blob";
-import { writeFile, mkdir } from "fs/promises";
+import { put, del } from "@vercel/blob";
+import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import type { Documentation, TypeDocumentation } from "@prisma/client";
 
@@ -18,6 +18,7 @@ const categoryField = z.enum([
   "catalogue",
   "presentation",
   "fiche-technique",
+  "cni",
 ]);
 
 const UI_CATEGORY_TO_TYPE: Record<
@@ -33,6 +34,7 @@ const UI_CATEGORY_TO_TYPE: Record<
   catalogue: "CATALOGUE",
   presentation: "PRESENTATION",
   "fiche-technique": "FICHE_TECHNIQUE",
+  cni: "CNI",
 };
 
 const fileUploadSchema = z.object({
@@ -148,6 +150,64 @@ export async function uploadCommercialDocumentation(
     }
     const msg =
       error instanceof Error ? error.message : "Échec de l'enregistrement.";
+    return { success: false, message: msg };
+  }
+}
+
+export async function deleteCommercialDocumentation(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const parsedId = z
+      .string()
+      .min(1, "Identifiant manquant.")
+      .parse(typeof id === "string" ? id.trim() : "");
+
+    const existing = await prisma.documentation.findUnique({
+      where: { id: parsedId },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Document introuvable." };
+    }
+
+    const fichier = existing.fichier;
+    const isRemote =
+      fichier.startsWith("http://") || fichier.startsWith("https://");
+
+    if (isRemote) {
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+      if (blobToken) {
+        try {
+          await del(fichier, { token: blobToken });
+        } catch (blobError) {
+          console.error("deleteCommercialDocumentation blob:", blobError);
+        }
+      }
+    } else if (fichier.startsWith("/externes/")) {
+      try {
+        const localPath = join(process.cwd(), "public", fichier.replace(/^\//, ""));
+        await unlink(localPath);
+      } catch (fsError) {
+        console.error("deleteCommercialDocumentation fs:", fsError);
+      }
+    }
+
+    await prisma.documentation.delete({ where: { id: parsedId } });
+
+    revalidatePath("/commercial/documentation");
+
+    return { success: true, message: "Document supprimé." };
+  } catch (error) {
+    console.error("deleteCommercialDocumentation:", error);
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        message: error.issues.map((i) => i.message).join(", "),
+      };
+    }
+    const msg =
+      error instanceof Error ? error.message : "Échec de la suppression.";
     return { success: false, message: msg };
   }
 }

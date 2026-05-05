@@ -1711,6 +1711,7 @@ enum TypeDocumentation {
   CATALOGUE
   PRESENTATION
   FICHE_TECHNIQUE
+  CNI
 }
 enum AgendaType {
   RENDEZ_VOUS_AVENIR
