@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: "Tableau de bord de gestion de KPANDJI",
 };
 
+/** Root layout reads cookies (dev bypass); avoid static prerender errors on child routes. */
+export const dynamic = "force-dynamic";
+
 // Get Clerk publishable key
 // During build, if key is missing, Clerk will throw an error
 // Make sure to set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env.local file
