@@ -47,15 +47,15 @@ import {
 import { downloadCommercialDocumentationFile } from "@/lib/documentation-download";
 
 const CATEGORIES = [
-  { id: "agrement", label: "AGREMENT" },
+  { id: "agrement", label: "Agrement" },
   { id: "arf", label: "ARF" },
   { id: "rccm", label: "RCCM" },
   { id: "dfe", label: "DFE" },
   { id: "cnps", label: "CNPS" },
   { id: "rib", label: "RIB" },
-  { id: "catalogue", label: "CATALOGUE" },
-  { id: "presentation", label: "PRESENTATION" },
-  { id: "fiche-technique", label: "FICHE_TECHNIQUE" },
+  { id: "catalogue", label: "Catalogue" },
+  { id: "presentation", label: "Presentation" },
+  { id: "fiche-technique", label: "Fiche Technique" },
 ] as const;
 
 type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -703,7 +703,7 @@ export default function CommercialDocumentationPage() {
                         </p>
                         <Button
                           variant="secondary"
-                          className="relative mt-7 gap-2 rounded-xl px-6"
+                          className="relative mt-7 gap-2 rounded-xl px-6 "
                           type="button"
                           onClick={() => openUpload(id)}
                         >
@@ -816,7 +816,7 @@ export default function CommercialDocumentationPage() {
                         type="button"
                         size="lg"
                         variant="secondary"
-                        className="gap-2 rounded-xl px-8 shadow-sm"
+                        className="gap-2 rounded-xl px-8 shadow-sm "
                         onClick={() => openUpload(id)}
                       >
                         <Upload className="size-[18px]" />
