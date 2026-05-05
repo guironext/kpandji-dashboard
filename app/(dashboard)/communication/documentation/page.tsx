@@ -44,6 +44,7 @@ import {
   getCommercialDocumentationRecords,
   uploadCommercialDocumentation,
 } from "@/lib/actions/documentation";
+import { downloadCommercialDocumentationFile } from "@/lib/documentation-download";
 
 const CATEGORIES = [
   { id: "agrement", label: "Agrement" },
@@ -286,6 +287,7 @@ export default function CommercialDocumentationPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const formId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -759,21 +761,41 @@ export default function CommercialDocumentationPage() {
                                 </div>
 
                                 <Button
+                                  type="button"
                                   variant="outline"
                                   size="sm"
                                   className={cn(
                                     "h-9 shrink-0 gap-2 rounded-xl border-border/70",
                                     "hover:border-primary/35 hover:bg-primary/5 hover:text-primary"
                                   )}
-                                  asChild
+                                  disabled={downloadingId === doc.id}
+                                  onClick={async () => {
+                                    setDownloadingId(doc.id);
+                                    try {
+                                      await downloadCommercialDocumentationFile(
+                                        doc.fileUrl,
+                                        doc.fileName
+                                      );
+                                    } catch {
+                                      toast.error(
+                                        "Impossible de télécharger le fichier."
+                                      );
+                                      const fallback =
+                                        doc.fileUrl.startsWith("http")
+                                          ? doc.fileUrl
+                                          : `${window.location.origin}${doc.fileUrl.startsWith("/") ? doc.fileUrl : `/${doc.fileUrl}`}`;
+                                      window.open(fallback, "_blank", "noopener,noreferrer");
+                                    } finally {
+                                      setDownloadingId(null);
+                                    }
+                                  }}
                                 >
-                                  <a
-                                    href={doc.fileUrl}
-                                    download={doc.fileName}
-                                  >
+                                  {downloadingId === doc.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
                                     <Download className="size-4" />
-                                    Télécharger
-                                  </a>
+                                  )}
+                                  Télécharger
                                 </Button>
                               </div>
                             </li>
