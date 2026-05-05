@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const LOCAL_DOCS_PREFIX = "/externes/commercial-documentation/";
 
@@ -13,13 +14,9 @@ function resolveAllowedUpstream(rawUrl: string, requestOrigin: string): string |
 		const u = new URL(rawUrl);
 		if (u.protocol !== "https:") return null;
 		const h = u.hostname.toLowerCase();
-		if (
-			h.endsWith(".public.blob.vercel-storage.com") ||
-			h.endsWith(".blob.vercel-storage.com")
-		) {
-			return u.href;
-		}
-		return null;
+		// Vercel Blob and related storage hosts (*.public.blob.vercel-storage.com, etc.)
+		if (!h.endsWith(".vercel-storage.com")) return null;
+		return u.href;
 	} catch {
 		return null;
 	}
@@ -36,14 +33,24 @@ export async function GET(req: NextRequest) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const urlParam = req.nextUrl.searchParams.get("url");
+	const id = req.nextUrl.searchParams.get("id");
 	const nameParam = req.nextUrl.searchParams.get("name")?.trim() || "document";
-
-	if (!urlParam) {
-		return NextResponse.json({ error: "Missing url" }, { status: 400 });
+-7
+	if (!id) {
+		return NextResponse.json({ error: "Missing id" }, { status: 400 });
 	}
 
-	const target = resolveAllowedUpstream(urlParam, req.nextUrl.origin);
+	const doc = await prisma.documentation.findUnique({
+		where: { id },
+		select: { fichier: true },
+	});
+	if (!doc) {
+		return NextResponse.json({ error: "Not found" }, { status: 404 });
+	}
+
+	const sourceUrl = doc.fichier;
+
+	const target = resolveAllowedUpstream(sourceUrl, req.nextUrl.origin);
 	if (!target) {
 		return NextResponse.json({ error: "Invalid url" }, { status: 400 });
 	}

@@ -1,10 +1,10 @@
-/** Download commercial documentation via same-origin API (avoids browser CORS failures on Vercel Blob). */
+/** Download commercial documentation via same-origin API (avoids CORS; uses DB id so Blob URLs are not mangled in the query string). */
 export async function downloadCommercialDocumentationFile(
-	fileUrl: string,
+	documentId: string,
 	fileName: string
 ): Promise<void> {
 	const params = new URLSearchParams({
-		url: fileUrl,
+		id: documentId,
 		name: fileName.trim() || "document",
 	});
 

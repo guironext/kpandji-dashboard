@@ -773,7 +773,7 @@ export default function CommercialDocumentationPage() {
                                     setDownloadingId(doc.id);
                                     try {
                                       await downloadCommercialDocumentationFile(
-                                        doc.fileUrl,
+                                        doc.id,
                                         doc.fileName
                                       );
                                     } catch {
