@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
+import { AgendaDuJourMarquee } from "@/components/manager/AgendaDuJourMarquee";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -128,6 +129,18 @@ export default function AssistanteDashboardPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Agenda du jour
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Tous les rendez-vous d’aujourd’hui, en défilement horizontal.
+          </p>
+          <div className="mt-4">
+            <AgendaDuJourMarquee />
           </div>
         </div>
 

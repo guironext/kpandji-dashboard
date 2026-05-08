@@ -19,7 +19,8 @@ import {
   Ship,
   Building2,
   Mail,
-  MessageSquare
+  MessageSquare,
+  Calendar
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -43,35 +44,42 @@ const navItems = [
     category: "main"
   },
   {
-    id: 3,
+    id: 3,  
+    icon: <Calendar className="w-5 h-5" />,
+    label: "AGENDA",
+    href: "/manager/agenda",
+    category: "main"
+  },
+  {
+    id: 4,
     icon: <ClipboardList className="w-5 h-5" />,
     label: "commandes",
     href: "/manager/commandes",
     category: "commandes"
   },
   {
-    id: 4,
+    id: 5,
     icon: <ListOrdered className="w-5 h-5" />,
     label: "Tableau Commandes",
     href: "/manager/tableau-commandes",
     category: "commandes"
   },
   {
-    id: 5,
+    id: 6,
     icon: <Container className="w-5 h-5" />,
     label: "Conteneurs Chargés",
     href: "/manager/listeConteneurs",
     category: "commandes"
   },
   {
-    id: 6,
+    id: 7,
     icon: <Ship className="w-5 h-5" />,
     label: "Conteneurs Transit",
     href: "/manager/conteneur-transit",
     category: "commandes"
   },
   {
-    id: 7,
+    id: 8,
     icon: <Truck className="w-5 h-5" />,
     label: "Conteneur Arrivés",
     href: "/manager/conteneur-arrives",
@@ -79,70 +87,70 @@ const navItems = [
   },
   
   {
-    id: 9,
+    id: 10,
     icon: <AlertTriangle className="w-5 h-5" />,
     label: "Réclamation Pièces",
     href: "/manager/reclamationpieces",
     category: "commandes"
   },
   {
-    id: 10,
+    id: 11,
     icon: <Wrench className="w-5 h-5" />,
     label: "Ordre Montage",
     href: "/manager/ordre-montage",
     category: "operations"
   },
   {
-    id: 11,
+    id: 12,
     icon: <FileEdit className="w-5 h-5" />,
     label: "Ordre Correction",
     href: "/manager/correction",
     category: "operations"
   },
   {
-    id: 12,
+    id: 13,
     icon: <CarFront className="w-5 h-5" />,
     label: "Sortie Parking",
     href: "/manager/ajouter-modele",
     category: "operations"
   },
   {
-    id: 13,
+    id: 14,
     icon: <FileSpreadsheet className="w-5 h-5" />,
     label: "Rapport Montages",
     href: "/manager/rapportmontages",
     category: "reports"
   },
   {
-    id: 14,
+    id: 15,
     icon: <ClipboardCheck className="w-5 h-5" />,
     label: "Rapport Vérification",
     href: "/manager/rapportverification",
     category: "reports"
   },
   {
-    id: 15,
+    id: 16,
     icon: <Building2 className="w-5 h-5" />,
     label: "Départements",
     href: "/manager/departements",
     category: "reports"
   },
   {
-    id: 16,
+    id: 17,
     icon: <Settings className="w-5 h-5" />,
     label: "Paramètres",
     href: "/manager/parametres",
     category: "settings"
   },
   {
-    id: 17,
+    id: 18,
     icon: <Mail className="w-5 h-5" />,
     label: "Numéro Courrier",
     href: "/manager/numero-courrier",
     category: "Communication"
   },
   {
-    id: 18,
+    id: 19,
     icon: <MessageSquare className="w-5 h-5" />,
     label: "Messages",
     href: "/manager/messages",

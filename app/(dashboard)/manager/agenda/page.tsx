@@ -21,7 +21,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-
   FileText as RapportAgendaIcon,
   Loader2,
   MapPin,
@@ -56,6 +55,7 @@ type Activity = {
   endTime: string; // HH:mm
   color: string;
   lieu?: string | null;
+  owner?: string | null;
 };
 
 function activityStartLocal(a: Pick<Activity, "date" | "startTime">): Date | null {
@@ -69,12 +69,9 @@ function activityStartLocal(a: Pick<Activity, "date" | "startTime">): Date | nul
 function playAlertBeep() {
   try {
     const AudioCtx =
-      (window as unknown as {
-        AudioContext?: typeof AudioContext;
-        webkitAudioContext?: typeof AudioContext;
-      }).AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
+      (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+        .AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
 
     const ctx = new AudioCtx();
@@ -92,9 +89,11 @@ function playAlertBeep() {
       osc.stop(t + duration);
     };
 
+    // Two short beeps.
     beep(now, 880, 0.08);
     beep(now + 0.12, 880, 0.08);
 
+    // Close after playback to avoid keeping audio resources alive.
     setTimeout(() => {
       try {
         ctx.close();
@@ -109,146 +108,81 @@ type ColorDef = {
   key: string;
   label: string;
   dot: string;
-  chipBg: string;
-  chipText: string;
-  chipBorder: string;
   bar: string;
-  solidBg: string;
   softBg: string;
   softText: string;
-  ring: string;
-  gradient: string;
+  chipBorder: string;
 };
 
-const COLOR_PALETTE: ColorDef[] = [
+const COLORS: ColorDef[] = [
   {
     key: "indigo",
     label: "Indigo",
     dot: "bg-indigo-500",
-    chipBg: "bg-indigo-100",
-    chipText: "text-indigo-800",
-    chipBorder: "border-indigo-300",
-    bar: "bg-indigo-600",
-    solidBg: "bg-indigo-500",
+    bar: "bg-indigo-500",
     softBg: "bg-indigo-50",
     softText: "text-indigo-700",
-    ring: "ring-indigo-300",
-    gradient: "from-indigo-500 to-blue-500",
+    chipBorder: "border-indigo-200",
   },
   {
     key: "sky",
-    label: "Bleu ciel",
+    label: "Bleu",
     dot: "bg-sky-500",
-    chipBg: "bg-sky-100",
-    chipText: "text-sky-800",
-    chipBorder: "border-sky-300",
-    bar: "bg-sky-600",
-    solidBg: "bg-sky-500",
+    bar: "bg-sky-500",
     softBg: "bg-sky-50",
     softText: "text-sky-700",
-    ring: "ring-sky-300",
-    gradient: "from-sky-500 to-cyan-500",
+    chipBorder: "border-sky-200",
   },
   {
     key: "emerald",
-    label: "Émeraude",
+    label: "Vert",
     dot: "bg-emerald-500",
-    chipBg: "bg-emerald-100",
-    chipText: "text-emerald-800",
-    chipBorder: "border-emerald-300",
-    bar: "bg-emerald-600",
-    solidBg: "bg-emerald-500",
+    bar: "bg-emerald-500",
     softBg: "bg-emerald-50",
     softText: "text-emerald-700",
-    ring: "ring-emerald-300",
-    gradient: "from-emerald-500 to-teal-500",
+    chipBorder: "border-emerald-200",
   },
   {
     key: "amber",
-    label: "Ambre",
+    label: "Orange",
     dot: "bg-amber-500",
-    chipBg: "bg-amber-100",
-    chipText: "text-amber-800",
-    chipBorder: "border-amber-300",
-    bar: "bg-amber-600",
-    solidBg: "bg-amber-500",
+    bar: "bg-amber-500",
     softBg: "bg-amber-50",
     softText: "text-amber-700",
-    ring: "ring-amber-300",
-    gradient: "from-amber-500 to-orange-500",
+    chipBorder: "border-amber-200",
   },
   {
     key: "rose",
     label: "Rose",
     dot: "bg-rose-500",
-    chipBg: "bg-rose-100",
-    chipText: "text-rose-800",
-    chipBorder: "border-rose-300",
-    bar: "bg-rose-600",
-    solidBg: "bg-rose-500",
+    bar: "bg-rose-500",
     softBg: "bg-rose-50",
     softText: "text-rose-700",
-    ring: "ring-rose-300",
-    gradient: "from-rose-500 to-pink-500",
+    chipBorder: "border-rose-200",
   },
   {
-    key: "violet",
-    label: "Violet",
-    dot: "bg-violet-500",
-    chipBg: "bg-violet-100",
-    chipText: "text-violet-800",
-    chipBorder: "border-violet-300",
-    bar: "bg-violet-600",
-    solidBg: "bg-violet-500",
-    softBg: "bg-violet-50",
-    softText: "text-violet-700",
-    ring: "ring-violet-300",
-    gradient: "from-violet-500 to-purple-500",
-  },
-  {
-    key: "teal",
-    label: "Teal",
-    dot: "bg-teal-500",
-    chipBg: "bg-teal-100",
-    chipText: "text-teal-800",
-    chipBorder: "border-teal-300",
-    bar: "bg-teal-600",
-    solidBg: "bg-teal-500",
-    softBg: "bg-teal-50",
-    softText: "text-teal-700",
-    ring: "ring-teal-300",
-    gradient: "from-teal-500 to-emerald-500",
-  },
-  {
-    key: "fuchsia",
-    label: "Fuchsia",
-    dot: "bg-fuchsia-500",
-    chipBg: "bg-fuchsia-100",
-    chipText: "text-fuchsia-800",
-    chipBorder: "border-fuchsia-300",
-    bar: "bg-fuchsia-600",
-    solidBg: "bg-fuchsia-500",
-    softBg: "bg-fuchsia-50",
-    softText: "text-fuchsia-700",
-    ring: "ring-fuchsia-300",
-    gradient: "from-fuchsia-500 to-pink-500",
+    key: "slate",
+    label: "Gris",
+    dot: "bg-slate-500",
+    bar: "bg-slate-500",
+    softBg: "bg-slate-50",
+    softText: "text-slate-700",
+    chipBorder: "border-slate-200",
   },
 ];
 
-const getColor = (key: string) =>
-  COLOR_PALETTE.find((c) => c.key === key) ?? COLOR_PALETTE[0];
+function getColor(key: string) {
+  return COLORS.find((c) => c.key === key) ?? COLORS[0]!;
+}
 
-// ===== TIME WINDOW: 03:00 → 24:00 =====
 const START_HOUR = 3;
 const END_HOUR = 24;
-const HOUR_HEIGHT = 64; // px per hour
-const MINUTE_HEIGHT = HOUR_HEIGHT / 60;
-const TOTAL_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
-
-const HOURS = Array.from(
-  { length: END_HOUR - START_HOUR + 1 },
+const MINUTE_HEIGHT = 1.6; // px per minute
+const HOUR_HEIGHT = 60 * MINUTE_HEIGHT;
+const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }).map(
   (_, i) => START_HOUR + i
 );
+const TOTAL_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 
 type FormState = {
   id?: string;
@@ -261,36 +195,28 @@ type FormState = {
   lieu: string;
 };
 
-function addHourToTime(hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
-  const end = Math.min(h + 1, END_HOUR);
-  return `${end.toString().padStart(2, "0")}:${m
-    .toString()
-    .padStart(2, "0")}`;
+function emptyForm(date?: Date, startTime?: string): FormState {
+  const d = date ?? new Date();
+  const base = format(d, "yyyy-MM-dd");
+  const st = startTime ?? "09:00";
+  const end = (() => {
+    const [h, m] = st.split(":").map(Number);
+    const total = h * 60 + m + 60;
+    const eh = Math.min(END_HOUR - 1, Math.floor(total / 60));
+    const em = total % 60;
+    return `${eh.toString().padStart(2, "0")}:${em.toString().padStart(2, "0")}`;
+  })();
+  return {
+    titre: "",
+    description: "",
+    date: base,
+    startTime: st,
+    endTime: end,
+    color: COLORS[0]!.key,
+    lieu: "",
+  };
 }
 
-function clampHM(hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
-  const minutes = Math.max(
-    START_HOUR * 60,
-    Math.min(END_HOUR * 60, (h || 0) * 60 + (m || 0))
-  );
-  const H = Math.floor(minutes / 60);
-  const M = minutes % 60;
-  return `${H.toString().padStart(2, "0")}:${M.toString().padStart(2, "0")}`;
-}
-
-const emptyForm = (date?: Date, startTime?: string): FormState => ({
-  titre: "",
-  description: "",
-  date: format(date ?? new Date(), "yyyy-MM-dd"),
-  startTime: startTime ?? "09:00",
-  endTime: startTime ? addHourToTime(startTime) : "10:00",
-  color: "indigo",
-  lieu: "",
-});
-
-// Compute side-by-side layout for overlapping activities
 type PositionedActivity = Activity & {
   top: number;
   height: number;
@@ -298,52 +224,50 @@ type PositionedActivity = Activity & {
   colCount: number;
 };
 
-function layoutActivities(list: Activity[]): PositionedActivity[] {
-  const sorted = [...list].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime)
-  );
-  const toMin = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
-  };
+function toMin(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Compute side-by-side layout for overlapping activities
+function layoutActivities(acts: Activity[]): PositionedActivity[] {
+  const sorted = [...acts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const placed: PositionedActivity[] = [];
 
   // Group into clusters of overlapping activities
   const clusters: Activity[][] = [];
-  let current: Activity[] = [];
-  let clusterEnd = -1;
   for (const a of sorted) {
     const s = toMin(a.startTime);
     const e = toMin(a.endTime);
-    if (current.length === 0 || s < clusterEnd) {
-      current.push(a);
-      clusterEnd = Math.max(clusterEnd, e);
-    } else {
-      clusters.push(current);
-      current = [a];
-      clusterEnd = e;
+    let found = false;
+    for (const cluster of clusters) {
+      const overlaps = cluster.some((b) => {
+        const bs = toMin(b.startTime);
+        const be = toMin(b.endTime);
+        return s < be && e > bs;
+      });
+      if (overlaps) {
+        cluster.push(a);
+        found = true;
+        break;
+      }
     }
+    if (!found) clusters.push([a]);
   }
-  if (current.length) clusters.push(current);
 
-  const placed: PositionedActivity[] = [];
   for (const cluster of clusters) {
     const columns: Activity[][] = [];
     for (const a of cluster) {
-      const s = toMin(a.startTime);
-      let placedCol = -1;
-      for (let i = 0; i < columns.length; i++) {
-        const col = columns[i];
-        const last = col[col.length - 1];
-        if (toMin(last.endTime) <= s) {
+      let placedInCol = false;
+      for (const col of columns) {
+        const last = col[col.length - 1]!;
+        if (toMin(a.startTime) >= toMin(last.endTime)) {
           col.push(a);
-          placedCol = i;
+          placedInCol = true;
           break;
         }
       }
-      if (placedCol === -1) {
-        columns.push([a]);
-        placedCol = columns.length - 1;
-      }
+      if (!placedInCol) columns.push([a]);
     }
     const colCount = columns.length;
     columns.forEach((col, colIndex) => {
@@ -359,14 +283,24 @@ function layoutActivities(list: Activity[]): PositionedActivity[] {
   return placed;
 }
 
-const AgendaPage = () => {
+const StatChip = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20 px-3 py-2 text-white shadow-sm">
+    <div className="text-[10px] uppercase tracking-wider text-white/70 font-semibold">
+      {label}
+    </div>
+    <div className="text-sm font-bold tabular-nums">{value}</div>
+  </div>
+);
+
+export default function AgendaManagerPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTodayDialogOpen, setIsTodayDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof FormState, string>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -374,6 +308,14 @@ const AgendaPage = () => {
   const alertedRef = useRef<Set<string>>(new Set());
 
   const gridScrollRef = useRef<HTMLDivElement>(null);
+
+  const todayActivities = useMemo(() => {
+    const list = activities.filter((a) => {
+      const d = parseISO(a.date);
+      return isSameDay(d, now);
+    });
+    return list.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [activities, now]);
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 60_000);
@@ -384,6 +326,8 @@ const AgendaPage = () => {
   useEffect(() => {
     const tick = () => {
       const current = new Date();
+
+      // Optional desktop notification (only if user already granted it).
       const canNotify =
         typeof window !== "undefined" &&
         "Notification" in window &&
@@ -396,6 +340,7 @@ const AgendaPage = () => {
         if (diffMs <= 0) continue;
 
         const diffMinutes = Math.round(diffMs / 60_000);
+        // "About one hour": trigger once when we're in the 60→59 minutes window.
         if (diffMinutes < 59 || diffMinutes > 60) continue;
 
         const key = `${a.id}:${a.date}:${a.startTime}`;
@@ -413,7 +358,9 @@ const AgendaPage = () => {
             new Notification("Rappel agenda (dans 1h)", {
               body: a.lieu ? `${label} · ${a.lieu}` : label,
             });
-          } catch {}
+          } catch {
+            // ignore browser notification errors
+          }
         }
       }
     };
@@ -423,68 +370,55 @@ const AgendaPage = () => {
     return () => clearInterval(i);
   }, [activities]);
 
-  const fetchActivities = useCallback(
-    async (signal?: AbortSignal) => {
-      const maxAttempts = 2;
-      let lastErr: unknown = null;
-      try {
-        setIsLoading(true);
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          try {
-            const res = await fetch("/api/agenda", {
-              cache: "no-store",
-              signal,
-            });
-            const json = await res.json();
-            if (!res.ok || !json.success) {
-              throw new Error(json.error || "Erreur de chargement");
-            }
-            if (signal?.aborted) return;
-            setActivities(json.data as Activity[]);
-            return;
-          } catch (err) {
-            lastErr = err;
-            // Abort (unmount / HMR) — silently exit, do not toast
-            if (
-              signal?.aborted ||
-              (err instanceof DOMException && err.name === "AbortError")
-            ) {
-              return;
-            }
-            // Transient network hiccup (Turbopack HMR, Neon P1017) — retry once
-            const isTransient =
-              err instanceof TypeError &&
-              /failed to fetch|network/i.test(err.message);
-            if (attempt < maxAttempts && isTransient) {
-              await new Promise((r) => setTimeout(r, 500));
-              continue;
-            }
-            throw err;
+  const fetchActivities = useCallback(async (signal?: AbortSignal) => {
+    const maxAttempts = 2;
+    let lastErr: unknown = null;
+    try {
+      setIsLoading(true);
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const res = await fetch("/api/agenda?all=1", {
+            cache: "no-store",
+            signal,
+            credentials: "include",
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            throw new Error(json.error || "Erreur de chargement");
           }
-        }
-      } catch (err) {
-        if (
-          err instanceof DOMException &&
-          err.name === "AbortError"
-        ) {
+          if (signal?.aborted) return;
+          setActivities(json.data as Activity[]);
           return;
+        } catch (err) {
+          lastErr = err;
+          if (
+            signal?.aborted ||
+            (err instanceof DOMException && err.name === "AbortError")
+          ) {
+            return;
+          }
+          const isTransient =
+            err instanceof TypeError && /failed to fetch|network/i.test(err.message);
+          if (attempt < maxAttempts && isTransient) {
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+          throw err;
         }
-        const isNetErr =
-          err instanceof TypeError &&
-          /failed to fetch|network|load failed/i.test(err.message);
-        if (!isNetErr) console.error(err);
-        else console.warn("[Agenda] load network hiccup");
-        toast.error(
-          lastErr instanceof Error
-            ? lastErr.message
-            : "Impossible de charger l'agenda"
-        );
-      } finally {
-        if (!signal?.aborted) setIsLoading(false);
       }
-    },
-    []
-  );
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      const isNetErr =
+        err instanceof TypeError && /failed to fetch|network|load failed/i.test(err.message);
+      if (!isNetErr) console.error(err);
+      else console.warn("[Agenda] load network hiccup");
+      toast.error(
+        lastErr instanceof Error ? lastErr.message : "Impossible de charger l'agenda"
+      );
+    } finally {
+      if (!signal?.aborted) setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -492,12 +426,10 @@ const AgendaPage = () => {
     return () => controller.abort();
   }, [fetchActivities]);
 
-  // Scroll the time column so that 08:00 is near the top on first load
   useEffect(() => {
     if (gridScrollRef.current) {
       const targetHour = 8;
-      gridScrollRef.current.scrollTop =
-        (targetHour - START_HOUR) * HOUR_HEIGHT - 12;
+      gridScrollRef.current.scrollTop = (targetHour - START_HOUR) * HOUR_HEIGHT - 12;
     }
   }, []);
 
@@ -509,7 +441,6 @@ const AgendaPage = () => {
     [activities]
   );
 
-  // ===== WEEK (Mon → Sun) =====
   const weekStart = useMemo(
     () => startOfWeek(selectedDate, { weekStartsOn: 1 }),
     [selectedDate]
@@ -565,53 +496,36 @@ const AgendaPage = () => {
     const [sh] = f.startTime.split(":").map(Number);
     const [eh, em] = f.endTime.split(":").map(Number);
     if (sh < START_HOUR) e.startTime = `Début minimum ${START_HOUR}:00`;
-    if (eh * 60 + em > END_HOUR * 60)
-      e.endTime = `Fin maximum ${END_HOUR}:00`;
+    if (eh * 60 + em > END_HOUR * 60) e.endTime = `Fin maximum ${END_HOUR}:00`;
     return e;
   };
 
-  // Retries on transient network / Turbopack-HMR / Neon-cold-start failures.
-  // Turbopack middleware recompiles can stall the dev server for 1-3s, during
-  // which the browser sees `TypeError: Failed to fetch`. We use exponential
-  // backoff so the retry window comfortably spans the recompile.
-  const fetchWithRetry = async (
-    url: string,
-    init: RequestInit,
-    maxAttempts = 4
-  ): Promise<Response> => {
+  const fetchWithRetry = async (url: string, init: RequestInit, maxAttempts = 4) => {
     let lastErr: unknown = null;
     const backoffs = [400, 900, 1800, 3200];
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const res = await fetch(url, init);
-        // 502/503/504 from dev proxy during recompile: treat as transient too
         if (
           (res.status === 502 || res.status === 503 || res.status === 504) &&
           attempt < maxAttempts
         ) {
-          await new Promise((r) =>
-            setTimeout(r, backoffs[attempt - 1] ?? 1500)
-          );
+          await new Promise((r) => setTimeout(r, backoffs[attempt - 1] ?? 1500));
           continue;
         }
         return res;
       } catch (err) {
         lastErr = err;
         const isTransient =
-          err instanceof TypeError &&
-          /failed to fetch|network|load failed/i.test(err.message);
+          err instanceof TypeError && /failed to fetch|network|load failed/i.test(err.message);
         if (attempt < maxAttempts && isTransient) {
-          await new Promise((r) =>
-            setTimeout(r, backoffs[attempt - 1] ?? 1500)
-          );
+          await new Promise((r) => setTimeout(r, backoffs[attempt - 1] ?? 1500));
           continue;
         }
         throw err;
       }
     }
-    throw lastErr instanceof Error
-      ? lastErr
-      : new Error("Erreur réseau");
+    throw lastErr instanceof Error ? lastErr : new Error("Erreur réseau");
   };
 
   const handleSubmit = async (ev: React.FormEvent) => {
@@ -635,56 +549,43 @@ const AgendaPage = () => {
       setIsSubmitting(true);
       const url = isEdit ? `/api/agenda/${form.id}` : "/api/agenda";
       const method = isEdit ? "PATCH" : "POST";
-      console.log("[Agenda] submitting", { method, url, payload });
       const res = await fetchWithRetry(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        credentials: "same-origin",
+        credentials: "include",
         cache: "no-store",
       });
-      console.log("[Agenda] response", res.status, res.statusText);
       const text = await res.text();
       let json: { success?: boolean; data?: Activity; error?: string };
       try {
         json = JSON.parse(text) as typeof json;
       } catch {
-        console.error("[Agenda] non-JSON response body:", text);
         throw new Error(
           `Réponse invalide du serveur (HTTP ${res.status}). Vérifiez la console serveur.`
         );
       }
       if (!res.ok || !json.success) {
-        throw new Error(
-          json.error || `Erreur lors de l'enregistrement (HTTP ${res.status})`
-        );
+        throw new Error(json.error || `Erreur lors de l'enregistrement (HTTP ${res.status})`);
       }
 
       const saved = json.data as Activity;
       setActivities((prev) =>
-        isEdit
-          ? prev.map((a) => (a.id === saved.id ? saved : a))
-          : [...prev, saved]
+        isEdit ? prev.map((a) => (a.id === saved.id ? saved : a)) : [...prev, saved]
       );
       toast.success(isEdit ? "Activité mise à jour" : "Activité ajoutée");
       setSelectedDate(parseISO(saved.date));
       setIsDialogOpen(false);
     } catch (err) {
       const isNetErr =
-        err instanceof TypeError &&
-        /failed to fetch|network|load failed/i.test(err.message);
-      // Only log non-network errors as console.error so Next.js dev overlay
-      // doesn't pop up for transient Turbopack socket drops we already handle.
+        err instanceof TypeError && /failed to fetch|network|load failed/i.test(err.message);
       if (!isNetErr) console.error(err);
-      else console.warn("[Agenda] submit network hiccup, reconciling...");
 
-      // Dev-env Turbopack sometimes drops the response socket even though the
-      // server persisted the write. Reconcile by refetching server state.
       if (isNetErr) {
         try {
           const res2 = await fetchWithRetry(
-            "/api/agenda",
-            { cache: "no-store" },
+            "/api/agenda?all=1",
+            { cache: "no-store", credentials: "include" },
             4
           );
           const json2 = await res2.json();
@@ -701,26 +602,20 @@ const AgendaPage = () => {
                     a.endTime === payload.endTime
                 );
             if (matched) {
-              toast.success(
-                isEdit ? "Activité mise à jour" : "Activité ajoutée"
-              );
+              toast.success(isEdit ? "Activité mise à jour" : "Activité ajoutée");
               setSelectedDate(parseISO(matched.date));
               setIsDialogOpen(false);
               return;
             }
           }
-        } catch (reconcileErr) {
-          console.warn("[Agenda] reconcile fetch failed:", reconcileErr);
-        }
+        } catch {}
         toast.error(
           "Connexion instable (serveur en recompilation ?). Réessayez dans un instant."
         );
         return;
       }
 
-      toast.error(
-        err instanceof Error ? err.message : "Erreur lors de l'enregistrement"
-      );
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'enregistrement");
     } finally {
       setIsSubmitting(false);
     }
@@ -729,52 +624,40 @@ const AgendaPage = () => {
   const handleDelete = async (id: string) => {
     try {
       setIsDeleting(true);
-      console.log("[Agenda] deleting", id);
       const res = await fetchWithRetry(`/api/agenda/${id}`, {
         method: "DELETE",
-        credentials: "same-origin",
+        credentials: "include",
         cache: "no-store",
       });
-      console.log("[Agenda] delete response", res.status, res.statusText);
       const text = await res.text();
       let json: { success?: boolean; error?: string };
       try {
         json = JSON.parse(text) as typeof json;
       } catch {
-        console.error("[Agenda] non-JSON delete body:", text);
-        throw new Error(
-          `Réponse invalide du serveur (HTTP ${res.status}).`
-        );
+        throw new Error(`Réponse invalide du serveur (HTTP ${res.status}).`);
       }
       if (!res.ok || !json.success) {
-        // 404 means it's already gone — treat as success
         if (res.status === 404) {
           setActivities((prev) => prev.filter((a) => a.id !== id));
           toast.success("Activité supprimée");
           setIsDialogOpen(false);
           return;
         }
-        throw new Error(
-          json.error || `Erreur lors de la suppression (HTTP ${res.status})`
-        );
+        throw new Error(json.error || `Erreur lors de la suppression (HTTP ${res.status})`);
       }
       setActivities((prev) => prev.filter((a) => a.id !== id));
       toast.success("Activité supprimée");
       setIsDialogOpen(false);
     } catch (err) {
       const isNetErr =
-        err instanceof TypeError &&
-        /failed to fetch|network|load failed/i.test(err.message);
+        err instanceof TypeError && /failed to fetch|network|load failed/i.test(err.message);
       if (!isNetErr) console.error(err);
-      else console.warn("[Agenda] delete network hiccup, reconciling...");
 
-      // Dev-env socket drop: the DELETE may have still landed. Refetch and
-      // reconcile — if the item is gone from the server, it was deleted.
       if (isNetErr) {
         try {
           const res2 = await fetchWithRetry(
-            "/api/agenda",
-            { cache: "no-store" },
+            "/api/agenda?all=1",
+            { cache: "no-store", credentials: "include" },
             4
           );
           const json2 = await res2.json();
@@ -787,18 +670,14 @@ const AgendaPage = () => {
               return;
             }
           }
-        } catch (reconcileErr) {
-          console.warn("[Agenda] reconcile fetch failed:", reconcileErr);
-        }
+        } catch {}
         toast.error(
           "Connexion instable (serveur en recompilation ?). Réessayez dans un instant."
         );
         return;
       }
 
-      toast.error(
-        err instanceof Error ? err.message : "Erreur lors de la suppression"
-      );
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la suppression");
     } finally {
       setIsDeleting(false);
     }
@@ -806,18 +685,14 @@ const AgendaPage = () => {
 
   const goPrevWeek = () => setSelectedDate((d) => addDays(d, -7));
   const goNextWeek = () => setSelectedDate((d) => addDays(d, 7));
-  const goToday = () => {
-    setSelectedDate(new Date());
-  };
+  const goToday = () => setSelectedDate(new Date());
 
-  // Now indicator (anchored to whichever day matches today, if any in the week)
   const nowMinutes = useMemo(() => {
     const mins = now.getHours() * 60 + now.getMinutes() - START_HOUR * 60;
     if (mins < 0 || mins > (END_HOUR - START_HOUR) * 60) return null;
     return mins * MINUTE_HEIGHT;
   }, [now]);
 
-  // ===== Week stats =====
   const weekActivities = useMemo(
     () =>
       activities.filter((a) =>
@@ -851,7 +726,8 @@ const AgendaPage = () => {
     }).length;
   }, [activities, selectedDate]);
 
-  const handleDayClick = (day: Date) =>
+  const handleDayClick =
+    (day: Date) =>
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target !== e.currentTarget) return;
       const rect = e.currentTarget.getBoundingClientRect();
@@ -860,14 +736,13 @@ const AgendaPage = () => {
       const total = START_HOUR * 60 + minutes;
       const H = Math.min(END_HOUR - 1, Math.floor(total / 60));
       const M = total % 60;
-      const start = `${H.toString().padStart(2, "0")}:${M.toString().padStart(2,"0" )}`;
+      const start = `${H.toString().padStart(2, "0")}:${M.toString().padStart(2, "0")}`;
       openCreate(day, start);
     };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40">
       <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1700px] mx-auto">
-        {/* ===== HERO HEADER ===== */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-600 p-6 md:p-8 shadow-xl shadow-indigo-500/20">
           <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-10 w-72 h-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
@@ -881,16 +756,15 @@ const AgendaPage = () => {
               <div className="text-white">
                 <div className="flex items-center gap-2 text-xs font-medium tracking-widest uppercase text-white/70">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Agenda hebdomadaire · 03:00 → 24:00
+                  Agenda manager · 03:00 → 24:00
                 </div>
                 <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mt-1 capitalize">
                   Semaine du {format(weekStart, "d MMM", { locale: fr })} —{" "}
                   {format(weekEnd, "d MMM yyyy", { locale: fr })}
                 </h1>
                 <p className="text-sm text-white/80 mt-1 max-w-lg">
-                  Visualisez toute votre semaine par créneau horaire. Cliquez
-                  sur une heure dans n&apos;importe quel jour pour créer une
-                  activité.
+                  Visualisez toute votre semaine par créneau horaire. Cliquez sur une
+                  heure dans n&apos;importe quel jour pour créer une activité.
                 </p>
               </div>
             </div>
@@ -923,84 +797,60 @@ const AgendaPage = () => {
             <StatChip label="Semaine" value={weekCount} />
             <StatChip label="Mois" value={monthCount} />
           </div>
-        </section>
 
-        {/* ===== WEEK NAVIGATOR ===== */}
-        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white/80 backdrop-blur-sm border border-gray-200/70 rounded-2xl p-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goPrevWeek}
-              aria-label="Semaine précédente"
-              className="h-9 w-9 rounded-lg"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToday}
-              className="rounded-lg font-medium"
-            >
-              <CalendarRange className="w-4 h-4 mr-1.5" />
-              Aujourd&apos;hui
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goNextWeek}
-              aria-label="Semaine suivante"
-              className="h-9 w-9 rounded-lg"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="text-sm md:text-base font-bold text-gray-800 capitalize">
-              {format(weekStart, "d MMM", { locale: fr })} —{" "}
-              {format(weekEnd, "d MMM yyyy", { locale: fr })}
+          <div className="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={goPrevWeek}
+                className="rounded-xl bg-white/15 text-white hover:bg-white/20 ring-1 ring-white/20"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Semaine -1
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={goToday}
+                className="rounded-xl bg-white/15 text-white hover:bg-white/20 ring-1 ring-white/20"
+              >
+                <CalendarRange className="w-4 h-4 mr-2" />
+                Aujourd&apos;hui
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={goNextWeek}
+                className="rounded-xl bg-white/15 text-white hover:bg-white/20 ring-1 ring-white/20"
+              >
+                Semaine +1
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
             </div>
-            <Input
-              type="date"
-              value={format(selectedDate, "yyyy-MM-dd")}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setSelectedDate(parseISO(e.target.value));
-                }
-              }}
-              className="h-9 rounded-lg w-[150px]"
-            />
-            {isLoading && (
-              <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-            )}
-          </div>
 
-          <div className="hidden lg:flex items-center gap-1.5">
-            {COLOR_PALETTE.slice(0, 6).map((c) => (
-              <span
-                key={c.key}
-                title={c.label}
-                className={clsx(
-                  "w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm",
-                  c.dot
-                )}
-              />
-            ))}
-            <span className="text-[11px] text-gray-500 ml-1">Palette</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsTodayDialogOpen(true)}
+                  className="rounded-xl bg-white/15 text-white hover:bg-white/20 ring-1 ring-white/20"
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Rendez-Vous du jour
+                  <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-white/20 text-[11px] font-bold tabular-nums">
+                    {todayActivities.length}
+                  </span>
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ===== WEEK TIME GRID (03:00 → 24:00) ===== */}
         <section className="bg-white/90 backdrop-blur-sm border border-gray-200/70 rounded-2xl shadow-lg shadow-indigo-500/5 overflow-hidden">
-          {/* Scrollable time grid */}
           <div
             ref={gridScrollRef}
             className="relative overflow-y-auto custom-scroll"
             style={{ maxHeight: "76vh" }}
           >
-            {/* Sticky week day headers */}
             <div className="sticky top-0 z-30 grid grid-cols-[72px_repeat(7,minmax(0,1fr))] border-b border-gray-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 backdrop-blur">
               <div className="border-r border-gray-200 flex items-center justify-center">
                 <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -1017,8 +867,7 @@ const AgendaPage = () => {
                     onClick={() => setSelectedDate(day)}
                     className={clsx(
                       "py-2.5 text-center border-r border-gray-200 last:border-r-0 transition-all group relative",
-                      isToday &&
-                        "bg-gradient-to-b from-indigo-50 to-transparent",
+                      isToday && "bg-gradient-to-b from-indigo-50 to-transparent",
                       isSelected && !isToday && "bg-indigo-50/40"
                     )}
                   >
@@ -1039,14 +888,9 @@ const AgendaPage = () => {
                     </div>
                     {dayCount > 0 && (
                       <div className="mt-1 flex items-center justify-center gap-0.5">
-                        {Array.from({ length: Math.min(dayCount, 4) }).map(
-                          (_, i) => (
-                            <span
-                              key={i}
-                              className="w-1 h-1 rounded-full bg-indigo-400"
-                            />
-                          )
-                        )}
+                        {Array.from({ length: Math.min(dayCount, 4) }).map((_, i) => (
+                          <span key={i} className="w-1 h-1 rounded-full bg-indigo-400" />
+                        ))}
                         {dayCount > 4 && (
                           <span className="text-[9px] text-indigo-500 font-bold">
                             +{dayCount - 4}
@@ -1059,12 +903,10 @@ const AgendaPage = () => {
               })}
             </div>
 
-            {/* Time + 7 day columns */}
             <div
               className="relative grid grid-cols-[72px_repeat(7,minmax(0,1fr))]"
               style={{ height: TOTAL_HEIGHT }}
             >
-              {/* Time labels column */}
               <div className="relative border-r border-gray-200 bg-gradient-to-b from-slate-50 to-white">
                 {HOURS.map((h, idx) => (
                   <div
@@ -1082,7 +924,6 @@ const AgendaPage = () => {
                 ))}
               </div>
 
-              {/* 7 day columns */}
               {weekDays.map((day) => {
                 const key = format(day, "yyyy-MM-dd");
                 const dayPos = positionedByDay[key] ?? [];
@@ -1096,7 +937,6 @@ const AgendaPage = () => {
                     )}
                     onClick={handleDayClick(day)}
                   >
-                    {/* Hour lines */}
                     {HOURS.map((h, idx) => (
                       <div
                         key={h}
@@ -1107,7 +947,6 @@ const AgendaPage = () => {
                         style={{ top: idx * HOUR_HEIGHT }}
                       />
                     ))}
-                    {/* Half-hour dashed lines */}
                     {HOURS.slice(0, -1).map((h, idx) => (
                       <div
                         key={`half-${h}`}
@@ -1118,7 +957,6 @@ const AgendaPage = () => {
                       />
                     ))}
 
-                    {/* Now indicator (only on today's column) */}
                     {isToday && nowMinutes !== null && (
                       <div
                         className="absolute left-0 right-0 z-20 pointer-events-none"
@@ -1131,7 +969,6 @@ const AgendaPage = () => {
                       </div>
                     )}
 
-                    {/* Activities */}
                     {dayPos.map((a) => {
                       const c = getColor(a.color);
                       const widthPct = 100 / a.colCount;
@@ -1158,12 +995,7 @@ const AgendaPage = () => {
                           }}
                           title={`${a.startTime} - ${a.endTime} · ${a.titre}`}
                         >
-                          <div
-                            className={clsx(
-                              "absolute left-0 top-0 bottom-0 w-1",
-                              c.bar
-                            )}
-                          />
+                          <div className={clsx("absolute left-0 top-0 bottom-0 w-1", c.bar)} />
                           <div className="pl-2 pr-1.5 py-1 h-full flex flex-col overflow-hidden">
                             <div
                               className={clsx(
@@ -1172,13 +1004,16 @@ const AgendaPage = () => {
                               )}
                             >
                               <Clock className="w-2.5 h-2.5" />
-                              <span className="tabular-nums">
-                                {a.startTime}
-                              </span>
+                              <span className="tabular-nums">{a.startTime}</span>
                             </div>
                             <div className="mt-0.5 text-[11px] font-semibold text-gray-900 leading-tight line-clamp-2">
                               {a.titre}
                             </div>
+                            {a.height >= 60 && a.owner && (
+                              <div className="text-[9px] text-gray-500 truncate">
+                                {a.owner}
+                              </div>
+                            )}
                             {a.height >= 60 && a.lieu && (
                               <div className="mt-auto text-[9px] text-gray-500 flex items-center gap-0.5 truncate">
                                 <MapPin className="w-2.5 h-2.5 shrink-0" />
@@ -1187,17 +1022,16 @@ const AgendaPage = () => {
                             )}
                           </div>
 
-                          {/* Hover actions */}
                           <div className="absolute top-0.5 right-0.5 flex items-center gap-0.5 opacity-0 group-hover/act:opacity-100 transition-opacity">
                             <Link
-                              href={`/assistante/agenda/${a.id}`}
+                              href={`/manager/agenda/${a.id}`}
                               onClick={(e) => e.stopPropagation()}
                               className="p-0.5 rounded-md bg-white/90 hover:bg-white text-gray-600 hover:text-indigo-600 border border-gray-200 shadow-sm cursor-pointer inline-flex"
                               title="Rapport"
                             >
                               <RapportAgendaIcon className="w-2.5 h-2.5" />
                             </Link>
-                            
+
                             <span
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1227,7 +1061,6 @@ const AgendaPage = () => {
               })}
             </div>
 
-            {/* Empty state hint (only if whole week is empty) */}
             {!isLoading && weekCount === 0 && (
               <div className="pointer-events-none absolute inset-x-0 top-24 flex items-center justify-center">
                 <div className="text-center">
@@ -1240,249 +1073,253 @@ const AgendaPage = () => {
                 </div>
               </div>
             )}
+
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-40 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-7 h-7 animate-spin text-indigo-600" />
+                  <div className="text-xs text-gray-600 font-medium">Chargement…</div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
-      </div>
 
-      {/* ===== DIALOG ===== */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden">
-          <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-600 px-6 py-5 text-white">
-            <DialogHeader className="space-y-1">
-              <DialogTitle className="text-xl font-bold text-white">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-[560px] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg">
                 {form.id ? "Modifier l'activité" : "Nouvelle activité"}
               </DialogTitle>
-              <DialogDescription className="text-white/80">
-                {form.id
-                  ? "Mettez à jour les informations de votre activité."
-                  : "Planifiez une nouvelle activité (entre 03:00 et 24:00)."}
+              <DialogDescription>
+                Planifiez un rendez-vous, une tâche ou un événement.
               </DialogDescription>
             </DialogHeader>
-          </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="titre" className="text-sm font-semibold">
-                Titre <span className="text-rose-500">*</span>
-              </Label>
-              <Input
-                id="titre"
-                value={form.titre}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, titre: e.target.value }))
-                }
-                placeholder="Ex : Réunion équipe commerciale"
-                className={clsx(errors.titre && "border-rose-400")}
-              />
-              {errors.titre && (
-                <p className="text-xs text-rose-600">{errors.titre}</p>
-              )}
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="titre">Titre</Label>
+                  <Input
+                    id="titre"
+                    value={form.titre}
+                    onChange={(e) => setForm((p) => ({ ...p, titre: e.target.value }))}
+                    className={errors.titre ? "border-rose-300" : ""}
+                    placeholder="Ex: Réunion équipe"
+                  />
+                  {errors.titre && <p className="text-xs text-rose-600">{errors.titre}</p>}
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-2 md:col-span-1">
-                <Label htmlFor="date" className="text-sm font-semibold">
-                  Date <span className="text-rose-500">*</span>
-                </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={form.date}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, date: e.target.value }))
-                  }
-                />
-                {errors.date && (
-                  <p className="text-xs text-rose-600">{errors.date}</p>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+                    className={errors.date ? "border-rose-300" : ""}
+                  />
+                  {errors.date && <p className="text-xs text-rose-600">{errors.date}</p>}
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Début</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={form.startTime}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, startTime: e.target.value }))
+                    }
+                    className={errors.startTime ? "border-rose-300" : ""}
+                  />
+                  {errors.startTime && (
+                    <p className="text-xs text-rose-600">{errors.startTime}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">Fin</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={form.endTime}
+                    onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))}
+                    className={errors.endTime ? "border-rose-300" : ""}
+                  />
+                  {errors.endTime && <p className="text-xs text-rose-600">{errors.endTime}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="lieu">Lieu</Label>
+                  <Input
+                    id="lieu"
+                    value={form.lieu}
+                    onChange={(e) => setForm((p) => ({ ...p, lieu: e.target.value }))}
+                    placeholder="Optionnel"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Couleur</Label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {COLORS.map((c) => (
+                      <button
+                        type="button"
+                        key={c.key}
+                        onClick={() => setForm((p) => ({ ...p, color: c.key }))}
+                        className={clsx(
+                          "px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all",
+                          form.color === c.key
+                            ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                            : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+                        )}
+                        title={c.label}
+                      >
+                        <span className={clsx("inline-block w-2 h-2 rounded-full mr-2", c.dot)} />
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="startTime" className="text-sm font-semibold">
-                  Début <span className="text-rose-500">*</span>
-                </Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  min="03:00"
-                  max="23:59"
-                  value={form.startTime}
-                  onChange={(e) => {
-                    const v = clampHM(e.target.value);
-                    setForm((f) => ({
-                      ...f,
-                      startTime: v,
-                      endTime:
-                        f.endTime && f.endTime > v
-                          ? f.endTime
-                          : addHourToTime(v),
-                    }));
-                  }}
-                />
-                {errors.startTime && (
-                  <p className="text-xs text-rose-600">{errors.startTime}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endTime" className="text-sm font-semibold">
-                  Fin <span className="text-rose-500">*</span>
-                </Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  min="03:00"
-                  max="24:00"
-                  value={form.endTime}
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={form.description}
                   onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      endTime: clampHM(e.target.value),
-                    }))
+                    setForm((p) => ({ ...p, description: e.target.value }))
                   }
-                  className={clsx(errors.endTime && "border-rose-400")}
+                  placeholder="Notes, ordre du jour, informations utiles…"
+                  rows={4}
                 />
-                {errors.endTime && (
-                  <p className="text-xs text-rose-600">{errors.endTime}</p>
-                )}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lieu" className="text-sm font-semibold">
-                Lieu
-              </Label>
-              <Input
-                id="lieu"
-                value={form.lieu}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, lieu: e.target.value }))
-                }
-                placeholder="Ex : Salle de réunion, en ligne…"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-semibold">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                rows={3}
-                value={form.description}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-                placeholder="Notes, ordre du jour, participants…"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Couleur</Label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PALETTE.map((c) => {
-                  const active = form.color === c.key;
-                  return (
-                    <button
-                      key={c.key}
-                      type="button"
-                      onClick={() =>
-                        setForm((f) => ({ ...f, color: c.key }))
-                      }
-                      className={clsx(
-                        "h-9 w-9 rounded-full flex items-center justify-center transition-all",
-                        c.solidBg,
-                        active
-                          ? "ring-2 ring-offset-2 ring-gray-800 scale-110 shadow-md"
-                          : "hover:scale-105 opacity-80 hover:opacity-100"
-                      )}
-                      title={c.label}
-                      aria-label={c.label}
-                    >
-                      {active && (
-                        <span className="w-2 h-2 rounded-full bg-white shadow" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <DialogFooter className="pt-2 gap-2 sm:gap-2 flex-row justify-between sm:justify-between">
-              <div>
+              <DialogFooter className="gap-2">
                 {form.id && (
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => form.id && handleDelete(form.id)}
+                    variant="destructive"
+                    onClick={() => handleDelete(form.id!)}
                     disabled={isDeleting || isSubmitting}
-                    className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                    className="rounded-xl"
                   >
                     {isDeleting ? (
-                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Suppression…
+                      </>
                     ) : (
-                      <Trash2 className="w-4 h-4 mr-1.5" />
+                      "Supprimer"
                     )}
-                    Supprimer
                   </Button>
                 )}
-              </div>
-              <div className="flex items-center gap-2">
+
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => setIsDialogOpen(false)}
                   disabled={isSubmitting || isDeleting}
+                  className="rounded-xl"
                 >
                   Annuler
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting || isDeleting}
-                  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700"
                 >
-                  {isSubmitting && (
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enregistrement…
+                    </>
+                  ) : form.id ? (
+                    "Mettre à jour"
+                  ) : (
+                    "Créer"
                   )}
-                  {form.id ? "Enregistrer" : "Créer l'activité"}
                 </Button>
-              </div>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-      <style jsx global>{`
-        .custom-scroll::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-          background: rgba(99, 102, 241, 0.25);
-          border-radius: 3px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(99, 102, 241, 0.5);
-        }
-      `}</style>
+        <Dialog open={isTodayDialogOpen} onOpenChange={setIsTodayDialogOpen}>
+          <DialogContent className="sm:max-w-[640px] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg">Rendez-Vous du jour</DialogTitle>
+              <DialogDescription>
+                {format(now, "EEEE d MMMM yyyy", { locale: fr })}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+              {todayActivities.length === 0 ? (
+                <div className="rounded-xl border border-gray-200 bg-slate-50 p-4 text-sm text-gray-600">
+                  Aucun rendez-vous aujourd&apos;hui.
+                </div>
+              ) : (
+                todayActivities.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-xl border border-gray-200 bg-white p-3 flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-lg bg-indigo-50 text-indigo-700 px-2 py-1 text-xs font-bold tabular-nums">
+                          <Clock className="w-3.5 h-3.5 mr-1.5" />
+                          {a.startTime}–{a.endTime}
+                        </span>
+                        <span className="font-semibold text-gray-900 truncate">{a.titre}</span>
+                      </div>
+                      {(a.lieu || a.description) && (
+                        <div className="mt-1 text-xs text-gray-600 space-y-1">
+                          {a.lieu && (
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                              <span className="truncate">{a.lieu}</span>
+                            </div>
+                          )}
+                          {a.description && (
+                            <div className="line-clamp-2">{a.description}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={clsx(
+                          "w-2.5 h-2.5 rounded-full ring-4 ring-white",
+                          COLORS.find((c) => c.key === a.color)?.dot ?? "bg-indigo-500"
+                        )}
+                        title="Couleur"
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsTodayDialogOpen(false)}
+                className="rounded-xl"
+              >
+                Fermer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
-};
-
-const StatChip = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | string;
-}) => (
-  <div className="rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/25 px-3 py-2 text-white min-w-[86px] text-center">
-    <div className="text-[10px] uppercase tracking-widest text-white/70 font-semibold">
-      {label}
-    </div>
-    <div className="text-lg font-bold leading-tight">{value}</div>
-  </div>
-);
-
-export default AgendaPage;
+}

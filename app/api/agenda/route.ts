@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma, executeWithRetry } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/actions/user";
-import type { Agenda } from "@prisma/client";
+import { UserRole, type Agenda } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +36,17 @@ function serializeAgenda(a: Agenda) {
   };
 }
 
+function serializeAgendaWithOwner(
+  a: Agenda & { user?: { firstName: string; lastName: string; email: string } }
+) {
+  const base = serializeAgenda(a);
+  const owner =
+    a.user?.firstName || a.user?.lastName
+      ? `${a.user?.firstName ?? ""} ${a.user?.lastName ?? ""}`.trim()
+      : a.user?.email ?? null;
+  return { ...base, owner: owner || null };
+}
+
 function isValidYMD(s: unknown): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
@@ -43,7 +54,7 @@ function isValidHM(s: unknown): s is string {
   return typeof s === "string" && /^\d{2}:\d{2}$/.test(s);
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
@@ -61,16 +72,32 @@ export async function GET() {
       );
     }
 
+    const wantsAll = req.nextUrl.searchParams.get("all") === "1";
+    const canSeeAll =
+      userResult.data.role === UserRole.MANAGER ||
+      userResult.data.role === UserRole.ADMIN;
+
     const items = await executeWithRetry(() =>
       prisma.agenda.findMany({
-        where: { userId: userResult.data.id },
+        ...(wantsAll && canSeeAll
+          ? {
+              include: {
+                user: { select: { firstName: true, lastName: true, email: true } },
+              },
+            }
+          : { where: { userId: userResult.data.id } }),
         orderBy: [{ date: "asc" }, { heureDebut: "asc" }],
       })
     );
 
     return NextResponse.json({
       success: true,
-      data: items.map(serializeAgenda),
+      data:
+        wantsAll && canSeeAll
+          ? (items as Array<
+              Agenda & { user: { firstName: string; lastName: string; email: string } }
+            >).map(serializeAgendaWithOwner)
+          : (items as Agenda[]).map(serializeAgenda),
     });
   } catch (error) {
     console.error("[GET /api/agenda]", error);

@@ -4,47 +4,102 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// Read .env file and get DATABASE_URL
 const envPath = path.join(__dirname, '..', '.env');
-let databaseUrl = '';
+const envLocalPath = path.join(__dirname, '..', '.env.local');
 
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf-8');
-  const envLines = envContent.split(/\r?\n/);
-  let directUrl = '';
-  for (const line of envLines) {
-    const trimmedLine = line.trim();
-    if (trimmedLine.startsWith('DATABASE_URL=')) {
-      databaseUrl = trimmedLine.substring('DATABASE_URL='.length).trim();
-      databaseUrl = databaseUrl.replace(/^["']|["']$/g, '');
-    }
-    if (trimmedLine.startsWith('DIRECT_URL=')) {
-      directUrl = trimmedLine.substring('DIRECT_URL='.length).trim();
-      directUrl = directUrl.replace(/^["']|["']$/g, '');
-    }
+function parseEnvFile(filePath) {
+  const result = {};
+  if (!fs.existsSync(filePath)) return result;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.substring(0, eq).trim();
+    let value = line.substring(eq + 1).trim();
+    value = value.replace(/^["']|["']$/g, '');
+    if (key) result[key] = value;
   }
-  // Use direct URL for Studio when available (fixes "Response from Engine was empty" with Neon pooled)
-  if (directUrl) {
-    databaseUrl = directUrl;
-    console.log('✓ Using DIRECT_URL for Prisma Studio (Neon direct connection)');
-  } else {
-    console.log('✓ DATABASE_URL loaded from .env');
+  return result;
+}
+
+// .env.local takes precedence (Next.js convention), then .env.
+const envFromFile = { ...parseEnvFile(envPath), ...parseEnvFile(envLocalPath) };
+
+const DATABASE_URL = envFromFile.DATABASE_URL || process.env.DATABASE_URL || '';
+const DIRECT_URL = envFromFile.DIRECT_URL || process.env.DIRECT_URL || '';
+const DATABASE_URL_UNPOOLED =
+  envFromFile.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL_UNPOOLED || '';
+
+function enhanceNeonUrl(raw) {
+  if (!raw) return raw;
+  try {
+    const url = new URL(raw);
+    if (url.hostname.includes('neon.tech')) {
+      if (!url.searchParams.has('sslmode')) url.searchParams.set('sslmode', 'require');
+      if (!url.searchParams.has('connect_timeout')) url.searchParams.set('connect_timeout', '60');
+      if (!url.searchParams.has('pool_timeout')) url.searchParams.set('pool_timeout', '30');
+    }
+    return url.toString();
+  } catch {
+    return raw;
   }
 }
 
-if (!databaseUrl) {
-  console.error('✗ Error: DATABASE_URL not found in .env file');
+// Derive a direct (unpooled) URL by stripping `-pooler` from the Neon hostname.
+function derivedDirectFromPooled(raw) {
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (url.hostname.includes('-pooler.') && url.hostname.includes('neon.tech')) {
+      url.hostname = url.hostname.replace(/-pooler\./, '.');
+      return url.toString();
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+let studioUrl = '';
+let source = '';
+if (DIRECT_URL) {
+  studioUrl = DIRECT_URL;
+  source = 'DIRECT_URL';
+} else if (DATABASE_URL_UNPOOLED) {
+  studioUrl = DATABASE_URL_UNPOOLED;
+  source = 'DATABASE_URL_UNPOOLED';
+} else if (DATABASE_URL) {
+  const derived = derivedDirectFromPooled(DATABASE_URL);
+  if (derived !== DATABASE_URL) {
+    studioUrl = derived;
+    source = 'DATABASE_URL (auto-stripped `-pooler`)';
+  } else {
+    studioUrl = DATABASE_URL;
+    source = 'DATABASE_URL (no unpooled variant found)';
+  }
+}
+
+if (!studioUrl) {
+  console.error('✗ Error: no DATABASE_URL / DIRECT_URL / DATABASE_URL_UNPOOLED found in .env');
   process.exit(1);
 }
+
+studioUrl = enhanceNeonUrl(studioUrl);
+
+console.log(`✓ Prisma Studio will connect via ${source}`);
+console.log('  ', studioUrl.replace(/:\/\/[^@]+@/, '://***:***@'));
 console.log('Starting Prisma Studio...');
 
-// Run Prisma Studio with explicit --url flag (required for Prisma 7.x)
-const child = spawn('npx', ['prisma', 'studio', '--url', databaseUrl], {
+const child = spawn('npx', ['prisma', 'studio', '--url', studioUrl], {
   stdio: 'inherit',
   shell: true,
   env: {
     ...process.env,
-    DATABASE_URL: databaseUrl,
+    DATABASE_URL: studioUrl,
+    DIRECT_URL: studioUrl,
   },
 });
 
