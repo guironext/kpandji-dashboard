@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma, executeWithRetry } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/actions/user";
 import { UserRole, type Agenda } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -77,18 +78,26 @@ export async function GET(req: NextRequest) {
       userResult.data.role === UserRole.MANAGER ||
       userResult.data.role === UserRole.ADMIN;
 
-    const items = await executeWithRetry(() =>
-      prisma.agenda.findMany({
-        ...(wantsAll && canSeeAll
-          ? {
+    const orderBy: Prisma.AgendaOrderByWithRelationInput[] = [
+      { date: "asc" },
+      { heureDebut: "asc" },
+    ];
+    const items =
+      wantsAll && canSeeAll
+        ? await executeWithRetry(() =>
+            prisma.agenda.findMany({
               include: {
                 user: { select: { firstName: true, lastName: true, email: true } },
               },
-            }
-          : { where: { userId: userResult.data.id } }),
-        orderBy: [{ date: "asc" }, { heureDebut: "asc" }],
-      })
-    );
+              orderBy,
+            })
+          )
+        : await executeWithRetry(() =>
+            prisma.agenda.findMany({
+              where: { userId: userResult.data.id },
+              orderBy,
+            })
+          );
 
     return NextResponse.json({
       success: true,

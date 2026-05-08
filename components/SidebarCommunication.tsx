@@ -2,13 +2,9 @@
 
 import {
   Home,
-  Users,
   BarChart3,
   Warehouse,
   FileText,
-  ClipboardList,
-  Calculator,
-  BookOpen,
   Settings,
   Mail,
   MessageSquare,

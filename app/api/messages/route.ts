@@ -171,18 +171,11 @@ export async function POST(request: NextRequest) {
         select: { id: true, role: true, firstName: true, lastName: true, email: true },
       });
 
-      const receiverNameById = new Map(
-        recipients.map((u) => [
-          u.id,
-          (`${u.firstName} ${u.lastName}`.trim() || u.email) as string,
-        ])
-      );
       const roleById = new Map(recipients.map((u) => [u.id, u.role as unknown as string]));
 
       await prisma.notification.createMany({
         data: directRecipientIds.map((rid) => {
           const msg = createdMessages.find((m) => m.receiverId === rid) ?? createdMessages[0]!;
-          const receiverName = receiverNameById.get(rid) ?? rid;
           const href = `${roleToMessagesPath(roleById.get(rid))}?messageId=${encodeURIComponent(msg.id)}`;
           return {
             type: "MESSAGE",

@@ -216,7 +216,6 @@ export function buildLineRowsFactureTerminee(
   }
 
   const categories = Array.from(byCat.entries());
-  const nCats = Math.max(1, categories.length);
   const totalMo = toNum(rep.horaire_travail_prix);
   const moAmounts = splitMainOeuvreParCategorie(totalMo, categories.length);
 

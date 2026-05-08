@@ -30,7 +30,6 @@ import {
   CarFront,
   FileSignature,
   Landmark,
-  ScrollText,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";

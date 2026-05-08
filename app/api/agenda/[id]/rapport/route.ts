@@ -213,7 +213,8 @@ export async function PUT(
     const { forCreate, forUpdate } = listRelationsFromReport(report);
 
     const existingRapportId = agenda.rapportActiviteAgenda?.id;
-    const { userId: _userIdOmit, ...createData } = scalarData;
+    const { userId, ...createData } = scalarData;
+    void userId;
     const saved = existingRapportId
       ? await executeWithRetry(() =>
           prisma.rapportActiviteAgenda.update({

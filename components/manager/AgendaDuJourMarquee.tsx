@@ -4,6 +4,10 @@ import * as React from "react";
 import Link from "next/link";
 import { CalendarDays, Clock, Loader2, MapPin } from "lucide-react";
 
+type CssVars = React.CSSProperties & {
+  ["--duration"]?: string;
+};
+
 type Activity = {
   id: string;
   titre: string;
@@ -151,7 +155,7 @@ export function AgendaDuJourMarquee() {
                 ].join(" ")}
                 style={
                   shouldScroll
-                    ? ({ ["--duration" as any]: `${durationSeconds}s` } as React.CSSProperties)
+                    ? ({ ["--duration"]: `${durationSeconds}s` } as CssVars)
                     : undefined
                 }
               >

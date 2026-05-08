@@ -42,7 +42,6 @@ import {
   ChevronRight,
   Building2,
   Briefcase,
-  Pencil,
   Send,
 } from "lucide-react";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
