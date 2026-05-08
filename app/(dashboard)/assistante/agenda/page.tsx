@@ -263,17 +263,18 @@ type FormState = {
 
 function addHourToTime(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
-  const end = Math.min(h + 1, END_HOUR);
-  return `${end.toString().padStart(2, "0")}:${m
-    .toString()
-    .padStart(2, "0")}`;
+  // HTML time inputs do not accept 24:00; clamp to 23:59 for UX consistency.
+  const endMinutes = Math.min((h + 1) * 60 + (m || 0), END_HOUR * 60 - 1);
+  const endH = Math.floor(endMinutes / 60);
+  const endM = endMinutes % 60;
+  return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
 }
 
 function clampHM(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
   const minutes = Math.max(
     START_HOUR * 60,
-    Math.min(END_HOUR * 60, (h || 0) * 60 + (m || 0))
+    Math.min(END_HOUR * 60 - 1, (h || 0) * 60 + (m || 0))
   );
   const H = Math.floor(minutes / 60);
   const M = minutes % 60;
@@ -1198,7 +1199,8 @@ const AgendaPage = () => {
                               <RapportAgendaIcon className="w-2.5 h-2.5" />
                             </Link>
                             
-                            <span
+                            <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openEdit(a);
@@ -1207,8 +1209,9 @@ const AgendaPage = () => {
                               title="Modifier"
                             >
                               <Pencil className="w-2.5 h-2.5" />
-                            </span>
-                            <span
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(a.id);
@@ -1217,7 +1220,7 @@ const AgendaPage = () => {
                               title="Supprimer"
                             >
                               <Trash2 className="w-2.5 h-2.5" />
-                            </span>
+                            </button>
                           </div>
                         </button>
                       );
@@ -1330,7 +1333,7 @@ const AgendaPage = () => {
                   id="endTime"
                   type="time"
                   min="03:00"
-                  max="24:00"
+                  max="23:59"
                   value={form.endTime}
                   onChange={(e) =>
                     setForm((f) => ({
