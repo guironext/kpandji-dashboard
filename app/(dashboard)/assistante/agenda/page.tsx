@@ -860,7 +860,7 @@ const AgendaPage = () => {
       const total = START_HOUR * 60 + minutes;
       const H = Math.min(END_HOUR - 1, Math.floor(total / 60));
       const M = total % 60;
-      const start = `${H.toString().padStart(2, "0")}:${M.toString().padStart(2,"0" )}`;
+      const start = `${H.toString().padStart(2, "0")}:${M.toString().padStart(2, "0")}`;
       openCreate(day, start);
     };
 

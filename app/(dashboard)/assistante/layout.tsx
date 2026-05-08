@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           isSidebarOpen ? "ml-52" : "ml-20"
         )}
       >
-        <div className={clsx(isSidebarOpen ? "ml-13" : "ml-1")}>{children}</div>
+        <div className={clsx(isSidebarOpen ? "ml-14" : "ml-1")}>{children}</div>
       </main>
     </div>
   );
