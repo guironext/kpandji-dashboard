@@ -189,26 +189,26 @@ export default function CommunicationDashboard() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-0 w-full">
       {/* Hero Section */}
-      <div className="relative -mx-6 -mt-6 mb-8 overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-600 via-cyan-600 to-teal-700 px-6 pt-8 pb-8">
+      <div className="relative -mx-4 -mt-4 mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-600 via-cyan-600 to-teal-700 px-4 py-6 sm:-mx-6 sm:-mt-6 sm:mb-8 sm:rounded-b-3xl sm:px-6 sm:pt-8 sm:pb-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
         <div className="relative">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-5 w-5 text-amber-300" />
             <span className="text-sm font-medium text-sky-100/90">Tableau de bord</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
             Communication
           </h1>
-          <p className="mt-2 text-lg text-sky-100/80 max-w-xl">
+          <p className="mt-2 text-base text-sky-100/80 max-w-xl sm:text-lg">
             Vue d&apos;ensemble de vos projets, messages et activités
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:mb-8 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {[
           {
             label: "Projets",
@@ -248,11 +248,11 @@ export default function CommunicationDashboard() {
             className="group relative overflow-hidden border-0 shadow-lg shadow-slate-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-0.5"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-[0.03] group-hover:opacity-[0.06] transition-opacity`} />
-            <CardContent className="relative p-6">
-              <div className="flex items-start justify-between">
-                <div>
+            <CardContent className="relative p-4 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:mt-2 sm:text-3xl">
                     {stat.value}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">{stat.sub}</p>
@@ -271,20 +271,22 @@ export default function CommunicationDashboard() {
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
           Accès rapide
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
           {quickActions.map((action) => (
             <Link
               key={action.href}
               href={action.href}
-              className="group relative flex items-center gap-4 p-5 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300 hover:scale-[1.02]"
+              className="group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-lg active:scale-[0.99] sm:gap-4 sm:rounded-2xl sm:p-5 sm:hover:scale-[1.02]"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity`} />
-              <div className={`relative p-3 rounded-xl ${action.bg} shadow-sm`}>
-                <action.icon className="h-6 w-6 text-slate-700" />
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 transition-opacity group-hover:opacity-[0.04]`} />
+              <div className={`relative shrink-0 rounded-xl p-2.5 sm:p-3 ${action.bg} shadow-sm`}>
+                <action.icon className="h-5 w-5 text-slate-700 sm:h-6 sm:w-6" />
               </div>
-              <div className="relative flex-1 min-w-0 flex items-center justify-between">
-                <span className="font-semibold text-slate-800">{action.label}</span>
-                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-1 transition-all" />
+              <div className="relative flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-slate-800 sm:text-base">
+                  {action.label}
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-all group-hover:translate-x-1 group-hover:text-slate-600" />
               </div>
             </Link>
           ))}
@@ -293,14 +295,14 @@ export default function CommunicationDashboard() {
 
       {/* Activity Feed */}
       <Card className="border-0 shadow-lg shadow-slate-200/50 overflow-hidden">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-slate-900">
+        <CardHeader className="border-b border-slate-100 bg-slate-50/50 p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:items-center">
+            <div className="shrink-0 rounded-lg bg-slate-900 p-2">
               <Activity className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <CardTitle className="text-lg">Activités récentes</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Activités récentes</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Chronologie de vos projets, messages, courriers et plans d&apos;action
               </CardDescription>
             </div>
@@ -320,7 +322,7 @@ export default function CommunicationDashboard() {
           ) : (
             <div className="relative">
               {/* Timeline line - centered with icon circle (px-6 + 20px = 44px) */}
-              <div className="absolute left-11 top-0 bottom-0 w-0.5 bg-slate-200" />
+              <div className="absolute left-9 top-0 bottom-0 w-0.5 bg-slate-200 sm:left-11" />
 
               <div className="divide-y divide-slate-100">
                 {activities.map((activity) => {
@@ -364,14 +366,14 @@ export default function CommunicationDashboard() {
                     <Link
                       key={activity.id}
                       href={activity.link}
-                      className="group flex items-start gap-4 px-6 py-5 transition-colors hover:bg-slate-50/80"
+                      className="group flex items-start gap-3 px-4 py-4 transition-colors hover:bg-slate-50/80 sm:gap-4 sm:px-6 sm:py-5"
                     >
                       {content}
                     </Link>
                   ) : (
                     <div
                       key={activity.id}
-                      className="flex items-start gap-4 px-6 py-5"
+                      className="flex items-start gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5"
                     >
                       {content}
                     </div>

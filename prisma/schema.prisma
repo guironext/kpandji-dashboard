@@ -210,7 +210,7 @@ enum StatusBonDeCommande {
 
 model BonPourAccord {
   id                     String   @id @default(uuid())
-  createdAt              DateTime @default(now())
+  createdAt              DateTime @default(now()) 
   updatedAt              DateTime @updatedAt
   numero_bon_pour_accord String
   factureId              String   @unique
@@ -225,6 +225,33 @@ enum StatusBonPourAccord {
   VALIDE_APPORT_INITIAL
   ANNULE
 }
+
+model LettreCommande {
+  id                      String   @id @default(uuid())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  numero_lettre_commande  String
+  validite_lettre_commande Boolean @default(false)
+  
+  factureId               String   @unique
+  Facture                 Facture  @relation(fields: [factureId], references: [id])
+  Evolution_Lettre_Commande Evolution_Lettre_Commande[]
+}
+
+model Evolution_Lettre_Commande {
+  id                      String   @id @default(uuid())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  etape_actuelle          String
+  etape_suivante          String
+  lettre_commandeId       String
+  LettreCommande          LettreCommande @relation(fields: [lettre_commandeId], references: [id], onDelete: Cascade)
+
+  @@index([lettre_commandeId])
+}
+
+
+
 
 model Client_entreprise {
   id                           String              @id
@@ -296,7 +323,18 @@ model Commande {
   Tool                                 Tool[]
   Voiture                              Voiture[]
   Fournisseur                          Fournisseur[]
+  typeCommandeId                       String?
+  TypeCommande                         TypeCommande?   @relation(fields: [typeCommandeId], references: [id])
 }
+
+model TypeCommande {
+  id String @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  nom TypeCommandeNom @default(PERSON_INDIVIDUEL)
+  Commande Commande[]
+}
+
 
 model CommandeEnAttente {
   id                   String        @id
@@ -518,6 +556,7 @@ model Facture {
   Accessoire             Accessoire[]
   BonDeCommande          BonDeCommande?
   BonPourAccord          BonPourAccord?
+  LettreCommande         LettreCommande?
   Commande               Commande[]
   Client_entreprise      Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   Client                 Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -1772,6 +1811,8 @@ enum UserRole {
   COMMUNICATION
   RESPONSABLE_COMMERCIAL
   ASSISTANTE
+  INFOGRAPHIE
+  COMMUNITY_MANAGER
 }
 
 enum ChassisFlag {
@@ -1943,4 +1984,12 @@ enum StatusVerification {
 enum Transmission {
   AUTOMATIQUE
   MANUEL
+}
+
+
+enum TypeCommandeNom {
+  PERSON_INDIVIDUEL
+  ENTREPRISE_CLIENTE
+  INSTITUTION
+  LETTRE_DE_COMMANDE_VALANT_MARCHE
 }

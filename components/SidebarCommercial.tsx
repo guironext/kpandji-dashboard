@@ -95,7 +95,8 @@ const navItems: NavItem[] = [
   { id: "fac-proformas-multi", icon: FileSpreadsheet, label: "Proformas-multi", href: "/commercial/profoma-multi", category: "facturation" },
   { id: "fac-bon-commande", icon: Receipt, label: "Bon de Commande", href: "/commercial/bon-de-commande", category: "facturation" },
   { id: "fac-bon-accord", icon: FileCheck, label: "Bon pour accord", href: "/commercial/bon-pour-accord", category: "facturation" },
-
+  { id: "fac-lettre-commande", icon: FileCheck, label: "Lettre Commande", href: "/commercial/lettre-commande", category: "facturation" },
+ 
   // Documentation
   { id: "fac-signature", icon: FileSignature, label: "Signature", href: "/commercial/signature", category: "documentation" },
   { id: "fac-numero-courrier", icon: Mail, label: "Numéro courrier", href: "/commercial/numero-courrier", category: "documentation" },

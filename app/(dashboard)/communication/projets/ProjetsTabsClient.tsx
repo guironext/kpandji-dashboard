@@ -10,7 +10,24 @@ import ResumeProjetClient from "../resume-projet/ResumeProjetClient";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
 import type { PlanActionItem } from "@/lib/actions/communication-plan-action";
 import type { CommunicationBudgetItem } from "@/lib/actions/communication-budget";
-import { Plus, ClipboardList, Users, Calculator, FileText, Sparkles, FolderKanban } from "lucide-react";
+import {
+  Plus,
+  ClipboardList,
+  Users,
+  Calculator,
+  FileText,
+  Sparkles,
+  FolderKanban,
+  ChevronRight,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 type TabId = "creer-projet" | "plan-action" | "auteurs-roles" | "budget" | "resume-projet";
 
@@ -34,7 +51,7 @@ const TABS: {
     inactiveBg: "bg-sky-50",
     inactiveBorder: "border-sky-200",
     inactiveText: "text-sky-700",
-    shadow: "shadow-sky-500/30",
+    shadow: "shadow-sky-500/25",
   },
   {
     id: "plan-action",
@@ -45,7 +62,7 @@ const TABS: {
     inactiveBg: "bg-emerald-50",
     inactiveBorder: "border-emerald-200",
     inactiveText: "text-emerald-700",
-    shadow: "shadow-emerald-500/30",
+    shadow: "shadow-emerald-500/25",
   },
   {
     id: "auteurs-roles",
@@ -56,7 +73,7 @@ const TABS: {
     inactiveBg: "bg-violet-50",
     inactiveBorder: "border-violet-200",
     inactiveText: "text-violet-700",
-    shadow: "shadow-violet-500/30",
+    shadow: "shadow-violet-500/25",
   },
   {
     id: "budget",
@@ -67,7 +84,7 @@ const TABS: {
     inactiveBg: "bg-amber-50",
     inactiveBorder: "border-amber-200",
     inactiveText: "text-amber-700",
-    shadow: "shadow-amber-500/30",
+    shadow: "shadow-amber-500/25",
   },
   {
     id: "resume-projet",
@@ -78,43 +95,38 @@ const TABS: {
     inactiveBg: "bg-rose-50",
     inactiveBorder: "border-rose-200",
     inactiveText: "text-rose-700",
-    shadow: "shadow-rose-500/30",
+    shadow: "shadow-rose-500/25",
   },
 ];
 
 const TAB_PANEL_STYLES: Record<
   TabId,
-  { border: string; headerGradient: string; accentGlow: string; leftBorder: string }
+  { border: string; headerGradient: string; ring: string }
 > = {
   "creer-projet": {
-    border: "border-sky-200/80",
-    headerGradient: "from-sky-500/20 via-cyan-500/15 to-teal-500/10",
-    accentGlow: "shadow-[0_0_40px_-10px_rgba(14,165,233,0.4)]",
-    leftBorder: "border-l-4 border-l-sky-500",
+    border: "border-sky-200/60",
+    headerGradient: "from-sky-500/10 via-cyan-500/5 to-teal-500/5",
+    ring: "ring-sky-500/20",
   },
   "plan-action": {
-    border: "border-emerald-200/80",
-    headerGradient: "from-emerald-500/20 via-green-500/15 to-teal-500/10",
-    accentGlow: "shadow-[0_0_40px_-10px_rgba(16,185,129,0.4)]",
-    leftBorder: "border-l-4 border-l-emerald-500",
+    border: "border-emerald-200/60",
+    headerGradient: "from-emerald-500/10 via-green-500/5 to-teal-500/5",
+    ring: "ring-emerald-500/20",
   },
   "auteurs-roles": {
-    border: "border-violet-200/80",
-    headerGradient: "from-violet-500/20 via-purple-500/15 to-fuchsia-500/10",
-    accentGlow: "shadow-[0_0_40px_-10px_rgba(139,92,246,0.4)]",
-    leftBorder: "border-l-4 border-l-violet-500",
+    border: "border-violet-200/60",
+    headerGradient: "from-violet-500/10 via-purple-500/5 to-fuchsia-500/5",
+    ring: "ring-violet-500/20",
   },
   budget: {
-    border: "border-amber-200/80",
-    headerGradient: "from-amber-500/20 via-orange-500/15 to-amber-600/10",
-    accentGlow: "shadow-[0_0_40px_-10px_rgba(245,158,11,0.4)]",
-    leftBorder: "border-l-4 border-l-amber-500",
+    border: "border-amber-200/60",
+    headerGradient: "from-amber-500/10 via-orange-500/5 to-amber-600/5",
+    ring: "ring-amber-500/20",
   },
   "resume-projet": {
-    border: "border-rose-200/80",
-    headerGradient: "from-rose-500/20 via-pink-500/15 to-fuchsia-500/10",
-    accentGlow: "shadow-[0_0_40px_-10px_rgba(244,63,94,0.4)]",
-    leftBorder: "border-l-4 border-l-rose-500",
+    border: "border-rose-200/60",
+    headerGradient: "from-rose-500/10 via-pink-500/5 to-fuchsia-500/5",
+    ring: "ring-rose-500/20",
   },
 };
 
@@ -135,141 +147,214 @@ export default function ProjetsTabsClient({
   const firstProjectId = projects[0]?.id ?? null;
   const activeTabConfig = TABS.find((t) => t.id === activeTab)!;
   const panelStyles = TAB_PANEL_STYLES[activeTab];
+  const activeCount = projects.filter((p) => p.projectStatus === "ACTIVE").length;
 
   return (
-    <div className="min-h-full">
-      {/* Vibrant gradient background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-400/25 blur-[100px]" />
-        <div className="absolute right-0 top-1/4 h-[500px] w-[500px] rounded-full bg-violet-400/20 blur-[120px]" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-amber-400/20 blur-[80px]" />
-        <div className="absolute right-1/3 top-2/3 h-64 w-64 rounded-full bg-emerald-400/15 blur-[70px]" />
-        <div className="absolute left-1/2 top-1/2 h-72 w-72 rounded-full bg-rose-400/10 blur-[90px]" />
+    <div className="min-h-full -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
+      <section className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-600 via-cyan-600 to-teal-700 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8">
         <div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(120,119,198,0.12),transparent_50%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_45%)]"
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.9)_0%,rgba(248,250,252,0.95)_50%,rgba(241,245,249,0.98)_100%)]"
+          className="pointer-events-none absolute -right-16 top-0 h-48 w-48 rounded-full bg-white/10 blur-3xl sm:h-64 sm:w-64"
           aria-hidden
         />
-      </div>
+        <div
+          className="pointer-events-none absolute -left-8 bottom-0 h-40 w-40 rounded-full bg-teal-400/20 blur-2xl"
+          aria-hidden
+        />
 
-      <div className="relative">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-          {/* Colorful hero header */}
-          <div className="relative mb-8 overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-violet-500/10 via-sky-500/10 to-amber-500/10 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-sm sm:p-8">
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage: `radial-gradient(circle at 20% 50%, rgba(139,92,246,0.3) 0%, transparent 40%),
-                  radial-gradient(circle at 80% 50%, rgba(14,165,233,0.25) 0%, transparent 40%),
-                  radial-gradient(circle at 50% 100%, rgba(251,191,36,0.2) 0%, transparent 40%)`,
-              }}
-              aria-hidden
-            />
-            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-600 text-white shadow-lg shadow-violet-500/40">
-                  <FolderKanban className="h-7 w-7" />
+        <div className="relative mx-auto max-w-6xl">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-sky-100 backdrop-blur-sm ring-1 ring-white/20">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                  Communication
+                </span>
+                <Badge className="border-0 bg-white/20 text-white hover:bg-white/25">
+                  {projects.length} projet{projects.length !== 1 ? "s" : ""}
+                </Badge>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                Gestion des projets
+              </h1>
+              <p className="max-w-2xl text-sm text-sky-100/90 sm:text-base">
+                Créez, planifiez et pilotez vos projets — diagnostic, objectifs, budget et équipes.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-md lg:shrink-0">
+              {[
+                { label: "Total", value: projects.length },
+                { label: "Actifs", value: activeCount },
+                { label: "Sections", value: TABS.length, wide: true },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={cn(
+                    "rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20",
+                    stat.wide && "col-span-2 sm:col-span-1"
+                  )}
+                >
+                  <p className="text-xs font-medium text-sky-100/80">{stat.label}</p>
+                  <p className="mt-0.5 text-2xl font-bold text-white">{stat.value}</p>
                 </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-violet-700 shadow-sm ring-1 ring-violet-200/60">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Projets de communication
-                    </span>
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                      {projects.length} projet{projects.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
-                    Gestion des projets
-                  </h1>
-                  <p className="mt-1.5 max-w-xl text-sm text-slate-600 sm:text-base">
-                    Créez, planifiez et pilotez vos projets en un seul endroit — diagnostic, objectifs, budget et équipes.
-                  </p>
-                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-0">
+        <div
+          className="pointer-events-none absolute -left-20 top-8 h-64 w-64 rounded-full bg-sky-300/20 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-10 top-32 h-56 w-56 rounded-full bg-violet-300/15 blur-3xl"
+          aria-hidden
+        />
+
+        <div className="relative space-y-5 sm:space-y-6">
+          <div className="md:hidden">
+            <label
+              htmlFor="projets-tab-select"
+              className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500"
+            >
+              Section active
+            </label>
+            <Select value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)}>
+              <SelectTrigger
+                id="projets-tab-select"
+                className="h-12 w-full rounded-xl border-slate-200 bg-white shadow-sm"
+              >
+                <SelectValue>
+                  <span className="flex items-center gap-2">
+                    <activeTabConfig.icon className="h-4 w-4 text-slate-600" />
+                    {activeTabConfig.label}
+                  </span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <SelectItem key={tab.id} value={tab.id}>
+                      <span className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        {tab.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <nav className="hidden md:block" aria-label="Sections du projet">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-slate-50 to-transparent lg:hidden" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-slate-50 to-transparent lg:hidden" />
+              <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible">
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        "group relative flex min-w-[9.5rem] shrink-0 snap-start flex-col gap-1 rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 lg:min-w-0 lg:flex-1",
+                        isActive
+                          ? cn(
+                              "border-transparent bg-gradient-to-br text-white shadow-lg",
+                              tab.gradient,
+                              tab.shadow
+                            )
+                          : cn(
+                              "border bg-white hover:-translate-y-0.5 hover:shadow-md",
+                              tab.inactiveBorder,
+                              tab.inactiveBg
+                            )
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={cn(
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+                            isActive ? "bg-white/20" : cn(tab.inactiveBg, tab.inactiveText)
+                          )}
+                        >
+                          <Icon className={cn("h-4 w-4", isActive ? "text-white" : "")} />
+                        </div>
+                        <span
+                          className={cn(
+                            "text-sm font-semibold leading-tight",
+                            isActive ? "text-white" : tab.inactiveText
+                          )}
+                        >
+                          {tab.label}
+                        </span>
+                      </div>
+                      <p
+                        className={cn(
+                          "pl-11 text-xs leading-snug",
+                          isActive ? "text-white/80" : "text-slate-500"
+                        )}
+                      >
+                        {tab.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          </nav>
 
-          {/* Colorful tab bar */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "group relative flex items-center gap-2.5 rounded-xl px-5 py-3.5 text-base font-semibold transition-all duration-300",
-                      isActive
-                        ? `bg-gradient-to-r ${tab.gradient} text-white shadow-lg ${tab.shadow} scale-[1.02]`
-                        : cn(
-                            tab.inactiveBg,
-                            tab.inactiveBorder,
-                            tab.inactiveText,
-                            "border hover:scale-[1.02] hover:shadow-md"
-                          )
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        "h-5 w-5 shrink-0 transition-transform group-hover:scale-110",
-                        isActive ? "text-white" : "opacity-80"
-                      )}
-                    />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Content panel with tab-specific styling */}
-          <div
-            key={activeTab}
+          <article
             className={cn(
-              "overflow-hidden rounded-2xl border-2 bg-white shadow-2xl",
+              "overflow-hidden rounded-2xl border bg-white shadow-lg shadow-slate-200/40 ring-1",
               panelStyles.border,
-              panelStyles.accentGlow,
-              panelStyles.leftBorder
+              panelStyles.ring
             )}
           >
-            {/* Tab header strip */}
-            <div
+            <header
               className={cn(
-                "border-b border-slate-100 bg-gradient-to-r px-6 py-5",
+                "flex flex-col gap-4 border-b border-slate-100 bg-gradient-to-r px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5",
                 panelStyles.headerGradient
               )}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div
                   className={cn(
-                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r text-white shadow-lg",
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md sm:h-12 sm:w-12 sm:rounded-2xl",
                     activeTabConfig.gradient
                   )}
                 >
-                  <activeTabConfig.icon className="h-6 w-6" />
+                  <activeTabConfig.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                     {activeTabConfig.label}
                   </h2>
-                  <p className="text-sm text-slate-600">
-                    {activeTabConfig.description}
-                  </p>
+                  <p className="text-sm text-slate-600">{activeTabConfig.description}</p>
                 </div>
               </div>
-            </div>
+              <div className="hidden items-center gap-1.5 text-sm font-medium text-slate-500 sm:flex">
+                <FolderKanban className="h-4 w-4" />
+                <span>
+                  {projects.length} projet{projects.length !== 1 ? "s" : ""} enregistré
+                  {projects.length !== 1 ? "s" : ""}
+                </span>
+                <ChevronRight className="h-4 w-4 text-slate-300" />
+              </div>
+            </header>
 
-            {/* Tab content */}
-            <div className="min-h-[480px] bg-gradient-to-b from-white to-slate-50/30">
+            <div className="min-h-[min(60vh,520px)] bg-gradient-to-b from-white to-slate-50/40">
               {activeTab === "creer-projet" && (
                 <div className="animate-in fade-in duration-300">
                   <ProjetsClient initialProjects={projects} embedded />
@@ -304,6 +389,7 @@ export default function ProjetsTabsClient({
               {activeTab === "resume-projet" && (
                 <div className="animate-in fade-in duration-300">
                   <ResumeProjetClient
+                    embedded
                     projects={projects.map((p) => ({
                       id: p.id,
                       name: p.name,
@@ -313,7 +399,7 @@ export default function ProjetsTabsClient({
                 </div>
               )}
             </div>
-          </div>
+          </article>
         </div>
       </div>
     </div>

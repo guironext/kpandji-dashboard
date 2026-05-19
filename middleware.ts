@@ -120,7 +120,7 @@ const ROLE_REDIRECTS: Record<string, string> = {
 	COMPTABLE: "/comptable",
 	CONCESSIONAIRE: "/concessionnaire",
 	SUPERVISEUR: "/superviseur",
-	INFORGRAPHIE: "/infographie",
+	INFOGRAPHIE: "/infographie",
 	COMMUNITY_MANAGER: "/communityManager",
 	ASSISTANTE: "/assistante",
 };
@@ -151,7 +151,7 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isComptableRoute, role: "COMPTABLE" },
 	{ match: isConcessionnaireRoute, role: "CONCESSIONAIRE" },
 	{ match: isSuperviseurRoute, role: "SUPERVISEUR" },
-	{ match: isInfographieRoute, role: "INFORGRAPHIE" },
+	{ match: isInfographieRoute, role: "INFOGRAPHIE" },
 	{ match: isCommunityManagerRoute, role: "COMMUNITY_MANAGER" },
 	{ match: isAssistanteRoute, role: "ASSISTANTE" },
 ];

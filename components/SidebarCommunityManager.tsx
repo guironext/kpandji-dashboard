@@ -33,7 +33,7 @@ const navItems = [
  
 ];
 
-const SidebarInfographie = ({ isOpen }: { isOpen: boolean }) => {
+const SidebarCommunityManager = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
@@ -158,4 +158,4 @@ const SidebarInfographie = ({ isOpen }: { isOpen: boolean }) => {
   );
 };
 
-export default SidebarInfographie;
+export default SidebarCommunityManager;

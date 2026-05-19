@@ -1,33 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableFooter,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useEffect, useMemo, useState } from "react";
 import {
   getCommunicationProjectById,
   deleteCommunicationProject,
@@ -46,39 +19,27 @@ import {
   type CommunicationBudgetItem,
 } from "@/lib/actions/communication-budget";
 import { toast } from "sonner";
-import {
-  Loader2,
-  FileDown,
-  Calendar,
-  Users,
-  DollarSign,
-  FileText,
-  Target,
-  TrendingUp,
-  CheckCircle2,
-  Clock,
-  Building2,
-  Briefcase,
-  Sparkles,
-  ArrowRight,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Document, Packer, Paragraph, TextRun, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, AlignmentType, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import { useRouter } from "next/navigation";
+import ResumeProjetView from "./ResumeProjetView";
+import { EMBEDDED_ACCENT, STANDALONE_ACCENT } from "./resume-projet-ui";
 
-type Props = {
-  projects: Array<{
-    id: string;
-    name: string;
-    projectStatus: "ACTIVE" | "INACTIVE";
-  }>;
+type ProjectListItem = {
+  id: string;
+  name: string;
+  projectStatus: "ACTIVE" | "INACTIVE";
 };
 
-export default function ResumeProjetClient({ projects }: Props) {
+type Props = {
+  projects: ProjectListItem[];
+  embedded?: boolean;
+};
+
+export default function ResumeProjetClient({ projects, embedded = false }: Props) {
+  const accent = embedded ? EMBEDDED_ACCENT : STANDALONE_ACCENT;
   const router = useRouter();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     projects[0]?.id ?? null
@@ -93,6 +54,11 @@ export default function ResumeProjetClient({ projects }: Props) {
   const [deleting, setDeleting] = useState(false);
 
   const activeProjects = projects.filter((p) => p.projectStatus === "ACTIVE");
+
+  const budgetTotal = useMemo(
+    () => budgetItems.reduce((sum, item) => sum + item.montant, 0),
+    [budgetItems]
+  );
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -714,581 +680,27 @@ export default function ResumeProjetClient({ projects }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-      <div className="flex h-screen gap-6 p-6">
-        {/* Left Sidebar - Active Projects */}
-        <div className="w-80 flex-shrink-0">
-          <Card className="h-full shadow-lg border-2">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
-                <CardTitle className="text-white">Projets Actifs</CardTitle>
-              </div>
-              <CardDescription className="text-blue-100">
-                {activeProjects.length} projet{activeProjects.length > 1 ? "s" : ""} actif{activeProjects.length > 1 ? "s" : ""}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                {activeProjects.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                      <FileText className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <p className="text-sm text-muted-foreground font-medium">
-                      Aucun projet actif
-                    </p>
-                  </div>
-                ) : (
-                  activeProjects.map((proj) => (
-                    <button
-                      key={proj.id}
-                      onClick={() => setSelectedProjectId(proj.id)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 transform hover:scale-[1.02] ${
-                        selectedProjectId === proj.id
-                          ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-lg shadow-blue-500/50"
-                          : "bg-white hover:bg-blue-50 border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                          selectedProjectId === proj.id ? "bg-white" : "bg-blue-600"
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                          <div className={`font-semibold truncate ${
-                            selectedProjectId === proj.id ? "text-white" : "text-slate-900"
-                          }`}>
-                            {proj.name}
-                          </div>
-                        </div>
-                        {selectedProjectId === proj.id && (
-                          <ArrowRight className="h-4 w-4 text-white flex-shrink-0" />
-                        )}
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Panel - Project Details */}
-        <div className="flex-1 overflow-y-auto pr-2">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-slate-600 font-medium">Chargement des données...</p>
-              </div>
-            </div>
-          ) : !project ? (
-            <Card className="shadow-lg border-2">
-              <CardContent className="py-16">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 mb-6">
-                    <FileText className="h-10 w-10 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                    Aucun projet sélectionné
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Sélectionnez un projet dans la liste pour voir les détails
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6 pb-6">
-              {/* Header with Export Button */}
-              <Card className="shadow-lg border-2 bg-gradient-to-r from-white to-blue-50/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg">
-                          <Sparkles className="h-5 w-5 text-white" />
-                        </div>
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                          {project.name}
-                        </h1>
-                      </div>
-                      <div className="flex items-center gap-4 mt-3 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span>Créé le {formatDate(project.createdAt)}</span>
-                        </div>
-                        {project.createdBy && (
-                          <>
-                            <Separator orientation="vertical" className="h-4" />
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              <span>{project.createdBy.firstName} {project.createdBy.lastName}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      <Button 
-                        onClick={exportToWord} 
-                        disabled={exporting}
-                        size="lg"
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/50"
-                      >
-                        {exporting ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Export en cours...
-                          </>
-                        ) : (
-                          <>
-                            <FileDown className="mr-2 h-5 w-5" />
-                            Exporter en Word
-                          </>
-                        )}
-                      </Button>
-                      <Button 
-                        onClick={() => setShowDeleteDialog(true)}
-                        disabled={deleting}
-                        size="lg"
-                        variant="destructive"
-                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-500/50"
-                      >
-                        <Trash2 className="mr-2 h-5 w-5" />
-                        Supprimer Projet
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Delete Confirmation Dialog */}
-              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <DialogContent>
-                  <DialogHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-red-100 rounded-full">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                      </div>
-                      <DialogTitle>Supprimer le projet</DialogTitle>
-                    </div>
-                    <DialogDescription className="text-base">
-                      Êtes-vous sûr de vouloir supprimer le projet <strong>{project.name}</strong> ?
-                      <br />
-                      <br />
-                      Cette action est <strong>irréversible</strong> et supprimera également :
-                      <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                        <li>Tous les plans d&apos;action associés</li>
-                        <li>Tous les acteurs du projet</li>
-                        <li>Tous les éléments de budget</li>
-                      </ul>
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowDeleteDialog(false)}
-                      disabled={deleting}
-                    >
-                      Annuler
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDeleteProject}
-                      disabled={deleting}
-                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-                    >
-                      {deleting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Suppression...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Supprimer définitivement
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* Project Details */}
-              <Card className="shadow-lg border-2">
-                <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b-2">
-                  <CardTitle className="flex items-center gap-3 text-2xl">
-                    <div className="p-2 bg-blue-600 rounded-lg">
-                      <FileText className="h-6 w-6 text-white" />
-                    </div>
-                    Détails du Projet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-8">
-                  {project.diagnosticContext && (
-                    <div className="relative pl-6 border-l-4 border-blue-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Target className="h-5 w-5 text-blue-600" />
-                        <h3 className="text-lg font-bold text-slate-900">1. Analyse de la situation (diagnostic)</h3>
-                      </div>
-                      <div className="space-y-3 ml-7">
-                        {project.diagnosticContext && (
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Contexte: </span>
-                            <span className="text-slate-600">{project.diagnosticContext}</span>
-                          </div>
-                        )}
-                        {project.diagnosticTarget && (
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Cible: </span>
-                            <span className="text-slate-600">{project.diagnosticTarget}</span>
-                          </div>
-                        )}
-                        {project.diagnosticEnvironment && (
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Environnement: </span>
-                            <span className="text-slate-600">{project.diagnosticEnvironment}</span>
-                          </div>
-                        )}
-                        {project.diagnosticForces && (
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Forces/Faiblesses: </span>
-                            <span className="text-slate-600">{project.diagnosticForces}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {project.objectives && (
-                    <div className="relative pl-6 border-l-4 border-green-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        <h3 className="text-lg font-bold text-slate-900">2. Définition des objectifs (SMART)</h3>
-                      </div>
-                      <div className="bg-green-50 p-4 rounded-lg ml-7">
-                        <span className="font-semibold text-slate-700">Objectifs: </span>
-                        <span className="text-slate-600">{project.objectives}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {(project.strategyPositioning || project.strategyTargets || project.strategyChannels) && (
-                    <div className="relative pl-6 border-l-4 border-purple-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="h-5 w-5 text-purple-600" />
-                        <h3 className="text-lg font-bold text-slate-900">3. Stratégie</h3>
-                      </div>
-                      <div className="space-y-3 ml-7">
-                        {project.strategyPositioning && (
-                          <div className="bg-purple-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Positionnement: </span>
-                            <span className="text-slate-600">{project.strategyPositioning}</span>
-                          </div>
-                        )}
-                        {project.strategyTargets && (
-                          <div className="bg-purple-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Cibles prioritaires: </span>
-                            <span className="text-slate-600">{project.strategyTargets}</span>
-                          </div>
-                        )}
-                        {project.strategyChannels && (
-                          <div className="bg-purple-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Canaux: </span>
-                            <span className="text-slate-600">{project.strategyChannels}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(project.actionPlan || project.actionSupports || project.actionCalendar || project.actionBudget) && (
-                    <div className="relative pl-6 border-l-4 border-orange-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Calendar className="h-5 w-5 text-orange-600" />
-                        <h3 className="text-lg font-bold text-slate-900">4. Plan d&apos;action</h3>
-                      </div>
-                      <div className="space-y-3 ml-7">
-                        {project.actionPlan && (
-                          <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Actions: </span>
-                            <span className="text-slate-600">{project.actionPlan}</span>
-                          </div>
-                        )}
-                        {project.actionSupports && (
-                          <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Supports: </span><br/>
-                            <span className="text-slate-600">{project.actionSupports} </span><br/>
-                          </div>
-                        )}
-                        {project.actionCalendar && (
-                          <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Calendrier: </span><br/>
-                            <span className="text-slate-600">{project.actionCalendar} </span><br/>
-                          </div>
-                        )}
-                        {project.actionBudget && (
-                          <div className="bg-orange-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Budget: </span>
-                            <span className="text-slate-600">{project.actionBudget}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(project.implementationContent || project.implementationLaunch || project.implementationTeams) && (
-                    <div className="relative pl-6 border-l-4 border-indigo-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="h-5 w-5 text-indigo-600" />
-                        <h3 className="text-lg font-bold text-slate-900">5. Mise en œuvre</h3>
-                      </div>
-                      <div className="space-y-3 ml-7">
-                        {project.implementationContent && (
-                          <div className="bg-indigo-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Création des contenus: </span>
-                            <span className="text-slate-600">{project.implementationContent}</span>
-                          </div>
-                        )}
-                        {project.implementationLaunch && (
-                          <div className="bg-indigo-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Lancement: </span>
-                            <span className="text-slate-600">{project.implementationLaunch}</span>
-                          </div>
-                        )}
-                        {project.implementationTeams && (
-                          <div className="bg-indigo-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Coordination des équipes: </span>
-                            <span className="text-slate-600">{project.implementationTeams}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(project.evaluationMetrics || project.evaluationComparison || project.evaluationAdjustments) && (
-                    <div className="relative pl-6 border-l-4 border-teal-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="h-5 w-5 text-teal-600" />
-                        <h3 className="text-lg font-bold text-slate-900">6. Évaluation</h3>
-                      </div>
-                      <div className="space-y-3 ml-7">
-                        {project.evaluationMetrics && (
-                          <div className="bg-teal-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Mesure d&apos;efficacité: </span>
-                            <span className="text-slate-600">{project.evaluationMetrics}</span>
-                          </div>
-                        )}
-                        {project.evaluationComparison && (
-                          <div className="bg-teal-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Comparaison avec objectifs: </span>
-                            <span className="text-slate-600">{project.evaluationComparison}</span>
-                          </div>
-                        )}
-                        {project.evaluationAdjustments && (
-                          <div className="bg-teal-50 p-4 rounded-lg">
-                            <span className="font-semibold text-slate-700">Ajustements: </span>
-                            <span className="text-slate-600">{project.evaluationAdjustments}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Plan Actions */}
-              <Card className="shadow-lg border-2">
-                <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b-2">
-                  <CardTitle className="flex items-center gap-3 text-2xl">
-                    <div className="p-2 bg-orange-600 rounded-lg">
-                      <Calendar className="h-6 w-6 text-white" />
-                    </div>
-                    Plan d&apos;Action
-                    {planActions.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {planActions.length} action{planActions.length > 1 ? "s" : ""}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {planActions.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-4">
-                        <Calendar className="h-8 w-8 text-orange-400" />
-                      </div>
-                      <p className="text-muted-foreground font-medium">Aucun plan d&apos;action défini</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-orange-50">
-                            <TableHead className="font-bold text-slate-900">Action</TableHead>
-                            <TableHead className="font-bold text-slate-900">Date de début</TableHead>
-                            <TableHead className="font-bold text-slate-900">Date de fin</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {planActions.map((action) => (
-                            <TableRow key={action.id} className="hover:bg-orange-50/50">
-                              <TableCell className="font-medium">{action.title}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4 text-orange-600" />
-                                  {formatDateTime(action.startDate)}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                  {formatDateTime(action.endDate)}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Project Actors */}
-              <Card className="shadow-lg border-2">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b-2">
-                  <CardTitle className="flex items-center gap-3 text-2xl">
-                    <div className="p-2 bg-blue-600 rounded-lg">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                    Acteurs du Projet
-                    {actors.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {actors.length} acteur{actors.length > 1 ? "s" : ""}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {actors.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
-                        <Users className="h-8 w-8 text-blue-400" />
-                      </div>
-                      <p className="text-muted-foreground font-medium">Aucun acteur défini</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-blue-50">
-                            <TableHead className="font-bold text-slate-900">Nom</TableHead>
-                            <TableHead className="font-bold text-slate-900">Département</TableHead>
-                            <TableHead className="font-bold text-slate-900">Poste</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {actors.map((actor) => (
-                            <TableRow key={actor.id} className="hover:bg-blue-50/50">
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                                    {actor.name.charAt(0).toUpperCase()}
-                                  </div>
-                                  {actor.name}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="h-4 w-4 text-blue-600" />
-                                  {actor.department}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Briefcase className="h-4 w-4 text-slate-600" />
-                                  {actor.job}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Budget */}
-              <Card className="shadow-lg border-2">
-                <CardHeader className="bg-gradient-to-r from-green-50 to-green-100/50 border-b-2">
-                  <CardTitle className="flex items-center gap-3 text-2xl">
-                    <div className="p-2 bg-green-600 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-white" />
-                    </div>
-                    Budget du Projet
-                    {budgetItems.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {budgetItems.length} élément{budgetItems.length > 1 ? "s" : ""}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {budgetItems.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                        <DollarSign className="h-8 w-8 text-green-400" />
-                      </div>
-                      <p className="text-muted-foreground font-medium">Aucun élément de budget défini</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-green-50">
-                            <TableHead className="font-bold text-slate-900">Désignation</TableHead>
-                            <TableHead className="text-right font-bold text-slate-900">Prix unitaire</TableHead>
-                            <TableHead className="text-right font-bold text-slate-900">Quantité</TableHead>
-                            <TableHead className="text-right font-bold text-slate-900">Montant</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {budgetItems.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-green-50/50">
-                              <TableCell className="font-medium">{item.designation}</TableCell>
-                              <TableCell className="text-right">{formatNumber(item.prixUnitaire)} FCFA</TableCell>
-                              <TableCell className="text-right">{item.quantite}</TableCell>
-                              <TableCell className="text-right font-semibold text-green-700">
-                                {formatNumber(item.montant)} FCFA
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                        <TableFooter className="bg-gradient-to-r from-green-50 to-green-100">
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-right font-bold text-lg">
-                              TOTAL
-                            </TableCell>
-                            <TableCell className="text-right font-bold text-lg text-green-700">
-                              {formatNumber(
-                                budgetItems.reduce((sum, item) => sum + item.montant, 0)
-                              )}{" "}
-                              FCFA
-                            </TableCell>
-                          </TableRow>
-                        </TableFooter>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <ResumeProjetView
+      embedded={embedded}
+      accent={accent}
+      activeProjects={activeProjects}
+      selectedProjectId={selectedProjectId}
+      onSelectProject={setSelectedProjectId}
+      loading={loading}
+      project={project}
+      planActions={planActions}
+      actors={actors}
+      budgetItems={budgetItems}
+      budgetTotal={budgetTotal}
+      exporting={exporting}
+      deleting={deleting}
+      showDeleteDialog={showDeleteDialog}
+      onShowDeleteDialog={setShowDeleteDialog}
+      onExport={exportToWord}
+      onDelete={handleDeleteProject}
+      formatDate={formatDate}
+      formatDateTime={formatDateTime}
+      formatNumber={formatNumber}
+    />
   );
 }

@@ -3,6 +3,7 @@
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "../prisma";
 import { UserRole } from "@prisma/client";
+import { normalizeUserRole } from "../user-role";
 
 /**
  * Get or create a user in the database from Clerk
@@ -41,8 +42,7 @@ export async function getOrCreateUser(clerkId?: string) {
         clerkUser.emailAddresses[0]?.emailAddress ||
         `${targetClerkId}@clerk.temp`;
 
-      const role =
-        (clerkUser.publicMetadata?.role as UserRole) || UserRole.EMPLOYEE;
+      const role = normalizeUserRole(clerkUser.publicMetadata?.role);
 
       // A user with this email might already exist in the DB from a previous
       // Clerk account. In that case, reconcile by updating the stale clerkId

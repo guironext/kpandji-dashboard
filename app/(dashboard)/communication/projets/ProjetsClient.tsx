@@ -175,13 +175,16 @@ export default function ProjetsClient({
   const progressValue = (step / 6) * 100;
 
   return (
-    <div className={cn("relative mx-auto", embedded ? "px-4 py-4 sm:px-6" : "max-w-5xl px-4 py-6 sm:px-6 md:py-8 lg:px-8")}>
-      {/* Header - compact when embedded */}
-      <header className={embedded ? "mb-4" : "mb-8 md:mb-10"}>
-        <div className={cn(
-          "flex flex-col gap-4",
-          embedded ? "items-end" : "sm:flex-row sm:items-end sm:justify-between"
-        )}>
+    <div className={cn("relative mx-auto", embedded ? "px-4 py-5 sm:px-6 sm:py-6" : "max-w-5xl px-4 py-6 sm:px-6 md:py-8 lg:px-8")}>
+      <header className={embedded ? "mb-5" : "mb-8 md:mb-10"}>
+        <div
+          className={cn(
+            "flex flex-col gap-3 sm:gap-4",
+            embedded
+              ? "sm:flex-row sm:items-center sm:justify-between"
+              : "sm:flex-row sm:items-end sm:justify-between"
+          )}
+        >
           {!embedded && (
             <div className="space-y-2">
               <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/25 border-0 font-medium">
@@ -199,7 +202,7 @@ export default function ProjetsClient({
           <Button
             onClick={handleStartCreate}
             size="lg"
-            className="shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-700 hover:to-indigo-700 hover:shadow-violet-500/30"
+            className="w-full shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-700 hover:to-indigo-700 hover:shadow-violet-500/30 sm:w-auto"
           >
             <Plus className="mr-2 h-5 w-5" />
             Nouveau projet
@@ -447,30 +450,56 @@ export default function ProjetsClient({
             </CardContent>
           </Card>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-1">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((p, index) => {
               const accent = STEP_COLORS[index % STEP_COLORS.length];
+              const isActive = p.projectStatus === "ACTIVE";
               return (
                 <li key={p.id}>
-                  <Link href={`/communication/projets/${p.id}`}>
-                    <Card className="group overflow-hidden border-0 bg-white/90 shadow-md shadow-slate-200/40 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50 backdrop-blur-sm">
-                      <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:py-5">
-                        <div className="flex items-start gap-4">
-                          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md", `bg-gradient-to-br ${accent.gradient}`)}>
-                            <FileText className="h-6 w-6" />
+                  <Link href={`/communication/projets/${p.id}`} className="block h-full">
+                    <Card className="group flex h-full flex-col overflow-hidden border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50">
+                      <CardContent className="flex flex-1 flex-col gap-4 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md",
+                              accent.gradient
+                            )}
+                          >
+                            <FileText className="h-5 w-5" />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-slate-900 transition-colors group-hover:text-violet-600">
-                              {p.name}
-                            </p>
-                            <p className="mt-0.5 text-xs text-slate-500">
-                              {p.createdBy ? `Créé par ${p.createdBy.firstName} ${p.createdBy.lastName}` : "—"} · Mis à jour le{" "}
-                              {new Date(p.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                            </p>
-                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "shrink-0 border-0 text-xs font-medium",
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-slate-100 text-slate-600"
+                            )}
+                          >
+                            {isActive ? "Actif" : "Inactif"}
+                          </Badge>
                         </div>
-                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 transition-all group-hover:gap-2.5 sm:shrink-0">
-                          Voir le projet 
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 font-semibold text-slate-900 transition-colors group-hover:text-violet-600">
+                            {p.name}
+                          </p>
+                          <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                            {p.createdBy
+                              ? `${p.createdBy.firstName} ${p.createdBy.lastName}`
+                              : "Auteur inconnu"}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            Mis à jour le{" "}
+                            {new Date(p.updatedAt).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 transition-all group-hover:gap-2">
+                          Voir le projet
                           <ArrowRight className="h-4 w-4" />
                         </span>
                       </CardContent>
