@@ -21,7 +21,6 @@ import {
   type SelectedMiseEnOeuvreTask,
 } from "@/components/communication/mise-en-oeuvre-task-ui";
 import {
-  getObjectifGlobalMiseEnOeuvreData,
   updateObjectifGlobalTaskStage,
   type ObjectifGlobalMiseEnOeuvreData,
   type SerializedObjectifGlobalTask,

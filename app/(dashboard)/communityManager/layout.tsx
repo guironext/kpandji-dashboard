@@ -4,7 +4,6 @@
 import { useState } from "react";
 import clsx from "clsx";
 import Header from "@/components/Header";
-import SidebarInfographie from "@/components/SidebarInfographie";
 import SidebarCommunityManager from "@/components/SidebarCommunityManager";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
