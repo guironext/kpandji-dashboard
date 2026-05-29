@@ -1,42 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getOrCreateUser } from "@/lib/actions/user";
+import {
+  buildProjectCreateData,
+  type CommunicationProjectInput,
+} from "@/lib/communication-project-data";
 
-function getCommunicationProjectModel() {
-  return (prisma as unknown as Record<string, unknown>).communicationProject as
-    | {
-        create: (args: object) => Promise<unknown>;
-        update: (args: object) => Promise<unknown>;
-        delete: (args: object) => Promise<unknown>;
-      }
-    | undefined;
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      name,
-      createdById,
-      diagnosticContext,
-      diagnosticTarget,
-      diagnosticEnvironment,
-      diagnosticForces,
-      objectives,
-      strategyPositioning,
-      strategyTargets,
-      strategyChannels,
-      actionPlan,
-      actionSupports,
-      actionCalendar,
-      actionBudget,
-      implementationContent,
-      implementationLaunch,
-      implementationTeams,
-      evaluationMetrics,
-      evaluationComparison,
-      evaluationAdjustments,
-    } = body;
+    const body = (await request.json()) as CommunicationProjectInput & {
+      clerkUserId?: string;
+    };
+
+    let clerkId = body.clerkUserId;
+    if (!clerkId) {
+      const authResult = await auth();
+      clerkId = authResult?.userId ?? undefined;
+    }
+    if (!clerkId) {
+      const clerkUser = await currentUser();
+      clerkId = clerkUser?.id;
+    }
+    if (!clerkId) {
+      return NextResponse.json(
+        { success: false, error: "Non authentifié." },
+        { status: 401 }
+      );
+    }
+    const { name } = body;
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -45,41 +41,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = getCommunicationProjectModel();
-    if (!model) {
+    const userResult = await getOrCreateUser(clerkId);
+    if (!userResult.success || !userResult.data) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
-        },
-        { status: 503 }
+        { success: false, error: userResult.error ?? "Utilisateur introuvable." },
+        { status: 400 }
       );
     }
 
-    const raw = await model.create({
-      data: {
-        name: name.trim(),
-        createdById: createdById ?? undefined,
-        diagnosticContext: diagnosticContext ?? undefined,
-        diagnosticTarget: diagnosticTarget ?? undefined,
-        diagnosticEnvironment: diagnosticEnvironment ?? undefined,
-        diagnosticForces: diagnosticForces ?? undefined,
-        objectives: objectives ?? undefined,
-        strategyPositioning: strategyPositioning ?? undefined,
-        strategyTargets: strategyTargets ?? undefined,
-        strategyChannels: strategyChannels ?? undefined,
-        actionPlan: actionPlan ?? undefined,
-        actionSupports: actionSupports ?? undefined,
-        actionCalendar: actionCalendar ?? undefined,
-        actionBudget: actionBudget ?? undefined,
-        implementationContent: implementationContent ?? undefined,
-        implementationLaunch: implementationLaunch ?? undefined,
-        implementationTeams: implementationTeams ?? undefined,
-        evaluationMetrics: evaluationMetrics ?? undefined,
-        evaluationComparison: evaluationComparison ?? undefined,
-        evaluationAdjustments: evaluationAdjustments ?? undefined,
-      },
+    const row = await prisma.communicationProject.create({
+      data: buildProjectCreateData(body, userResult.data.id),
+      include: { createdBy: { select: { firstName: true, lastName: true } } },
     });
 
     try {
@@ -89,18 +61,18 @@ export async function POST(request: NextRequest) {
       // ignore
     }
 
-    const row = raw as {
-      id: string;
-      name: string;
-      createdAt: Date;
-      updatedAt: Date;
-      createdBy?: { firstName: string; lastName: string } | null;
-    };
     const project = {
       id: row.id,
       name: row.name,
-      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-      updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+      projectStatus: row.projectStatus ?? "ACTIVE",
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : String(row.createdAt),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : String(row.updatedAt),
       createdBy: row.createdBy ?? null,
     };
 
@@ -135,14 +107,6 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const model = getCommunicationProjectModel();
-    if (!model) {
-      return NextResponse.json(
-        { success: false, error: "Modèle Communication non disponible." },
-        { status: 503 }
-      );
-    }
-
     const updateData: Record<string, unknown> = {
       name: name.trim(),
       diagnosticContext: formData.diagnosticContext ?? null,
@@ -165,7 +129,7 @@ export async function PATCH(request: NextRequest) {
       evaluationAdjustments: formData.evaluationAdjustments ?? null,
     };
 
-    await model.update({
+    await prisma.communicationProject.update({
       where: { id },
       data: updateData,
     });
@@ -201,15 +165,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const model = getCommunicationProjectModel();
-    if (!model) {
-      return NextResponse.json(
-        { success: false, error: "Modèle Communication non disponible." },
-        { status: 503 }
-      );
-    }
-
-    await model.delete({ where: { id } });
+    await prisma.communicationProject.delete({ where: { id } });
 
     try {
       revalidatePath("/communication/projets");

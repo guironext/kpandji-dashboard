@@ -28,9 +28,10 @@ const SCHEMA_ROLES = [
 
 type SchemaRole = (typeof SCHEMA_ROLES)[number];
 
-/** Legacy typo used in Clerk metadata and onboarding UI */
+/** Legacy typos used in Clerk metadata and onboarding UI */
 const ROLE_ALIASES: Record<string, SchemaRole> = {
   INFOGRAPHIE: "INFOGRAPHIE",
+  INFORGRAPHIE: "INFOGRAPHIE",
 };
 
 export function normalizeUserRole(role: unknown): UserRole {

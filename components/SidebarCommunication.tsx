@@ -6,10 +6,8 @@ import {
   Target,
   Rocket,
   BarChart3,
-  Mail,
   MessageSquare,
   Megaphone,
-  ListTodo,
   FileText,
   type LucideIcon,
 } from "lucide-react";
@@ -56,7 +54,7 @@ const navItems: NavItem[] = [
     id: 4,
     icon: Rocket,
     label: "Rapports Projets",
-    href: "/communication/mise-oeuvre",
+    href: "/communication/rapport-projets",
     category: "projets",
   },
   {
@@ -66,33 +64,20 @@ const navItems: NavItem[] = [
     href: "/communication/objectifs-principaux",
     category: "operations",
   },
-  {
-    id: 6,
-    icon: Mail,
-    label: "Calendrier",
-    href: "/communication/calendrier",
-    category: "operations",
-  },
+
   {
     id: 7,
     icon: MessageSquare,
-    label: "Operations",
-    href: "/communication/operations",
+    label: "Performances",
+    href: "/communication/performances",
     category: "operations",
   },
   {
     id: 8,
     icon: MessageSquare,
     label: "Courriers Messages",
-    href: "/communication/courriers-messages",
+    href: "/communication/numero-courrier",
     category: "courriers-messages",
-  },
-  {
-    id: 9,
-    icon: ListTodo,
-    label: "Tâches",
-    href: "/communication/taches",
-    category: "projets",
   },
   {
     id: 10,

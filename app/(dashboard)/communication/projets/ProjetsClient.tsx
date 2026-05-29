@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import {
   Card,
@@ -16,9 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import type {
-  CommunicationProjectInput,
-  CommunicationProjectListItem,
+import {
+  createCommunicationProject,
+  type CommunicationProjectInput,
+  type CommunicationProjectListItem,
 } from "@/lib/actions/communication-project";
 import { toast } from "sonner";
 import {
@@ -59,11 +61,14 @@ const STEPS = [
 export default function ProjetsClient({
   initialProjects,
   embedded,
+  projectsBasePath = "/communication/projets",
 }: {
   initialProjects: CommunicationProjectListItem[];
   embedded?: boolean;
+  projectsBasePath?: string;
 }) {
   const router = useRouter();
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [projects, setProjects] = useState(initialProjects);
   const [isCreating, setIsCreating] = useState(false);
   const [step, setStep] = useState(1);
@@ -130,23 +135,26 @@ export default function ProjetsClient({
       toast.error("Le nom du projet est obligatoire.");
       return;
     }
+    if (!clerkLoaded) {
+      toast.error("Chargement de la session, veuillez réessayer.");
+      return;
+    }
+    if (!clerkUser?.id) {
+      toast.error("Vous devez être connecté pour créer un projet.");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/communication/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const result = await res.json();
-      if (res.ok && result.success && result.project) {
+      const result = await createCommunicationProject(form, clerkUser.id);
+      if (result.success && result.project) {
         const p = result.project;
         setProjects((prev) => [
           {
             id: p.id,
             name: p.name,
             projectStatus: (p.projectStatus ?? "ACTIVE") as "ACTIVE" | "INACTIVE",
-            createdAt: typeof p.createdAt === "string" ? new Date(p.createdAt) : p.createdAt,
-            updatedAt: typeof p.updatedAt === "string" ? new Date(p.updatedAt) : p.updatedAt,
+            createdAt: new Date(p.createdAt),
+            updatedAt: new Date(p.updatedAt),
             createdBy: p.createdBy,
           },
           ...prev,
@@ -154,17 +162,13 @@ export default function ProjetsClient({
         toast.success("Projet de communication créé avec succès.");
         handleCancelCreate();
         router.refresh();
-      } else {
-        toast.error(result?.error ?? "Erreur lors de la création.");
+      } else if (!result.success) {
+        toast.error(result.error ?? "Erreur lors de la création.");
       }
     } catch (err) {
       console.error("Création projet:", err);
       const rawMessage = err instanceof Error ? err.message : typeof err === "string" ? err : "";
-      const message =
-        rawMessage === "Failed to fetch" || rawMessage.includes("fetch")
-          ? "Impossible de contacter le serveur. Vérifiez que l'application tourne et réessayez."
-          : rawMessage || "Erreur lors de la création du projet.";
-      toast.error(message);
+      toast.error(rawMessage || "Erreur lors de la création du projet.");
     } finally {
       setIsSubmitting(false);
     }
@@ -205,7 +209,7 @@ export default function ProjetsClient({
             className="w-full shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-700 hover:to-indigo-700 hover:shadow-violet-500/30 sm:w-auto"
           >
             <Plus className="mr-2 h-5 w-5" />
-            Nouveau projet
+            Nouveau projet de communication
           </Button>
         </div>
       </header>
@@ -456,7 +460,7 @@ export default function ProjetsClient({
               const isActive = p.projectStatus === "ACTIVE";
               return (
                 <li key={p.id}>
-                  <Link href={`/communication/projets/${p.id}`} className="block h-full">
+                  <Link href={`${projectsBasePath}/${p.id}`} className="block h-full">
                     <Card className="group flex h-full flex-col overflow-hidden border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50">
                       <CardContent className="flex flex-1 flex-col gap-4 p-5">
                         <div className="flex items-start justify-between gap-3">

@@ -3,8 +3,8 @@ import RapportProjetsClient from "./RapportProjetsClient";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Rapport des Projets | Communication",
-  description: "Rapport de tous les projets de communication, du plus récent au plus ancien",
+  title: "Rapport des projets | Communication",
+  description: "Clôture et synthèse des projets de communication",
 };
 
 export default async function RapportProjetsPage() {

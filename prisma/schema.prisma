@@ -9,40 +9,45 @@ datasource db {
 }
 
 model User {
-  id                        String                      @id @default(uuid())
-  clerkId                   String                      @unique
-  email                     String                      @unique
-  firstName                 String
-  lastName                  String
-  role                      UserRole                    @default(EMPLOYEE)
-  department                String?
-  createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime                    @updatedAt
-  telephone                 String?
-  CalendrierSortie          CalendrierSortie[]
-  Client                    Client[]
-  Client_entreprise         Client_entreprise[]
-  CommunicationProject      CommunicationProject[]
-  Employee                  Employee[]
-  Facture                   Facture[]
-  ReceivedMessages          Message[]                   @relation("ReceivedMessages")
-  SentMessages              Message[]                   @relation("SentMessages")
-  NumeroCourrier            NumeroCourrier[]
-  ObjectifCible             ObjectifCible[]
-  ObjectifPeriod            ObjectifPeriod[]
-  ObjectifPole              ObjectifPole[]
-  Objectifsfinancieres      Objectifsfinancieres[]
-  Objectifsprospects        Objectifsprospects[]
-  Objectifsvehicules        Objectifsvehicules[]
-  Paiement                  Paiement[]
-  ReservationVehicule       ReservationVehicule[]
-  Signature                 Signature?
-  Tableau_chute             Tableau_chute[]
-  Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
-  NotificationsSent         Notification[]              @relation("NotificationsSent")
-  NotificationsReceived     Notification[]              @relation("NotificationsReceived")
-  Agenda                    Agenda[]
-  RapportActiviteAgenda     RapportActiviteAgenda[]
+  id                                 String                              @id @default(uuid())
+  clerkId                            String                              @unique
+  email                              String                              @unique
+  firstName                          String
+  lastName                           String
+  role                               UserRole                            @default(EMPLOYEE)
+  department                         String?
+  createdAt                          DateTime                            @default(now())
+  updatedAt                          DateTime                            @updatedAt
+  telephone                          String?
+  CalendrierSortie                   CalendrierSortie[]
+  Client                             Client[]
+  Client_entreprise                  Client_entreprise[]
+  CommunicationProject               CommunicationProject[]
+  Employee                           Employee[]
+  Facture                            Facture[]
+  ReceivedMessages                   Message[]                           @relation("ReceivedMessages")
+  SentMessages                       Message[]                           @relation("SentMessages")
+  NumeroCourrier                     NumeroCourrier[]
+  ObjectifCible                      ObjectifCible[]
+  ObjectifPeriod                     ObjectifPeriod[]
+  ObjectifPole                       ObjectifPole[]
+  Objectifsfinancieres               Objectifsfinancieres[]
+  Objectifsprospects                 Objectifsprospects[]
+  Objectifsvehicules                 Objectifsvehicules[]
+  Paiement                           Paiement[]
+  ReservationVehicule                ReservationVehicule[]
+  Signature                          Signature?
+  Tableau_chute                      Tableau_chute[]
+  Tableau_chute_rendez_vous          Tableau_chute_rendez_vous[]
+  NotificationsSent                  Notification[]                      @relation("NotificationsSent")
+  NotificationsReceived              Notification[]                      @relation("NotificationsReceived")
+  Agenda                             Agenda[]
+  RapportActiviteAgenda              RapportActiviteAgenda[]
+  objectifPrincipauxes               ObjectifPrincipaux[]
+  RubriqueObjectifGlobal             RubriqueObjectifGlobal[]
+  ObjectifGlobal                     ObjectifGlobal[]
+  publicationObjectifGlobalRubriques PublicationObjectifGlobalRubrique[]
+  JournalPublication                 JournalPublication[]
 }
 
 model Message {
@@ -189,15 +194,16 @@ model Attribution {
 }
 
 model BonDeCommande {
-  id            String   @id
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime
-  numero        String
-  factureId     String   @unique
-  prefix_numero String
-  Facture       Facture  @relation(fields: [factureId], references: [id])
+  id                     String              @id
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime
+  numero                 String
+  factureId              String              @unique
+  prefix_numero          String
+  Facture                Facture             @relation(fields: [factureId], references: [id])
   status_bon_de_commande StatusBonDeCommande @default(EN_ATTENTE)
 }
+
 //set status_bon_de_commande=VALIDE_APPORT_INITIAL when facture.prix_unitaire*facture.nbr_voiture_commande*0.60 is greater than facture.total_ttc
 
 enum StatusBonDeCommande {
@@ -209,12 +215,12 @@ enum StatusBonDeCommande {
 }
 
 model BonPourAccord {
-  id                     String   @id @default(uuid())
-  createdAt              DateTime @default(now()) 
-  updatedAt              DateTime @updatedAt
+  id                     String              @id @default(uuid())
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
   numero_bon_pour_accord String
-  factureId              String   @unique
-  Facture                Facture  @relation(fields: [factureId], references: [id])
+  factureId              String              @unique
+  Facture                Facture             @relation(fields: [factureId], references: [id])
   status_bon_pour_accord StatusBonPourAccord @default(EN_ATTENTE)
 }
 
@@ -227,31 +233,28 @@ enum StatusBonPourAccord {
 }
 
 model LettreCommande {
-  id                      String   @id @default(uuid())
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  numero_lettre_commande  String
-  validite_lettre_commande Boolean @default(false)
-  
-  factureId               String   @unique
-  Facture                 Facture  @relation(fields: [factureId], references: [id])
+  id                       String   @id @default(uuid())
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  numero_lettre_commande   String
+  validite_lettre_commande Boolean  @default(false)
+
+  factureId                 String                      @unique
+  Facture                   Facture                     @relation(fields: [factureId], references: [id])
   Evolution_Lettre_Commande Evolution_Lettre_Commande[]
 }
 
 model Evolution_Lettre_Commande {
-  id                      String   @id @default(uuid())
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  etape_actuelle          String
-  etape_suivante          String
-  lettre_commandeId       String
-  LettreCommande          LettreCommande @relation(fields: [lettre_commandeId], references: [id], onDelete: Cascade)
+  id                String         @id @default(uuid())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  etape_actuelle    String
+  etape_suivante    String
+  lettre_commandeId String
+  LettreCommande    LettreCommande @relation(fields: [lettre_commandeId], references: [id], onDelete: Cascade)
 
   @@index([lettre_commandeId])
 }
-
-
-
 
 model Client_entreprise {
   id                           String              @id
@@ -324,17 +327,16 @@ model Commande {
   Voiture                              Voiture[]
   Fournisseur                          Fournisseur[]
   typeCommandeId                       String?
-  TypeCommande                         TypeCommande?   @relation(fields: [typeCommandeId], references: [id])
+  TypeCommande                         TypeCommande?      @relation(fields: [typeCommandeId], references: [id])
 }
 
 model TypeCommande {
-  id String @id
-  createdAt DateTime @default(now())
+  id        String          @id
+  createdAt DateTime        @default(now())
   updatedAt DateTime
-  nom TypeCommandeNom @default(PERSON_INDIVIDUEL)
-  Commande Commande[]
+  nom       TypeCommandeNom @default(PERSON_INDIVIDUEL)
+  Commande  Commande[]
 }
-
 
 model CommandeEnAttente {
   id                   String        @id
@@ -598,18 +600,19 @@ model Fournisseur {
 }
 
 model Partenaire {
-  id            String     @id
-  nom           String
-  email         String?
-  telephone     String?
-  adresse       String?
-  ville         String?
-  code_postal   String?
-  pays          String?
+  id              String         @id
+  nom             String
+  email           String?
+  telephone       String?
+  adresse         String?
+  ville           String?
+  code_postal     String?
+  pays            String?
   type_partenaire TypePartenaire
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime
 }
+
 enum TypePartenaire {
   FOURNISSEUR
   CLIENT
@@ -1068,6 +1071,7 @@ model VoitureModel {
   Voiture           Voiture[]
 }
 
+///departement communication
 model CommunicationProject {
   id                    String                      @id @default(uuid())
   name                  String
@@ -1111,8 +1115,24 @@ model CommunicationPlanAction {
   completed      Boolean                        @default(false)
   project        CommunicationProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignedActors CommunicationPlanActionActor[]
+  tasks          CommunicationPlanActionTask[]
 
   @@index([projectId])
+}
+
+model CommunicationPlanActionTask {
+  id         String                  @id @default(uuid())
+  title      String
+  startDate  DateTime
+  endDate    DateTime
+  stage      PlanActionTaskStage     @default(EN_ATTENTE_DEBUT)
+  orderIndex Int                     @default(0)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  actionId   String
+  action     CommunicationPlanAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([actionId])
 }
 
 model CommunicationProjectActor {
@@ -1154,6 +1174,140 @@ model CommunicationBudgetItem {
   project      CommunicationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+model ObjectifPrincipaux {
+  id          String  @id @default(uuid())
+  titre       String
+  description String?
+  status ObjectifPrincipauxStatus @default(ACTIVE)
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  userId                        String
+  User                          User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cycleObjectifGlobalRubrique   CycleObjectifGlobalRubrique? @relation(fields: [cycleObjectifGlobalRubriqueId], references: [id])
+  cycleObjectifGlobalRubriqueId String?
+
+  @@index([userId])
+}
+
+enum ObjectifPrincipauxStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model RubriqueObjectifGlobal {
+  id                                String                              @id @default(uuid())
+  rubrique                          String
+  createdAt                         DateTime                            @default(now())
+  updatedAt                         DateTime                            @updatedAt
+  CycleObjectifGlobalRubrique       CycleObjectifGlobalRubrique[]
+  PublicationObjectifGlobalRubrique PublicationObjectifGlobalRubrique[]
+  status                            RubriqueObjectifGlobalStatus          @default(ACTIVE)
+  userId                            String?
+  User                              User?                               @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+enum RubriqueObjectifGlobalStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model CycleObjectifGlobalRubrique {
+  id                                String                              @id @default(uuid())
+  createdAt                         DateTime                            @default(now())
+  updatedAt                         DateTime                            @updatedAt
+  titreCycle                        String
+  dateDebutCycle                    DateTime
+  dateFinCycle                      DateTime
+  status                            CycleObjectifGlobalRubriqueStatus   @default(ACTIVE)
+  rubriqueId                        String
+  RubriqueObjectifGlobal            RubriqueObjectifGlobal              @relation(fields: [rubriqueId], references: [id], onDelete: Cascade)
+  ObjectifGlobal                    ObjectifGlobal[]
+  ObjectifPrincipaux                ObjectifPrincipaux[]
+  PublicationObjectifGlobalRubrique PublicationObjectifGlobalRubrique[]
+}
+
+enum CycleObjectifGlobalRubriqueStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model PublicationObjectifGlobalRubrique {
+  id                   String                                  @id @default(uuid())
+  createdAt            DateTime                                @default(now())
+  updatedAt            DateTime                                @updatedAt
+  titrePublication     String
+  dateDebutPublication DateTime
+  dateFinPublication   DateTime
+  status               PublicationObjectifGlobalRubriqueStatus @default(ACTIVE)
+  objectifGlobalId     String
+  ObjectifGlobal       ObjectifGlobal                          @relation(fields: [objectifGlobalId], references: [id], onDelete: Cascade)
+  tasks                ObjectifGlobalTask[]
+
+  userId                        String
+  User                          User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rubriqueObjectifGlobal        RubriqueObjectifGlobal?      @relation(fields: [rubriqueObjectifGlobalId], references: [id])
+  rubriqueObjectifGlobalId      String?
+  cycleObjectifGlobalRubrique   CycleObjectifGlobalRubrique? @relation(fields: [cycleObjectifGlobalRubriqueId], references: [id])
+  cycleObjectifGlobalRubriqueId String?
+
+  JournalPublication JournalPublication[]
+
+  @@index([userId])
+}
+
+enum PublicationObjectifGlobalRubriqueStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model JournalPublication {
+  id                                 String                            @id @default(uuid())
+  createdAt                          DateTime                          @default(now())
+  updatedAt                          DateTime                          @updatedAt
+  titreJournal                       String
+  descriptionJournal                 String?
+  publicationId                      String
+  PublicationObjectifGlobalRubrique  PublicationObjectifGlobalRubrique @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  userId                             String
+  User                               User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([publicationId])
+  @@index([userId])
+}
+
+model ObjectifGlobal {
+  id                                String                              @id @default(uuid())
+  createdAt                         DateTime                            @default(now())
+  updatedAt                         DateTime                            @updatedAt
+  objectif                          String
+  cycleObjectifGlobalRubriqueId     String?
+  CycleObjectifGlobalRubrique       CycleObjectifGlobalRubrique?        @relation(fields: [cycleObjectifGlobalRubriqueId], references: [id], onDelete: Cascade)
+  frequence                         String
+  plateforme                        String
+  style_Thon                        String
+  userId                            String
+  User                              User                                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks                             ObjectifGlobalTask[]
+  PublicationObjectifGlobalRubrique PublicationObjectifGlobalRubrique[]
+}
+
+model ObjectifGlobalTask {
+  id                                  String                             @id @default(uuid())
+  title                               String
+  startDate                           DateTime
+  endDate                             DateTime
+  stage                               PlanActionTaskStage                @default(EN_ATTENTE_DEBUT)
+  orderIndex                          Int                                @default(0)
+  createdAt                           DateTime                           @default(now())
+  updatedAt                           DateTime                           @updatedAt
+  objectifId                          String
+  ObjectifGlobal                      ObjectifGlobal                     @relation(fields: [objectifId], references: [id], onDelete: Cascade)
+  PublicationObjectifGlobalRubrique   PublicationObjectifGlobalRubrique? @relation(fields: [publicationObjectifGlobalRubriqueId], references: [id], onDelete: Cascade)
+  publicationObjectifGlobalRubriqueId String?
+
+  @@index([objectifId])
 }
 
 /// Objectifs commerciaux 
@@ -1468,23 +1622,23 @@ model PieceSAV {
 }
 
 model Reparation {
-  id                   String   @id @default(uuid())
-  categorie_reparation String
-  detail_reparation    String?
-  quantite             Int      @default(0)
-  prix_unitaire        Decimal?
-  horaire_travail_prix      Decimal?
+  id                       String   @id @default(uuid())
+  categorie_reparation     String
+  detail_reparation        String?
+  quantite                 Int      @default(0)
+  prix_unitaire            Decimal?
+  horaire_travail_prix     Decimal?
   horaire_travail_duration String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
-  voitureSAVId     String
-  voitureSAV       VoitureSAV         @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
-  statut           StatutReparation   @default(EN_TRAITEMENT)
-  DetailDiagnostic DetailDiagnostic[]
-  PieceSAV         PieceSAV[]
+  voitureSAVId       String
+  voitureSAV         VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  statut             StatutReparation     @default(EN_TRAITEMENT)
+  DetailDiagnostic   DetailDiagnostic[]
+  PieceSAV           PieceSAV[]
   FactureProformaSAV FactureProformaSAV[]
-  Maintenance Maintenance[]
+  Maintenance        Maintenance[]
 }
 
 enum StatutReparation {
@@ -1497,19 +1651,19 @@ enum StatutReparation {
 }
 
 model Maintenance {
-  id String @id @default(uuid())
-  nom String
-  description String?
-  duree_maintenance String?
-  prix_maintenance Decimal?
-  reparationId String
-  reparation Reparation @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  id                     String                @id @default(uuid())
+  nom                    String
+  description            String?
+  duree_maintenance      String?
+  prix_maintenance       Decimal?
+  reparationId           String
+  reparation             Reparation            @relation(fields: [reparationId], references: [id], onDelete: Cascade)
   catergorieDiagnosticId String?
-  catergorieDiagnostic CatergorieDiagnostic? @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: SetNull)
-  factureProformaSAVs FactureProformaSAV[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  statut StatutMaintenance @default(EN_ATTENTE)
+  catergorieDiagnostic   CatergorieDiagnostic? @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: SetNull)
+  factureProformaSAVs    FactureProformaSAV[]
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  statut                 StatutMaintenance     @default(EN_ATTENTE)
 }
 
 enum StatutMaintenance {
@@ -1526,57 +1680,55 @@ model FactureProformaSAV {
   montant_ht     Decimal       @default(0) @db.Decimal(18, 2)
   statut_facture StatusFacture @default(EN_ATTENTE)
   remise         Decimal       @default(0) @db.Decimal(18, 2)
-  
-  montant_net_ht Decimal  @db.Decimal(18, 2)
-  tva            Decimal? @db.Decimal(18, 2)
-  montant_tva    Decimal  @default(0) @db.Decimal(18, 2)
-  total_ttc      Decimal  @default(0) @db.Decimal(18, 2)
-  avance_payee   Decimal  @default(0) @db.Decimal(18, 2)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+
+  montant_net_ht Decimal     @db.Decimal(18, 2)
+  tva            Decimal?    @db.Decimal(18, 2)
+  montant_tva    Decimal     @default(0) @db.Decimal(18, 2)
+  total_ttc      Decimal     @default(0) @db.Decimal(18, 2)
+  avance_payee   Decimal     @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   reparationId   String
-  reparation     Reparation @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  reparation     Reparation  @relation(fields: [reparationId], references: [id], onDelete: Cascade)
   maintenanceId  String
   maintenance    Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
 }
 
 model PersonnelSAV {
-  id                   String               @id @default(uuid())
+  id                   String              @id @default(uuid())
   nom                  String
   prenom               String
   email                String
   telephone            String
   specialite           String
   groupePersonnelSAVId String
-  groupePersonnelSAV   GroupePersonnelSAV   @relation("PersonnelGroupeMembres", fields: [groupePersonnelSAVId], references: [id], onDelete: Cascade)
-  groupeOuJeSuisChef   GroupePersonnelSAV?  @relation("PersonnelGroupeChef")
+  groupePersonnelSAV   GroupePersonnelSAV  @relation("PersonnelGroupeMembres", fields: [groupePersonnelSAVId], references: [id], onDelete: Cascade)
+  groupeOuJeSuisChef   GroupePersonnelSAV? @relation("PersonnelGroupeChef")
 }
 
 model GroupePersonnelSAV {
-  id              String         @id @default(uuid())
-  nom             String
-  chefGroupeId    String?        @unique
-  chefGroupe      PersonnelSAV?  @relation("PersonnelGroupeChef", fields: [chefGroupeId], references: [id], onDelete: SetNull)
-  personnelSAVs   PersonnelSAV[] @relation("PersonnelGroupeMembres")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  nom           String
+  chefGroupeId  String?        @unique
+  chefGroupe    PersonnelSAV?  @relation("PersonnelGroupeChef", fields: [chefGroupeId], references: [id], onDelete: SetNull)
+  personnelSAVs PersonnelSAV[] @relation("PersonnelGroupeMembres")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
-
 model Notification {
-  id String @id @default(uuid())
-  title String?
-  message String
-  href String?
-  type NotificationType @default(INFO)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  senderId String?
-  sender User? @relation("NotificationsSent", fields: [senderId], references: [id], onDelete: SetNull)
+  id         String           @id @default(uuid())
+  title      String?
+  message    String
+  href       String?
+  type       NotificationType @default(INFO)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  senderId   String?
+  sender     User?            @relation("NotificationsSent", fields: [senderId], references: [id], onDelete: SetNull)
   receiverId String?
-  receiver User? @relation("NotificationsReceived", fields: [receiverId], references: [id], onDelete: SetNull)
-  read Boolean @default(false)
-
+  receiver   User?            @relation("NotificationsReceived", fields: [receiverId], references: [id], onDelete: SetNull)
+  read       Boolean          @default(false)
 }
 
 enum NotificationType {
@@ -1588,23 +1740,22 @@ enum NotificationType {
 }
 
 model Agenda {
-  id String @id @default(uuid())
-  titre String
-  description String?
-  date DateTime
-  heureDebut DateTime
-  heureFin DateTime
-  lieu String?
-  color String @default("indigo")
-  type AgendaType @default(RENDEZ_VOUS_AVENIR )
-  statut AgendaStatut @default(EN_ATTENTE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(uuid())
+  titre                 String
+  description           String?
+  date                  DateTime
+  heureDebut            DateTime
+  heureFin              DateTime
+  lieu                  String?
+  color                 String                 @default("indigo")
+  type                  AgendaType             @default(RENDEZ_VOUS_AVENIR)
+  statut                AgendaStatut           @default(EN_ATTENTE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  userId                String
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   rapportActiviteAgenda RapportActiviteAgenda?
 }
-
 
 model RapportActiviteAgenda {
   id String @id @default(uuid())
@@ -1654,90 +1805,89 @@ model RapportActiviteAgenda {
 
   // Ownership: direct link to the authenticated user who authored the report.
   userId String?
-  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  agendaId String  @unique
-  agenda   Agenda  @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  agendaId String @unique
+  agenda   Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
 
-   @@index([userId])
+  @@index([userId])
 }
 
-
 model ListePresent {
-  id String @id @default(uuid())
-  nom String
-  prenoms String
-  email String?
-  telephone String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String                @id @default(uuid())
+  nom                     String
+  prenoms                 String
+  email                   String?
+  telephone               String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda   RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
 model ListeParticipantQrCode {
-  id String @id @default(uuid())
-  nom String
-  prenoms String
-  email String?
-  telephone String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String                @id @default(uuid())
+  nom                     String
+  prenoms                 String
+  email                   String?
+  telephone               String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda   RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
 model ListeOrdreDuJour {
-  id String @id @default(uuid())
-  ordreDuJour String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String                @id @default(uuid())
+  ordreDuJour             String
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda   RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
-model ListePointsAbordes {  
-  id String @id @default(uuid())
-  pointAborde String
-  resumePointsAbordes String?
-  problemesPointsAbordes String?
+model ListePointsAbordes {
+  id                        String                @id @default(uuid())
+  pointAborde               String
+  resumePointsAbordes       String?
+  problemesPointsAbordes    String?
   propositionsPointsAbordes String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  rapportActiviteAgendaId   String
+  rapportActiviteAgenda     RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
 model ListeDecisionsPrises {
-  id String @id @default(uuid())
-  decisionPrise String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String                @id @default(uuid())
+  decisionPrise           String
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda   RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
 model ListeActionsAExecuter {
-  id String @id @default(uuid())
-  actionAExecuter String
-  responsable String
-  dateExecution DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String                @id @default(uuid())
+  actionAExecuter         String
+  responsable             String
+  dateExecution           DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   rapportActiviteAgendaId String
-  rapportActiviteAgenda RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
+  rapportActiviteAgenda   RapportActiviteAgenda @relation(fields: [rapportActiviteAgendaId], references: [id], onDelete: Cascade)
 }
 
 model Documentation {
-  id String @id @default(uuid())
-  nom String
-  type TypeDocumentation
-  fichier String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String            @id @default(uuid())
+  nom       String
+  type      TypeDocumentation
+  fichier   String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 }
 
 enum TypeDocumentation {
@@ -1752,6 +1902,7 @@ enum TypeDocumentation {
   FICHE_TECHNIQUE
   CNI
 }
+
 enum AgendaType {
   RENDEZ_VOUS_AVENIR
   RENDEZ_VOUS_ANNULE
@@ -1770,6 +1921,7 @@ enum AgendaStatut {
   EN_COURS
   TERMINEE
 }
+
 enum StatutCalendrierSortie {
   EN_ATTENTE
   CONFIRME
@@ -1960,6 +2112,15 @@ enum ProjectStatus {
   INACTIVE
 }
 
+enum PlanActionTaskStage {
+  EN_ATTENTE_DEBUT
+  DEBUT
+  EN_COURS
+  EN_ATTENTE_VALIDATION
+  VALIDEE
+  TERMINEE
+}
+
 enum StatusFacture {
   EN_ATTENTE
   PROFORMA
@@ -1985,7 +2146,6 @@ enum Transmission {
   AUTOMATIQUE
   MANUEL
 }
-
 
 enum TypeCommandeNom {
   PERSON_INDIVIDUEL

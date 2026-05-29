@@ -31,6 +31,39 @@ import { Badge } from "@/components/ui/badge";
 
 type TabId = "creer-projet" | "plan-action" | "auteurs-roles" | "budget" | "resume-projet";
 
+export type ProjetsWorkspace = "communication" | "infographie";
+
+const WORKSPACE_CONFIG: Record<
+  ProjetsWorkspace,
+  {
+    badge: string;
+    title: string;
+    description: string;
+    heroGradient: string;
+    statText: string;
+    projectsBasePath: string;
+  }
+> = {
+  communication: {
+    badge: "Communication",
+    title: "Gestion des projets",
+    description:
+      "Créez, planifiez et pilotez vos projets — diagnostic, objectifs, budget et équipes.",
+    heroGradient: "from-sky-600 via-cyan-600 to-teal-700",
+    statText: "text-sky-100/80",
+    projectsBasePath: "/communication/projets",
+  },
+  infographie: {
+    badge: "Infographie",
+    title: "Gestion des projets",
+    description:
+      "Créez, planifiez et pilotez vos projets visuels — diagnostic, objectifs, budget et équipes.",
+    heroGradient: "from-violet-600 via-fuchsia-600 to-purple-700",
+    statText: "text-violet-100/80",
+    projectsBasePath: "/infographie/projets",
+  },
+};
+
 const TABS: {
   id: TabId;
   label: string;
@@ -135,6 +168,7 @@ type Props = {
   initialPlanActions: PlanActionItem[];
   initialBudgetItems: CommunicationBudgetItem[];
   budgetError: string | null;
+  workspace?: ProjetsWorkspace;
 };
 
 export default function ProjetsTabsClient({
@@ -142,7 +176,9 @@ export default function ProjetsTabsClient({
   initialPlanActions,
   initialBudgetItems,
   budgetError,
+  workspace = "communication",
 }: Props) {
+  const config = WORKSPACE_CONFIG[workspace];
   const [activeTab, setActiveTab] = useState<TabId>("creer-projet");
   const firstProjectId = projects[0]?.id ?? null;
   const activeTabConfig = TABS.find((t) => t.id === activeTab)!;
@@ -151,7 +187,12 @@ export default function ProjetsTabsClient({
 
   return (
     <div className="min-h-full -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
-      <section className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-600 via-cyan-600 to-teal-700 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8">
+      <section
+        className={cn(
+          "relative overflow-hidden rounded-b-3xl bg-gradient-to-br px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8",
+          config.heroGradient
+        )}
+      >
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_45%)]"
           aria-hidden
@@ -169,19 +210,19 @@ export default function ProjetsTabsClient({
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-sky-100 backdrop-blur-sm ring-1 ring-white/20">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm ring-1 ring-white/20">
                   <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                  Communication
+                  {config.badge}
                 </span>
                 <Badge className="border-0 bg-white/20 text-white hover:bg-white/25">
                   {projects.length} projet{projects.length !== 1 ? "s" : ""}
                 </Badge>
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                Gestion des projets
+                {config.title}
               </h1>
-              <p className="max-w-2xl text-sm text-sky-100/90 sm:text-base">
-                Créez, planifiez et pilotez vos projets — diagnostic, objectifs, budget et équipes.
+              <p className="max-w-2xl text-sm text-white/90 sm:text-base">
+                {config.description}
               </p>
             </div>
 
@@ -198,7 +239,7 @@ export default function ProjetsTabsClient({
                     stat.wide && "col-span-2 sm:col-span-1"
                   )}
                 >
-                  <p className="text-xs font-medium text-sky-100/80">{stat.label}</p>
+                  <p className={cn("text-xs font-medium", config.statText)}>{stat.label}</p>
                   <p className="mt-0.5 text-2xl font-bold text-white">{stat.value}</p>
                 </div>
               ))}
@@ -357,7 +398,11 @@ export default function ProjetsTabsClient({
             <div className="min-h-[min(60vh,520px)] bg-gradient-to-b from-white to-slate-50/40">
               {activeTab === "creer-projet" && (
                 <div className="animate-in fade-in duration-300">
-                  <ProjetsClient initialProjects={projects} embedded />
+                  <ProjetsClient
+                    initialProjects={projects}
+                    embedded
+                    projectsBasePath={config.projectsBasePath}
+                  />
                 </div>
               )}
               {activeTab === "plan-action" && (

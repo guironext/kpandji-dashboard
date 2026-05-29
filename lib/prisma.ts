@@ -48,8 +48,8 @@ function configureDatabaseUrl(): void {
 
 configureDatabaseUrl();
 
-export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient({
     log:
       process.env.NODE_ENV === "development"
         ? process.env.PRISMA_LOG === "1"
@@ -57,10 +57,43 @@ export const prisma =
           : [] // Suppress E57P01 connection noise; PRISMA_LOG=1 to debug
         : ["error"],
   });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
 }
+
+/** Delegates that must exist after the latest `prisma generate` (dev singleton can go stale). */
+const REQUIRED_PRISMA_DELEGATES = ["objectifGlobalTask"] as const;
+
+function prismaHasRequiredDelegates(client: PrismaClient): boolean {
+  const record = client as unknown as Record<string, { findMany?: unknown } | undefined>;
+  return REQUIRED_PRISMA_DELEGATES.every(
+    (key) => typeof record[key]?.findMany === "function"
+  );
+}
+
+function resolvePrismaClient(): PrismaClient {
+  const cached = globalForPrisma.prisma;
+
+  if (
+    process.env.NODE_ENV !== "production" &&
+    cached &&
+    !prismaHasRequiredDelegates(cached)
+  ) {
+    console.warn(
+      "[Prisma] Stale client detected after schema change — reconnecting. Run `npx prisma generate` if this persists."
+    );
+    void cached.$disconnect().catch(() => {});
+    globalForPrisma.prisma = undefined;
+  }
+
+  const client = globalForPrisma.prisma ?? createPrismaClient();
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client;
+  }
+
+  return client;
+}
+
+export const prisma = resolvePrismaClient();
 
 // Helper function to execute queries with retry logic
 export async function executeWithRetry<T>(

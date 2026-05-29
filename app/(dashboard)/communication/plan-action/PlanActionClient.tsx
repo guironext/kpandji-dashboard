@@ -483,7 +483,7 @@ export default function PlanActionClient({
             </Tabs>
           </div>
 
-          <div className="hidden gap-6 lg:grid lg:grid-cols-5 xl:gap-8">
+          <div className="flex flex-col gap-6">
             <Card className="border-slate-200/80 bg-white/80 shadow-sm lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2">

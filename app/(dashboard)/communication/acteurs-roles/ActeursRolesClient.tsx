@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,7 +45,16 @@ import {
   Link2,
 } from "lucide-react";
 import type { CommunicationProjectListItem } from "@/lib/actions/communication-project";
-import type { CommunicationProjectActor } from "@/lib/actions/communication-actor";
+import type {
+  CommunicationProjectActor,
+  UserForActorOption,
+} from "@/lib/actions/communication-actor";
+import {
+  createProjectActor,
+  deleteProjectActor,
+  getActorsByProject,
+  getUsersForProjectActors,
+} from "@/lib/actions/communication-actor";
 import type { PlanActionItem } from "@/lib/actions/communication-plan-action";
 import { getPlanActionsByProjectId } from "@/lib/actions/communication-plan-action";
 import {
@@ -125,6 +133,9 @@ export default function ActeursRolesClient({
   const [isLoadingActions, setIsLoadingActions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [users, setUsers] = useState<UserForActorOption[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     department: "",
@@ -149,41 +160,76 @@ export default function ActeursRolesClient({
     }
   }, [selectedProjectId]);
 
+  useEffect(() => {
+    if (!dialogOpen) {
+      setSelectedUserId("");
+      setFormData({ name: "", department: "", job: "" });
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      setIsLoadingUsers(true);
+      try {
+        const result = await getUsersForProjectActors();
+        if (cancelled) return;
+        if (result.success) {
+          setUsers(result.users);
+        } else {
+          toast.error(result.error || "Erreur lors du chargement des utilisateurs");
+          setUsers([]);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error loading users:", error);
+        toast.error("Erreur lors du chargement des utilisateurs");
+        setUsers([]);
+      } finally {
+        if (!cancelled) setIsLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen]);
+
+  const availableUsers = useMemo(() => {
+    const existingNames = new Set(
+      actors.map((a) => a.name.trim().toLowerCase())
+    );
+    return users.filter(
+      (u) => !existingNames.has(u.name.trim().toLowerCase())
+    );
+  }, [users, actors]);
+
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      setFormData({
+        name: user.name,
+        department: user.department,
+        job: user.job,
+      });
+    }
+  };
+
   const loadActors = async (projectId: string) => {
     setIsLoadingActors(true);
     try {
-      const response = await fetch(
-        `/api/communication/actors?projectId=${projectId}`
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "Erreur lors du chargement des acteurs";
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Erreur ${response.status}: ${errorText || response.statusText}`;
-        }
-        toast.error(errorMessage);
-        setActors([]);
-        return;
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setActors(data.actors);
+      const result = await getActorsByProject(projectId);
+      if (result.success) {
+        setActors(result.actors);
       } else {
         toast.error("Erreur lors du chargement des acteurs");
         setActors([]);
       }
     } catch (error) {
       console.error("Error loading actors:", error);
-      toast.error(
-        error instanceof Error
-          ? `Erreur réseau: ${error.message}`
-          : "Erreur lors du chargement des acteurs."
-      );
+      toast.error("Erreur lors du chargement des acteurs.");
       setActors([]);
     } finally {
       setIsLoadingActors(false);
@@ -222,64 +268,37 @@ export default function ActeursRolesClient({
       return;
     }
 
+    if (!selectedUserId) {
+      toast.error("Veuillez sélectionner un utilisateur");
+      return;
+    }
+
     if (!formData.name.trim()) {
       toast.error("Le nom de l'acteur est obligatoire");
       return;
     }
 
-    if (!formData.department.trim()) {
-      toast.error("Le département est obligatoire");
-      return;
-    }
-
-    if (!formData.job.trim()) {
-      toast.error("Le poste est obligatoire");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/communication/actors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: selectedProjectId,
-          name: formData.name.trim(),
-          department: formData.department.trim(),
-          job: formData.job.trim(),
-        }),
+      const result = await createProjectActor({
+        projectId: selectedProjectId,
+        name: formData.name.trim(),
+        department: formData.department.trim(),
+        job: formData.job.trim(),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "Erreur lors de l'ajout de l'acteur";
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Erreur ${response.status}: ${errorText || response.statusText}`;
-        }
-        toast.error(errorMessage);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (result.success) {
         toast.success("Acteur ajouté avec succès");
+        setSelectedUserId("");
         setFormData({ name: "", department: "", job: "" });
         setDialogOpen(false);
         await loadActors(selectedProjectId);
       } else {
-        toast.error(data.error || "Erreur lors de l'ajout de l'acteur");
+        toast.error(result.error || "Erreur lors de l'ajout de l'acteur");
       }
     } catch (error) {
       console.error("Error adding actor:", error);
-      toast.error(
-        error instanceof Error
-          ? `Erreur réseau: ${error.message}`
-          : "Erreur lors de l'ajout de l'acteur."
-      );
+      toast.error("Erreur lors de l'ajout de l'acteur.");
     } finally {
       setIsSubmitting(false);
     }
@@ -289,40 +308,18 @@ export default function ActeursRolesClient({
     if (!confirm("Êtes-vous sûr de vouloir supprimer cet acteur ?")) return;
 
     try {
-      const response = await fetch(
-        `/api/communication/actors?actorId=${actorId}&projectId=${selectedProjectId}`,
-        { method: "DELETE" }
-      );
+      const result = await deleteProjectActor(actorId, selectedProjectId);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "Erreur lors de la suppression de l'acteur";
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Erreur ${response.status}: ${errorText || response.statusText}`;
-        }
-        toast.error(errorMessage);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (result.success) {
         toast.success("Acteur supprimé avec succès");
         await loadActors(selectedProjectId);
         await loadAssignments(selectedProjectId);
       } else {
-        toast.error(data.error || "Erreur lors de la suppression de l'acteur");
+        toast.error(result.error || "Erreur lors de la suppression de l'acteur");
       }
     } catch (error) {
       console.error("Error deleting actor:", error);
-      toast.error(
-        error instanceof Error
-          ? `Erreur réseau: ${error.message}`
-          : "Erreur lors de la suppression de l'acteur."
-      );
+      toast.error("Erreur lors de la suppression de l'acteur.");
     }
   };
 
@@ -504,38 +501,79 @@ export default function ActeursRolesClient({
                   <DialogHeader>
                     <DialogTitle>Nouvel acteur</DialogTitle>
                     <DialogDescription>
-                      Renseignez les informations de l&apos;acteur à ajouter au
-                      projet
+                      Sélectionnez un utilisateur de l&apos;organisation à
+                      ajouter au projet
                       {selectedProject ? ` « ${selectedProject.name} »` : ""}.
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormField
-                      id="dialog-name"
-                      label="Nom"
-                      required
-                      placeholder="Ex : Jean Dupont"
-                      value={formData.name}
-                      onChange={(v) => setFormData({ ...formData, name: v })}
-                    />
-                    <FormField
-                      id="dialog-department"
-                      label="Département"
-                      required
-                      placeholder="Ex : Marketing"
-                      value={formData.department}
-                      onChange={(v) =>
-                        setFormData({ ...formData, department: v })
-                      }
-                    />
-                    <FormField
-                      id="dialog-job"
-                      label="Poste"
-                      required
-                      placeholder="Ex : Responsable communication"
-                      value={formData.job}
-                      onChange={(v) => setFormData({ ...formData, job: v })}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="dialog-user">
+                        Utilisateur <span className="text-rose-500">*</span>
+                      </Label>
+                      {isLoadingUsers ? (
+                        <div className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-500">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Chargement des utilisateurs...
+                        </div>
+                      ) : availableUsers.length === 0 ? (
+                        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                          {users.length === 0
+                            ? "Aucun utilisateur trouvé dans la base de données."
+                            : "Tous les utilisateurs sont déjà acteurs de ce projet."}
+                        </p>
+                      ) : (
+                        <Select
+                          value={selectedUserId}
+                          onValueChange={handleUserSelect}
+                        >
+                          <SelectTrigger
+                            id="dialog-user"
+                            className={cn("border-slate-200", accent.ring)}
+                          >
+                            <SelectValue placeholder="Choisir un utilisateur..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {availableUsers.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <span className="flex flex-col items-start gap-0.5">
+                                  <span className="font-medium">
+                                    {user.name}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {user.email}
+                                  </span>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    {selectedUserId && (
+                      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                        <div className="flex items-start gap-2 text-sm">
+                          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                          <div>
+                            <p className="font-medium text-slate-700">
+                              Département
+                            </p>
+                            <p className="text-slate-600">
+                              {formData.department}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm">
+                          <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                          <div>
+                            <p className="font-medium text-slate-700">
+                              Poste
+                            </p>
+                            <p className="text-slate-600">{formData.job}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
                       <Button
                         type="button"
@@ -547,7 +585,12 @@ export default function ActeursRolesClient({
                       </Button>
                       <Button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={
+                          isSubmitting ||
+                          isLoadingUsers ||
+                          !selectedUserId ||
+                          availableUsers.length === 0
+                        }
                         className={cn("w-full sm:w-auto", accent.button)}
                       >
                         {isSubmitting ? (
@@ -924,39 +967,6 @@ export default function ActeursRolesClient({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function FormField({
-  id,
-  label,
-  required,
-  placeholder,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  required?: boolean;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>
-        {label}
-        {required && <span className="text-rose-500"> *</span>}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="border-slate-200"
-      />
     </div>
   );
 }

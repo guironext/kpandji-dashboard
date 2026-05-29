@@ -1,19 +1,44 @@
 "use server";
 
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
+import { getOrCreateUser } from "./user";
+import {
+  buildProjectCreateData,
+  type CommunicationProjectInput,
+} from "../communication-project-data";
 
-// Guard: model may be missing until "npx prisma generate" is run after schema change
-function getCommunicationProjectModel() {
-  return (prisma as unknown as Record<string, unknown>).communicationProject as
-    | {
-        findMany: (args: object) => Promise<unknown[]>;
-        findUnique: (args: object) => Promise<unknown | null>;
-        create: (args: object) => Promise<unknown>;
-        update: (args: object) => Promise<unknown>;
-        delete: (args: object) => Promise<unknown>;
+function optionalText(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function revalidateProjectPaths(projectId?: string) {
+  const paths = [
+    "/communication/projets",
+    "/communication",
+    "/infographie/projets",
+    "/infographie",
+  ];
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch {
+      // ignore
+    }
+  }
+  if (projectId) {
+    for (const base of ["/communication/projets", "/infographie/projets"]) {
+      try {
+        revalidatePath(`${base}/${projectId}`);
+      } catch {
+        // ignore
       }
-    | undefined;
+    }
+  }
 }
 
 export type CommunicationProjectListItem = {
@@ -25,28 +50,7 @@ export type CommunicationProjectListItem = {
   createdBy: { firstName: string; lastName: string } | null;
 };
 
-export type CommunicationProjectInput = {
-  name: string;
-  createdById?: string | null;
-  diagnosticContext?: string | null;
-  diagnosticTarget?: string | null;
-  diagnosticEnvironment?: string | null;
-  diagnosticForces?: string | null;
-  objectives?: string | null;
-  strategyPositioning?: string | null;
-  strategyTargets?: string | null;
-  strategyChannels?: string | null;
-  actionPlan?: string | null;
-  actionSupports?: string | null;
-  actionCalendar?: string | null;
-  actionBudget?: string | null;
-  implementationContent?: string | null;
-  implementationLaunch?: string | null;
-  implementationTeams?: string | null;
-  evaluationMetrics?: string | null;
-  evaluationComparison?: string | null;
-  evaluationAdjustments?: string | null;
-};
+export type { CommunicationProjectInput } from "../communication-project-data";
 
 export type SerializedCommunicationProjectListItem = Omit<CommunicationProjectListItem, "createdAt" | "updatedAt"> & {
   createdAt: string;
@@ -90,54 +94,56 @@ export type CreateCommunicationProjectResult =
   | { success: true; project: SerializedCommunicationProjectListItem }
   | { success: false; error: string };
 
+/** Pass clerkUserId from the client (useUser().id) when auth() is unavailable in server actions. */
 export async function createCommunicationProject(
-  data: CommunicationProjectInput
+  data: CommunicationProjectInput,
+  clerkUserId?: string,
 ): Promise<CreateCommunicationProjectResult> {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return {
-      success: false,
-      error: "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
-    };
+  if (!data.name?.trim()) {
+    return { success: false, error: "Le nom du projet est obligatoire." };
   }
+
   try {
-    const raw = await model.create({
-      data: {
-        name: data.name,
-        createdById: data.createdById ?? undefined,
-        diagnosticContext: data.diagnosticContext ?? undefined,
-        diagnosticTarget: data.diagnosticTarget ?? undefined,
-        diagnosticEnvironment: data.diagnosticEnvironment ?? undefined,
-        diagnosticForces: data.diagnosticForces ?? undefined,
-        objectives: data.objectives ?? undefined,
-        strategyPositioning: data.strategyPositioning ?? undefined,
-        strategyTargets: data.strategyTargets ?? undefined,
-        strategyChannels: data.strategyChannels ?? undefined,
-        actionPlan: data.actionPlan ?? undefined,
-        actionSupports: data.actionSupports ?? undefined,
-        actionCalendar: data.actionCalendar ?? undefined,
-        actionBudget: data.actionBudget ?? undefined,
-        implementationContent: data.implementationContent ?? undefined,
-        implementationLaunch: data.implementationLaunch ?? undefined,
-        implementationTeams: data.implementationTeams ?? undefined,
-        evaluationMetrics: data.evaluationMetrics ?? undefined,
-        evaluationComparison: data.evaluationComparison ?? undefined,
-        evaluationAdjustments: data.evaluationAdjustments ?? undefined,
-      },
-    });
-    try {
-      revalidatePath("/communication/projets");
-      revalidatePath("/communication");
-    } catch {
-      // ignore revalidate errors
+    let clerkId = clerkUserId;
+    if (!clerkId) {
+      const authResult = await auth();
+      clerkId = authResult?.userId ?? undefined;
     }
-    const row = raw as { id: string; name: string; projectStatus: "ACTIVE" | "INACTIVE"; createdAt: Date; updatedAt: Date; createdBy?: { firstName: string; lastName: string } | null };
+    if (!clerkId) {
+      const clerkUser = await currentUser();
+      clerkId = clerkUser?.id;
+    }
+    if (!clerkId) {
+      return { success: false, error: "Vous devez être connecté pour créer un projet." };
+    }
+
+    const userResult = await getOrCreateUser(clerkId);
+    if (!userResult.success || !userResult.data) {
+      return {
+        success: false,
+        error: userResult.error ?? "Utilisateur introuvable.",
+      };
+    }
+
+    const row = await prisma.communicationProject.create({
+      data: buildProjectCreateData(data, userResult.data.id),
+      include: { createdBy: { select: { firstName: true, lastName: true } } },
+    });
+
+    revalidateProjectPaths();
+
     const project = {
       id: row.id,
       name: row.name,
       projectStatus: row.projectStatus ?? "ACTIVE",
-      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
-      updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : String(row.createdAt),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : String(row.updatedAt),
       createdBy: row.createdBy ?? null,
     };
     return { success: true, project };
@@ -155,15 +161,11 @@ export async function getCommunicationProjects(): Promise<
   | { success: true; projects: CommunicationProjectListItem[] }
   | { success: false; projects: [] }
 > {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return { success: true, projects: [] };
-  }
   try {
-    const projects = (await model.findMany({
+    const projects = await prisma.communicationProject.findMany({
       orderBy: { updatedAt: "desc" },
       include: { createdBy: { select: { firstName: true, lastName: true } } },
-    })) as CommunicationProjectListItem[];
+    });
     return { success: true, projects };
   } catch (error) {
     console.error("getCommunicationProjects error:", error);
@@ -176,15 +178,11 @@ export async function getCommunicationProjectsForReport(): Promise<
   | { success: true; projects: CommunicationProjectListItem[] }
   | { success: false; projects: [] }
 > {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return { success: true, projects: [] };
-  }
   try {
-    const projects = (await model.findMany({
+    const projects = await prisma.communicationProject.findMany({
       orderBy: { createdAt: "desc" },
       include: { createdBy: { select: { firstName: true, lastName: true } } },
-    })) as CommunicationProjectListItem[];
+    });
     return { success: true, projects };
   } catch (error) {
     console.error("getCommunicationProjectsForReport error:", error);
@@ -196,16 +194,12 @@ export async function getActiveCommunicationProjects(): Promise<
   | { success: true; projects: CommunicationProjectListItem[] }
   | { success: false; projects: [] }
 > {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return { success: true, projects: [] };
-  }
   try {
-    const projects = (await model.findMany({
+    const projects = await prisma.communicationProject.findMany({
       where: { projectStatus: "ACTIVE" },
       orderBy: { updatedAt: "desc" },
       include: { createdBy: { select: { firstName: true, lastName: true } } },
-    })) as CommunicationProjectListItem[];
+    });
     return { success: true, projects };
   } catch (error) {
     console.error("getActiveCommunicationProjects error:", error);
@@ -216,15 +210,11 @@ export async function getActiveCommunicationProjects(): Promise<
 export async function getCommunicationProjectById(
   id: string
 ): Promise<GetCommunicationProjectByIdResult> {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return { success: true, project: null };
-  }
   try {
-    const project = (await model.findUnique({
+    const project = await prisma.communicationProject.findUnique({
       where: { id },
       include: { createdBy: { select: { firstName: true, lastName: true } } },
-    })) as CommunicationProjectDetail | null;
+    });
     return { success: true, project };
   } catch (error) {
     console.error("getCommunicationProjectById error:", error);
@@ -240,13 +230,6 @@ export async function updateCommunicationProject(
   id: string,
   data: Partial<CommunicationProjectInput> & { name?: string }
 ): Promise<UpdateCommunicationProjectResult> {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return {
-      success: false,
-      error: "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
-    };
-  }
   try {
     const updateData: Record<string, unknown> = {};
     const fields: (keyof CommunicationProjectInput)[] = [
@@ -274,23 +257,21 @@ export async function updateCommunicationProject(
     for (const key of fields) {
       if (key in data) {
         const val = data[key];
-        updateData[key] = val === "" || val === null ? null : val;
+        if (key === "name" && typeof val === "string") {
+          updateData[key] = val.trim();
+        } else {
+          updateData[key] = optionalText(val);
+        }
       }
     }
     if (Object.keys(updateData).length === 0) {
       return { success: true };
     }
-    await model.update({
+    await prisma.communicationProject.update({
       where: { id },
       data: updateData,
     });
-    try {
-      revalidatePath("/communication/projets");
-      revalidatePath(`/communication/projets/${id}`);
-      revalidatePath("/communication");
-    } catch {
-      // ignore revalidate errors
-    }
+    revalidateProjectPaths(id);
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -309,24 +290,15 @@ export type DeleteCommunicationProjectResult =
 export async function deleteCommunicationProject(
   id: string
 ): Promise<DeleteCommunicationProjectResult> {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return {
-      success: false,
-      error: "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
-    };
-  }
   try {
-    await model.delete({
+    await prisma.communicationProject.delete({
       where: { id },
     });
+    revalidateProjectPaths(id);
     try {
-      revalidatePath("/communication/projets");
-      revalidatePath(`/communication/projets/${id}`);
       revalidatePath("/communication/resume-projet");
-      revalidatePath("/communication");
     } catch {
-      // ignore revalidate errors
+      // ignore
     }
     return { success: true };
   } catch (error) {
@@ -346,15 +318,8 @@ export type SetProjectStatusInactiveResult =
 export async function setProjectStatusInactive(
   projectId: string
 ): Promise<SetProjectStatusInactiveResult> {
-  const model = getCommunicationProjectModel();
-  if (!model) {
-    return {
-      success: false,
-      error: "Modèle Communication non disponible. Exécutez « npx prisma generate » puis « npx prisma migrate dev ».",
-    };
-  }
   try {
-    await model.update({
+    await prisma.communicationProject.update({
       where: { id: projectId },
       data: { projectStatus: "INACTIVE" },
     });

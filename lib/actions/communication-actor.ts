@@ -25,6 +25,95 @@ export type CommunicationProjectActor = {
   updatedAt: Date;
 };
 
+export type UserForActorOption = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  name: string;
+  department: string;
+  job: string;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Administrateur",
+  MANAGER: "Manager",
+  COMMERCIAL: "Commercial",
+  CHEFUSINE: "Chef d'usine",
+  CHEFEQUIPE: "Chef d'équipe",
+  MAGASINIER: "Magasinier",
+  RH: "Ressources humaines",
+  CHEFQUALITE: "Chef qualité",
+  EMPLOYEE: "Employé",
+  SAV: "SAV",
+  LOGISTIQUE: "Logistique",
+  FINANCE: "Finance",
+  DIRECTEUR_GENERAL: "Directeur général",
+  CLIENTELLE: "Clientèle",
+  COMPTABLE: "Comptable",
+  CONCESSIONAIRE: "Concessionnaire",
+  SUPERVISEUR: "Superviseur",
+  COMMUNICATION: "Communication",
+  RESPONSABLE_COMMERCIAL: "Responsable commercial",
+  ASSISTANTE: "Assistante",
+  INFOGRAPHIE: "Infographie",
+  COMMUNITY_MANAGER: "Community manager",
+};
+
+function roleToJob(role: string): string {
+  return ROLE_LABELS[role] ?? role.replace(/_/g, " ").toLowerCase();
+}
+
+export type GetUsersForActorsResult =
+  | { success: true; users: UserForActorOption[] }
+  | { success: false; users: []; error: string };
+
+export async function getUsersForProjectActors(): Promise<GetUsersForActorsResult> {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        department: true,
+        role: true,
+        Employee: {
+          select: { poste: true },
+          take: 1,
+        },
+      },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+    });
+
+    const options: UserForActorOption[] = users.map((user) => {
+      const poste = user.Employee[0]?.poste?.trim();
+      const department = user.department?.trim() || "Non renseigné";
+      const job = poste || roleToJob(user.role);
+
+      return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`.trim(),
+        department,
+        job,
+      };
+    });
+
+    return { success: true, users: options };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("getUsersForProjectActors error:", error);
+    return {
+      success: false,
+      users: [],
+      error: message || "Erreur lors du chargement des utilisateurs",
+    };
+  }
+}
+
 export type CreateActorInput = {
   projectId: string;
   name: string;

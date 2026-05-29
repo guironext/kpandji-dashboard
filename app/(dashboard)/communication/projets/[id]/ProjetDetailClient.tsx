@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import type {
   CommunicationProjectDetail,
   CommunicationProjectInput,
@@ -36,17 +36,12 @@ import {
   BarChart3,
   AlertTriangle,
   User,
+  Sparkles,
+  Layers,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STEP_COLORS = [
-  { gradient: "from-violet-500 to-purple-600" },
-  { gradient: "from-amber-500 to-orange-500" },
-  { gradient: "from-emerald-500 to-teal-500" },
-  { gradient: "from-rose-500 to-pink-500" },
-  { gradient: "from-sky-500 to-blue-500" },
-  { gradient: "from-cyan-500 to-teal-500" },
-] as const;
+import { PROJECT_STEP_COLORS } from "../project-sections";
 
 const STEPS = [
   { id: 1, title: "Analyse de la situation", icon: Search, fields: ["name", "diagnosticContext", "diagnosticTarget", "diagnosticEnvironment", "diagnosticForces"] as const },
@@ -106,9 +101,24 @@ function toFormData(project: CommunicationProjectDetail): CommunicationProjectIn
 type Props = {
   project: CommunicationProjectDetail;
   children: React.ReactNode;
+  projetsListPath?: string;
+  hasAnyContent: boolean;
+  progressPercent: number;
+  filledFields: number;
+  totalFields: number;
+  sectionsCompleted: number;
 };
 
-export default function ProjetDetailClient({ project, children }: Props) {
+export default function ProjetDetailClient({
+  project,
+  children,
+  projetsListPath = "/communication/projets",
+  hasAnyContent,
+  progressPercent,
+  filledFields,
+  totalFields,
+  sectionsCompleted,
+}: Props) {
   const router = useRouter();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -116,6 +126,9 @@ export default function ProjetDetailClient({ project, children }: Props) {
   const [form, setForm] = useState<CommunicationProjectInput>(() => toFormData(project));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const isActive = project.projectStatus === "ACTIVE";
+  const stepColor = PROJECT_STEP_COLORS[editStep - 1];
 
   const updateForm = (field: keyof CommunicationProjectInput, value: string | null) => {
     setForm((prev) => ({ ...prev, [field]: value ?? "" }));
@@ -172,7 +185,7 @@ export default function ProjetDetailClient({ project, children }: Props) {
       if (res.ok && result.success) {
         toast.success(`Le projet "${project.name}" a été supprimé avec succès.`);
         setShowDeleteDialog(false);
-        router.push("/communication/projets");
+        router.push(projetsListPath);
         router.refresh();
       } else {
         toast.error(result?.error ?? "Erreur lors de la suppression.");
@@ -190,109 +203,236 @@ export default function ProjetDetailClient({ project, children }: Props) {
     }
   };
 
-  const stepColor = STEP_COLORS[editStep - 1];
-
   return (
     <>
-      {/* Hero: project name + meta + action buttons */}
-      <header className="rounded-2xl bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-cyan-500/10 border border-violet-200/60 px-6 py-6 sm:px-8 sm:py-7 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="gap-1.5 font-medium bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-0 shadow-md shadow-indigo-500/25">
-              <FileText className="w-3.5 h-3.5" />
-              Projet de communication
-            </Badge>
+      {/* Hero */}
+      <header className="relative overflow-hidden rounded-3xl border border-white/50 bg-white/80 shadow-2xl shadow-violet-500/10 backdrop-blur-xl">
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-violet-600/8 via-transparent to-cyan-500/8"
+          aria-hidden
+        />
+        <div
+          className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-violet-400/15 blur-2xl"
+          aria-hidden
+        />
+        <div
+          className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-cyan-400/10 blur-2xl"
+          aria-hidden
+        />
+
+        <div className="relative p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="gap-1.5 border-0 bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1 text-white shadow-md shadow-violet-500/25">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Projet de communication
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "border-0 font-medium",
+                    isActive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-600"
+                  )}
+                >
+                  {isActive ? "Actif" : "Inactif"}
+                </Badge>
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
+                {project.name}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+                {project.createdBy ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100">
+                      <User className="h-3.5 w-3.5 text-violet-600" />
+                    </span>
+                    {project.createdBy.firstName} {project.createdBy.lastName}
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center gap-1.5 text-slate-500">
+                  <Clock className="h-4 w-4 text-slate-400" />
+                  Mis à jour le{" "}
+                  {new Date(project.updatedAt).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col lg:items-stretch xl:flex-row">
+              <Button
+                onClick={openEditDialog}
+                size="sm"
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Modifier
+              </Button>
+              <Button
+                onClick={() => setShowDeleteDialog(true)}
+                variant="outline"
+                size="sm"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Supprimer
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={openEditDialog}
-              variant="default"
-              size="sm"
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:from-violet-700 hover:to-indigo-700"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Modifier
-            </Button>
-            <Button
-              onClick={() => setShowDeleteDialog(true)}
-              variant="destructive"
-              size="sm"
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Supprimer
-            </Button>
+
+          {/* Stats row */}
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Complétion globale
+              </p>
+              <div className="mt-2 flex items-end justify-between gap-3">
+                <span className="text-2xl font-bold text-slate-900">
+                  {progressPercent}%
+                </span>
+                <span className="text-xs text-slate-500">
+                  {filledFields}/{totalFields} champs
+                </span>
+              </div>
+              <Progress
+                value={progressPercent}
+                className="mt-3 h-2 bg-slate-200/80 [&>div]:bg-gradient-to-r [&>div]:from-violet-500 [&>div]:to-indigo-500"
+              />
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-slate-500">
+                <Layers className="h-3.5 w-3.5" />
+                Étapes
+              </p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {sectionsCompleted}
+                <span className="text-lg font-normal text-slate-400">
+                  {" "}
+                  / 6
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                étapes avec du contenu
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Méthodologie
+              </p>
+              <p className="mt-2 text-sm font-medium leading-snug text-slate-700">
+                Diagnostic → Objectifs → Stratégie → Plan → Mise en œuvre →
+                Évaluation
+              </p>
+            </div>
           </div>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mt-3">
-          {project.name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 mt-3">
-          {project.createdBy ? (
-            <span className="inline-flex items-center gap-1.5">
-              <User className="w-4 h-4 text-violet-500" />
-              Créé par {project.createdBy.firstName} {project.createdBy.lastName}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5">
-              <User className="w-4 h-4 text-violet-400" />
-              —
-            </span>
-          )}
-          <span className="text-violet-300" aria-hidden>·</span>
-          <span>
-            Mis à jour le {new Date(project.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-          </span>
         </div>
       </header>
 
-      <Separator className="bg-gradient-to-r from-transparent via-violet-200 to-transparent h-0.5" />
-
-      {children}
+      <div className="mt-10">
+        {!hasAnyContent ? (
+          <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-violet-200/80 bg-white/60 px-6 py-20 text-center shadow-inner backdrop-blur-sm">
+            <div className="relative">
+              <div className="absolute inset-0 scale-150 rounded-full bg-gradient-to-br from-violet-400/20 to-cyan-400/20 blur-xl" />
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30">
+                <FileText className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            <h2 className="mt-8 text-xl font-bold text-slate-900">
+              Votre projet est prêt à être structuré
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">
+              Complétez les 6 étapes de la méthodologie de communication pour
+              documenter votre diagnostic, stratégie et plan d&apos;action.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-2">
+              {PROJECT_STEP_COLORS.map((c, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-2 w-8 rounded-full bg-gradient-to-r opacity-40",
+                    c.gradient
+                  )}
+                />
+              ))}
+            </div>
+            <Button
+              onClick={openEditDialog}
+              size="lg"
+              className="mt-8 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700"
+            >
+              <Pencil className="mr-2 h-5 w-5" />
+              Commencer à compléter
+            </Button>
+          </div>
+        ) : (
+          children
+        )}
+      </div>
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
+          <DialogHeader className="border-b px-6 py-5">
             <DialogTitle>Modifier le projet</DialogTitle>
             <DialogDescription>
-              Modifiez les informations du projet de communication.
+              Parcourez les 6 étapes pour mettre à jour votre projet.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 overflow-x-auto py-2 border-b">
+
+          <div className="flex gap-1.5 overflow-x-auto border-b bg-slate-50/80 px-4 py-3">
             {STEPS.map((s) => {
               const isActive = editStep === s.id;
-              const colors = STEP_COLORS[s.id - 1];
+              const colors = PROJECT_STEP_COLORS[s.id - 1];
+              const Icon = s.icon;
               return (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => setEditStep(s.id)}
                   className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all",
+                    "flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm",
                     isActive
-                      ? `bg-gradient-to-r ${colors.gradient} text-white`
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? cn("bg-gradient-to-r text-white shadow-md", colors.gradient)
+                      : "bg-white text-slate-600 shadow-sm hover:bg-slate-100"
                   )}
                 >
-                  {s.id}. {s.title}
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">{s.id}.</span> {s.title.split(" ").slice(0, 2).join(" ")}…
                 </button>
               );
             })}
           </div>
-          <div className="flex-1 overflow-y-auto space-y-5 py-4">
+
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             {STEPS.map((s) => {
               if (s.id !== editStep) return null;
               const Icon = s.icon;
+              const colors = PROJECT_STEP_COLORS[s.id - 1];
               return (
                 <div key={s.id} className="space-y-4">
-                  <div className={cn("flex items-center gap-2 text-lg font-semibold", s.id === 1 ? "text-violet-700" : "text-slate-700")}>
-                    <Icon className="h-5 w-5" />
+                  <div className={cn("flex items-center gap-3 text-lg font-semibold", colors.accent)}>
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white",
+                        colors.gradient
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
                     {s.title}
                   </div>
                   {s.fields.map((fieldKey) => (
                     <div key={fieldKey}>
-                      <Label className="text-slate-700">{FIELD_LABELS[fieldKey] ?? fieldKey}</Label>
+                      <Label className="text-slate-700">
+                        {FIELD_LABELS[fieldKey] ?? fieldKey}
+                      </Label>
                       {fieldKey === "name" ? (
                         <Input
                           value={form.name}
@@ -303,8 +443,13 @@ export default function ProjetDetailClient({ project, children }: Props) {
                       ) : (
                         <Textarea
                           value={form[fieldKey as keyof CommunicationProjectInput] ?? ""}
-                          onChange={(e) => updateForm(fieldKey as keyof CommunicationProjectInput, e.target.value)}
-                          className="mt-2 min-h-[80px] resize-y"
+                          onChange={(e) =>
+                            updateForm(
+                              fieldKey as keyof CommunicationProjectInput,
+                              e.target.value
+                            )
+                          }
+                          className="mt-2 min-h-[88px] resize-y"
                           placeholder={FIELD_LABELS[fieldKey]}
                         />
                       )}
@@ -314,8 +459,9 @@ export default function ProjetDetailClient({ project, children }: Props) {
               );
             })}
           </div>
-          <DialogFooter className="border-t pt-4">
-            <div className="flex w-full justify-between">
+
+          <DialogFooter className="border-t bg-slate-50/50 px-6 py-4">
+            <div className="flex w-full justify-between gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -335,8 +481,16 @@ export default function ProjetDetailClient({ project, children }: Props) {
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={handleSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700"
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="mr-2 h-4 w-4" />
+                  )}
                   Enregistrer
                 </Button>
               )}
@@ -349,18 +503,23 @@ export default function ProjetDetailClient({ project, children }: Props) {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent aria-describedby={`delete-desc-${project.id}`}>
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-red-100 rounded-full">
+            <div className="mb-2 flex items-center gap-3">
+              <div className="rounded-full bg-red-100 p-2">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <DialogTitle>Supprimer le projet</DialogTitle>
             </div>
-            <div className="text-muted-foreground text-base" id={`delete-desc-${project.id}`}>
-              Êtes-vous sûr de vouloir supprimer le projet <strong>{project.name}</strong> ?
+            <div
+              className="text-base text-muted-foreground"
+              id={`delete-desc-${project.id}`}
+            >
+              Êtes-vous sûr de vouloir supprimer le projet{" "}
+              <strong>{project.name}</strong> ?
               <br />
               <br />
-              Cette action est <strong>irréversible</strong> et supprimera également toutes les données associées :
-              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+              Cette action est <strong>irréversible</strong> et supprimera
+              également toutes les données associées :
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
                 <li>Tous les plans d&apos;action</li>
                 <li>Tous les acteurs du projet</li>
                 <li>Tous les éléments de budget</li>
@@ -368,14 +527,17 @@ export default function ProjetDetailClient({ project, children }: Props) {
             </div>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
               Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
             >
               {isDeleting ? (
                 <>
