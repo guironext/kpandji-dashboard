@@ -122,6 +122,25 @@ function serializeFacture(facture: unknown) {
           status: (f.BonDeCommande as { status_bon_de_commande?: string }).status_bon_de_commande ?? "EN_ATTENTE",
         }
       : null,
+    lettreCommande: f.LettreCommande
+      ? {
+          numero: (f.LettreCommande as { numero_lettre_commande: string }).numero_lettre_commande,
+          validite: (f.LettreCommande as { validite_lettre_commande?: boolean }).validite_lettre_commande ?? false,
+          evolution: (
+            (f.LettreCommande as {
+              Evolution_Lettre_Commande?: Array<{
+                id: string;
+                etape_actuelle: string;
+                etape_suivante: string;
+              }>;
+            }).Evolution_Lettre_Commande || []
+          ).map((step) => ({
+            id: step.id,
+            etape_actuelle: step.etape_actuelle,
+            etape_suivante: step.etape_suivante,
+          })),
+        }
+      : null,
   };
 }
 
@@ -186,6 +205,49 @@ export async function getAllFacturesForBonPourAccord() {
     return { success: true, data: serializedFactures };
   } catch (error) {
     console.error("Error fetching factures for bon pour accord:", error);
+    return { success: false, error: "Failed to fetch factures" };
+  }
+}
+
+export async function getAllFacturesForLettreCommande() {
+  try {
+    const factures = await prisma.facture.findMany({
+      where: {
+        clientEntrepriseId: { not: null },
+        LettreCommande: { isNot: null },
+      },
+      include: {
+        Client: true,
+        Client_entreprise: true,
+        User: true,
+        Voiture: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        FactureLigne: {
+          include: {
+            VoitureModel: true,
+          },
+        },
+        Accessoire: true,
+        LettreCommande: {
+          include: {
+            Evolution_Lettre_Commande: {
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        },
+        Commande: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const serializedFactures = (factures as unknown[]).map(serializeFacture);
+
+    return { success: true, data: serializedFactures };
+  } catch (error) {
+    console.error("Error fetching factures for lettre commande:", error);
     return { success: false, error: "Failed to fetch factures" };
   }
 }

@@ -5,8 +5,18 @@ import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { getSistreInvoice, type SistreInvoice } from "@/lib/actions/sistre";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Printer,
+  FileText,
+  Receipt,
+  AlertCircle,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -30,21 +40,16 @@ export default function SistreInvoiceDetailPage() {
     const fetchInvoice = async () => {
       try {
         setLoading(true);
-        console.log("Fetching invoice with ID:", invoiceId);
         const result = await getSistreInvoice(invoiceId);
-        console.log("Invoice result:", result);
 
         if (result.success && result.data) {
-          console.log("Invoice data:", result.data);
           setInvoice(result.data);
           setError(null);
         } else {
-          console.error("Failed to fetch invoice:", result.error);
           setError(result.error || "Erreur lors du chargement du reçu");
           toast.error(result.error || "Erreur lors du chargement du reçu");
         }
       } catch (error) {
-        console.error("Error fetching invoice:", error);
         const errorMessage =
           error instanceof Error
             ? error.message
@@ -59,7 +64,6 @@ export default function SistreInvoiceDetailPage() {
     if (invoiceId) {
       fetchInvoice();
     } else {
-      console.error("No invoice ID provided");
       toast.error("ID de reçu manquant");
       router.push("/manager/sistre");
     }
@@ -576,10 +580,12 @@ export default function SistreInvoiceDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-          <p className="text-muted-foreground">Chargement du reçu...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-amber-200/60 bg-white/80 px-10 py-12 shadow-lg backdrop-blur-sm">
+          <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+          <p className="text-sm font-medium text-slate-600">
+            Chargement du reçu...
+          </p>
         </div>
       </div>
     );
@@ -587,28 +593,33 @@ export default function SistreInvoiceDetailPage() {
 
   if (!invoice && !loading) {
     return (
-      <div className="flex flex-col w-full p-8">
-        <div className="mb-6">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-2xl space-y-6">
           <Button
             onClick={() => router.push("/manager/sistre")}
             variant="outline"
-            className="border-black text-black hover:bg-amber-50"
+            className="border-amber-300 text-slate-800 hover:bg-amber-50"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Retour
           </Button>
-        </div>
-        <Card>
-          <CardContent className="p-8">
-            <div className="text-center space-y-4">
-              <p className="text-xl font-semibold text-black">
+          <Card className="border-red-200/80 shadow-xl">
+            <CardContent className="flex flex-col items-center gap-4 p-8 text-center sm:p-12">
+              <div className="rounded-full bg-red-100 p-4">
+                <AlertCircle className="h-8 w-8 text-red-500" />
+              </div>
+              <p className="text-xl font-semibold text-slate-900">
                 Reçu introuvable
               </p>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <p className="text-gray-500 text-sm">ID: {invoiceId}</p>
-            </div>
-          </CardContent>
-        </Card>
+              {error && (
+                <p className="max-w-md text-sm text-red-600">{error}</p>
+              )}
+              <Badge variant="outline" className="font-mono text-xs">
+                ID: {invoiceId}
+              </Badge>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -617,178 +628,250 @@ export default function SistreInvoiceDetailPage() {
     return null;
   }
 
+  const hasLineItems = invoice.lineItems && invoice.lineItems.length > 0;
+
   return (
-    <>
-      <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 p-8">
-        <div className=" print-hide">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-white to-orange-50/60">
+      <div className="print-hide sticky top-0 z-20 border-b border-amber-200/60 bg-white/90 shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <Button
             onClick={() => router.push("/manager/sistre")}
             variant="outline"
-            className="border-black text-black hover:bg-amber-50"
+            size="sm"
+            className="shrink-0 border-amber-300 text-slate-800 hover:bg-amber-50 sm:size-default"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Retour</span>
           </Button>
-        </div>
 
-        <div
-          id="printable-area"
-          className="bg-white rounded-lg  p-4 max-w-5xl mx-auto w-full"
-        >
-          {/* Header */}
-          <div className="flex justify-between items-start mb-2 pb-2 border-b-2 border-black">
-            <div className="flex items-center gap-6">
-              <Image src="/sistre1.png" alt="Logo" width={60} height={100} />
-              <div className="text-xs text-black">
-                SISTRE GLOBAL SOURCING PTE LTD To Wholesale Industriial,
-                Construction and Related Machinery and Equipment N.E.C –
-                Wholesale of parts and accessories for vehicles Address : 9
-                Raffles Place, #29-05, Republic Plaza, Singapore 048619 Email :
-                weifong@corpnd.com Registration No. 202550388K
-              </div>
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1 sm:items-start">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 shrink-0 text-amber-600" />
+              <Badge className="border-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                PI {invoice.invoiceNumber}
+              </Badge>
             </div>
-            <div className="text-right print-hide">
-              <Button
-                onClick={handlePrint}
-                className="print-hide bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-md"
-              >
-                Imprimer
-              </Button>
-            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {formatDate(invoice.invoiceDate)}
+            </p>
           </div>
 
-          {/* Invoice Items */}
-          <div className="mb-4 text-black w-full">
-            <div className="flex w-full flex-nowrap gap-x-2">
-              <div className="text-xs">To</div>
+          <Button
+            onClick={handlePrint}
+            size="sm"
+            className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 font-semibold text-white shadow-md hover:from-amber-600 hover:to-orange-600 sm:size-default"
+          >
+            <Printer className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Imprimer</span>
+          </Button>
+        </div>
+      </div>
 
-              <div className="flex justify-between w-full">
-                <p className="text-xs">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+        <Card
+          id="printable-area"
+          className="overflow-hidden border-0 shadow-xl shadow-amber-100/50"
+        >
+          <CardContent className="p-4 text-black sm:p-6 lg:p-8">
+            <div className="border-b-2 border-black pb-4 sm:pb-6">
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+                <Image
+                  src="/sistre1.png"
+                  alt="Logo SISTRE"
+                  width={60}
+                  height={100}
+                  className="h-auto w-12 shrink-0 sm:w-[60px]"
+                />
+                <p className="text-center text-[11px] leading-relaxed text-black sm:text-left sm:text-xs">
+                  SISTRE GLOBAL SOURCING PTE LTD To Wholesale Industriial,
+                  Construction and Related Machinery and Equipment N.E.C –
+                  Wholesale of parts and accessories for vehicles Address : 9
+                  Raffles Place, #29-05, Republic Plaza, Singapore 048619 Email
+                  : weifong@corpnd.com Registration No. 202550388K
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6">
+              <div className="rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-orange-50/40 p-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                  To
+                </p>
+                <p className="text-xs leading-relaxed sm:text-sm">
                   KPANDJI AUTOMOBILES <br />
                   Abidjan, Abobo Garage Ecole <br />
                   KOUAME N’DA N’GORAN BERNARD <br />
                   +2250544100000
                 </p>
-
-                <p className="text-xs">
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:text-right">
+                <div className="mb-2 flex items-center gap-2 sm:justify-end">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                    Proforma Invoice
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed sm:text-sm">
                   PI No : {invoice.invoiceNumber} <br />
                   Date: {formatDate(invoice.invoiceDate)} <br />
                   Total: 1 Page
                 </p>
               </div>
             </div>
-            <div className="text-sm my-4 font-bold">Commodity:</div>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gradient-to-r from-gray-50 via-amber-50/60 to-orange-50/40 border-b-2 border-gray-200 text-balck">
-                  <TableHead className="font-extrabold  py-2 text-sm uppercase tracking-wide">
-                    N°
-                  </TableHead>
-                  <TableHead className="font-extrabold  py-2 text-sm uppercase tracking-wide">
-                    Description
-                  </TableHead>
-                  <TableHead className="font-extrabold  py-2 text-center text-sm uppercase tracking-wide">
-                    Quantité
-                  </TableHead>
-                  <TableHead className="font-extrabold  py-2 text-right text-sm uppercase tracking-wide">
-                    Prix Unitaire
-                  </TableHead>
-                  <TableHead className="font-extrabold  py-2 text-right text-sm uppercase tracking-wide">
-                    Montant
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.lineItems && invoice.lineItems.length > 0 ? (
+
+            <div className="mt-6">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold sm:text-base">
+                <span className="h-1 w-6 rounded-full bg-gradient-to-r from-amber-500 to-orange-500" />
+                Commodity
+              </h3>
+
+              <div className="space-y-3 sm:hidden">
+                {hasLineItems ? (
                   invoice.lineItems.map((item, index) => (
-                    <TableRow
+                    <div
                       key={item.id}
-                      className="hover:bg-amber-50/30 transition-colors"
+                      className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm"
                     >
-                      <TableCell className="font-medium text-black">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium text-black">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-amber-300 bg-amber-50 text-amber-800"
+                        >
+                          #{index + 1}
+                        </Badge>
+                        <span className="text-right text-sm font-bold text-amber-600">
+                          {formatCurrency(item.unitPrice * item.quantity)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium leading-snug">
                         {item.description}
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.unitPrice)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-amber-600">
-                        {formatCurrency(item.unitPrice * item.quantity)}
-                      </TableCell>
-                    </TableRow>
+                      </p>
+                      <Separator className="my-3 bg-amber-100" />
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                        <div>
+                          <span className="font-semibold text-slate-800">
+                            QuantitÃ©
+                          </span>
+                          <p className="mt-0.5 font-bold text-black">
+                            {item.quantity}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-slate-800">
+                            Prix unitaire
+                          </span>
+                          <p className="mt-0.5 font-medium text-black">
+                            {formatCurrency(item.unitPrice)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-black py-8"
-                    >
-                      Aucun article trouvé
-                    </TableCell>
-                  </TableRow>
+                  <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
+                    Aucun article trouvÃ©
+                  </div>
                 )}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
 
-          {/* Total Section */}
-          <div className="border-t-2 border-amber-400 py-2">
-            <div className="flex justify-end">
-              <div className="text-right space-y-2 w-64">
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-xl font-bold text-amber-700">
-                    Total:
-                  </span>
-                  <span className="text-xl font-bold text-amber-600">
-                    {formatCurrency(invoice.total)}
-                  </span>
-                </div>
+              <div className="custom-scrollbar hidden overflow-x-auto sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-2 border-amber-200/60 bg-gradient-to-r from-gray-50 via-amber-50/60 to-orange-50/40">
+                      <TableHead className="py-3 text-xs font-extrabold uppercase tracking-wide">
+                        NÂ°
+                      </TableHead>
+                      <TableHead className="py-3 text-xs font-extrabold uppercase tracking-wide">
+                        Description
+                      </TableHead>
+                      <TableHead className="py-3 text-center text-xs font-extrabold uppercase tracking-wide">
+                        QuantitÃ©
+                      </TableHead>
+                      <TableHead className="py-3 text-right text-xs font-extrabold uppercase tracking-wide">
+                        Prix Unitaire
+                      </TableHead>
+                      <TableHead className="py-3 text-right text-xs font-extrabold uppercase tracking-wide">
+                        Montant
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {hasLineItems ? (
+                      invoice.lineItems.map((item, index) => (
+                        <TableRow
+                          key={item.id}
+                          className="transition-colors hover:bg-amber-50/40"
+                        >
+                          <TableCell className="font-medium">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="max-w-xs font-medium lg:max-w-md">
+                            {item.description}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(item.unitPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-amber-600">
+                            {formatCurrency(item.unitPrice * item.quantity)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="py-10 text-center text-slate-500"
+                        >
+                          Aucun article trouvÃ©
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </div>
-          </div>
 
-          <div className="border-y border-black py-2">
-            <div className="flex ">
-              <div className=" w-full text-sm flex">
-                <p className="text-sm font-semibold ">
-                  TOTAL FOB SHANGHAI, China : USD $
-                  {formatCurrency(invoice.total)} (SAY US DALLAR{" "}
-                  {numberToEnglish(Math.floor(invoice.total))} ONLY)
-                </p>
+            <div className="mt-6 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50 p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-4 sm:justify-end">
+                <span className="text-lg font-bold text-amber-800 sm:text-xl">
+                  Total:
+                </span>
+                <span className="text-2xl font-bold text-amber-600 sm:text-3xl">
+                  ${formatCurrency(invoice.total)}
+                </span>
               </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex flex-col w-full bottom-0 right-0 left-0">
-            <div className="flex flex-col w-full mt-2 space-y-2 text-sm">
-              <p className="text-sm font-semibold text-black capitalize border-b border-black w-fit ">
+            <div className="mt-4 border-y border-black py-3 sm:py-4">
+              <p className="text-xs font-semibold leading-relaxed sm:text-sm">
+                TOTAL FOB SHANGHAI, China : USD $
+                {formatCurrency(invoice.total)} (SAY US DALLAR{" "}
+                {numberToEnglish(Math.floor(invoice.total))} ONLY)
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-2.5 text-xs leading-relaxed sm:text-sm">
+              <p className="w-fit border-b border-black pb-1 text-sm font-semibold capitalize">
                 * Terms and Conditions apply: 100% TT
               </p>
-
-              <p>a) Place of delivery: Port Abidjan, Côte d&apos;Ivoire</p>
-
+              <p>a) Place of delivery: Port Abidjan, CÃ´te d&apos;Ivoire</p>
               <p>
                 b) Time of delivery: Shipment within 30 days after receipt the
                 total payment.
               </p>
-
               <p>
                 Terms of payment: Buyer shall pay Seller the total payment by
                 T/T within 5 days after signing the PROFORMA INVOICE by two
                 parties, which is ${formatCurrency(invoice.total)} (SAY US
                 DOLLAR{" "}
-                {numberToEnglish(Math.floor(invoice.total)).toUpperCase()} ONLY)
+                {numberToEnglish(Math.floor(invoice.total)).toUpperCase()}{" "}
+                ONLY)
               </p>
-
               <p>c) Account:</p>
-
-              <div className="ml-4 space-y-1 font-bold">
+              <div className="ml-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50/50 p-3 font-bold sm:ml-4">
                 <p>Company name : SISTRE GLOBAL SOURCING PTE LTD</p>
                 <p>Bank Name : The Currency Cloud Limited</p>
                 <p>
@@ -803,53 +886,53 @@ export default function SistreInvoiceDetailPage() {
                 <p>Bank Name : Barclays Bank PLC, London</p>
                 <p>Swift Code : BARCGB22XXX</p>
               </div>
-
               <p>
                 d) Packing : Packing shall be in accordance with the Sales
                 Contract signed by both parties.
               </p>
-
               <p>e) Validity : Within 30 days</p>
-
               <p>f) Country of origin : China</p>
-
               <p>
                 g) Warranty: 36 months or 100,000 km which comes first, details
                 refers to Service Agreement.
               </p>
-
               <p>h) Remarks</p>
             </div>
 
-            <div className="mt-1 space-y-2">
+            <div className="mt-8 border-t border-amber-100 pt-6">
               <p className="text-sm">Your faithfully</p>
               <p className="text-sm font-semibold">
                 SISTRE GLOBAL SOURCING PTE LTD
               </p>
-              <div className="flex items-center  ">
-                <div className="flex flex-col ">
+              <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-end">
+                <div className="flex flex-col">
                   <Image
                     src="/sistre2.png"
                     alt="Signature"
                     width={70}
                     height={70}
+                    className="h-auto w-16 sm:w-[70px]"
                   />
-                  <div className="border-t border-black w-48"></div>
+                  <div className="mt-1 w-36 border-t border-black sm:w-48" />
                 </div>
-                <div className="-mb-10 ml-2">
-                  <Image
-                    src="/sistre3.png"
-                    alt="Signature"
-                    width={100}
-                    height={100}
-                  />
-                </div>
+                <Image
+                  src="/sistre3.png"
+                  alt="Signature stamp"
+                  width={100}
+                  height={100}
+                  className={cn(
+                    "h-auto w-20 sm:ml-2 sm:w-[100px]",
+                    "sm:-mb-6"
+                  )}
+                />
               </div>
-              <p className="text-sm font-semibold ">YONG WEI FONG</p>
+              <p className="mt-4 text-sm font-semibold sm:mt-2">
+                YONG WEI FONG
+              </p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 }

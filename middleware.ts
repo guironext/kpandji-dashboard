@@ -36,7 +36,7 @@ const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
 const isEmployeeRoute = createRouteMatcher(["/employee", "/employee/(.*)"]);
 const isManagerRoute = createRouteMatcher(["/manager", "/manager/(.*)"]);
-const isJuristeRoute = createRouteMatcher(["/juriste", "/juriste/(.*)"]);
+const isJuridiqueRoute = createRouteMatcher(["/juridique", "/juridique/(.*)"]);	
 const isMagasinierRoute = createRouteMatcher([
 	"/magasinier",
 	"/magasinier/(.*)",
@@ -105,7 +105,7 @@ const ROLE_REDIRECTS: Record<string, string> = {
 	MANAGER: "/manager",
 	MAGASINIER: "/magasinier",
 	CHEFUSINE: "/chefusine",
-	JURISTE: "/juriste",
+	JURIDIQUE: "/juridique",
 	CHEFEQUIPE: "/chefequipe",
 	CHEFQUALITE: "/chefqualite",
 	COMMERCIAL: "/commercial",
@@ -135,7 +135,7 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isEmployeeRoute, role: "EMPLOYEE" },
 	{ match: isManagerRoute, role: "MANAGER" },
 	{ match: isChefusineRoute, role: "CHEFUSINE" },
-	{ match: isJuristeRoute, role: "JURISTE" },
+	{ match: isJuridiqueRoute, role: "JURIDIQUE" },
 	{ match: isChefequipeRoute, role: "CHEFEQUIPE" },
 	{ match: isMagasinierRoute, role: "MAGASINIER" },
 	{ match: isChefqualiteRoute, role: "CHEFQUALITE" },

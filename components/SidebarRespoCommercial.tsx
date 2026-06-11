@@ -95,6 +95,7 @@ const navCategories = [
       { id: 16, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
       { id: 17, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
       { id: 18, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
+      { id: 23, icon: <FileCheck className={iconClass} />, label: "Lettre Commande", href: "/responsablecommercial/lettre-commande" },
       { id: 19, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },

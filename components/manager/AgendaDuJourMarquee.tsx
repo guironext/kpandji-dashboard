@@ -46,7 +46,7 @@ function Chip({
   );
 }
 
-export function AgendaDuJourMarquee() {
+export function AgendaDuJourMarquee({ basePath = "/manager" }: { basePath?: string }) {
   const [activities, setActivities] = React.useState<Activity[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -103,7 +103,7 @@ export function AgendaDuJourMarquee() {
           </div>
         </div>
         <Link
-          href="/manager/agenda"
+          href={`${basePath}/agenda`}
           className="text-xs font-semibold text-indigo-700 hover:text-indigo-800"
         >
           Voir tout →
@@ -162,7 +162,7 @@ export function AgendaDuJourMarquee() {
                 {[...todayActivities, ...(shouldScroll ? todayActivities : [])].map((a, idx) => (
                   <Link
                     key={`${a.id}-${idx}`}
-                    href={`/manager/agenda/${a.id}`}
+                    href={`${basePath}/agenda/${a.id}`}
                     className="flex min-w-[280px] max-w-[360px] flex-col justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50/20 hover:shadow-md"
                     title="Ouvrir le rapport"
                   >
