@@ -9,6 +9,7 @@ const SCHEMA_ROLES = [
   "CHEFEQUIPE",
   "MAGASINIER",
   "RH",
+  "JURIDIQUE",
   "CHEFQUALITE",
   "EMPLOYEE",
   "SAV",

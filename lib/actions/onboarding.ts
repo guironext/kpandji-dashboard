@@ -97,8 +97,9 @@ export async function completeUserOnboarding(
   telephone?: string,
 ) {
   try {
-    await persistOnboardedUser(clerkId, role, department, telephone);
-    return { success: true };
+    const normalizedRole = normalizeUserRole(role);
+    await persistOnboardedUser(clerkId, normalizedRole, department, telephone);
+    return { success: true, role: normalizedRole };
   } catch (error) {
     console.error(error);
     return {

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
+import { getRedirectForRole } from "@/lib/role-redirects";
 
 const isPublicRoute = createRouteMatcher([
 	"/",
@@ -98,36 +99,6 @@ const isAssistanteRoute = createRouteMatcher([
 	"/assistante",
 	"/assistante/(.*)",
 ]);
-
-const ROLE_REDIRECTS: Record<string, string> = {
-	ADMIN: "/admin",
-	EMPLOYEE: "/employee",
-	MANAGER: "/manager",
-	MAGASINIER: "/magasinier",
-	CHEFUSINE: "/chefusine",
-	JURIDIQUE: "/juridique",
-	CHEFEQUIPE: "/chefequipe",
-	CHEFQUALITE: "/chefqualite",
-	COMMERCIAL: "/commercial",
-	RESPONSABLE_COMMERCIAL: "/responsablecommercial",
-	COMMUNICATION: "/communication",
-	RH: "/rh",
-	SAV: "/sav",
-	LOGISTIQUE: "/logistique",
-	FINANCE: "/finance",
-	DIRECTEUR_GENERAL: "/directeurgeneral",
-	CLIENTELLE: "/clientele",
-	COMPTABLE: "/comptable",
-	CONCESSIONAIRE: "/concessionnaire",
-	SUPERVISEUR: "/superviseur",
-	INFOGRAPHIE: "/infographie",
-	COMMUNITY_MANAGER: "/communityManager",
-	ASSISTANTE: "/assistante",
-};
-
-function getRedirectForRole(role: string | undefined): string | null {
-	return (role && ROLE_REDIRECTS[role]) ?? null;
-}
 
 type RouteMatcher = (req: NextRequest) => boolean;
 const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
@@ -235,7 +206,12 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	// Role-based route protection
 	for (const { match, role } of ROLE_ROUTES) {
 		if (match(req)) {
-			if (sessionClaims?.metadata?.role === role) {
+			const userRole = sessionClaims?.metadata?.role;
+			if (userRole === role) {
+				return NextResponse.next();
+			}
+			// Generic employees land on the manager dashboard
+			if (role === "MANAGER" && userRole === "EMPLOYEE") {
 				return NextResponse.next();
 			}
 			return NextResponse.redirect(new URL("/", req.url));
