@@ -4,7 +4,7 @@ import React from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileText, Package } from 'lucide-react'
 import CommandesPageClient from './CommandesPageClient'
-import LettreCommandePage from '@/app/(dashboard)/responsablecommercial/lettre-commande/page'
+import LettreCommandeClient from '@/app/(dashboard)/responsablecommercial/lettre-commande/LettreCommandeClient'
 
 type CommandeType = {
   id: string
@@ -71,7 +71,7 @@ const CommandesTabsClient = ({
           </TabsList>
 
           <TabsContent value="lettres" className="mt-0">
-            <LettreCommandePage embedded managerMode />
+            <LettreCommandeClient embedded managerMode />
           </TabsContent>
 
           <TabsContent value="commandes" className="mt-0">

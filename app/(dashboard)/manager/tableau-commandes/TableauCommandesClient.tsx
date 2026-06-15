@@ -83,40 +83,35 @@ type GroupedRow = {
   conteneursNeeded: number
 }
 
-// Configuration for minimum order quantities and conteneurs
-const getOrderConfig = (model: string | null) => {
+type OrderConfig = { minQuantity: number; conteneursPerMinOrder: number }
+
+/** Most specific patterns first — order matters for DJETRAN variants. */
+const ORDER_RULES: Array<OrderConfig & { patterns: string[] }> = [
+  { patterns: ['KPANDJI DJETRAN PLUS', 'DJETRAN PLUS'], minQuantity: 2, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI DJETRAN BVA DIESEL', 'DJETRAN BVA DIESEL'], minQuantity: 3, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI DJETRAN BVM DIESEL', 'DJETRAN BVM DIESEL'], minQuantity: 3, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI DJETRAN BVM ESSENCE', 'DJETRAN BVM ESSENCE'], minQuantity: 3, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI DJETRAN BVA ESSENCE', 'DJETRAN BVA ESSENCE'], minQuantity: 3, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI CAVALLY', 'CAVALLY'], minQuantity: 8, conteneursPerMinOrder: 3 },
+  { patterns: ['KPANDJI LATHAYE', 'LATHAYE'], minQuantity: 3, conteneursPerMinOrder: 1 },
+  { patterns: ['KPANDJI BANCO', 'BANCO'], minQuantity: 11, conteneursPerMinOrder: 2 },
+  { patterns: ['KPANDJI SOURALAY', 'SOURALAY'], minQuantity: 3, conteneursPerMinOrder: 1 },
+]
+
+const getOrderConfig = (model: string | null): OrderConfig => {
   if (!model) return { minQuantity: 0, conteneursPerMinOrder: 0 }
-  
-  const modelUpper = model.toUpperCase().trim()
-  
-  // Check for exact matches first, then partial matches
-  if (modelUpper === 'KPANDJI DJETRAN BVA DIESEL' || modelUpper.includes('KPANDJI DJETRAN BVA DIESEL')) {
-    return { minQuantity: 3, conteneursPerMinOrder: 1 }
+
+  const modelUpper = model.toUpperCase().trim().replace(/\s+/g, ' ')
+
+  for (const rule of ORDER_RULES) {
+    if (rule.patterns.some((pattern) => modelUpper.includes(pattern))) {
+      return {
+        minQuantity: rule.minQuantity,
+        conteneursPerMinOrder: rule.conteneursPerMinOrder,
+      }
+    }
   }
-  if (modelUpper === 'KPANDJI DJETRAN BVM DIESEL' || modelUpper.includes('KPANDJI DJETRAN BVM DIESEL')) {
-    return { minQuantity: 3, conteneursPerMinOrder: 1 }
-  }
-  if (modelUpper === 'KPANDJI DJETRAN BVM ESSENCE' || modelUpper.includes('KPANDJI DJETRAN BVM ESSENCE')) {
-    return { minQuantity: 3, conteneursPerMinOrder: 1 }
-  }
-  if (modelUpper === 'KPANDJI DJETRAN BVA ESSENCE' || modelUpper.includes('KPANDJI DJETRAN BVA ESSENCE')) {
-    return { minQuantity: 3, conteneursPerMinOrder: 1 }
-  }
-  if (modelUpper === 'KPANDJI CAVALLY' || modelUpper.includes('KPANDJI CAVALLY')) {
-    return { minQuantity: 8, conteneursPerMinOrder: 3 }
-  }
-  if (modelUpper === 'KPANDJI LATHAYE' || modelUpper.includes('KPANDJI LATHAYE')) {
-    return { minQuantity: 3, conteneursPerMinOrder: 1 }
-  }
-  if (modelUpper === 'KPANDJI BANCO' || modelUpper.includes('KPANDJI BANCO')) {
-    return { minQuantity: 11, conteneursPerMinOrder: 2 }
-  }
-  if (modelUpper === 'KPANDJI DJETRAN PLUS' || modelUpper.includes('KPANDJI DJETRAN PLUS')) {
-    return { minQuantity: 2, conteneursPerMinOrder: 1 }
-  }
-  
-  
-  // Default: no minimum order
+
   return { minQuantity: 0, conteneursPerMinOrder: 0 }
 }
 
@@ -240,11 +235,6 @@ const TableauCommandesClient = ({ commandes, error, isLoading }: Props) => {
           // If remainingCommandes < minQuantity, we need (minQuantity - remainingCommandes) more
           // We store it as negative to indicate incomplete group, but display the positive value
           const commandesNeeded = minQuantity - remainingCommandes
-          
-          // Debug: Log for KPANDJI LATHAYE to verify calculation
-          if (model.toUpperCase().includes('LATHAYE')) {
-            console.log(`[KPANDJI LATHAYE Debug] totalCommandes: ${totalCommandes}, minQuantity: ${minQuantity}, remainingCommandes: ${remainingCommandes}, commandesNeeded: ${commandesNeeded}, enAttente: ${-commandesNeeded}`)
-          }
           
           rows.push({
             model,
