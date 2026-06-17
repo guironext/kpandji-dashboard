@@ -222,17 +222,24 @@ export async function deleteEmployee(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting employee:", error);
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as { code: string }).code === "P2003"
-    ) {
-      return {
-        success: false,
-        error:
-          "Impossible de supprimer cet employé : des données liées existent encore dans le système.",
-      };
+    if (error && typeof error === "object" && "code" in error) {
+      const prismaError = error as { code: string; meta?: { column?: string; modelName?: string } };
+      if (prismaError.code === "P2003") {
+        return {
+          success: false,
+          error:
+            "Impossible de supprimer cet employé : des données liées existent encore dans le système.",
+        };
+      }
+      if (prismaError.code === "P2022") {
+        const column = prismaError.meta?.column;
+        return {
+          success: false,
+          error: column
+            ? `Schéma base de données désynchronisé (colonne manquante : ${column}). Exécutez « npx prisma db push » puis réessayez.`
+            : "Schéma base de données désynchronisé. Exécutez « npx prisma db push » puis réessayez.",
+        };
+      }
     }
     return { success: false, error: "Échec de la suppression de l'employé" };
   }

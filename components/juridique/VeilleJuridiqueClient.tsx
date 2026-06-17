@@ -20,11 +20,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ActionsCorrectivesTab from "@/components/juridique/ActionsCorrectivesTab";
 import DossiersVeilleJuridiqueTab from "@/components/juridique/DossiersVeilleJuridiqueTab";
+import EcartsRisquesJuridiquesTab from "@/components/juridique/EcartsRisquesJuridiquesTab";
+import FormationTab from "@/components/juridique/FormationTab";
 import NonConformiteJuridiqueTab from "@/components/juridique/NonConformiteJuridiqueTab";
+import NouvellesLoiTab from "@/components/juridique/NouvellesLoiTab";
 import type {
+  ActionCorrectiveListItem,
   DossierVeilleJuridiqueListItem,
+  EcartRisqueJuridiqueListItem,
+  FormationListItem,
   NonConformiteJuridiqueListItem,
+  NouvelleLoiListItem,
 } from "@/lib/actions/veille-juridique";
 
 type TabId =
@@ -127,9 +135,17 @@ function TabPlaceholder({ title }: { title: string }) {
 export default function VeilleJuridiqueClient({
   dossiers,
   nonConformites,
+  ecartsRisques,
+  nouvellesLoi,
+  actionsCorrectives,
+  formations,
 }: {
   dossiers: DossierVeilleJuridiqueListItem[];
   nonConformites: NonConformiteJuridiqueListItem[];
+  ecartsRisques: EcartRisqueJuridiqueListItem[];
+  nouvellesLoi: NouvelleLoiListItem[];
+  actionsCorrectives: ActionCorrectiveListItem[];
+  formations: FormationListItem[];
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("dossiers");
   const activeTabConfig = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
@@ -268,6 +284,26 @@ export default function VeilleJuridiqueClient({
                     nonConformites={nonConformites}
                     dossiers={dossiers}
                   />
+                ) : tab.id === "ecarts-risques" ? (
+                  <EcartsRisquesJuridiquesTab
+                    ecartsRisques={ecartsRisques}
+                    nonConformites={nonConformites}
+                  />
+                ) : tab.id === "nouvelles-loi" ? (
+                  <NouvellesLoiTab
+                    nouvellesLoi={nouvellesLoi}
+                    ecartsRisques={ecartsRisques}
+                    dossiers={dossiers}
+                  />
+                ) : tab.id === "actions-correctifs" ? (
+                  <ActionsCorrectivesTab
+                    actionsCorrectives={actionsCorrectives}
+                    nonConformites={nonConformites}
+                    ecartsRisques={ecartsRisques}
+                    nouvellesLoi={nouvellesLoi}
+                  />
+                ) : tab.id === "formation" ? (
+                  <FormationTab formations={formations} nonConformites={nonConformites} />
                 ) : (
                   <TabPlaceholder title={tab.label} />
                 )}

@@ -1,17 +1,39 @@
 import { Suspense } from "react";
 import VeilleJuridiqueClient from "@/components/juridique/VeilleJuridiqueClient";
-import { getDossiersVeilleJuridique, getNonConformitesJuridiques } from "@/lib/actions/veille-juridique";
+import {
+  getActionsCorrectives,
+  getDossiersVeilleJuridique,
+  getEcartsRisquesJuridiques,
+  getFormations,
+  getNonConformitesJuridiques,
+  getNouvellesLoi,
+} from "@/lib/actions/veille-juridique";
 
 async function VeilleJuridiqueContent() {
-  const [dossiersResult, nonConformitesResult] = await Promise.all([
+  const [
+    dossiersResult,
+    nonConformitesResult,
+    ecartsRisquesResult,
+    nouvellesLoiResult,
+    actionsCorrectivesResult,
+    formationsResult,
+  ] = await Promise.all([
     getDossiersVeilleJuridique(),
     getNonConformitesJuridiques(),
+    getEcartsRisquesJuridiques(),
+    getNouvellesLoi(),
+    getActionsCorrectives(),
+    getFormations(),
   ]);
 
   return (
     <VeilleJuridiqueClient
       dossiers={dossiersResult.data ?? []}
       nonConformites={nonConformitesResult.data ?? []}
+      ecartsRisques={ecartsRisquesResult.data ?? []}
+      nouvellesLoi={nouvellesLoiResult.data ?? []}
+      actionsCorrectives={actionsCorrectivesResult.data ?? []}
+      formations={formationsResult.data ?? []}
     />
   );
 }

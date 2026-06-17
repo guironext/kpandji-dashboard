@@ -419,7 +419,6 @@ model Employee {
   bloodType                  String?
   specialite                 String
   poste                      String?
-  departement                String?
   email                      String?
   adresse                    String?
   image                      String?
@@ -2038,19 +2037,21 @@ model NonConformiteJuridique {
   ecartJuridique EcartJuridique[]
   risqueJuridique RisqueJuridique[]
   actionCorrective ActionCorrective[]
+  formation Formation[]
 }
 
 model EcartJuridique {
   id String @id @default(uuid())
   obligationJuridique String
   situationObservee String
-  descriptionEcart String
-  dateDetection DateTime
-  serviceConcerne String
+  descriptionEcart String?
+  dateDetection DateTime?
+  serviceConcerne String?
   nonConformiteJuridiqueId String
   nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  risqueJuridique RisqueJuridique?
   nouvelleLoi NouvelleLoi[]
   actionCorrective ActionCorrective[]
 
@@ -2059,12 +2060,14 @@ model EcartJuridique {
 model RisqueJuridique {
   id String @id @default(uuid())
   descriptionRisque String
-  probabilite String
-  impact String
-  niveauRisque String
-  mesurePreventive String
+  probabilite String?
+  impact String?
+  niveauRisque String?
+  mesurePreventive String?
   nonConformiteJuridiqueId String
   nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  ecartJuridiqueId String? @unique
+  ecartJuridique EcartJuridique? @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   nouvelleLoi NouvelleLoi[]
@@ -2118,6 +2121,8 @@ model Formation {
   typeFormation String?
   dateDebut DateTime
   dateCloture DateTime?
+  nonConformiteJuridiqueId String
+  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
