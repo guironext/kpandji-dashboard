@@ -60,7 +60,11 @@ function createPrismaClient(): PrismaClient {
 }
 
 /** Delegates that must exist after the latest `prisma generate` (dev singleton can go stale). */
-const REQUIRED_PRISMA_DELEGATES = ["objectifGlobalTask"] as const;
+const REQUIRED_PRISMA_DELEGATES = [
+  "objectifGlobalTask",
+  "dossierVeilleJuridique",
+  "nonConformiteJuridique",
+] as const;
 
 function prismaHasRequiredDelegates(client: PrismaClient): boolean {
   const record = client as unknown as Record<string, { findMany?: unknown } | undefined>;

@@ -48,6 +48,7 @@ model User {
   ObjectifGlobal                     ObjectifGlobal[]
   publicationObjectifGlobalRubriques PublicationObjectifGlobalRubrique[]
   JournalPublication                 JournalPublication[]
+  DossierContentieux                 DossierContentieux[]
 }
 
 model Message {
@@ -418,6 +419,7 @@ model Employee {
   bloodType                  String?
   specialite                 String
   poste                      String?
+  departement                String?
   email                      String?
   adresse                    String?
   image                      String?
@@ -1888,6 +1890,318 @@ model Documentation {
   fichier   String
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+}
+
+
+model DossierContentieux {
+  id String @id @default(uuid())
+  numeroDossier String @unique
+  typeDossier TypeDossierContentieux
+  statutDossier StatutDossierContentieux
+  description String
+  objet String
+  dateOuverture DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partiesPrenantes PartiesPrenantes[]
+  gestionAudiences GestionAudiences[]
+  documentsContentieux DocumentsContentieux[]
+  gestionDesDecisionsDeJustice GestionDesDecisionsDeJustice[]
+}
+
+model PartiesPrenantes {
+  id String @id @default(uuid())
+  nom String
+  prenom String
+  email String?
+  telephone String?
+  typePartie TypePartie
+  dossierContentieuxId String
+  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DocumentsContentieux {
+  id String @id @default(uuid())
+  nom String
+  typeDocument TypeDocumentContentieux
+  dossierContentieuxId String
+  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  nomFichier String
+  dateUpload DateTime
+  url String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GestionAudiences {
+  id String @id @default(uuid())
+  dateAudience DateTime
+  heureAudience String
+  rjAudience String
+  statutAudience StatutAudience
+  salleAudience String
+  tribunalAudience String
+  resultatAudience String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dossierContentieuxId String
+  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+}
+
+model GestionDesDecisionsDeJustice {
+  id String @id @default(uuid())
+  dateDecision DateTime
+  heureDecision String
+  lieuDecision String
+  statutDecision StatutDecisionDeJustice
+  dossierContentieuxId String
+  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContratsEtPartenariats {
+  id String @id @default(uuid())
+  titre String
+  typeContrat TypeContrat
+  description String
+  nomFichier String?
+  url String?
+  dateUpload DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  partenaireSignataire PartenaireSignataire[]
+}
+
+enum TypeContrat {
+  CONTRAT
+  PARTENARIAT
+  DELEGATION
+  AGREMENT
+  CONVENTION
+  CONTRAT_DE_LOCATION
+  CONTRAT_DE_LOCATION_VENTE
+  CONTRAT_DE_LOCATION_VENTE_MISE_EN_LOCATION
+  CONTRAT_DE_LOCATION_VENTE_MISE_EN_LOCATION_VENTE
+}
+
+model PartenaireSignataire{
+  id String @id @default(uuid())
+  nom String
+  prenom String
+  email String?
+  telephone String?
+  fonction String?
+  entreprise String?
+  adresse String?
+  ville String?
+  codePostal String?
+  pays String?
+  dateSignature DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contratEtPartenariatsId String
+  contratEtPartenariats ContratsEtPartenariats @relation(fields: [contratEtPartenariatsId], references: [id], onDelete: Cascade)
+}
+
+
+model DossierVeilleJuridique {
+  id String @id @default(uuid())
+  titre String
+  description String
+  dateOuverture DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  typeDossier NonConformiteJuridique[]
+  nouvellesLoi NouvelleLoi[]
+}
+
+model NonConformiteJuridique {
+  id String @id @default(uuid())
+  titre String
+  description String
+  typeNonConformite String
+  statutNonConformite String
+  dateOuverture DateTime
+  dateCloture DateTime?
+  dossierVeilleJuridiqueId String
+  dossierVeilleJuridique DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ecartJuridique EcartJuridique[]
+  risqueJuridique RisqueJuridique[]
+  actionCorrective ActionCorrective[]
+}
+
+model EcartJuridique {
+  id String @id @default(uuid())
+  obligationJuridique String
+  situationObservee String
+  descriptionEcart String
+  dateDetection DateTime
+  serviceConcerne String
+  nonConformiteJuridiqueId String
+  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  nouvelleLoi NouvelleLoi[]
+  actionCorrective ActionCorrective[]
+
+}
+
+model RisqueJuridique {
+  id String @id @default(uuid())
+  descriptionRisque String
+  probabilite String
+  impact String
+  niveauRisque String
+  mesurePreventive String
+  nonConformiteJuridiqueId String
+  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  nouvelleLoi NouvelleLoi[]
+  actionCorrective ActionCorrective[]
+
+}
+
+model NouvelleLoi {
+  id String @id @default(uuid())
+  titre String
+  chapitre String
+  article String
+  paragraphe String?
+  dateOuverture DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ecartJuridiqueId String
+  ecartJuridique EcartJuridique @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
+  risqueJuridiqueId String?
+  risqueJuridique RisqueJuridique? @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
+  dossierVeilleJuridiqueId String
+  dossierVeilleJuridique DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
+  actionCorrective ActionCorrective[]
+}
+
+model ActionCorrective {
+  id String @id @default(uuid())
+  titre String
+  description String
+  actionCorrective String
+  dateDebut DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  nouvelleLoiId String
+  nouvelleLoi NouvelleLoi @relation(fields: [nouvelleLoiId], references: [id], onDelete: Cascade)
+  ecartJuridiqueId String
+  ecartJuridique EcartJuridique @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
+  risqueJuridiqueId String?
+  risqueJuridique RisqueJuridique? @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
+  nonConformiteJuridiqueId String
+  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+}
+
+model Formation {
+  id String @id @default(uuid())
+  titre String
+  description String
+  cible String
+  typeFormation String?
+  dateDebut DateTime
+  dateCloture DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum StatutDecisionDeJustice {
+  EN_ATTENTE
+  PARTIELLEMENT_EXECUTE
+  EXECUTE
+  NON_EXECUTE
+  CONTESTEE
+  EN_APPEL
+  JUGEMENT
+  ARRET
+  ORDONNANCE
+  APPEL
+  EXECUTION
+  EN_TRAITEMENT
+  EN_COURS
+  TERMINEE
+  ANNULE
+}
+
+
+
+enum StatutAudience {
+  RECLAMATION
+  MISE_EN_DEMEURE
+  CONCILIATION
+  MEDIATION
+  ASSIGNATION
+  AUDIENCE
+  JUGEMENT
+  APPEL
+  EXECUTION
+  EN_ATTENTE
+  EN_TRAITEMENT
+  EN_COURS
+  TERMINEE
+  ANNULE
+}
+
+enum TypeDocumentContentieux {
+
+  CONTRATS
+  FACTURES
+  COURRIERS
+  JUGEMENTS
+  PROCES_VERBAUX
+  PHOTOS
+}
+
+enum TypePartie {
+  PERSONNE_PHYSIQUE
+  PERSONNE_MORALE
+  ENTREPRISE
+  ORGANISATION
+  ADMINISTRATION
+  AUTRE
+}
+
+enum TypeDossierContentieux {
+  CIVIL
+  COMMERCIAL
+  SOCIAL
+  ADMINISTRATIF
+  FISCAL
+  PENAL
+}
+
+enum StatutDossierContentieux {
+  RECLAMATION
+  MISE_EN_DEMEURE
+  CONCILIATION
+  MEDIATION
+  ASSIGNATION
+  AUDIENCE
+  JUGEMENT
+  APPEL
+  EXECUTION
+  EN_ATTENTE
+  EN_TRAITEMENT
+  EN_COURS
+  TERMINEE
+  ANNULE
 }
 
 enum TypeDocumentation {

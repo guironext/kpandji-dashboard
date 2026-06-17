@@ -175,14 +175,65 @@ export async function updateEmployee(id: string, data: {
 
 export async function deleteEmployee(id: string) {
   try {
-    await prisma.employee.delete({
-      where: { id }
+    const employee = await prisma.employee.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        Equipe: { select: { nomEquipe: true } },
+      },
     });
-    
+
+    if (!employee) {
+      return { success: false, error: "Employé introuvable" };
+    }
+
+    if (employee.Equipe.length > 0) {
+      const equipes = employee.Equipe.map((e) => e.nomEquipe).join(", ");
+      return {
+        success: false,
+        error: `Impossible de supprimer cet employé : il est chef d'équipe (${equipes}). Réassignez d'abord le chef d'équipe.`,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const testes = await tx.teste.findMany({
+        where: { employeeId: id },
+        select: { id: true },
+      });
+      const testeIds = testes.map((t) => t.id);
+
+      if (testeIds.length > 0) {
+        await tx.rapportTeste.deleteMany({ where: { testeId: { in: testeIds } } });
+        await tx.teste.deleteMany({ where: { employeeId: id } });
+      }
+
+      await tx.equipeMembre.deleteMany({ where: { employeeId: id } });
+      await tx.pointage.deleteMany({ where: { employeeId: id } });
+      await tx.nomination_vote_Employee.deleteMany({ where: { employeeId: id } });
+      await tx.permission.deleteMany({ where: { employeeId: id } });
+      await tx.congeAnnuel.deleteMany({ where: { employeeId: id } });
+      await tx.localBuy.deleteMany({ where: { employeeId: id } });
+
+      await tx.employee.delete({ where: { id } });
+    });
+
     revalidatePath("/rh/employes");
+    revalidatePath("/assistante/employes");
     return { success: true };
   } catch (error) {
     console.error("Error deleting employee:", error);
-    return { success: false, error: "Failed to delete employee" };
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code: string }).code === "P2003"
+    ) {
+      return {
+        success: false,
+        error:
+          "Impossible de supprimer cet employé : des données liées existent encore dans le système.",
+      };
+    }
+    return { success: false, error: "Échec de la suppression de l'employé" };
   }
 }

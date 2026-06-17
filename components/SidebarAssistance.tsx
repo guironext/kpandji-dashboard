@@ -28,8 +28,9 @@ const navCategories = [
     bg: "#6366f11a", // indigo-500 @ 10% opacity
     items: [
       { id: 1, icon: <LayoutDashboard className={iconClass} />, label: "Dashboard", href: "/assistante" },
+      { id: 13, icon: <LayoutDashboard className={iconClass} />, label: "Pointage", href: "/assistante/pointage" },
       { id: 2, icon: <CalendarDays className={iconClass} />, label: "Agenda", href: "/assistante/agenda" },
-      
+  
       { id: 5, icon: <FileTextIcon className={iconClass} />, label: "Rapports", href: "/assistante/rapports-activites" },
     ],
   },
@@ -55,6 +56,7 @@ const navCategories = [
       { id: 10, icon: <Contact className={iconClass} />, label: "Repertoire Clients", href: "/assistante/repertoire-clients" },
       { id: 11, icon: <UserSearch className={iconClass} />, label: "Repertoire Prospects", href: "/assistante/repertoire-prospects" },
       { id: 12, icon: <Briefcase className={iconClass} />, label: "Partenaires", href: "/assistante/repertoire-partenaires" },
+      { id: 14, icon: <Briefcase className={iconClass} />, label: "Ajouter Employés", href: "/assistante/employes" },
 
     ],
   },
