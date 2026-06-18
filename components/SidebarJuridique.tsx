@@ -5,12 +5,13 @@ import {
   Users,
   Scale,
   Handshake,
-  FolderPlus,
-  FolderOpen,
-  BookMarked,
   MessageSquare,
-  Inbox,
   type LucideIcon,
+  ScrollText,
+  FilePlus2,
+  Gavel,
+  Newspaper,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -82,36 +83,50 @@ const navItems: NavItem[] = [
     id: "main-contrats",
     icon: Handshake,
     label: "Contrats & Partenariats",
-    description: "Accords et conventions",
+    description: "Gestion des accords",
     href: "/juridique/contrats-et-partenariats",
     category: "main",
   },
- 
+  {
+    id: "main-liste-contrats",
+    icon: ScrollText,
+    label: "Liste des contrats",
+    description: "Registre des accords",
+    href: "/juridique/contrats-et-partenariats/liste-contrats",
+    category: "main",
+  },
   {
     id: "ctx-create",
-    icon: FolderPlus,
+    icon: FilePlus2,
     label: "Nouveau dossier",
-    description: "Créer un nouveau dossier",
+    description: "Créer un contentieux",
     href: "/juridique/contentieux/nouveau-dossier",
     category: "contentieux",
   },
   {
     id: "ctx-list",
-    icon: FolderOpen,
-    label: "Dossiers actifs",
-    description: "Suivi des contentieux",
+    icon: Gavel,
+    label: "Liste des contentieux",
+    description: "Dossiers en cours",
     href: "/juridique/contentieux/liste-contentieux",
     category: "contentieux",
   },
   {
     id: "ops-veille",
-    icon: BookMarked,
-    label: "Veille Juridique",
+    icon: Newspaper,
+    label: "Veille juridique",
     description: "Actualités & jurisprudence",
     href: "/juridique/veille-juridique",
     category: "veille_juridique",
   },
-
+  {
+    id: "ops-liste-veilles",
+    icon: ScrollText,
+    label: "Liste des veilles juridiques",
+    description: "Registre des dossiers",
+    href: "/juridique/veille-juridique/liste-veilles-juridiques",
+    category: "veille_juridique",
+  },
   {
     id: "com-messages",
     icon: MessageSquare,
@@ -122,7 +137,7 @@ const navItems: NavItem[] = [
   },
   {
     id: "com-courriers",
-    icon: Inbox,
+    icon: Mail,
     label: "Courriers",
     description: "Numérotation & suivi",
     href: "/juridique/numero-courrier",
@@ -143,22 +158,14 @@ function isNavActive(
   searchParams: URLSearchParams
 ) {
   const [path, query] = href.split("?");
-  const matchesPath =
-    pathname === path ||
-    (path !== "/juridique" && pathname.startsWith(`${path}/`));
 
-  if (!matchesPath) return false;
+  if (pathname !== path) return false;
 
   if (query) {
     const expected = new URLSearchParams(query);
     for (const [key, value] of expected.entries()) {
       if (searchParams.get(key) !== value) return false;
     }
-    return true;
-  }
-
-  if (path === "/juridique/contentieux") {
-    return searchParams.get("tab") !== "nouveau-dossier";
   }
 
   return true;

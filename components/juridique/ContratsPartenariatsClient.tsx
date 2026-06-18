@@ -146,6 +146,7 @@ export type PartenaireItem = {
 type Props = {
   contrats: ContratItem[];
   partenaires: PartenaireItem[];
+  variant?: "default" | "registre";
 };
 
 type ViewMode = "grid" | "table";
@@ -557,11 +558,16 @@ function EmptyState({
   );
 }
 
-export default function ContratsPartenariatsClient({ contrats, partenaires }: Props) {
+export default function ContratsPartenariatsClient({
+  contrats,
+  partenaires,
+  variant = "default",
+}: Props) {
+  const isRegistre = variant === "registre";
   const [contratsList, setContratsList] = useState(contrats);
   const [partenairesList, setPartenairesList] = useState(partenaires);
   const [activeTab, setActiveTab] = useState<ActiveTab>("contrat");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>(isRegistre ? "table" : "grid");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [contratDialogOpen, setContratDialogOpen] = useState(false);
@@ -850,20 +856,29 @@ export default function ContratsPartenariatsClient({ contrats, partenaires }: Pr
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-violet-100 backdrop-blur-md">
                 <Sparkles className="h-3.5 w-3.5 text-violet-300" />
-                Service Juridique · Contrats
+                {isRegistre
+                  ? "Service Juridique · Registre"
+                  : "Service Juridique · Contrats"}
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 shadow-2xl ring-1 ring-white/20 backdrop-blur-md sm:h-14 sm:w-14">
-                  <Handshake className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                  {isRegistre ? (
+                    <List className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                  ) : (
+                    <Handshake className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                  )}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                    Contrats et partenariats
+                    {isRegistre
+                      ? "Liste des contrats et partenariats"
+                      : "Contrats et partenariats"}
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Centralisez vos contrats, téléversez les documents et suivez les partenaires
-                    signataires associés.
+                    {isRegistre
+                      ? "Consultez l'ensemble des contrats enregistrés et des partenaires signataires associés."
+                      : "Centralisez vos contrats, téléversez les documents et suivez les partenaires signataires associés."}
                   </p>
                 </div>
               </div>

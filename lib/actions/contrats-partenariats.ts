@@ -8,7 +8,10 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import type { TypeContrat } from "@prisma/client";
 
-const PAGE_PATH = "/juridique/contrats-et-partenariats";
+const PAGE_PATHS = [
+  "/juridique/contrats-et-partenariats",
+  "/juridique/contrats-et-partenariats/liste-contrats",
+];
 
 const typeContratField = z.enum([
   "CONTRAT",
@@ -29,7 +32,9 @@ const fileUploadSchema = z.object({
 });
 
 function revalidateContratsPath() {
-  revalidatePath(PAGE_PATH);
+  for (const path of PAGE_PATHS) {
+    revalidatePath(path);
+  }
 }
 
 async function uploadContratFile(file: File) {

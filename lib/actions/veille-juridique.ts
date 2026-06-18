@@ -9,6 +9,7 @@ import {
 } from "@/lib/veille-juridique-display";
 
 const PAGE_PATH = "/juridique/veille-juridique";
+const LISTE_PATH = "/juridique/veille-juridique/liste-veilles-juridiques";
 
 const dossierSchema = z.object({
   titre: z.string().min(1, "Le titre est requis").max(500),
@@ -19,6 +20,7 @@ const dossierSchema = z.object({
 
 function revalidateVeilleJuridiquePath() {
   revalidatePath(PAGE_PATH);
+  revalidatePath(LISTE_PATH);
 }
 
 export type DossierVeilleJuridiqueListItem = {
