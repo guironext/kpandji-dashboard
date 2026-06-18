@@ -1,31 +1,34 @@
 import { AlertCircle } from "lucide-react";
 import ManagerDashboardClient from "@/components/manager/ManagerDashboardClient";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { getManagerDashboard } from "@/lib/actions/manager-dashboard";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard | Manager",
+  description:
+    "Tableau de bord opérations — commandes, conteneurs, montages et agenda",
+};
 
 export default async function ManagerDashboardPage() {
   const result = await getManagerDashboard();
 
   if (!result.success || !result.data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-        <div className="mx-auto max-w-2xl">
-          <Card className="border-red-200 bg-red-50/80 shadow-lg backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-red-100 p-2">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-red-700">Erreur</CardTitle>
-                  <CardDescription className="text-red-600">
-                    {result.error || "Impossible de charger le tableau de bord"}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="flex min-h-[50vh] items-center justify-center p-6">
+        <Card className="max-w-md border-rose-200 bg-rose-50/50">
+          <CardContent className="flex items-center gap-4 p-6">
+            <AlertCircle className="h-8 w-8 shrink-0 text-rose-500" />
+            <div>
+              <p className="font-semibold text-rose-900">
+                Impossible de charger le tableau de bord
+              </p>
+              <p className="mt-1 text-sm text-rose-700">
+                {result.error ?? "Une erreur inattendue s'est produite."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

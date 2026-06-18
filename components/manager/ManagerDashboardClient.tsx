@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   ArrowUpRight,
+  BarChart3,
   CalendarDays,
   ClipboardList,
   Container,
@@ -14,21 +15,118 @@ import {
   Mail,
   MessageSquare,
   Package,
+  PieChart as PieChartIcon,
   Ship,
   Sparkles,
+  TrendingUp,
   Truck,
   TriangleAlert,
   Warehouse,
   Wrench,
 } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgendaDuJourMarquee } from "@/components/manager/AgendaDuJourMarquee";
-import type { ManagerDashboardData } from "@/lib/actions/manager-dashboard";
+import type { ChartDatum, ManagerDashboardData } from "@/lib/actions/manager-dashboard";
 
 type Props = {
   data: ManagerDashboardData;
 };
+
+const TOOLTIP_STYLE = {
+  backgroundColor: "rgba(255,255,255,0.98)",
+  border: "1px solid #e2e8f0",
+  borderRadius: "16px",
+  boxShadow: "0 20px 50px -12px rgb(15 23 42 / 0.18)",
+  padding: "12px 16px",
+};
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/50 px-6 py-12 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+        <BarChart3 className="h-6 w-6 text-slate-300" />
+      </div>
+      <p className="text-sm font-medium text-slate-600">{message}</p>
+    </div>
+  );
+}
+
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const visible = payload.filter((p) => p.value > 0);
+  if (visible.length === 0) return null;
+
+  return (
+    <div style={TOOLTIP_STYLE}>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
+      <div className="space-y-2">
+        {visible.map((entry) => (
+          <div key={entry.name} className="flex items-center justify-between gap-6 text-sm">
+            <span className="flex items-center gap-2 text-slate-700">
+              <span
+                className="h-2.5 w-2.5 rounded-full ring-2 ring-white"
+                style={{ backgroundColor: entry.color }}
+              />
+              {entry.name}
+            </span>
+            <span className="font-bold tabular-nums text-slate-900">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PieTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; payload: { color: string } }>;
+}) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  return (
+    <div style={TOOLTIP_STYLE}>
+      <div className="flex items-center justify-between gap-6 text-sm">
+        <span className="flex items-center gap-2 text-slate-700">
+          <span
+            className="h-2.5 w-2.5 rounded-full ring-2 ring-white"
+            style={{ backgroundColor: entry.payload.color }}
+          />
+          {entry.name}
+        </span>
+        <span className="font-bold tabular-nums text-slate-900">{entry.value}</span>
+      </div>
+    </div>
+  );
+}
 
 const QUICK_LINKS = [
   {
@@ -215,6 +313,16 @@ export default function ManagerDashboardClient({ data }: Props) {
 
   const categories = [...new Set(QUICK_LINKS.map((l) => l.category))];
 
+  const hasMonthlyData = data.monthlyTrends.some(
+    (m) => m.commandes > 0 || m.conteneurs > 0 || m.montagesTermines > 0
+  );
+
+  const totalConteneurs = data.conteneurPipelineChart.reduce((sum, d) => sum + d.value, 0);
+  const tauxVente =
+    data.totalCommandes > 0
+      ? Math.round((data.commandesVendues / data.totalCommandes) * 100)
+      : 0;
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#f8fafc]">
       <div
@@ -235,7 +343,7 @@ export default function ManagerDashboardClient({ data }: Props) {
         />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 sm:pb-32 sm:pt-10 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:px-8 lg:pb-32">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100 backdrop-blur-md">
@@ -248,10 +356,10 @@ export default function ManagerDashboardClient({ data }: Props) {
                   <Warehouse className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
+                  <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
                     Bonjour, {userLabel}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-300">
+                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
                     Pilotez vos commandes, conteneurs et opérations atelier depuis une vue
                     unifiée, claire et actionnable.
                   </p>
@@ -263,6 +371,12 @@ export default function ManagerDashboardClient({ data }: Props) {
                   <CalendarDays className="h-3.5 w-3.5 text-blue-300" />
                   {todayLabel}
                 </span>
+                {data.montagesActifs > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-xs font-medium text-orange-100">
+                    <Wrench className="h-3.5 w-3.5" />
+                    {data.montagesActifs} montage(s) en cours
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-medium text-emerald-100">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -273,11 +387,11 @@ export default function ManagerDashboardClient({ data }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-stretch">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:flex-col lg:items-stretch">
               <Button
                 asChild
                 size="lg"
-                className="rounded-2xl border-0 bg-white px-6 text-indigo-950 shadow-xl shadow-black/20 hover:bg-blue-50"
+                className="w-full rounded-2xl border-0 bg-white px-6 text-indigo-950 shadow-xl shadow-black/20 hover:bg-blue-50 sm:w-auto"
               >
                 <Link href="/manager/tableau-commandes">
                   Tableau commandes
@@ -288,7 +402,7 @@ export default function ManagerDashboardClient({ data }: Props) {
                 asChild
                 size="lg"
                 variant="outline"
-                className="rounded-2xl border-white/15 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white"
+                className="w-full rounded-2xl border-white/15 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white sm:w-auto"
               >
                 <Link href="/manager/agenda">
                   Ouvrir l&apos;agenda
@@ -302,7 +416,7 @@ export default function ManagerDashboardClient({ data }: Props) {
 
       {/* KPI Cards */}
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="-mt-20 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="-mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {kpiCards.map((kpi) => {
             const Icon = kpi.icon;
             return (
@@ -311,13 +425,13 @@ export default function ManagerDashboardClient({ data }: Props) {
                 className="group overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/50 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/70"
               >
                 <div className={`h-1 bg-gradient-to-r ${kpi.accent}`} />
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                         {kpi.label}
                       </p>
-                      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-950">
+                      <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-950 sm:text-3xl">
                         {kpi.value}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{kpi.sub}</p>
@@ -334,7 +448,332 @@ export default function ManagerDashboardClient({ data }: Props) {
           })}
         </div>
 
-        <div className="mt-10 space-y-10 pb-12">
+        <div className="mt-8 space-y-8 pb-10 sm:mt-10 sm:space-y-10 sm:pb-12">
+          {/* Statistiques & graphiques */}
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-indigo-500 to-violet-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Activité opérationnelle
+                    </CardTitle>
+                    <CardDescription>
+                      Commandes, conteneurs et montages (6 derniers mois)
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {hasMonthlyData ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={data.monthlyTrends} barGap={4}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis
+                        dataKey="monthShort"
+                        tick={{ fill: "#64748b", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fill: "#64748b", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(148,163,184,0.08)" }} />
+                      <Legend />
+                      <Bar
+                        dataKey="commandes"
+                        name="Commandes"
+                        fill="#2563eb"
+                        radius={[6, 6, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="conteneurs"
+                        name="Conteneurs"
+                        fill="#7c3aed"
+                        radius={[6, 6, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="montagesTermines"
+                        name="Montages terminés"
+                        fill="#059669"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <EmptyChart message="Aucune activité enregistrée sur la période." />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <Container className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Pipeline conteneurs
+                    </CardTitle>
+                    <CardDescription>
+                      {totalConteneurs} conteneur(s) suivis · répartition par étape
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.conteneurPipelineChart.length > 0 ? (
+                  <div className="flex flex-col items-center gap-6 sm:flex-row">
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={data.conteneurPipelineChart}
+                          dataKey="value"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={90}
+                          paddingAngle={3}
+                        >
+                          {data.conteneurPipelineChart.map((entry) => (
+                            <Cell key={entry.label} fill={entry.color} stroke="white" strokeWidth={2} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="w-full space-y-2 sm:max-w-[180px]">
+                      {data.conteneurPipelineChart.map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
+                        >
+                          <span className="flex items-center gap-2 text-sm text-slate-700">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            {item.label}
+                          </span>
+                          <span className="text-sm font-bold tabular-nums text-slate-900">
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyChart message="Aucun conteneur enregistré." />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                    <PieChartIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Répartition commandes
+                    </CardTitle>
+                    <CardDescription>
+                      {tauxVente}% vendues · {data.commandesDisponibles} disponible(s)
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.commandesByFlag.length > 0 ? (
+                  <div className="flex flex-col items-center gap-6 sm:flex-row">
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={data.commandesByFlag}
+                          dataKey="value"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={90}
+                          paddingAngle={4}
+                        >
+                          {data.commandesByFlag.map((entry) => (
+                            <Cell key={entry.label} fill={entry.color} stroke="white" strokeWidth={2} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<PieTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="w-full space-y-2 sm:max-w-[180px]">
+                      {data.commandesByFlag.map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
+                        >
+                          <span className="flex items-center gap-2 text-sm text-slate-700">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            {item.label}
+                          </span>
+                          <span className="text-sm font-bold tabular-nums text-slate-900">
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyChart message="Aucune commande enregistrée." />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-orange-500 to-amber-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-700">
+                    <Wrench className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Montages par étape
+                    </CardTitle>
+                    <CardDescription>
+                      {data.montagesActifs} actif(s) · suivi atelier
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.montageByEtape.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={data.montageByEtape} layout="vertical" barSize={18}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        allowDecimals={false}
+                        tick={{ fill: "#64748b", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="label"
+                        width={90}
+                        tick={{ fill: "#64748b", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "rgba(148,163,184,0.08)" }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const item = payload[0].payload as ChartDatum;
+                          return (
+                            <div style={TOOLTIP_STYLE}>
+                              <div className="flex items-center justify-between gap-6 text-sm">
+                                <span className="text-slate-700">{item.label}</span>
+                                <span className="font-bold tabular-nums text-slate-900">
+                                  {item.value}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="value" name="Montages" radius={[0, 6, 6, 0]}>
+                        {data.montageByEtape.map((entry) => (
+                          <Cell key={entry.label} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <EmptyChart message="Aucun montage enregistré." />
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Évolution mensuelle — courbe */}
+          {hasMonthlyData && (
+            <section>
+              <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+                <div className="h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600" />
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                      <BarChart3 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-slate-900">
+                        Tendance mensuelle
+                      </CardTitle>
+                      <CardDescription>
+                        Évolution des commandes et conteneurs sur 6 mois
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={data.monthlyTrends}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis
+                        dataKey="monthShort"
+                        tick={{ fill: "#64748b", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fill: "#64748b", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="commandes"
+                        name="Commandes"
+                        stroke="#2563eb"
+                        strokeWidth={2.5}
+                        dot={{ fill: "#2563eb", r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="conteneurs"
+                        name="Conteneurs"
+                        stroke="#7c3aed"
+                        strokeWidth={2.5}
+                        dot={{ fill: "#7c3aed", r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
           {/* Pipeline conteneurs */}
           <section>
             <div className="mb-5 flex items-end justify-between gap-4">
