@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
-import { getFacturesByUser, deleteFacture, updateProformaNotes } from "@/lib/actions/facture";
+import { getFacturesByUser, deleteFacture, updateProformaNotes, updateProformaTotalTtc } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getUserSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
@@ -213,6 +213,10 @@ export default function Page() {
   const [showSignature, setShowSignature] = useState(false);
   const [editedAmountTexts, setEditedAmountTexts] = useState<Record<string, string>>({});
   const [editingAmountText, setEditingAmountText] = useState<string | null>(null);
+  const [editedTotalTtc, setEditedTotalTtc] = useState<Record<string, number>>({});
+  const [editingTotalTtc, setEditingTotalTtc] = useState<string | null>(null);
+  const [totalTtcInputs, setTotalTtcInputs] = useState<Record<string, string>>({});
+  const [savingTotalTtc, setSavingTotalTtc] = useState<string | null>(null);
   const [notesProforma, setNotesProforma] = useState<Record<string, string>>({});
   const [savingNotes, setSavingNotes] = useState<string | null>(null);
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
@@ -226,6 +230,52 @@ export default function Page() {
     const rate = customExchangeRate ? parseFloat(customExchangeRate) : selectedCurrency.rate;
     if (!rate || isNaN(rate) || rate <= 0) return amountCfa;
     return amountCfa / rate;
+  };
+
+  const convertToCfa = (displayAmount: number): number => {
+    if (selectedCurrency.code === "XOF") return displayAmount;
+    const rate = customExchangeRate ? parseFloat(customExchangeRate) : selectedCurrency.rate;
+    if (!rate || isNaN(rate) || rate <= 0) return displayAmount;
+    return displayAmount * rate;
+  };
+
+  const getEffectiveTotalTtc = (facture: Facture) => editedTotalTtc[facture.id] ?? facture.total_ttc;
+
+  const parseAmountInput = (value: string): number | null => {
+    const parsed = parseFloat(value.replace(/\s/g, "").replace(",", "."));
+    return isNaN(parsed) ? null : parsed;
+  };
+
+  const handleSaveTotalTtc = async (facture: Facture) => {
+    const raw = totalTtcInputs[facture.id];
+    if (raw === undefined) {
+      setEditingTotalTtc(null);
+      return;
+    }
+    const displayAmount = parseAmountInput(raw);
+    if (displayAmount === null || displayAmount < 0) {
+      toast.error("Montant invalide");
+      return;
+    }
+    const totalCfa = Math.round(convertToCfa(displayAmount) * 100) / 100;
+
+    setSavingTotalTtc(facture.id);
+    const result = await updateProformaTotalTtc(facture.id, totalCfa);
+    setSavingTotalTtc(null);
+
+    if (result.success) {
+      setEditedTotalTtc((prev) => ({ ...prev, [facture.id]: totalCfa }));
+      setEditingTotalTtc(null);
+      toast.success("Total TTC enregistré");
+      if (clerkId) {
+        const updatedFactures = await getFacturesByUser(clerkId);
+        if (updatedFactures.success && updatedFactures.data) {
+          setFactures(updatedFactures.data as unknown as Facture[]);
+        }
+      }
+    } else {
+      toast.error(result.error || "Erreur lors de l'enregistrement");
+    }
   };
 
   const formatAmount = (amountCfa: number): string => {
@@ -881,14 +931,14 @@ export default function Page() {
                   <tr class="total-row">
                     <td colspan="4"></td>
                     <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.total_ttc)}</td>
+                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(editedTotalTtc?.[currentFacture.id] ?? currentFacture.total_ttc)}</td>
                   </tr>
                 </tfoot>
               </table>
 
               <div class="amount-text">
                 Arrêter la présente facture à la somme de <span>${(() => {
-                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(convertAmount(currentFacture.total_ttc || 0)));
+                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(convertAmount((editedTotalTtc?.[currentFacture.id] ?? currentFacture.total_ttc) || 0)));
                   return escapeHtml(amountText);
                 })()} ${getCurrencyLabel()}</span>
               </div>
@@ -1393,7 +1443,51 @@ export default function Page() {
                       <TableRow className="text-sm bg-green-50">
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
-                        <TableCell className="text-right font-medium pr-6 text-black">{formatAmount(facture.total_ttc)}</TableCell>
+                        <TableCell className="text-right font-medium pr-6 text-black">
+                          {editingTotalTtc === facture.id ? (
+                            <div className="flex items-center justify-end gap-1 print-hide">
+                              <Input
+                                type="text"
+                                value={totalTtcInputs[facture.id] ?? formatAmount(getEffectiveTotalTtc(facture))}
+                                onChange={(e) => setTotalTtcInputs({ ...totalTtcInputs, [facture.id]: e.target.value })}
+                                className="w-28 h-7 text-sm text-right"
+                                autoFocus
+                                disabled={savingTotalTtc === facture.id}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveTotalTtc(facture);
+                                  if (e.key === "Escape") setEditingTotalTtc(null);
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSaveTotalTtc(facture)}
+                                disabled={savingTotalTtc === facture.id}
+                                className="h-7 px-2 text-xs"
+                              >
+                                {savingTotalTtc === facture.id ? "..." : "OK"}
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <span>{formatAmount(getEffectiveTotalTtc(facture))}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingTotalTtc(facture.id);
+                                  setTotalTtcInputs({
+                                    ...totalTtcInputs,
+                                    [facture.id]: formatAmount(getEffectiveTotalTtc(facture)),
+                                  });
+                                }}
+                                className="h-6 w-6 p-0 print-hide"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
                       </TableRow>
                     </TableFooter>
                   </Table>
@@ -1406,7 +1500,7 @@ export default function Page() {
                       {editingAmountText === facture.id ? (
                         <div className="flex items-center gap-2 flex-1 min-w-[300px]">
                           <Input
-                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))}
+                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))}
                             onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
                             className="flex-1 text-sm font-semibold"
                             placeholder="Saisir la somme en lettres"
@@ -1430,7 +1524,7 @@ export default function Page() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">
-                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))} {getCurrencyLabel()}
+                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))} {getCurrencyLabel()}
                           </span>
                           <Button
                             size="sm"
@@ -1440,7 +1534,7 @@ export default function Page() {
                               if (!editedAmountTexts[facture.id]) {
                                 setEditedAmountTexts({
                                   ...editedAmountTexts,
-                                  [facture.id]: numberToFrench(Math.floor(convertAmount(facture.total_ttc || 0)))
+                                  [facture.id]: numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))
                                 });
                               }
                             }}

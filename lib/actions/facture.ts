@@ -1256,6 +1256,35 @@ export async function updateProformaNotes(factureId: string, notes: string) {
   }
 }
 
+export async function updateProformaTotalTtc(factureId: string, totalTtc: number) {
+  try {
+    const facture = await prisma.facture.findUnique({ where: { id: factureId } });
+    if (!facture) return { success: false, error: "Facture introuvable" };
+
+    const montantNetHt = Number(facture.montant_net_ht);
+    const avance = Number(facture.avance_payee);
+    const montantTva = totalTtc - montantNetHt;
+    const restePayer = totalTtc - avance;
+
+    await executeWithRetry(async () => {
+      await prisma.facture.update({
+        where: { id: factureId },
+        data: {
+          total_ttc: new Decimal(totalTtc),
+          montant_tva: new Decimal(montantTva),
+          reste_payer: new Decimal(restePayer),
+        },
+      });
+    });
+    revalidatePath("/commercial/proformas");
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error updating proforma total TTC:", error);
+    return { success: false, error: message };
+  }
+}
+
 export async function getClientsWithFacturesGroupedByYearMonth() {
   try {
     // Fetch factures with status FACTURE and (bon_pour_acquis === true OR BonDeCommande exists)
