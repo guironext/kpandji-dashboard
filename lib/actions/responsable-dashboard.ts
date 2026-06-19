@@ -11,8 +11,10 @@ import {
   getObjectifsVehiculesByPeriodAndCommercial,
 } from "./rapport-rendez-vous-analytics";
 import { getObjectifPeriods } from "./objectif-period";
+import type { ChartDatum, MonthlyClientTrend } from "./commercial-dashboard";
 
-export type ResponsableDashboardData = {
+export type ResponsableDashboardStats = {
+  commercialsCount: number;
   periodsCount: number;
   totalChutes: number;
   totalCommercialsWithChutes: number;
@@ -22,13 +24,63 @@ export type ResponsableDashboardData = {
   objectifsCibleCount: number;
   objectifsFinancieresCount: number;
   objectifsVehiculesCount: number;
-  commercialsCount: number;
   prospectsCount: number;
   clientsCount: number;
   facturesEnAttenteCount: number;
   facturesValideesCount: number;
+  proformasEnAttente: number;
+  caMois: number;
+  caTotal: number;
   currentPeriodLabel: string | null;
 };
+
+export type ResponsableDashboardData = {
+  stats: ResponsableDashboardStats;
+  monthlyTrends: MonthlyClientTrend[];
+  chutesByCommercial: ChartDatum[];
+  rapportBreakdown: ChartDatum[];
+  facturesByStatus: ChartDatum[];
+  objectifsBreakdown: ChartDatum[];
+};
+
+/** @deprecated Use ResponsableDashboardStats via data.stats */
+export type ResponsableDashboardDataLegacy = ResponsableDashboardStats;
+
+const CHART_COLORS = [
+  "#2563eb",
+  "#7c3aed",
+  "#059669",
+  "#ea580c",
+  "#db2777",
+  "#0284c7",
+  "#d97706",
+  "#475569",
+] as const;
+
+const FACTURE_STATUS_LABELS: Record<string, string> = {
+  EN_ATTENTE: "En attente",
+  PROFORMA: "Proforma",
+  FACTURE: "Facture",
+  PAYEE: "Payée",
+  ANNULEE: "Annulée",
+};
+
+function buildMonthlyKeys(months: number) {
+  const result: { monthKey: string; monthLabel: string; monthShort: string; start: Date; end: Date }[] = [];
+  const now = new Date();
+
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const monthLabel = d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+    const monthShort = d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "");
+    result.push({ monthKey, monthLabel, monthShort, start, end });
+  }
+
+  return result;
+}
 
 export async function getResponsableDashboard(): Promise<{
   success: boolean;
@@ -51,6 +103,12 @@ export async function getResponsableDashboard(): Promise<{
       return { success: false, error: "Non autorisé" };
     }
 
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const monthlyKeys = buildMonthlyKeys(6);
+    const earliestMonth = monthlyKeys[0].start;
+
     const [
       periodsResult,
       chuteResult,
@@ -71,7 +129,10 @@ export async function getResponsableDashboard(): Promise<{
 
     let totalChutes = 0;
     let totalCommercialsWithChutes = 0;
-    if (chuteResult.success && chuteResult.data?.periods) {
+    const chutesByCommercial: ChartDatum[] = [];
+
+    if (chuteResult.success && chuteResult.data?.periods?.length) {
+      const currentPeriod = chuteResult.data.periods[0];
       for (const period of chuteResult.data.periods) {
         totalChutes += period.commercials.reduce(
           (sum: number, comm: { totalChutes: number }) => sum + comm.totalChutes,
@@ -83,6 +144,18 @@ export async function getResponsableDashboard(): Promise<{
           period.commercials.map((comm) => comm.commercialId)
         )
       ).size;
+
+      currentPeriod.commercials
+        .filter((c) => c.totalChutes > 0)
+        .sort((a, b) => b.totalChutes - a.totalChutes)
+        .slice(0, 8)
+        .forEach((c, index) => {
+          chutesByCommercial.push({
+            label: c.commercialName,
+            value: c.totalChutes,
+            color: CHART_COLORS[index % CHART_COLORS.length],
+          });
+        });
     }
 
     let totalRapportsProspects = 0;
@@ -109,6 +182,12 @@ export async function getResponsableDashboard(): Promise<{
       entrepriseClients,
       facturesEnAttente,
       facturesValidees,
+      proformasEnAttente,
+      clientsRaw,
+      clientEntreprisesRaw,
+      rendezVousMonthlyRaw,
+      facturesRaw,
+      facturesByStatusRaw,
     ] = await Promise.all([
       prisma.user.count({ where: { role: "COMMERCIAL" } }),
       prisma.client.count({ where: { status_client: "PROSPECT" } }),
@@ -117,6 +196,26 @@ export async function getResponsableDashboard(): Promise<{
       prisma.client_entreprise.count({ where: { status_client: "CLIENT" } }),
       prisma.facture.count({ where: { status_facture: "EN_ATTENTE" } }),
       prisma.facture.count({ where: { status_facture: "FACTURE" } }),
+      prisma.facture.count({ where: { status_facture: "PROFORMA" } }),
+      prisma.client.findMany({
+        where: { status_client: { in: ["PROSPECT", "CLIENT"] } },
+        select: { createdAt: true },
+      }),
+      prisma.client_entreprise.findMany({
+        where: { status_client: { in: ["PROSPECT", "CLIENT"] } },
+        select: { createdAt: true },
+      }),
+      prisma.rendezVous.findMany({
+        where: { date: { gte: earliestMonth } },
+        select: { date: true },
+      }),
+      prisma.facture.findMany({
+        select: { status_facture: true, total_ttc: true, date_facture: true },
+      }),
+      prisma.facture.groupBy({
+        by: ["status_facture"],
+        _count: { _all: true },
+      }),
     ]);
 
     const prospectsCountTotal = clientProspects + entrepriseProspects;
@@ -138,22 +237,70 @@ export async function getResponsableDashboard(): Promise<{
       currentPeriodLabel = `${startStr} — ${endStr}`;
     }
 
+    const monthlyTrends: MonthlyClientTrend[] = monthlyKeys.map(
+      ({ monthKey, monthLabel, monthShort, start, end }) => ({
+        monthKey,
+        monthLabel,
+        monthShort,
+        clients: clientsRaw.filter((c) => c.createdAt >= start && c.createdAt <= end).length,
+        clientEntreprises: clientEntreprisesRaw.filter(
+          (c) => c.createdAt >= start && c.createdAt <= end
+        ).length,
+        rendezVous: rendezVousMonthlyRaw.filter((r) => r.date >= start && r.date <= end).length,
+      })
+    );
+
+    const rapportBreakdown: ChartDatum[] = [
+      { label: "Prospects", value: totalRapportsProspects, color: "#2563eb" },
+      { label: "Clients", value: totalRapportsClients, color: "#059669" },
+    ].filter((d) => d.value > 0);
+
+    const facturesByStatus: ChartDatum[] = facturesByStatusRaw
+      .filter((g) => g._count._all > 0)
+      .map((g, index) => ({
+        label: FACTURE_STATUS_LABELS[g.status_facture] ?? g.status_facture,
+        value: g._count._all,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      }));
+
+    const objectifsBreakdown: ChartDatum[] = [
+      { label: "Cibles", value: objectifsCibleCount, color: "#2563eb" },
+      { label: "Financiers", value: objectifsFinancieresCount, color: "#7c3aed" },
+      { label: "Véhicules", value: objectifsVehiculesCount, color: "#059669" },
+    ].filter((d) => d.value > 0);
+
+    const facturesValideesList = facturesRaw.filter((f) => f.status_facture === "FACTURE");
+    const caTotal = facturesValideesList.reduce((sum, f) => sum + Number(f.total_ttc), 0);
+    const caMois = facturesValideesList
+      .filter((f) => f.date_facture >= startOfMonth && f.date_facture <= endOfMonth)
+      .reduce((sum, f) => sum + Number(f.total_ttc), 0);
+
     const data: ResponsableDashboardData = {
-      periodsCount,
-      totalChutes,
-      totalCommercialsWithChutes,
-      totalRapportsProspects,
-      totalRapportsClients,
-      totalRapports,
-      objectifsCibleCount,
-      objectifsFinancieresCount,
-      objectifsVehiculesCount,
-      commercialsCount,
-      prospectsCount: prospectsCountTotal,
-      clientsCount: clientsCountTotal,
-      facturesEnAttenteCount: facturesEnAttente,
-      facturesValideesCount: facturesValidees,
-      currentPeriodLabel,
+      stats: {
+        commercialsCount,
+        periodsCount,
+        totalChutes,
+        totalCommercialsWithChutes,
+        totalRapportsProspects,
+        totalRapportsClients,
+        totalRapports,
+        objectifsCibleCount,
+        objectifsFinancieresCount,
+        objectifsVehiculesCount,
+        prospectsCount: prospectsCountTotal,
+        clientsCount: clientsCountTotal,
+        facturesEnAttenteCount: facturesEnAttente,
+        facturesValideesCount: facturesValidees,
+        proformasEnAttente,
+        caMois,
+        caTotal,
+        currentPeriodLabel,
+      },
+      monthlyTrends,
+      chutesByCommercial,
+      rapportBreakdown,
+      facturesByStatus,
+      objectifsBreakdown,
     };
 
     return { success: true, data };

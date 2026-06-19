@@ -111,7 +111,7 @@ async function deleteVoitureSAV(id: string) {
   return json;
 }
 
-export default function VoitureSAVTab() {
+export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean }) {
   const [voitures, setVoitures] = useState<VoitureSAV[]>([]);
   const [clients, setClients] = useState<ClientSAV[]>([]);
   const [loading, setLoading] = useState(true);
@@ -356,14 +356,20 @@ export default function VoitureSAVTab() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-emerald-50 rounded-xl px-4 py-2 border border-emerald-100">
-            <span className="text-2xl font-bold text-emerald-700">{voitures.length}</span>
-            <span className="text-sm text-emerald-600 ml-1">véhicule(s)</span>
+      <div className={embedded ? "mb-6 flex justify-end" : "mb-6 flex items-center justify-between"}>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2">
+              <span className="text-2xl font-bold text-emerald-700">{voitures.length}</span>
+              <span className="ml-1 text-sm text-emerald-600">véhicule(s)</span>
+            </div>
           </div>
-        </div>
-        <Button onClick={handleOpenAdd} size="default" className="bg-emerald-600 hover:bg-emerald-700">
+        )}
+        <Button
+          onClick={handleOpenAdd}
+          size="default"
+          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Ajouter Voiture SAV
         </Button>

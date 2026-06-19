@@ -133,7 +133,7 @@ function getCategoryColor(index: number): string {
   return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
 }
 
-export default function DetailsDiagnostiqueTab() {
+export default function DetailsDiagnostiqueTab({ embedded = false }: { embedded?: boolean }) {
   const [details, setDetails] = useState<DetailDiagnostic[]>([]);
   const [categories, setCategories] = useState<CatergorieDiagnostic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -365,48 +365,47 @@ export default function DetailsDiagnostiqueTab() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Section header */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Détails Diagnostique</h2>
-            <p className="text-sm text-slate-500">Interventions et prestations par catégorie avec tarification</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats & filters bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm px-6 py-4 shadow-sm shadow-slate-100 min-w-[180px]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100">
-              <FileText className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-slate-800">{filteredDetails.length}</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Intervention{filteredDetails.length !== 1 ? "s" : ""}</p>
-            </div>
-          </div>
-          {details.length > 0 && (
-            <div className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm px-6 py-4 shadow-sm shadow-slate-100 min-w-[180px]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 border border-amber-100">
-                <Coins className="h-6 w-6 text-amber-600" />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        {!embedded && (
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex min-w-[180px] items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/90 px-6 py-4 shadow-sm shadow-slate-100 backdrop-blur-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50">
+                <FileText className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-lg font-bold tabular-nums text-slate-800">
-                  {formatPrixFCFA(details.reduce((sum, d) => sum + (Number(d.prix_unitaire) || 0), 0))}
+                <p className="text-2xl font-bold tabular-nums text-slate-800">{filteredDetails.length}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                  Intervention{filteredDetails.length !== 1 ? "s" : ""}
                 </p>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total catalogue</p>
               </div>
             </div>
-          )}
-        </div>
+            {details.length > 0 && (
+              <div className="flex min-w-[180px] items-center gap-4 rounded-2xl border border-slate-200/80 bg-white/90 px-6 py-4 shadow-sm shadow-slate-100 backdrop-blur-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
+                  <Coins className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold tabular-nums text-slate-800">
+                    {formatPrixFCFA(details.reduce((sum, d) => sum + (Number(d.prix_unitaire) || 0), 0))}
+                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Total catalogue</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        {embedded && details.length > 0 && (
+          <div className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-2.5">
+            <Coins className="h-4 w-4 text-amber-600" />
+            <span className="text-sm font-semibold tabular-nums text-amber-900">
+              Catalogue : {formatPrixFCFA(details.reduce((sum, d) => sum + (Number(d.prix_unitaire) || 0), 0))}
+            </span>
+          </div>
+        )}
+
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:ml-auto">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input

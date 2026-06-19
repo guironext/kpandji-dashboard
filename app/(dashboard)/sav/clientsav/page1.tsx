@@ -381,16 +381,13 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
         </div>
       )}
 
-      {/* Embedded toolbar - when hero is hidden */}
       {embedded && (
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-50 rounded-xl px-4 py-2 border border-emerald-100">
-              <span className="text-2xl font-bold text-emerald-700">{clients.length}</span>
-              <span className="text-sm text-emerald-600 ml-1">clients</span>
-            </div>
-          </div>
-          <Button onClick={handleOpenAdd} size="default" className="bg-emerald-600 hover:bg-emerald-700">
+        <div className="mb-6 flex justify-end">
+          <Button
+            onClick={handleOpenAdd}
+            size="default"
+            className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Ajouter Client
           </Button>
