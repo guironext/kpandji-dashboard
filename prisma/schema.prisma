@@ -257,6 +257,52 @@ model Evolution_Lettre_Commande {
   @@index([lettre_commandeId])
 }
 
+model AppelOffre {
+  id                      String                    @id @default(uuid())
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  numero_appel_offre      String
+  validite_appel_offre    Boolean                   @default(false)
+  factureId               String                    @unique
+  Facture                 Facture                   @relation(fields: [factureId], references: [id])
+  Information_Appel_Offre Information_Appel_Offre[]
+  Evolution_Appel_Offre   Evolution_Appel_Offre[]
+}
+
+model Information_Appel_Offre {
+  id             String     @id @default(uuid())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  nomStrctureEmettrice String
+  domaineActivite String
+  telephone String
+  email String
+  numeroAppelOffre String
+  appel_offreId  String
+  AppelOffre     AppelOffre @relation(fields: [appel_offreId], references: [id], onDelete: Cascade)
+  listeDocuments Document[]
+}
+model Document {
+  id             String     @id @default(uuid())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  nomDocument String
+  urlDocument String
+  information_appel_offreId String
+  Information_Appel_Offre Information_Appel_Offre @relation(fields: [information_appel_offreId], references: [id], onDelete: Cascade)
+}
+model Evolution_Appel_Offre {
+  id             String     @id @default(uuid())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  etape_actuelle String
+  etape_suivante String
+  appel_offreId  String
+  AppelOffre     AppelOffre @relation(fields: [appel_offreId], references: [id], onDelete: Cascade)
+
+  @@index([appel_offreId])
+}
+
 model Client_entreprise {
   id                           String              @id
   nom_entreprise               String
@@ -560,6 +606,7 @@ model Facture {
   BonDeCommande          BonDeCommande?
   BonPourAccord          BonPourAccord?
   LettreCommande         LettreCommande?
+  AppelOffre             AppelOffre?
   Commande               Commande[]
   Client_entreprise      Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
   Client                 Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)

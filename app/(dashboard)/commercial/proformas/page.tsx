@@ -211,6 +211,7 @@ export default function Page() {
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; prix?: number | null; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  const [showPaymentConditions, setShowPaymentConditions] = useState(true);
   const [editedAmountTexts, setEditedAmountTexts] = useState<Record<string, string>>({});
   const [editingAmountText, setEditingAmountText] = useState<string | null>(null);
   const [editedTotalTtc, setEditedTotalTtc] = useState<Record<string, number>>({});
@@ -453,6 +454,13 @@ export default function Page() {
       currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || "N/A"
     );
     const dateEcheance = escapeHtml(new Date(currentFacture.date_echeance).toLocaleDateString());
+    const proformaNotes = (notesProforma[currentFacture.id] ?? currentFacture.notes_proforma ?? "").trim();
+    const proformaNotesHtml = proformaNotes
+      ? `<div style="flex: 1; max-width: 28rem;">
+          <div style="font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Notes / Commentaires</div>
+          <div style="font-size: 13px; white-space: pre-wrap; border: 1px solid #9ca3af; padding: 8px; border-radius: 4px;">${escapeHtml(proformaNotes)}</div>
+        </div>`
+      : "<div></div>";
 
     const printContent = `
       <!DOCTYPE html>
@@ -944,7 +952,7 @@ export default function Page() {
               </div>
 
               <div class="signature-section">
-                <div></div>
+                ${proformaNotesHtml}
                 <div class="signature-right">
                   <div class="signature-label">Direction Commerciale</div>
                   ${signatureHtml}
@@ -953,10 +961,6 @@ export default function Page() {
 
               <div class="notes-section">
                 <p class="notes-title">Notes</p>
-                ${(() => {
-                  const notes = notesProforma?.[currentFacture.id] ?? currentFacture.notes_proforma ?? "";
-                  return notes ? `<p style="font-weight: 500; margin-bottom: 8px; white-space: pre-wrap;">${escapeHtml(notes)}</p>` : "";
-                })()}
                 <p style="font-weight: 500;">date d'échéance: ${dateEcheance}</p>
               </div>
             </div>
@@ -964,9 +968,11 @@ export default function Page() {
             <div class="footer">
               <div class="footer-conditions">
                 <p class="footer-conditions-title">CONDITIONS:</p>
+                ${showPaymentConditions ? `
                 <p>60% d'accompte à la commande</p>
                 <p style="font-weight: 300;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
                 <p>SOLDE avant livraison</p>
+                ` : ''}
                 <p className="text-black">
                   <span className="font-bold">Garantie: </span>
                   3 Ans ou 100.000 milles kilometres
@@ -1612,9 +1618,30 @@ export default function Page() {
             <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0">
               <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
                 <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
-                <p className="text-black">60% d&apos;accompte à la commande</p>
-                <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p className="text-black">SOLDE avant livraison</p>
+                {showPaymentConditions ? (
+                  <div
+                    className="flex flex-col gap-y-1 cursor-pointer rounded px-1 -mx-1 hover:bg-orange-50 transition-colors"
+                    onClick={() => setShowPaymentConditions(false)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowPaymentConditions(false); }}
+                    title="Cliquer pour masquer ces conditions à l'impression"
+                  >
+                    <p className="text-black">60% d&apos;accompte à la commande</p>
+                    <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+                    <p className="text-black">SOLDE avant livraison</p>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPaymentConditions(true)}
+                    className="print-hide w-fit text-[9px] h-7 border-orange-300 text-orange-700 hover:bg-orange-50"
+                  >
+                    Afficher les conditions de paiement
+                  </Button>
+                )}
                 <p className="text-black">
                   <span className="font-bold">Garantie: </span>
                   3 Ans ou 100.000 milles kilometres
