@@ -81,18 +81,6 @@ const numberToFrench = (num: number): string => {
   return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
 };
 
-const escapeHtml = (value?: string | null) => {
-  if (!value) return "";
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-};
-
-const escapeAttr = (value?: string | null) => escapeHtml(value);
-
 // Currency conversion: 1 unit of target = rate CFA (e.g. 1 USD = 600 CFA)
 const CURRENCIES = [
   { code: "XOF", label: "Francs CFA (FCFA)", rate: 1, symbol: "FCFA" },
@@ -324,718 +312,8 @@ export default function Page() {
   const endIndex = startIndex + itemsPerPage;
   const currentData = factures.slice(startIndex, endIndex);
 
-  const handlePrint = () => {
-    const currentFacture = currentData[0];
-    if (!currentFacture) {
-      toast.error("Aucune facture à imprimer");
-      return;
-    }
+  const handlePrint = () => window.print();
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error("Impossible d'ouvrir la fenêtre d'impression. Veuillez autoriser les pop-ups.");
-      return;
-    }
-
-    // Get the lignes data
-    const lignes = currentFacture.lignes && currentFacture.lignes.length > 0
-      ? currentFacture.lignes
-      : [{
-          id: "1",
-          voitureModelId: "",
-          couleur: "",
-          nbr_voiture: currentFacture.nbr_voiture_commande,
-          prix_unitaire: currentFacture.prix_unitaire,
-          montant_ligne: currentFacture.montant_ht,
-          transmission: "",
-          motorisation: "",
-          voitureModel: currentFacture.voiture?.voitureModel || null,
-        }];
-
-    // Generate table rows for vehicles
-    const vehicleRows = lignes.map((ligne, index) => {
-      const vehicleModelName = escapeHtml(ligne.voitureModel?.model || "N/A");
-      const vehicleDescription = escapeHtml(ligne.voitureModel?.description || "N/A");
-      const vehicleImage = ligne.voitureModel?.image 
-        ? `<img src="${escapeAttr(ligne.voitureModel.image)}" alt="${vehicleModelName}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
-        : "N/A";
-      
-      const colorInfo = ligne.couleur 
-        ? `<div style="font-size: 8px; color: #92400e;">Couleur: ${escapeHtml(ligne.couleur)}${ligne.transmission ? ` Transmission: ${escapeHtml(ligne.transmission)}` : ''}${ligne.motorisation ? ` Motorisation: ${escapeHtml(ligne.motorisation)}` : ''}</div>`
-        : '';
-
-      return `
-        <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 5px; text-align: center; font-weight: 600;">${index + 1}</td>
-          <td style="padding: 5px;">${vehicleImage}</td>
-          <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${vehicleModelName}</div>
-            <div style="font-size: 8px; margin-top: 4px;">${vehicleDescription}</div>
-            ${colorInfo}
-          </td>
-          <td style="padding: 5px; text-align: center; font-size: 13px;">${ligne.nbr_voiture}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(Number(ligne.prix_unitaire))}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatAmount(Number(ligne.montant_ligne))}</td>
-        </tr>
-      `;
-    }).join('');
-
-    // Generate table rows for accessories
-    let accessoryRows = '';
-    if (currentFacture.accessoires && currentFacture.accessoires.length > 0) {
-      accessoryRows = currentFacture.accessoires.map((accessoire, accIndex) => {
-        const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
-        const accessoireName = escapeHtml(accessoire.nom);
-        const accessoireDescription = escapeHtml(accessoire.description);
-        const accessoryImage = accessoire.image 
-          ? `<img src="${escapeAttr(accessoire.image)}" alt="${accessoireName}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
-          : '<div style="font-size: 13px; color: #9ca3af;">Pas d\'image</div>';
-        
-        return `
-          <tr style="border-bottom: 1px solid #fed7aa;">
-            <td style="padding: 8px; text-align: center; font-weight: 600;">${lignes.length + accIndex + 1}</td>
-            <td style="padding: 5px;">${accessoryImage}</td>
-            <td style="padding: 5px;">
-              <div style="font-size: 13px; font-weight: 600;">${accessoireName}</div>
-              ${accessoire.description ? `<div style="font-size: 8px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
-            </td>
-            <td style="padding: 5px; text-align: center; font-size: 13px;">${accessoire.quantity || 1}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(accessoirePrix)}</td>
-            <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatAmount(accessoirePrix * (accessoire.quantity || 1))}</td>
-          </tr>
-        `;
-      }).join('');
-    } else if (currentFacture.accessoire_nom) {
-      const imagePath = getAccessoireImage(currentFacture.accessoire_nom, accessoires);
-      const accessoireNom = escapeHtml(currentFacture.accessoire_nom);
-      const accessoireDescription = escapeHtml(currentFacture.accessoire_description);
-      const accessoryImage = imagePath 
-        ? `<img src="${escapeAttr(imagePath)}" alt="${accessoireNom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
-        : '<div style="font-size: 13px; color: #6b7280;">Pas d\'image</div>';
-      
-      accessoryRows = `
-        <tr style="border-bottom: 1px solid #fed7aa;">
-          <td style="padding: 5px; text-align: center; font-weight: 600;">${lignes.length + 1}</td>
-          <td style="padding: 5px;">${accessoryImage}</td>
-          <td style="padding: 5px;">
-            <div style="font-size: 13px; font-weight: 600;">${accessoireNom}</div>
-            ${currentFacture.accessoire_description ? `<div style="font-size: 7px; margin-top: 4px; max-width: 320px;">${accessoireDescription}</div>` : ''}
-          </td>
-          <td style="padding: 5px; text-align: center; font-size: 14px;">${currentFacture.accessoire_nbr || 1}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px;">${formatAmount((currentFacture.accessoire_prix || 0) / (currentFacture.accessoire_nbr || 1))}</td>
-          <td style="padding: 5px; text-align: right; font-size: 14px; white-space: nowrap;">${formatAmount(currentFacture.accessoire_prix || 0)}</td>
-        </tr>
-      `;
-    }
-
-    // Signature image
-    const signatureHtml = showSignature && signatureImage 
-      ? `<img src="${escapeAttr(signatureImage)}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
-      : '';
-
-    const factureId = escapeHtml(currentFacture.id.slice(-7));
-    const factureStatus = escapeHtml(currentFacture.status_facture);
-    const factureDate = escapeHtml(new Date(currentFacture.date_facture).toLocaleDateString());
-    const createdByName = escapeHtml(
-      `${currentFacture.user?.firstName || ''} ${currentFacture.user?.lastName || ''}`.trim()
-    ) || "N/A";
-    const createdByEmail = escapeHtml(currentFacture.user?.email || "N/A");
-    const createdByTelephone = escapeHtml(currentFacture.user?.telephone || "N/A");
-    const clientName = escapeHtml(
-      currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise || "N/A"
-    );
-    const clientEntrepriseName = currentFacture.client?.entreprise
-      ? escapeHtml(currentFacture.client.entreprise)
-      : "";
-    const clientTelephone = escapeHtml(
-      currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || "N/A"
-    );
-    const clientLocalisation = escapeHtml(
-      currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || "N/A"
-    );
-    const dateEcheance = escapeHtml(new Date(currentFacture.date_echeance).toLocaleDateString());
-    const proformaNotes = (notesProforma[currentFacture.id] ?? currentFacture.notes_proforma ?? "").trim();
-    const proformaNotesHtml = proformaNotes
-      ? `<div style="flex: 1; max-width: 28rem;">
-          <div style="font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Notes / Commentaires</div>
-          <div style="font-size: 13px; white-space: pre-wrap; border: 1px solid #9ca3af; padding: 8px; border-radius: 4px;">${escapeHtml(proformaNotes)}</div>
-        </div>`
-      : "<div></div>";
-
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Proforma - ${factureId}</title>
-          <meta charset="UTF-8">
-          <meta name="color-scheme" content="light">
-          <style>
-            @page {
-              size: A4;
-              margin: 1mm 5mm;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-              color-adjust: exact;
-            }
-            @page:first {
-              margin-top: 10mm;
-            }
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-            html, body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              color: #000;
-            }
-            .page {
-              page-break-after: always;
-              min-height: 277mm;
-              max-height: 277mm;
-              display: flex;
-              flex-direction: column;
-              padding: 8mm;
-              box-sizing: border-box;
-            }
-            .page:last-child {
-              page-break-after: auto;
-            }
-            .content-wrapper {
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-            }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 4px solid #d97706;
-              padding-bottom: 5px;
-              margin-bottom: 5px;
-              page-break-inside: avoid;
-            }
-            .header-left img {
-              width: 100px;
-              height: 50px;
-              object-fit: contain;
-            }
-            .header-right {
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-            }
-            .header-right h1 {
-              font-size: 24px;
-              font-weight: bold;
-              margin: 0;
-              color: #000;
-            }
-            .header-right p {
-              font-size: 14px;
-              color: #374151;
-              font-weight: 300;
-              margin: 0;
-            }
-            .date-section {
-              display: flex;
-              justify-content: flex-end;
-              margin-top: 20px;
-              font-size: 14px;
-              font-weight: 600;
-              color: #4b5563;
-              page-break-inside: avoid;
-            }
-            .title-section {
-              display: flex;
-              justify-content: center;
-              margin: 16px 0;
-              page-break-inside: avoid;
-            }
-            .title-section h1 {
-              font-size: 20px;
-              font-weight: bold;
-              color: #000;
-              border: 1px solid #000;
-              padding: 8px 16px;
-              border-radius: 8px;
-            }
-            .info-section {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 15px;
-              page-break-inside: avoid;
-            }
-            .info-left, .info-right {
-              font-size: 24px;
-              font-weight: 600;
-              color: #000;
-            }
-            .info-item {
-              display: flex;
-              gap: 8px;
-              font-size: 12px;
-              margin-bottom: 8px;
-            }
-            .info-label {
-              font-weight: bold;
-              color: #111827;
-            }
-            .info-value {
-              color: #374151;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 16px;
-            }
-            thead {
-              display: table-header-group;
-            }
-            thead tr {
-              background-color: #f0fdf4;
-              border-bottom: 1px solid #000;
-            }
-            th {
-              padding: 8px;
-              text-align: left;
-              font-weight: bold;
-              color: #000;
-              font-size: 14px;
-            }
-            th.text-center {
-              text-align: center;
-            }
-            th.text-right {
-              text-align: right;
-            }
-            tbody tr {
-              border-bottom: 1px solid #fed7aa;
-              page-break-inside: avoid;
-            }
-            tbody tr:last-child {
-              page-break-after: auto;
-            }
-            td {
-              padding: 8px;
-              font-size: 14px;
-              color: #000;
-            }
-            td.text-center {
-              text-align: center;
-            }
-            td.text-right {
-              text-align: right;
-            }
-            th:nth-child(6), td:nth-child(6) {
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-            tfoot {
-              display: table-footer-group;
-            }
-            tfoot tr {
-              background-color: #f0fdf4;
-              page-break-inside: avoid;
-            }
-            tfoot td {
-              padding: 8px;
-              font-weight: 600;
-            }
-            .total-row {
-              background-color: #f0fdf4;
-              font-weight: 600;
-              text-transform: uppercase;
-            }
-            .amount-text {
-              font-size: 14px;
-              font-weight: 300;
-              color: #000;
-              margin-top: 16px;
-              page-break-inside: avoid;
-            }
-            .amount-text span {
-              font-weight: 600;
-            }
-            .signature-section {
-              display: flex;
-              justify-content: space-between;
-              margin-top: 20px;
-              padding: 0 32px;
-              page-break-inside: avoid;
-            }
-            .signature-right {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 16px;
-            }
-            .signature-label {
-              font-weight: bold;
-              font-size: 14px;
-              text-transform: uppercase;
-              color: #000;
-            }
-            .notes-section {
-              margin-top: 15px;
-              font-size: 8px;
-              page-break-inside: avoid;
-            }
-            .notes-section p {
-              margin: 4px 0;
-            }
-            .notes-title {
-              font-weight: bold;
-              color: #2563eb;
-            }
-            .footer {
-              margin-top: auto;
-              padding: 0;
-              margin-bottom: 0;
-              margin-left: 0;
-              margin-right: 0;
-              page-break-inside: avoid;
-            }
-            .footer-conditions {
-              margin: 0;
-              padding: 0;
-            }
-            .footer-conditions-title {
-              font-weight: bold;
-              color: #ea580c;
-              margin: 0;
-              padding: 0;
-            }
-            .footer-conditions p {
-              color: #000;
-              margin: 0;
-              padding: 0;
-              font-size: 8px;
-            }
-            .footer-info {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              background-color: #f0fdf4;
-              border-top: 1px solid #000;
-              font-size: 8px;
-              color: #000;
-              margin: 0;
-              padding: 0;
-            }
-            .page-number {
-              display: none !important;
-            }
-            @media print {
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              .page {
-                page-break-after: always;
-                min-height: 277mm;
-                max-height: 277mm;
-                background: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              .page:last-child {
-                page-break-after: auto;
-              }
-              thead tr {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              tfoot tr {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .total-row {
-                background-color: #f0fdf4 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .footer {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-conditions {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-conditions-title {
-                padding: 0 !important;
-                margin: 0 !important;
-                color: #ea580c !important;
-              }
-              .footer-conditions p {
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-              .footer-info {
-                background-color: #f0fdf4 !important;
-                border-top-color: #000 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .header {
-                border-bottom-color: #d97706 !important;
-                border-bottom-width: 4px !important;
-                border-bottom-style: solid !important;
-              }
-              .title-section h1 {
-                border-color: #000 !important;
-                color: #000 !important;
-              }
-              thead tr {
-                border-bottom-color: #000 !important;
-              }
-              tbody tr {
-                border-bottom-color: #fed7aa !important;
-              }
-              .notes-title {
-                color: #2563eb !important;
-              }
-              img {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-            }
-            @media screen {
-              body {
-                background: #f0f0f0;
-                padding: 20px;
-              }
-              .page {
-                background: white;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                margin: 0 auto 15px;
-                max-width: 210mm;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="page">
-            <div class="content-wrapper">
-              <div class="header">
-                <div class="header-left">
-                  <img src="${escapeAttr(window.location.origin)}/logo.png" alt="Logo" />
-                </div>
-                <div class="header-right">
-                  <h1>KPANDJI AUTOMOBILES</h1>
-                  <p>Constructeur et Assembleur Automobile</p>
-                </div>
-              </div>
-
-              <div class="date-section">
-                <div style="display: flex; gap: 8px;">
-                  <span>Date:</span>
-                  <span>${factureDate}</span>
-                </div>
-              </div>
-
-              <div class="title-section">
-                <h1>FACTURE ${factureStatus}</h1>
-              </div>
-
-              <div class="info-section">
-                <div class="info-left">
-                  <div class="info-item">
-                    <span class="info-label">Numéro de Proforma:</span>
-                    <span class="info-value" style="text-transform: uppercase;">${factureId}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Créé par:</span>
-                    <span class="info-value">${createdByName}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Contact:</span>
-                    <span class="info-value">${createdByEmail}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${createdByTelephone}</span>
-                  </div>
-                </div>
-                <div class="info-right">
-                  <div class="info-item">
-                    <span class="info-label">Client:</span>
-                    <span class="info-value">${clientName}</span>
-                  </div>
-                  ${currentFacture.client?.entreprise ? `
-                  <div class="info-item">
-                    <span class="info-label">Entreprise:</span>
-                    <span class="info-value">${clientEntrepriseName}</span>
-                  </div>
-                  ` : ''}
-                  <div class="info-item">
-                    <span class="info-label">Téléphone:</span>
-                    <span class="info-value">${clientTelephone}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Localisation:</span>
-                    <span class="info-value">${clientLocalisation}</span>
-                  </div>
-                </div>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Véhicule</th>
-                    <th>Description</th>
-                    <th class="text-center">Quantité</th>
-                    <th class="text-right" style="white-space: nowrap;">Prix Unitaire HT (${getCurrencyLabel()})</th>
-                    <th class="text-right" style="white-space: nowrap;">Total HT (${getCurrencyLabel()})</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${vehicleRows}
-                  ${accessoryRows}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600;">Total HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.total_ht)}</td>
-                  </tr>
-                  ${currentFacture.remise !== 0 ? `
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right">Remise (${currentFacture.remise}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatAmount(currentFacture.montant_remise)}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600;">Montant Net HT</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(currentFacture.montant_net_ht)}</td>
-                  </tr>
-                  ` : ''}
-                  <tr>
-                    <td colspan="4"></td>
-                    <td class="text-right">TVA(${currentFacture.tva}%)</td>
-                    <td class="text-right" style="white-space: nowrap;">${formatAmount(currentFacture.montant_tva)}</td>
-                  </tr>
-                  <tr class="total-row">
-                    <td colspan="4"></td>
-                    <td class="text-right" style="font-weight: 600; text-transform: uppercase;">Total TTC</td>
-                    <td class="text-right" style="font-weight: 600; white-space: nowrap;">${formatAmount(editedTotalTtc?.[currentFacture.id] ?? currentFacture.total_ttc)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              <div class="amount-text">
-                Arrêter la présente facture à la somme de <span>${(() => {
-                  const amountText = editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(convertAmount((editedTotalTtc?.[currentFacture.id] ?? currentFacture.total_ttc) || 0)));
-                  return escapeHtml(amountText);
-                })()} ${getCurrencyLabel()}</span>
-              </div>
-
-              <div class="signature-section">
-                ${proformaNotesHtml}
-                <div class="signature-right">
-                  <div class="signature-label">Direction Commerciale</div>
-                  ${signatureHtml}
-                </div>
-              </div>
-
-              <div class="notes-section">
-                <p class="notes-title">Notes</p>
-                <p style="font-weight: 500;">date d'échéance: ${dateEcheance}</p>
-              </div>
-            </div>
-
-            <div class="footer">
-              <div class="footer-conditions">
-                <p class="footer-conditions-title">CONDITIONS:</p>
-                ${showPaymentConditions ? `
-                <p>60% d'accompte à la commande</p>
-                <p style="font-weight: 300;">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
-                <p>SOLDE avant livraison</p>
-                ` : ''}
-                <p className="text-black">
-                  <span className="font-bold">Garantie: </span>
-                  3 Ans ou 100.000 milles kilometres
-                </p>
-              </div>
-              <div class="footer-info">
-                <p>Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-                <p>Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-                <p>kpandjiautomobiles@gmail.com / www.kpandji.com</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    
-    // Wait for images to load before printing
-    printWindow.addEventListener('load', () => {
-      // Wait for all images to load
-      const images = printWindow.document.querySelectorAll('img');
-      let imagesLoaded = 0;
-      const totalImages = images.length;
-      
-      if (totalImages === 0) {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-        return;
-      }
-      
-      images.forEach((img) => {
-        if (img.complete) {
-          imagesLoaded++;
-        } else {
-          img.addEventListener('load', () => {
-            imagesLoaded++;
-            if (imagesLoaded === totalImages) {
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-          });
-          img.addEventListener('error', () => {
-            imagesLoaded++;
-            if (imagesLoaded === totalImages) {
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-          });
-        }
-      });
-      
-      if (imagesLoaded === totalImages) {
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
-    });
-  };
   
   const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const goToPrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -1127,6 +405,64 @@ export default function Page() {
 
   return (
     <>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 210mm !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+          body * { visibility: hidden; }
+          #printable-area, #printable-area * { visibility: visible; }
+          #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 215mm !important;
+            padding: 5mm 10mm 50mm 10mm !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          #printable-area img {
+            max-width: 100%;
+            height: auto;
+          }
+          .print-hide { display: none !important; }
+          @page { size: A4; margin: 0 !important; }
+          #printable-area > div:first-child {
+            margin-bottom: 3mm !important;
+            page-break-after: avoid !important;
+          }
+          .print-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 10mm !important;
+            right: 10mm !important;
+            width: calc(100% - 20mm) !important;
+            padding-top: 5mm !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+            z-index: 1000 !important;
+          }
+          tfoot { display: table-footer-group !important; }
+        }
+      `,
+        }}
+      />
+
       <Dialog open={showCurrencyDialog} onOpenChange={setShowCurrencyDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1451,29 +787,34 @@ export default function Page() {
                         <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
                         <TableCell className="text-right font-medium pr-6 text-black">
                           {editingTotalTtc === facture.id ? (
-                            <div className="flex items-center justify-end gap-1 print-hide">
-                              <Input
-                                type="text"
-                                value={totalTtcInputs[facture.id] ?? formatAmount(getEffectiveTotalTtc(facture))}
-                                onChange={(e) => setTotalTtcInputs({ ...totalTtcInputs, [facture.id]: e.target.value })}
-                                className="w-28 h-7 text-sm text-right"
-                                autoFocus
-                                disabled={savingTotalTtc === facture.id}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveTotalTtc(facture);
-                                  if (e.key === "Escape") setEditingTotalTtc(null);
-                                }}
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSaveTotalTtc(facture)}
-                                disabled={savingTotalTtc === facture.id}
-                                className="h-7 px-2 text-xs"
-                              >
-                                {savingTotalTtc === facture.id ? "..." : "OK"}
-                              </Button>
-                            </div>
+                            <>
+                              <div className="flex items-center justify-end gap-1 print-hide">
+                                <Input
+                                  type="text"
+                                  value={totalTtcInputs[facture.id] ?? formatAmount(getEffectiveTotalTtc(facture))}
+                                  onChange={(e) => setTotalTtcInputs({ ...totalTtcInputs, [facture.id]: e.target.value })}
+                                  className="w-28 h-7 text-sm text-right"
+                                  autoFocus
+                                  disabled={savingTotalTtc === facture.id}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveTotalTtc(facture);
+                                    if (e.key === "Escape") setEditingTotalTtc(null);
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSaveTotalTtc(facture)}
+                                  disabled={savingTotalTtc === facture.id}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  {savingTotalTtc === facture.id ? "..." : "OK"}
+                                </Button>
+                              </div>
+                              <span className="hidden print:inline">
+                                {totalTtcInputs[facture.id] ?? formatAmount(getEffectiveTotalTtc(facture))}
+                              </span>
+                            </>
                           ) : (
                             <div className="flex items-center justify-end gap-1">
                               <span>{formatAmount(getEffectiveTotalTtc(facture))}</span>
@@ -1504,29 +845,34 @@ export default function Page() {
                         Arrêter la présente facture à la somme de
                       </p>
                       {editingAmountText === facture.id ? (
-                        <div className="flex items-center gap-2 flex-1 min-w-[300px]">
-                          <Input
-                            value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))}
-                            onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
-                            className="flex-1 text-sm font-semibold"
-                            placeholder="Saisir la somme en lettres"
-                            autoFocus
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingAmountText(null);
-                              if (!editedAmountTexts[facture.id]) {
-                                const newTexts = { ...editedAmountTexts };
-                                delete newTexts[facture.id];
-                                setEditedAmountTexts(newTexts);
-                              }
-                            }}
-                          >
-                            Valider
-                          </Button>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-2 flex-1 min-w-[300px] print-hide">
+                            <Input
+                              value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))}
+                              onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
+                              className="flex-1 text-sm font-semibold"
+                              placeholder="Saisir la somme en lettres"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingAmountText(null);
+                                if (!editedAmountTexts[facture.id]) {
+                                  const newTexts = { ...editedAmountTexts };
+                                  delete newTexts[facture.id];
+                                  setEditedAmountTexts(newTexts);
+                                }
+                              }}
+                            >
+                              Valider
+                            </Button>
+                          </div>
+                          <span className="hidden print:inline font-semibold">
+                            {editedAmountTexts[facture.id] || numberToFrench(Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)))} {getCurrencyLabel()}
+                          </span>
+                        </>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">
@@ -1544,7 +890,7 @@ export default function Page() {
                                 });
                               }
                             }}
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 print-hide"
                           >
                             <Edit2 className="h-3 w-3" />
                           </Button>
@@ -1554,7 +900,9 @@ export default function Page() {
                   </div>
 
                   <div className="flex w-full justify-between mt-5 px-8">
-                    <div className="flex flex-col gap-2 flex-1 max-w-md">
+                    <div
+                      className={`flex flex-col gap-2 flex-1 max-w-md ${!(notesProforma[facture.id] ?? facture.notes_proforma ?? "").trim() ? "print-hide" : ""}`}
+                    >
                       <label className="text-sm font-medium text-gray-700">Notes / Commentaires</label>
                       <Textarea
                         value={notesProforma[facture.id] ?? facture.notes_proforma ?? ""}
@@ -1600,7 +948,7 @@ export default function Page() {
                         </div>
                       )}
                       {showSignature && !signatureImage && (
-                        <div className="text-xs text-gray-500 italic">Signature en cours de chargement...</div>
+                        <div className="text-xs text-gray-500 italic print-hide">Signature en cours de chargement...</div>
                       )}
                     </div>
                   </div>
@@ -1617,7 +965,7 @@ export default function Page() {
 {/*footer*/}
             <div className="print-footer flex flex-col w-full bottom-0 right-0 left-0">
               <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
-                <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
+               
                 {showPaymentConditions ? (
                   <div
                     className="flex flex-col gap-y-1 cursor-pointer rounded px-1 -mx-1 hover:bg-orange-50 transition-colors"
@@ -1627,6 +975,7 @@ export default function Page() {
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowPaymentConditions(false); }}
                     title="Cliquer pour masquer ces conditions à l'impression"
                   >
+                     <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
                     <p className="text-black">60% d&apos;accompte à la commande</p>
                     <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
                     <p className="text-black">SOLDE avant livraison</p>
@@ -1644,7 +993,7 @@ export default function Page() {
                 )}
                 <p className="text-black">
                   <span className="font-bold">Garantie: </span>
-                  3 Ans ou 100.000 milles kilometres
+                  3 Ans ou 100.000 kilometres
                 </p>
               </div>
               <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
