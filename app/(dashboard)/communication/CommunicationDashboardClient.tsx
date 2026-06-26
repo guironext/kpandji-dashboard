@@ -384,7 +384,7 @@ export default function CommunicationDashboardClient({
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="relative -mx-4 -mt-4 min-h-screen overflow-hidden bg-[#f8fafc] sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(124,58,237,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#ffffff_40%,#f1f5f9)]"
         aria-hidden
@@ -486,7 +486,7 @@ export default function CommunicationDashboardClient({
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                         {kpi.label}
                       </p>
-                      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-950">
+                      <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-950 sm:text-3xl">
                         {kpi.value}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">{kpi.sub}</p>
@@ -600,7 +600,7 @@ export default function CommunicationDashboardClient({
                       {performanceData.totalCount === 0 ? (
                         <EmptyChart message="Aucune publication terminée pour le moment." />
                       ) : (
-                        <div className="h-[360px] w-full">
+                        <div className="h-[280px] w-full sm:h-[360px]">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                               data={monthlyChartData}

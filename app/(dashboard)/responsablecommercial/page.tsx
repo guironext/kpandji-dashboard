@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Dashboard | Responsable Commercial",
   description:
-    "Tableau de bord responsable commercial — équipe, objectifs, performances et statistiques",
+    "Tableau de bord responsable commercial — équipe, performances, objectifs et activité",
 };
 
 export default async function ResponsableCommercialDashboardPage() {
@@ -16,12 +16,14 @@ export default async function ResponsableCommercialDashboardPage() {
   if (!result.success || !result.data) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="max-w-md border-red-200 bg-red-50/50">
+        <Card className="max-w-md border-rose-200 bg-rose-50/50">
           <CardContent className="flex items-center gap-4 p-6">
-            <AlertCircle className="h-8 w-8 shrink-0 text-red-500" />
+            <AlertCircle className="h-8 w-8 shrink-0 text-rose-500" />
             <div>
-              <p className="font-semibold text-red-900">Impossible de charger le tableau de bord</p>
-              <p className="mt-1 text-sm text-red-700">
+              <p className="font-semibold text-rose-900">
+                Impossible de charger le tableau de bord
+              </p>
+              <p className="mt-1 text-sm text-rose-700">
                 {result.error ?? "Une erreur inattendue s'est produite."}
               </p>
             </div>
@@ -31,5 +33,5 @@ export default async function ResponsableCommercialDashboardPage() {
     );
   }
 
-  return <ResponsableCommercialDashboardClient data={result.data} />;
+  return <ResponsableCommercialDashboardClient initialData={result.data} />;
 }

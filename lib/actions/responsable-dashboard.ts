@@ -13,6 +13,8 @@ import {
 import { getObjectifPeriods } from "./objectif-period";
 import type { ChartDatum, MonthlyClientTrend } from "./commercial-dashboard";
 
+export type ResponsableMonthlyTrend = MonthlyClientTrend & { ca: number };
+
 export type ResponsableDashboardStats = {
   commercialsCount: number;
   periodsCount: number;
@@ -36,7 +38,7 @@ export type ResponsableDashboardStats = {
 
 export type ResponsableDashboardData = {
   stats: ResponsableDashboardStats;
-  monthlyTrends: MonthlyClientTrend[];
+  monthlyTrends: ResponsableMonthlyTrend[];
   chutesByCommercial: ChartDatum[];
   rapportBreakdown: ChartDatum[];
   facturesByStatus: ChartDatum[];
@@ -237,7 +239,9 @@ export async function getResponsableDashboard(): Promise<{
       currentPeriodLabel = `${startStr} — ${endStr}`;
     }
 
-    const monthlyTrends: MonthlyClientTrend[] = monthlyKeys.map(
+    const facturesValideesList = facturesRaw.filter((f) => f.status_facture === "FACTURE");
+
+    const monthlyTrends: ResponsableMonthlyTrend[] = monthlyKeys.map(
       ({ monthKey, monthLabel, monthShort, start, end }) => ({
         monthKey,
         monthLabel,
@@ -247,6 +251,9 @@ export async function getResponsableDashboard(): Promise<{
           (c) => c.createdAt >= start && c.createdAt <= end
         ).length,
         rendezVous: rendezVousMonthlyRaw.filter((r) => r.date >= start && r.date <= end).length,
+        ca: facturesValideesList
+          .filter((f) => f.date_facture >= start && f.date_facture <= end)
+          .reduce((sum, f) => sum + Number(f.total_ttc), 0),
       })
     );
 
@@ -269,7 +276,6 @@ export async function getResponsableDashboard(): Promise<{
       { label: "Véhicules", value: objectifsVehiculesCount, color: "#059669" },
     ].filter((d) => d.value > 0);
 
-    const facturesValideesList = facturesRaw.filter((f) => f.status_facture === "FACTURE");
     const caTotal = facturesValideesList.reduce((sum, f) => sum + Number(f.total_ttc), 0);
     const caMois = facturesValideesList
       .filter((f) => f.date_facture >= startOfMonth && f.date_facture <= endOfMonth)

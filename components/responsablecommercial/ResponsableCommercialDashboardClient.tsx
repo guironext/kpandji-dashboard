@@ -1,19 +1,24 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
+  ArrowRight,
   ArrowUpRight,
   BarChart3,
   CalendarRange,
-  ChevronRight,
   ClipboardList,
+  Crown,
   FileText,
   KeyRound,
-  Layers,
+  LayoutDashboard,
+  Loader2,
   Receipt,
+  RefreshCw,
   Sparkles,
   Target,
   TrendingDown,
@@ -22,6 +27,8 @@ import {
   Users,
 } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -38,10 +45,14 @@ import {
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { ResponsableDashboardData } from "@/lib/actions/responsable-dashboard";
+import { Badge } from "@/components/ui/badge";
+import {
+  getResponsableDashboard,
+  type ResponsableDashboardData,
+} from "@/lib/actions/responsable-dashboard";
 
 type Props = {
-  data: ResponsableDashboardData;
+  initialData: ResponsableDashboardData;
 };
 
 const TOOLTIP_STYLE = {
@@ -174,11 +185,55 @@ function ChartTooltip({
   );
 }
 
-export default function ResponsableCommercialDashboardClient({ data }: Props) {
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{eyebrow}</p>
+        <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+export default function ResponsableCommercialDashboardClient({ initialData }: Props) {
+  const { user } = useUser();
+  const [data, setData] = useState(initialData);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const { stats } = data;
   const todayLabel = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
+  const userLabel =
+    user?.firstName?.trim() ||
+    user?.fullName?.trim()?.split(" ")[0] ||
+    "Responsable commercial";
   const totalObjectifs =
     stats.objectifsCibleCount + stats.objectifsFinancieresCount + stats.objectifsVehiculesCount;
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const result = await getResponsableDashboard();
+    if (!result.success || !result.data) {
+      setError(result.error ?? "Échec du chargement");
+    } else {
+      setData(result.data);
+      setError(null);
+    }
+    setLoading(false);
+  }, []);
 
   const kpiCards = [
     {
@@ -265,10 +320,25 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
     rendezVous: m.rendezVous,
   }));
 
+  const caTrendData = data.monthlyTrends.map((m) => ({
+    monthShort: m.monthShort,
+    ca: m.ca,
+  }));
+
+  const topChuteCommercial = data.chutesByCommercial[0];
+  const conversionRate =
+    stats.prospectsCount + stats.clientsCount > 0
+      ? Math.round((stats.clientsCount / (stats.prospectsCount + stats.clientsCount)) * 100)
+      : 0;
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="relative -mx-4 -mt-4 min-h-screen overflow-hidden bg-[#f8fafc] sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8">
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(99,102,241,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#ffffff_40%,#f1f5f9)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px]"
         aria-hidden
       />
 
@@ -279,7 +349,7 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
           aria-hidden
         />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:px-8 lg:pb-32">
+        <div className="relative mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 sm:pb-32 sm:pt-10 lg:px-8">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-blue-100 backdrop-blur-md">
@@ -289,15 +359,15 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
 
               <div className="flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
-                  <Layers className="h-7 w-7 text-white" />
+                  <LayoutDashboard className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                    Coordination commerciale
+                  <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
+                    Bonjour, {userLabel}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Vue d&apos;ensemble de l&apos;équipe : performances, objectifs, chutes et
-                    activité commerciale.
+                  <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-300">
+                    Pilotez votre équipe commerciale : performances, objectifs, chutes et activité
+                    depuis une vue unifiée.
                   </p>
                 </div>
               </div>
@@ -313,6 +383,13 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                     Période : {stats.currentPeriodLabel}
                   </span>
                 )}
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-medium text-emerald-100">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  Données synchronisées
+                </span>
                 {stats.facturesEnAttenteCount > 0 && (
                   <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs font-medium text-amber-100">
                     <Receipt className="h-3.5 w-3.5" />
@@ -322,22 +399,25 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
               </div>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:flex-col">
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-stretch">
               <Button
-                asChild
                 size="lg"
-                className="w-full rounded-2xl border-0 bg-white px-6 text-indigo-950 shadow-xl shadow-black/20 hover:bg-blue-50 sm:w-auto"
+                onClick={() => void loadData()}
+                disabled={loading}
+                className="rounded-2xl border-0 bg-white px-6 text-indigo-950 shadow-xl shadow-black/20 hover:bg-blue-50"
               >
-                <Link href="/responsablecommercial/objectifs">
-                  Gérer les objectifs
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Link>
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Actualiser
               </Button>
               <Button
                 asChild
                 size="lg"
                 variant="outline"
-                className="w-full rounded-2xl border-white/15 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white sm:w-auto"
+                className="rounded-2xl border-white/15 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white"
               >
                 <Link href="/responsablecommercial/performences">
                   Voir les performances
@@ -350,7 +430,7 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
       </section>
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="-mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="-mt-20 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {kpiCards.map((kpi) => {
             const Icon = kpi.icon;
             return (
@@ -381,9 +461,39 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
           })}
         </div>
 
-        <div className="mt-8 space-y-8 pb-10 sm:mt-10 sm:space-y-10 sm:pb-12">
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+        <div className="mt-10 space-y-10 pb-12">
+          {error && (
+            <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-slate-200/70 bg-white py-28 shadow-lg shadow-slate-200/40">
+              <Loader2 className="h-9 w-9 animate-spin text-indigo-500" />
+              <div className="text-center">
+                <p className="font-semibold text-slate-800">Mise à jour en cours</p>
+                <p className="mt-1 text-sm text-slate-500">Rafraîchissement des indicateurs…</p>
+              </div>
+            </div>
+          ) : (
+            <>
+          <section className="space-y-5">
+            <SectionHeading
+              eyebrow="Activité"
+              title="Tendances sur 6 mois"
+              description="Clients, rendez-vous et chiffre d'affaires de l'équipe."
+              action={
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700"
+                >
+                  {conversionRate}% taux de conversion clients
+                </Badge>
+              }
+            />
+          <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl xl:col-span-8">
               <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-600" />
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -400,9 +510,10 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-5 pt-6 sm:p-6">
                 {monthlyChartData.some((m) => m.total > 0) ? (
-                  <ResponsiveContainer width="100%" height={280}>
+                  <div className="h-[280px] w-full sm:h-[320px]">
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyChartData} barGap={4}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis
@@ -433,12 +544,14 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                  </div>
                 ) : (
                   <EmptyChart message="Aucun client ou prospect enregistré." />
                 )}
               </CardContent>
             </Card>
 
+            <div className="grid gap-6 xl:col-span-4">
             <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
               <div className="h-1 bg-gradient-to-r from-indigo-500 to-violet-600" />
               <CardHeader>
@@ -454,9 +567,10 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-5 pt-0">
                 {rdvTrendData.some((m) => m.rendezVous > 0) ? (
-                  <ResponsiveContainer width="100%" height={280}>
+                  <div className="h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={rdvTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis
@@ -483,13 +597,45 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                  </div>
                 ) : (
                   <EmptyChart message="Aucun rendez-vous enregistré." />
                 )}
               </CardContent>
             </Card>
+
+            {topChuteCommercial && (
+              <div className="relative overflow-hidden rounded-[1.35rem] border border-amber-200/60 bg-gradient-to-br from-amber-50 via-orange-50 to-white p-5 shadow-lg shadow-amber-100/50">
+                <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-amber-300/20 blur-2xl" />
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md">
+                      <Crown className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                      Plus de chutes (période)
+                    </p>
+                  </div>
+                  <p className="mt-4 truncate text-xl font-bold text-amber-950">
+                    {topChuteCommercial.label}
+                  </p>
+                  <p className="mt-1 text-sm text-amber-800/80">
+                    {topChuteCommercial.value} chute{topChuteCommercial.value > 1 ? "s" : ""} enregistrée
+                    {topChuteCommercial.value > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            )}
+            </div>
+          </section>
           </section>
 
+          <section className="space-y-5">
+            <SectionHeading
+              eyebrow="Performance"
+              title="Analyses commerciales"
+              description="Chutes, rapports, objectifs et facturation."
+            />
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
               <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-600" />
@@ -563,7 +709,9 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
               </CardHeader>
               <CardContent>
                 {data.rapportBreakdown.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
+                  <>
+                  <div className="relative mx-auto h-[210px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={data.rapportBreakdown}
@@ -572,25 +720,109 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
                         cx="50%"
                         cy="50%"
                         innerRadius={55}
-                        outerRadius={95}
-                        paddingAngle={3}
+                        outerRadius={82}
+                        paddingAngle={4}
+                        stroke="white"
+                        strokeWidth={3}
                       >
                         {data.rapportBreakdown.map((entry) => (
                           <Cell key={entry.label} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip contentStyle={TOOLTIP_STYLE} />
-                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <p className="text-2xl font-bold tabular-nums text-slate-900">{stats.totalRapports}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total</p>
+                  </div>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {data.rapportBreakdown.map((item) => (
+                      <div key={item.label} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-slate-600">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          {item.label}
+                        </span>
+                        <span className="font-bold tabular-nums text-slate-900">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  </>
                 ) : (
                   <EmptyChart message="Aucun rapport de rendez-vous enregistré." />
                 )}
               </CardContent>
             </Card>
           </section>
+          </section>
 
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-rose-500 to-pink-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Chiffre d&apos;affaires mensuel
+                    </CardTitle>
+                    <CardDescription>Factures validées — 6 derniers mois</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {caTrendData.some((m) => m.ca > 0) ? (
+                  <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={caTrendData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="caFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#e11d48" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#e11d48" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#eef2f7" />
+                      <XAxis
+                        dataKey="monthShort"
+                        tick={{ fill: "#64748b", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: "#64748b", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) =>
+                          new Intl.NumberFormat("fr-FR", {
+                            notation: "compact",
+                            maximumFractionDigits: 0,
+                          }).format(v)
+                        }
+                      />
+                      <Tooltip
+                        contentStyle={TOOLTIP_STYLE}
+                        formatter={(value) => [formatCurrency(Number(value)), "CA"]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="ca"
+                        stroke="#e11d48"
+                        strokeWidth={2.5}
+                        fill="url(#caFill)"
+                        dot={{ r: 4, strokeWidth: 2, fill: "#fff", stroke: "#e11d48" }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyChart message="Aucune facture validée sur la période." />
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
               <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-600" />
               <CardHeader>
@@ -701,33 +933,53 @@ export default function ResponsableCommercialDashboardClient({ data }: Props) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {QUICK_LINKS.map((link) => {
                   const Icon = link.icon;
                   return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg ${link.glow}`}
-                    >
+                    <Link key={link.href} href={link.href} className="group">
                       <div
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md ${link.gradient} transition group-hover:scale-105`}
+                        className={`relative overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-white p-4 shadow-lg shadow-slate-200/40 transition duration-300 hover:-translate-y-1 hover:border-slate-300 ${link.glow} hover:shadow-xl`}
                       >
-                        <Icon className="h-5 w-5" />
+                        <div
+                          className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${link.gradient} opacity-10 blur-2xl transition group-hover:opacity-20`}
+                        />
+                        <div className="relative flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${link.gradient} text-white shadow-lg`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900">{link.label}</p>
+                              <p className="mt-0.5 text-xs text-slate-500">{link.description}</p>
+                            </div>
+                          </div>
+                          <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-600" />
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-slate-900 group-hover:text-indigo-700">
-                          {link.label}
-                        </p>
-                        <p className="truncate text-sm text-slate-500">{link.description}</p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-indigo-600" />
                     </Link>
                   );
                 })}
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex justify-center pt-2">
+            <Button
+              asChild
+              size="lg"
+              className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 shadow-lg shadow-indigo-200/60 hover:from-blue-600/95 hover:to-indigo-600/95"
+            >
+              <Link href="/responsablecommercial/objectifs">
+                Gérer les objectifs de l&apos;équipe
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
