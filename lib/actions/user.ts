@@ -1,7 +1,7 @@
 "use server";
 
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
-import { prisma } from "../prisma";
+import { prisma, executeWithRetry } from "../prisma";
 import { UserRole } from "@prisma/client";
 import { normalizeUserRole } from "../user-role";
 
@@ -23,9 +23,11 @@ export async function getOrCreateUser(clerkId?: string) {
     }
 
     // Try to find user in database
-    let dbUser = await prisma.user.findUnique({
-      where: { clerkId: targetClerkId },
-    });
+    let dbUser = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { clerkId: targetClerkId },
+      }),
+    );
 
     if (!dbUser) {
       const clerkUser = await (
@@ -48,35 +50,41 @@ export async function getOrCreateUser(clerkId?: string) {
       // Clerk account. In that case, reconcile by updating the stale clerkId
       // instead of creating a duplicate (which would violate the unique
       // constraint on `email`).
-      const existingByEmail = await prisma.user.findUnique({
-        where: { email },
-      });
+      const existingByEmail = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { email },
+        }),
+      );
 
       if (existingByEmail) {
-        dbUser = await prisma.user.update({
-          where: { id: existingByEmail.id },
-          data: {
-            clerkId: targetClerkId,
-            firstName: clerkUser.firstName || existingByEmail.firstName,
-            lastName: clerkUser.lastName || existingByEmail.lastName,
-          },
-        });
+        dbUser = await executeWithRetry(() =>
+          prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: {
+              clerkId: targetClerkId,
+              firstName: clerkUser.firstName || existingByEmail.firstName,
+              lastName: clerkUser.lastName || existingByEmail.lastName,
+            },
+          }),
+        );
       } else {
-        dbUser = await prisma.user.create({
-          data: {
-            clerkId: targetClerkId,
-            email: email,
-            firstName: clerkUser.firstName || "Unknown",
-            lastName: clerkUser.lastName || "User",
-            role: role,
-            department: clerkUser.publicMetadata?.department as
-              | string
-              | undefined,
-            telephone: clerkUser.publicMetadata?.telephone as
-              | string
-              | undefined,
-          },
-        });
+        dbUser = await executeWithRetry(() =>
+          prisma.user.create({
+            data: {
+              clerkId: targetClerkId,
+              email: email,
+              firstName: clerkUser.firstName || "Unknown",
+              lastName: clerkUser.lastName || "User",
+              role: role,
+              department: clerkUser.publicMetadata?.department as
+                | string
+                | undefined,
+              telephone: clerkUser.publicMetadata?.telephone as
+                | string
+                | undefined,
+            },
+          }),
+        );
       }
     }
 

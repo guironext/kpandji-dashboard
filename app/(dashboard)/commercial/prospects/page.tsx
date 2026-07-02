@@ -38,6 +38,7 @@ import {
 	Eye,
 	Loader2,
 	BarChart3,
+	Download,
 } from "lucide-react";
 import {
 	BarChart,
@@ -515,6 +516,113 @@ const ProspectsPage = () => {
 		}
 	};
 
+	const escapeCsvCell = (value: unknown) => {
+		const str = value == null ? "" : String(value);
+		return `"${str.replace(/"/g, '""')}"`;
+	};
+
+	const CSV_DELIMITER = ";";
+
+	const formatExportDate = (date: Date | string) =>
+		new Date(date).toLocaleDateString("fr-FR");
+
+	const handleExportCsv = () => {
+		if (clients.length === 0 && clientEntreprises.length === 0) {
+			toast.warning("Aucun prospect à exporter");
+			return;
+		}
+
+		const headers = [
+			"Type",
+			"Nom / Raison sociale",
+			"Sigle",
+			"Email",
+			"Téléphone",
+			"Entreprise",
+			"Nom contact",
+			"Fonction contact",
+			"Email contact",
+			"Téléphone contact",
+			"Localisation",
+			"Secteur d'activité",
+			"Flotte véhicules",
+			"Description flotte",
+			"Commercial",
+			"Statut",
+			"Date de création",
+		];
+
+		const individualRows = clients.map((client) => [
+			"Individuel",
+			client.nom,
+			"",
+			client.email ?? "",
+			client.telephone,
+			client.entreprise ?? "",
+			"",
+			"",
+			"",
+			"",
+			client.localisation ?? "",
+			client.secteur_activite ?? "",
+			"",
+			"",
+			client.commercial ?? "",
+			getStatusLabel(client.status_client),
+			formatExportDate(client.createdAt),
+		]);
+
+		const enterpriseRows = clientEntreprises.map((ce) => [
+			"Entreprise",
+			ce.nom_entreprise,
+			ce.sigle ?? "",
+			ce.email ?? "",
+			ce.telephone,
+			"",
+			ce.nom_personne_contact ?? "",
+			ce.fonction_personne_contact ?? "",
+			ce.email_personne_contact ?? "",
+			ce.telephone_personne_contact ?? "",
+			ce.localisation ?? "",
+			ce.secteur_activite ?? "",
+			ce.flotte_vehicules ? "Oui" : "Non",
+			ce.flotte_vehicules_description ?? "",
+			ce.commercial ?? "",
+			getStatusLabel(ce.status_client),
+			formatExportDate(ce.createdAt),
+		]);
+
+		const csvContent = [
+			headers.join(CSV_DELIMITER),
+			...individualRows.map((row) =>
+				row.map(escapeCsvCell).join(CSV_DELIMITER),
+			),
+			...enterpriseRows.map((row) =>
+				row.map(escapeCsvCell).join(CSV_DELIMITER),
+			),
+		].join("\n");
+
+		const blob = new Blob(["\ufeff" + csvContent], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const link = document.createElement("a");
+		const url = URL.createObjectURL(blob);
+		const dateStamp = new Date().toISOString().split("T")[0];
+
+		link.setAttribute("href", url);
+		link.setAttribute("download", `prospects-${dateStamp}.csv`);
+		link.style.visibility = "hidden";
+
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+
+		toast.success(
+			`${clients.length + clientEntreprises.length} prospect(s) exporté(s)`,
+		);
+	};
+
 	if (!isLoaded) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
@@ -728,13 +836,60 @@ const ProspectsPage = () => {
 
 				{/* Lists Section */}
 				<div className="max-w-7xl mx-auto">
-					<div className="mb-8">
-						<h2 className="text-2xl font-bold text-gray-900 mb-2">
-							Vos Prospects
-						</h2>
-						<p className="text-gray-600">
-							Gérez vos prospects individuels et entreprises
-						</p>
+					<div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+						<div className="bg-gradient-to-r from-slate-50 via-blue-50/80 to-indigo-50/60 px-4 py-5 sm:px-6">
+							<div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+								<div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+									<div
+										className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/20 sm:h-14 sm:w-14 sm:rounded-2xl"
+										aria-hidden>
+										<Users className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+									</div>
+									<div className="min-w-0">
+										<h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+											Vos Prospects
+										</h2>
+										<p className="mt-1 text-sm text-gray-600 sm:text-base">
+											Gérez vos prospects individuels et entreprises
+										</p>
+										<div className="mt-3 flex flex-wrap items-center gap-2">
+											<Badge
+												variant="outline"
+												className="border-blue-200 bg-blue-50/80 px-2.5 py-1 text-xs font-medium text-blue-700 sm:text-sm">
+												<User className="mr-1.5 h-3.5 w-3.5" />
+												{clients.length} individuel
+												{clients.length !== 1 ? "s" : ""}
+											</Badge>
+											<Badge
+												variant="outline"
+												className="border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-xs font-medium text-emerald-700 sm:text-sm">
+												<Building2 className="mr-1.5 h-3.5 w-3.5" />
+												{clientEntreprises.length} entreprise
+												{clientEntreprises.length !== 1 ? "s" : ""}
+											</Badge>
+											<span className="hidden text-xs text-gray-500 sm:inline sm:text-sm">
+												· {clients.length + clientEntreprises.length} au total
+											</span>
+										</div>
+									</div>
+								</div>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleExportCsv}
+									disabled={
+										loading ||
+										(clients.length === 0 && clientEntreprises.length === 0)
+									}
+									className="h-11 w-full shrink-0 border-gray-200 bg-white/90 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 sm:w-auto">
+									<Download className="mr-2 h-4 w-4 shrink-0" />
+									<span className="sm:hidden">Exporter CSV</span>
+									<span className="hidden sm:inline">
+										Exporter la liste en CSV
+									</span>
+								</Button>
+							</div>
+						</div>
 					</div>
 
 					<div className="grid grid-cols-1 xl:grid-cols-2 gap-8">

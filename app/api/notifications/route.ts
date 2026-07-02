@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, executeWithRetry } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/actions/user";
 
 export const dynamic = "force-dynamic";
@@ -50,11 +50,13 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const take = Math.min(Math.max(Number(url.searchParams.get("take") ?? 50) || 50, 1), 100);
 
-    const list = await prisma.notification.findMany({
-      where: { receiverId: userResult.data.id },
-      orderBy: { createdAt: "desc" },
-      take,
-    });
+    const list = await executeWithRetry(() =>
+      prisma.notification.findMany({
+        where: { receiverId: userResult.data.id },
+        orderBy: { createdAt: "desc" },
+        take,
+      }),
+    );
 
     return NextResponse.json(
       list.map((n) => ({

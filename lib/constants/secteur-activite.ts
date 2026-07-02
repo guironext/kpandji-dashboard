@@ -1,4 +1,4 @@
-export const SECTEUR_ACTIVITE_OPTIONS = [
+const SECTEUR_ACTIVITE_OPTIONS_RAW = [
 	"Secteur Public",
 	"Agro-Industrie",
 	"Sécurité",
@@ -19,8 +19,6 @@ export const SECTEUR_ACTIVITE_OPTIONS = [
 	"Sport",
 	"Technologie",
 	"Autres",
-	"Artisanat",
-	"Industrie",
 	"Mines & Énergie",
 	"Services & Finance",
 	"BTP & Infrastructures",
@@ -33,3 +31,10 @@ export const SECTEUR_ACTIVITE_OPTIONS = [
 	"Commerce de Détail & E-commerce",
 	"Événementiel & Traiteurs",
 ] as const;
+
+export type SecteurActivite = (typeof SECTEUR_ACTIVITE_OPTIONS_RAW)[number];
+
+/** Unique secteur options (deduped) for selects and forms. */
+export const SECTEUR_ACTIVITE_OPTIONS: SecteurActivite[] = [
+	...new Set(SECTEUR_ACTIVITE_OPTIONS_RAW),
+];

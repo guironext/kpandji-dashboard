@@ -126,6 +126,7 @@ export async function executeWithRetry<T>(
         prismaCode === "P1001" ||
         prismaCode === "P1017" ||
         prismaCode === "P1008" ||
+        prismaCode === "P2024" ||
         (error instanceof Error &&
           (error.message.includes("connection") ||
             error.message.includes("ConnectionReset") ||

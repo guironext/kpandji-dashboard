@@ -16,14 +16,21 @@ const MAX_NOTIFICATIONS = 50;
 
 async function syncFromServer() {
   if (typeof window === "undefined") return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(`/api/notifications?take=${MAX_NOTIFICATIONS}`, { cache: "no-store" });
+    const res = await fetch(`/api/notifications?take=${MAX_NOTIFICATIONS}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
     if (!res.ok) return;
     const list = (await res.json()) as AppNotification[];
     writeStore(list);
     emitChange();
   } catch {
-    // best-effort sync
+    // best-effort sync (DB may be waking up or dev server busy)
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
