@@ -684,14 +684,18 @@ const ProspectsPage = () => {
 										<div className="text-2xl font-bold text-white">
 											{clientEntreprises.length}
 										</div>
-										<div className="text-blue-100 text-sm">Entreprises</div>
+										<div className="text-blue-100 text-sm">
+											Entreprises
+										</div>
 									</div>
 								</div>
 
 								<div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3">
 									<div className="flex items-center gap-2 text-white">
 										<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-										<span className="text-sm font-medium">Système actif</span>
+										<span className="text-sm font-medium">
+											Système actif
+										</span>
 									</div>
 								</div>
 							</div>

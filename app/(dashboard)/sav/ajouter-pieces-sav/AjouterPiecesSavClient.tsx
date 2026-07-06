@@ -38,6 +38,7 @@ import {
   Hash,
   Search,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,7 +76,11 @@ export default function AjouterPiecesSavClient({
   const router = useRouter();
   const [pieces, setPieces] = useState(initialPieces);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [active, setActive] = useState<PieceSAVRow | null>(null);
   const [search, setSearch] = useState("");
 
   const [nom, setNom] = useState("");
@@ -125,6 +130,29 @@ export default function AjouterPiecesSavClient({
     setQuantiteEntree("0");
   }
 
+  function resetEditForm() {
+    setActive(null);
+    resetForm();
+  }
+
+  function openEdit(p: PieceSAVRow) {
+    setActive(p);
+    setNom(p.nom);
+    setModelVoiture(p.model_voiture ?? "");
+    setMarquePiece(p.marque_piece ?? "");
+    setPartCode(p.part_code ?? "");
+    setDescription(p.description ?? "");
+    setPrixAchat(p.prix_achat != null ? String(p.prix_achat) : "");
+    setPrixVente(p.prix_vente != null ? String(p.prix_vente) : "");
+    setQuantiteEntree(String(p.quantite_entree));
+    setEditOpen(true);
+  }
+
+  function openDelete(p: PieceSAVRow) {
+    setActive(p);
+    setDeleteOpen(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!nom.trim()) {
@@ -164,6 +192,71 @@ export default function AjouterPiecesSavClient({
       toast.error(err instanceof Error ? err.message : "Erreur");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!active) return;
+    if (!nom.trim()) {
+      toast.error("Saisissez le nom de la pièce.");
+      return;
+    }
+    const qe = parseInt(quantiteEntree, 10);
+    if (Number.isNaN(qe) || qe < 0) {
+      toast.error("La quantité entrée doit être un entier positif ou zéro.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/sav/piece-sav/${active.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: nom.trim(),
+          model_voiture: modelVoiture.trim() || null,
+          marque_piece: marquePiece.trim() || null,
+          part_code: partCode.trim() || null,
+          description: description.trim() || null,
+          prix_achat: prixAchat.trim() || null,
+          prix_vente: prixVente.trim() || null,
+          quantite_entree: qe,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Mise à jour impossible");
+      }
+      toast.success("Pièce mise à jour.");
+      setEditOpen(false);
+      resetEditForm();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!active) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/sav/piece-sav/${active.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Suppression impossible");
+      }
+      toast.success("Pièce supprimée.");
+      setDeleteOpen(false);
+      setActive(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -210,7 +303,10 @@ export default function AjouterPiecesSavClient({
                 "bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 hover:from-emerald-300 hover:to-teal-400",
                 "lg:self-end"
               )}
-              onClick={() => setDialogOpen(true)}
+              onClick={() => {
+                resetForm();
+                setDialogOpen(true);
+              }}
             >
               <PackagePlus className="h-5 w-5" />
               Ajouter une pièce
@@ -323,12 +419,15 @@ export default function AjouterPiecesSavClient({
                     <TableHead className="min-w-[200px] font-semibold text-slate-700">
                       Description
                     </TableHead>
+                    <TableHead className="min-w-[120px] text-center font-semibold text-slate-700">
+                      Action
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-40 p-0">
+                      <TableCell colSpan={9} className="h-40 p-0">
                         <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
                           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 ring-1 ring-slate-200/80">
                             <Package className="h-8 w-8 text-slate-400" />
@@ -418,6 +517,29 @@ export default function AjouterPiecesSavClient({
                             )}
                           </span>
                         </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 rounded-lg border-slate-200 px-3 text-xs font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                              onClick={() => openEdit(p)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-600 hover:bg-red-50 hover:text-red-600"
+                              aria-label={`Supprimer ${p.nom}`}
+                              onClick={() => openDelete(p)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -427,6 +549,239 @@ export default function AjouterPiecesSavClient({
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o);
+          if (!o) resetEditForm();
+        }}
+      >
+        <DialogContent className="max-h-[min(90vh,720px)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 sm:max-w-lg">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/40 px-6 py-5">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-xl font-semibold text-slate-900">
+                Modifier la pièce
+              </DialogTitle>
+              <DialogDescription className="text-slate-600">
+                Mettez à jour l&apos;identification, le stock et les prix.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleEditSubmit} className="px-6 py-5">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Identification
+                </p>
+                <div className="grid gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-nom" className="text-slate-700">
+                      Nom <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="edit-nom"
+                      value={nom}
+                      onChange={(e) => setNom(e.target.value)}
+                      required
+                      className="h-11 rounded-xl border-slate-200"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="edit-model_voiture"
+                        className="text-slate-700"
+                      >
+                        Modèle voiture
+                      </Label>
+                      <Input
+                        id="edit-model_voiture"
+                        value={modelVoiture}
+                        onChange={(e) => setModelVoiture(e.target.value)}
+                        className="h-11 rounded-xl border-slate-200"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="edit-marque_piece"
+                        className="text-slate-700"
+                      >
+                        Marque pièce
+                      </Label>
+                      <Input
+                        id="edit-marque_piece"
+                        value={marquePiece}
+                        onChange={(e) => setMarquePiece(e.target.value)}
+                        className="h-11 rounded-xl border-slate-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-part_code" className="text-slate-700">
+                      Part code
+                    </Label>
+                    <Input
+                      id="edit-part_code"
+                      value={partCode}
+                      onChange={(e) => setPartCode(e.target.value)}
+                      className="h-11 rounded-xl border-slate-200 font-mono text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="bg-slate-100" />
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Stock &amp; prix
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-qe" className="text-slate-700">
+                      Quantité entrée <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="edit-qe"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={quantiteEntree}
+                      onChange={(e) => setQuantiteEntree(e.target.value)}
+                      required
+                      className="h-11 rounded-xl border-slate-200"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-prix_achat" className="text-slate-700">
+                      Prix d&apos;achat
+                    </Label>
+                    <Input
+                      id="edit-prix_achat"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={prixAchat}
+                      onChange={(e) => setPrixAchat(e.target.value)}
+                      className="h-11 rounded-xl border-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-prix_vente" className="text-slate-700">
+                    Prix de vente
+                  </Label>
+                  <Input
+                    id="edit-prix_vente"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={prixVente}
+                    onChange={(e) => setPrixVente(e.target.value)}
+                    className="h-11 rounded-xl border-slate-200"
+                  />
+                </div>
+              </div>
+
+              <Separator className="bg-slate-100" />
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Détails
+                </p>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-desc" className="text-slate-700">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="edit-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="min-h-[88px] resize-none rounded-xl border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-8 flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-0 pb-0 pt-5 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-xl sm:w-auto"
+                onClick={() => {
+                  setEditOpen(false);
+                  resetEditForm();
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md hover:from-emerald-500 hover:to-teal-500 sm:w-auto"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement…
+                  </>
+                ) : (
+                  "Enregistrer"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-md rounded-3xl border-slate-200/80">
+          <DialogHeader>
+            <DialogTitle>Supprimer la pièce ?</DialogTitle>
+            <DialogDescription className="text-slate-600">
+              {active ? (
+                <>
+                  Cette action est définitive. La référence{" "}
+                  <span className="font-semibold text-slate-800">
+                    {active.nom}
+                  </span>{" "}
+                  sera retirée de l&apos;inventaire.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="rounded-xl"
+              disabled={deleting}
+              onClick={handleDeleteConfirm}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression…
+                </>
+              ) : (
+                "Supprimer"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[min(90vh,720px)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 sm:max-w-lg">

@@ -60,6 +60,7 @@ export type CommercialDashboardStats = {
 };
 
 export type CommercialDashboardData = {
+  userLabel: string;
   stats: CommercialDashboardStats;
   monthlyTrends: MonthlyClientTrend[];
   secteurChart: ChartDatum[];
@@ -142,6 +143,11 @@ export async function getCommercialDashboardData(): Promise<{
     }
 
     const userId = userResult.data.id;
+    const userLabel =
+      userResult.data.firstName?.trim() ||
+      `${userResult.data.firstName ?? ""} ${userResult.data.lastName ?? ""}`.trim() ||
+      userResult.data.email?.split("@")[0] ||
+      "Commercial";
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -406,6 +412,7 @@ export async function getCommercialDashboardData(): Promise<{
     return {
       success: true,
       data: {
+        userLabel,
         stats: {
           prospectsTotal: prospectsParticuliers + prospectsEntreprises,
           clientsTotal: clientsParticuliers + clientsEntreprises,

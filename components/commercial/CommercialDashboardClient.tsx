@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -161,9 +160,7 @@ function ChartTooltip({
 }
 
 export default function CommercialDashboardClient({ data }: Props) {
-  const { user } = useUser();
-  const { stats } = data;
-  const userLabel = user?.firstName || user?.username || "Commercial";
+  const { stats, userLabel } = data;
   const todayLabel = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
 
   const kpiCards = [

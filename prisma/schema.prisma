@@ -1589,6 +1589,7 @@ model VoitureSAV {
   Voiture           Voiture             @relation(fields: [voitureId], references: [id], onDelete: Cascade)
   diagnosticArrivee DiagnosticArrivee[]
   Reparation        Reparation[]
+  VisuelDefaut      VisuelDefaut[]
   clientSAVId       String
   ClientSAV         ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
 }
@@ -1599,6 +1600,17 @@ enum StatutVoitureSAV {
   TESTE
   TERMINE
   ANNULE
+}
+
+model VisuelDefaut {
+  id                String              @id @default(uuid())
+  nom               String
+  description       String?
+  image             String?
+  voitureSAVId       String
+  voitureSAV         VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model CatergorieDiagnostic {
