@@ -43,6 +43,8 @@ model User {
   NotificationsReceived              Notification[]                      @relation("NotificationsReceived")
   Agenda                             Agenda[]
   RapportActiviteAgenda              RapportActiviteAgenda[]
+  RapportMaintenanceSAV              RapportMaintenanceSAV[]
+  CheckListsSAV                      CheckListsSAV[]
   objectifPrincipauxes               ObjectifPrincipaux[]
   RubriqueObjectifGlobal             RubriqueObjectifGlobal[]
   ObjectifGlobal                     ObjectifGlobal[]
@@ -1587,11 +1589,51 @@ model VoitureSAV {
   statut            StatutVoitureSAV    @default(ARRIVE)
   voitureId         String
   Voiture           Voiture             @relation(fields: [voitureId], references: [id], onDelete: Cascade)
-  diagnosticArrivee DiagnosticArrivee[]
-  Reparation        Reparation[]
-  VisuelDefaut      VisuelDefaut[]
-  clientSAVId       String
-  ClientSAV         ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
+  diagnosticArrivee       DiagnosticArrivee[]
+  Reparation              Reparation[]
+  VisuelDefaut            VisuelDefaut[]
+  RapportMaintenanceSAV   RapportMaintenanceSAV[]
+  CheckListsSAV           CheckListsSAV[]
+  clientSAVId             String
+  ClientSAV               ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
+}
+
+enum TypeRapportMaintenanceSAV {
+  AUTOMATIQUE
+  MANUEL
+  COMPLET
+}
+
+enum StatutRapportMaintenanceSAV {
+  BROUILLON
+  VALIDE
+  ARCHIVE
+}
+
+/// Rapport consolidé de toutes les activités SAV d'un véhicule
+/// (diagnostic à l'arrivée, défauts visuels, réparations, pièces, maintenance).
+model RapportMaintenanceSAV {
+  id           String                      @id @default(uuid())
+  titre        String
+  /// Synthèse auto-générée à partir des activités du dossier VoitureSAV.
+  contenuAuto  String?                     @db.Text
+  /// Notes complémentaires rédigées manuellement.
+  contenu      String?                     @db.Text
+  observations String?                     @db.Text
+  type         TypeRapportMaintenanceSAV   @default(COMPLET)
+  statut       StatutRapportMaintenanceSAV @default(BROUILLON)
+  /// Instantané JSON des activités au moment de la génération
+  /// (IDs diagnosticArrivee, reparation, visuelDefaut, factures…).
+  snapshotActivites Json?
+  voitureSAVId String
+  voitureSAV   VoitureSAV                  @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  redacteurId  String?
+  redacteur    User?                       @relation(fields: [redacteurId], references: [id], onDelete: SetNull)
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
+
+  @@index([voitureSAVId])
+  @@index([statut])
 }
 
 enum StatutVoitureSAV {
@@ -1774,6 +1816,136 @@ model GroupePersonnelSAV {
   personnelSAVs PersonnelSAV[] @relation("PersonnelGroupeMembres")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+}
+
+enum StatutCheckListSAV {
+  EN_ATTENTE
+  ECHEC
+  VALIDE
+  TERMINEE
+  EN_COURS
+  ANNULE
+}
+
+enum TypeCheckListSAV {
+  RECEPTION
+  PREPARATION
+  FINALE
+}
+
+/// Check-list de réception et de contrôle du véhicule (SAV).
+model CheckListsSAV {
+  id     String               @id @default(uuid())
+  titre  String               @default("Check-list de réception et de contrôle du véhicule")
+  statut StatutCheckListSAV   @default(EN_ATTENTE)
+  type TypeCheckListSAV   @default(RECEPTION)
+
+  // 1. Informations générales
+  date                   DateTime @default(now())
+  numeroOrdreReparation  String?
+  nomClient              String?
+  telephone              String?
+  marque                 String?
+  modele                 String?
+  immatriculation        String?
+  numeroChassis          String?
+  kilometrage            Int?
+  niveauCarburant        String?
+
+  // 2. État extérieur
+  pareBrise                Boolean @default(false)
+  vitresLaterales          Boolean @default(false)
+  lunetteArriere           Boolean @default(false)
+  capot                    Boolean @default(false)
+  pareChocsAvant           Boolean @default(false)
+  pareChocsArriere         Boolean @default(false)
+  ailesAvant               Boolean @default(false)
+  ailesArriere             Boolean @default(false)
+  portes                   Boolean @default(false)
+  toit                     Boolean @default(false)
+  coffre                   Boolean @default(false)
+  retroviseurs             Boolean @default(false)
+  essuieGlaces             Boolean @default(false)
+  eclairageAvantArriere    Boolean @default(false)
+  plaquesImmatriculation   Boolean @default(false)
+
+  // 3. Pneumatiques
+  pressionCorrecte      Boolean @default(false)
+  usureReguliere        Boolean @default(false)
+  roueSecoursPresente   Boolean @default(false)
+  cricPresent           Boolean @default(false)
+  cleRouePresente       Boolean @default(false)
+
+  // 4. Compartiment moteur
+  niveauHuileMoteur         Boolean @default(false)
+  liquideRefroidissement    Boolean @default(false)
+  liquideFrein              Boolean @default(false)
+  liquideDirectionAssistee  Boolean @default(false)
+  liquideLaveGlace          Boolean @default(false)
+  batterie                  Boolean @default(false)
+  courroies                 Boolean @default(false)
+  absenceFuite              Boolean @default(false)
+
+  // 5. Habitacle
+  tableauBord            Boolean @default(false)
+  temoinsAllumes         Boolean @default(false)
+  climatisation          Boolean @default(false)
+  chauffage              Boolean @default(false)
+  klaxon                 Boolean @default(false)
+  ceinturesSecurite      Boolean @default(false)
+  sieges                 Boolean @default(false)
+  leveVitres             Boolean @default(false)
+  verrouillageCentralise Boolean @default(false)
+  autoradio              Boolean @default(false)
+
+  // 6. Électricité
+  feuxPosition       Boolean @default(false)
+  feuxCroisement     Boolean @default(false)
+  feuxRoute          Boolean @default(false)
+  clignotants        Boolean @default(false)
+  feuxStop           Boolean @default(false)
+  feuxRecul          Boolean @default(false)
+  feuxAntibrouillard Boolean @default(false)
+
+  // 7. Contrôle mécanique
+  controleMoteur       Boolean @default(false)
+  controleEmbrayage    Boolean @default(false)
+  controleBoiteVitesses Boolean @default(false)
+  controleDirection    Boolean @default(false)
+  controleSuspension   Boolean @default(false)
+  controleFreinage     Boolean @default(false)
+  controleTransmission Boolean @default(false)
+
+  // 8. Essai routier
+  demarrageNormal        Boolean @default(false)
+  accelerationCorrecte   Boolean @default(false)
+  freinageEfficace       Boolean @default(false)
+  directionStable        Boolean @default(false)
+  absenceVibrations      Boolean @default(false)
+  absenceBruitAnormal    Boolean @default(false)
+
+  // 9. Accessoires remis par le client
+  cle1                  Boolean @default(false)
+  cle2                  Boolean @default(false)
+  carteGrise            Boolean @default(false)
+  accessoireRoueSecours Boolean @default(false)
+  accessoireCric        Boolean @default(false)
+  trousseOutils         Boolean @default(false)
+  giletSecurite         Boolean @default(false)
+  triangleSignalisation Boolean @default(false)
+
+  // 10. Observations
+  observations String? @db.Text
+
+  voitureSAVId String
+  voitureSAV   VoitureSAV @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  redacteurId  String?
+  redacteur    User?      @relation(fields: [redacteurId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([voitureSAVId])
+  @@index([statut])
 }
 
 model Notification {

@@ -30,9 +30,12 @@ import {
   Upload,
   X,
   Camera,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import CheckListVerificationForm from "./CheckListVerificationForm";
+import VehiclePicker from "./VehiclePicker";
 
 interface CatergorieDiagnostic {
   id: string;
@@ -54,7 +57,7 @@ interface VoitureSAV {
   immatriculation: string;
   couleur: string;
   statut: string;
-  ClientSAV?: { nom?: string; prenom?: string };
+  ClientSAV?: { nom?: string; prenom?: string; contact?: string };
 }
 
 interface VisuelDefaut {
@@ -309,136 +312,99 @@ function DiagnostiqueForm({
   const clientName = [voiture.ClientSAV?.nom, voiture.ClientSAV?.prenom].filter(Boolean).join(" ") || "—";
 
   return (
-    <div className="space-y-6">
-      {/* Vehicle summary bar — sticky on scroll */}
-      <div className="sticky top-0 z-10 -mx-2 px-2 py-3 -mt-2 mb-2 bg-gradient-to-r from-slate-50/95 via-white/95 to-slate-50/95 backdrop-blur-md border-b border-slate-200/80 rounded-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/15 to-orange-500/15">
-                <User className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Client</p>
-                <p className="font-semibold text-slate-800">{clientName}</p>
-              </div>
+    <div className="space-y-4 pb-24 sm:space-y-5 sm:pb-28">
+      {/* Compact vehicle strip */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20">
+              <Car className="h-5 w-5" />
             </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/15 to-emerald-500/15">
-                <Car className="h-5 w-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Véhicule</p>
-                <p className="font-semibold text-slate-800">{voiture.model}</p>
-              </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-slate-900">{voiture.model}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {clientName}
+                </span>
+                <span className="hidden text-slate-300 sm:inline">•</span>
+                <span className="inline-flex items-center gap-1 font-mono tracking-wide text-slate-700">
+                  <Hash className="h-3 w-3" />
+                  {voiture.immatriculation}
+                </span>
+              </p>
             </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-                <Hash className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Immatriculation</p>
-                <p className="font-mono font-semibold text-slate-800">{voiture.immatriculation}</p>
-              </div>
-            </div>
-            <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-800 border-amber-200">
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-              {checkedCount} sélectionné{checkedCount > 1 ? "s" : ""}
-            </Badge>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 shrink-0">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setVisuelDialogOpen(true)}
-              className="rounded-xl border-dashed border-slate-300 bg-white/80 text-slate-600 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all"
-            >
-              <ImagePlus className="h-4 w-4 shrink-0" />
-              <span className="ml-2 hidden sm:inline">Ajouter défaut visuel</span>
-              <span className="ml-2 sm:hidden">Défaut visuel</span>
-            </Button>
-            <div className="hidden sm:block h-8 w-px bg-slate-200" aria-hidden="true" />
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              size="lg"
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 transition-all disabled:opacity-70 disabled:shadow-none min-w-[11.5rem]"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-              ) : (
-                <Save className="h-4 w-4 shrink-0" />
-              )}
-              <span className="ml-2">
-                {saving ? "Enregistrement…" : "Enregistrer le diagnostic"}
-              </span>
-            </Button>
-          </div>
+          <Badge
+            variant="secondary"
+            className="w-fit rounded-lg bg-amber-50 px-2.5 py-1 text-amber-800 border-amber-100"
+          >
+            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+            {checkedCount} sélectionné{checkedCount > 1 ? "s" : ""}
+          </Badge>
         </div>
       </div>
 
       {/* Category blocks */}
-      <div className="space-y-6">
+      <div className="space-y-3 sm:space-y-4">
         {Array.from(byCategory.entries()).map(([catId, items], catIndex) => {
           const cat = items[0]?.catergorieDiagnostic;
           const catNom = cat?.nom ?? "Sans catégorie";
           const accent = CATEGORY_ACCENTS[catIndex % CATEGORY_ACCENTS.length];
+          const catChecked = items.filter((d) => checked.has(d.id)).length;
 
           return (
             <Card
               key={catId}
-              className={cn(
-                "overflow-hidden rounded-2xl border-slate-200/80 shadow-sm",
-                "transition-all duration-200 hover:shadow-md hover:border-slate-300/60"
-              )}
+              className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm"
             >
-              <CardHeader className="pb-4 pt-6">
-                <div className="flex items-center gap-3">
-                  <div className={cn("h-1 w-1 rounded-full bg-gradient-to-r", accent)} />
-                  <div className="h-8 w-1 rounded-full bg-gradient-to-b from-amber-400/40 to-orange-500/40" />
-                  <CardTitle className="text-lg font-semibold text-slate-800 tracking-tight">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className={cn("h-8 w-1 shrink-0 rounded-full bg-gradient-to-b", accent)} />
+                  <CardTitle className="truncate text-[15px] font-semibold text-slate-800 sm:text-base">
                     {catNom}
                   </CardTitle>
                 </div>
+                <Badge variant="secondary" className="shrink-0 rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                  {catChecked}/{items.length}
+                </Badge>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <CardContent className="p-3 sm:p-4">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                   {items.map((d) => {
                     const isChecked = checked.has(d.id);
                     return (
                       <label
                         key={d.id}
                         className={cn(
-                          "group flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-all duration-200",
+                          "group flex min-h-[48px] touch-manipulation items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors",
                           isChecked
-                            ? "border-amber-300/60 bg-amber-50/80 shadow-sm"
-                            : "border-slate-200 bg-slate-50/30 hover:bg-slate-100/60 hover:border-slate-300"
+                            ? "border-amber-300/70 bg-amber-50/90"
+                            : "border-slate-200/90 bg-slate-50/40 active:bg-slate-100 hover:border-slate-300 hover:bg-white"
                         )}
                       >
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={(v) => toggle(d.id, !!v)}
-                          className="mt-0.5 h-5 w-5 rounded-md border-2 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                          className="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
                         />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <span
                             className={cn(
-                              "font-medium transition-colors",
-                              isChecked ? "text-amber-900" : "text-slate-800"
+                              "text-sm font-medium leading-snug",
+                              isChecked ? "text-amber-950" : "text-slate-700"
                             )}
                           >
                             {d.nom}
                           </span>
                           {d.description && (
-                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{d.description}</p>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{d.description}</p>
                           )}
                         </div>
                         <ChevronRight
                           className={cn(
-                            "h-4 w-4 shrink-0 opacity-0 transition-opacity",
-                            isChecked ? "text-amber-600 opacity-60" : "text-slate-400 group-hover:opacity-40"
+                            "mt-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity",
+                            isChecked ? "text-amber-600 opacity-50" : "text-slate-400 group-hover:opacity-40"
                           )}
                         />
                       </label>
@@ -451,12 +417,12 @@ function DiagnostiqueForm({
         })}
         {details.length === 0 && (
           <Card className="rounded-2xl border-dashed border-slate-300 bg-slate-50/50">
-            <CardContent className="py-16 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/80">
-                <ClipboardCheck className="h-8 w-8 text-slate-400" />
+            <CardContent className="px-4 py-12 text-center sm:py-16">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-200/80 sm:h-16 sm:w-16">
+                <ClipboardCheck className="h-7 w-7 text-slate-400 sm:h-8 sm:w-8" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold text-slate-700">Aucun détail configuré</h3>
-              <p className="mt-2 max-w-sm mx-auto text-slate-500 text-sm">
+              <h3 className="mt-4 text-base font-semibold text-slate-700 sm:text-lg">Aucun détail configuré</h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
                 Ajoutez des détails diagnostique dans Client SAV → Détails Diagnostique pour les afficher ici.
               </p>
             </CardContent>
@@ -466,37 +432,35 @@ function DiagnostiqueForm({
 
       {/* Visuel défauts gallery */}
       <Card className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
-        <CardHeader className="pb-4 pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500/15 to-pink-500/15">
-                <Camera className="h-5 w-5 text-rose-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800 tracking-tight">
-                  Défauts visuels
-                </CardTitle>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  Photos des défauts constatés sur ce véhicule
-                </p>
-              </div>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50">
+              <Camera className="h-4 w-4 text-rose-600" />
             </div>
-            <Badge variant="secondary" className="bg-rose-100 text-rose-800 border-rose-200">
-              {visuelDefauts.length} photo{visuelDefauts.length > 1 ? "s" : ""}
-            </Badge>
+            <div className="min-w-0">
+              <CardTitle className="text-[15px] font-semibold text-slate-800 sm:text-base">
+                Défauts visuels
+              </CardTitle>
+              <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
+                Photos des anomalies constatées
+              </p>
+            </div>
           </div>
+          <Badge variant="secondary" className="shrink-0 rounded-lg bg-rose-50 text-rose-800 border-rose-100">
+            {visuelDefauts.length}
+          </Badge>
         </CardHeader>
-        <CardContent className="pt-0 pb-6">
+        <CardContent className="p-3 sm:p-4">
           {loadingVisuels ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
             </div>
           ) : visuelDefauts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 py-12 text-center">
-              <ImagePlus className="mx-auto h-10 w-10 text-slate-400" />
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-10 text-center">
+              <ImagePlus className="mx-auto h-9 w-9 text-slate-400" />
               <p className="mt-3 text-sm font-medium text-slate-600">Aucun défaut visuel</p>
               <p className="mt-1 text-xs text-slate-500">
-                Cliquez sur &quot;Ajouter défaut visuel&quot; pour documenter les anomalies.
+                Documentez les anomalies avec une photo.
               </p>
               <Button
                 variant="outline"
@@ -504,16 +468,16 @@ function DiagnostiqueForm({
                 className="mt-4 rounded-xl"
                 onClick={() => setVisuelDialogOpen(true)}
               >
-                <ImagePlus className="h-4 w-4 mr-2" />
+                <ImagePlus className="mr-2 h-4 w-4" />
                 Ajouter une photo
               </Button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
               {visuelDefauts.map((v) => (
                 <div
                   key={v.id}
-                  className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-300"
+                  className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                     {v.image ? (
@@ -529,10 +493,10 @@ function DiagnostiqueForm({
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-slate-800 line-clamp-1">{v.nom}</p>
+                  <div className="p-2.5 sm:p-3">
+                    <p className="line-clamp-1 text-sm font-semibold text-slate-800">{v.nom}</p>
                     {v.description && (
-                      <p className="mt-1 text-xs text-slate-500 line-clamp-2">{v.description}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{v.description}</p>
                     )}
                   </div>
                 </div>
@@ -541,6 +505,39 @@ function DiagnostiqueForm({
           )}
         </CardContent>
       </Card>
+
+      {/* Sticky bottom actions */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur-md supports-[backdrop-filter]:bg-white/85 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-3">
+          <div className="mr-auto hidden min-w-0 sm:block">
+            <p className="truncate text-sm font-medium text-slate-800">
+              {checkedCount} point{checkedCount > 1 ? "s" : ""} sélectionné{checkedCount > 1 ? "s" : ""}
+            </p>
+            <p className="text-xs text-slate-500">Diagnostic à l&apos;arrivée</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setVisuelDialogOpen(true)}
+            className="h-11 flex-1 rounded-xl border-dashed sm:flex-none sm:min-w-[9rem]"
+          >
+            <ImagePlus className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Défaut visuel</span>
+            <span className="ml-2 sm:hidden">Photo</span>
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="h-11 flex-[1.4] rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600 sm:flex-none sm:min-w-[12rem]"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            <span className="ml-2">{saving ? "Enregistrement…" : "Enregistrer"}</span>
+          </Button>
+        </div>
+      </div>
 
       <Dialog
         open={visuelDialogOpen}
@@ -731,89 +728,115 @@ export default function DiagnostiqueArriveePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-[calc(100vh-4rem)]">
       {/* Hero */}
-      <div className="relative -mx-6 -mt-6 mb-8 overflow-hidden rounded-b-[1.75rem] bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 px-6 pt-10 pb-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.25),transparent)]" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute top-0 left-1/4 w-64 h-64 bg-orange-400/15 rounded-full blur-3xl -translate-y-1/2" />
-        <div className="relative">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-              <ClipboardCheck className="h-4 w-4 text-amber-100" />
+      <div className="relative -mx-3 mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 px-4 py-6 sm:-mx-4 sm:mb-6 sm:rounded-3xl sm:px-6 sm:py-8 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.22),transparent)]" />
+        <div className="absolute -bottom-16 -right-10 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="absolute -top-10 left-1/4 h-40 w-40 rounded-full bg-orange-300/15 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm sm:h-8 sm:w-8">
+                <ClipboardCheck className="h-3.5 w-3.5 text-amber-50 sm:h-4 sm:w-4" />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-50/95 sm:text-xs">
+                Contrôle à l&apos;arrivée
+              </span>
             </div>
-            <span className="text-sm font-semibold text-amber-100/95 uppercase tracking-widest">
-              Contrôle à l&apos;arrivée
-            </span>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Diagnostique Arrivée
-          </h1>
-          <p className="mt-3 text-lg text-amber-100/90 max-w-xl">
-            Sélectionnez les contrôles effectués pour chaque véhicule en statut ARRIVÉ.
-          </p>
-          {voitures.length > 0 && (
-            <p className="mt-4 text-sm text-amber-200/90">
-              {voitures.length} véhicule{voitures.length > 1 ? "s" : ""} en attente
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
+              Diagnostique Arrivée
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-amber-50/90 sm:text-base">
+              Vérifiez le véhicule, puis renseignez le diagnostic pour chaque arrivée.
             </p>
+          </div>
+          {voitures.length > 0 && (
+            <div className="inline-flex w-fit items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm ring-1 ring-white/20">
+              <Car className="h-4 w-4 shrink-0 opacity-90" />
+              {voitures.length} véhicule{voitures.length > 1 ? "s" : ""}
+            </div>
           )}
         </div>
       </div>
 
       {voitures.length === 0 ? (
-        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 px-6 py-8">
-            <CardContent className="flex flex-col items-center text-center py-12">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200/80">
-                <Car className="h-10 w-10 text-slate-400" />
-              </div>
-              <h3 className="mt-6 text-xl font-semibold text-slate-700">Aucun véhicule arrivé</h3>
-              <p className="mt-2 text-slate-500 max-w-md">
-                Les véhicules avec le statut <span className="font-medium text-slate-600">ARRIVÉ</span> apparaîtront ici pour le diagnostic.
-              </p>
-            </CardContent>
-          </div>
+        <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-sm">
+          <CardContent className="flex flex-col items-center px-4 py-14 text-center sm:py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 sm:h-20 sm:w-20">
+              <Car className="h-8 w-8 text-slate-400 sm:h-10 sm:w-10" />
+            </div>
+            <h3 className="mt-5 text-lg font-semibold text-slate-700 sm:text-xl">Aucun véhicule arrivé</h3>
+            <p className="mt-2 max-w-md text-sm text-slate-500">
+              Les véhicules avec le statut{" "}
+              <span className="font-medium text-slate-600">ARRIVÉ</span> apparaîtront ici.
+            </p>
+          </CardContent>
         </Card>
       ) : (
-        <Tabs key={voitures.map((v) => v.id).join(",")} defaultValue={voitures[0]?.id} className="w-full">
-          <div className="mb-6">
-            <TabsList
-              className={cn(
-                "inline-flex flex-nowrap gap-2 h-auto p-2 rounded-2xl",
-                "bg-slate-100/90 border border-slate-200/80 shadow-sm",
-                "overflow-x-auto overflow-y-hidden max-w-full"
-              )}
-            >
-              {voitures.map((v) => (
-                <TabsTrigger
-                  key={v.id}
-                  value={v.id}
-                  className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-xl px-5 py-3.5 min-w-[200px]",
-                    "text-left whitespace-nowrap",
-                    "data-[state=active]:bg-white data-[state=active]:text-amber-800",
-                    "data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/80",
-                    "data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-200/60"
-                  )}
-                >
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <User className="h-3.5 w-3.5 shrink-0" />
-                    {[v.ClientSAV?.nom, v.ClientSAV?.prenom].filter(Boolean).join(" ") || "—"}
-                  </span>
-                  <span className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                    <Car className="h-3 w-3 shrink-0" />
-                    {v.model} • {v.immatriculation}
-                  </span>
-                </TabsTrigger>
-              ))}
+        <Tabs defaultValue="verification" className="w-full">
+          <div className="sticky top-0 z-30 -mx-1 mb-4 bg-slate-50/90 px-1 py-2 backdrop-blur-md sm:mb-5">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl border border-slate-200/80 bg-slate-100/90 p-1 shadow-sm sm:mx-auto sm:max-w-xl sm:p-1.5">
+              <TabsTrigger
+                value="verification"
+                className={cn(
+                  "min-h-11 gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold sm:gap-2 sm:px-4 sm:text-sm",
+                  "data-[state=active]:bg-white data-[state=active]:text-sky-800",
+                  "data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-sky-200/70"
+                )}
+              >
+                <ClipboardList className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  <span className="sm:hidden">Vérification</span>
+                  <span className="hidden sm:inline">Vérification Voiture à l&apos;arrivée</span>
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="diagnostic"
+                className={cn(
+                  "min-h-11 gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold sm:gap-2 sm:px-4 sm:text-sm",
+                  "data-[state=active]:bg-white data-[state=active]:text-amber-800",
+                  "data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-amber-200/70"
+                )}
+              >
+                <ClipboardCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  <span className="sm:hidden">Diagnostic</span>
+                  <span className="hidden sm:inline">Diagnostic à l&apos;arrivée</span>
+                </span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
-          {voitures.map((v) => (
-            <TabsContent key={v.id} value={v.id} className="mt-0 focus-visible:ring-0">
-              <DiagnostiqueForm voiture={v} details={details} onSaved={loadData} />
-            </TabsContent>
-          ))}
+          <TabsContent value="verification" className="mt-0 focus-visible:ring-0">
+            <Tabs
+              key={`verif-${voitures.map((v) => v.id).join(",")}`}
+              defaultValue={voitures[0]?.id}
+              className="w-full space-y-4"
+            >
+              <VehiclePicker voitures={voitures} accent="sky" />
+              {voitures.map((v) => (
+                <TabsContent key={`verif-${v.id}`} value={v.id} className="mt-0 focus-visible:ring-0">
+                  <CheckListVerificationForm voiture={v} />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="diagnostic" className="mt-0 focus-visible:ring-0">
+            <Tabs
+              key={`diag-${voitures.map((v) => v.id).join(",")}`}
+              defaultValue={voitures[0]?.id}
+              className="w-full space-y-4"
+            >
+              <VehiclePicker voitures={voitures} accent="amber" />
+              {voitures.map((v) => (
+                <TabsContent key={`diag-${v.id}`} value={v.id} className="mt-0 focus-visible:ring-0">
+                  <DiagnostiqueForm voiture={v} details={details} onSaved={loadData} />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
         </Tabs>
       )}
     </div>

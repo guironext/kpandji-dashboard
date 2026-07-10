@@ -68,7 +68,7 @@ export type MaintenanceSAVFactureRow = {
 };
 
 export function toNum(
-  v: string | number | { toString(): string } | null | undefined,
+  v: string | number | { toString(): string } | null | undefined | unknown,
 ): number {
   if (v == null) return 0;
   const n = Number(v);

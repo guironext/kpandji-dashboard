@@ -611,7 +611,7 @@ export default function MaintenanceClient() {
 
       if (
         !window.confirm(
-          "Confirmer la fin de maintenance ? La réparation passera au statut « terminé » et quittera cette liste."
+          "Confirmer la fin de maintenance ? La réparation passera au test final et quittera cette liste."
         )
       ) {
         return;
@@ -620,13 +620,13 @@ export default function MaintenanceClient() {
       const res = await fetch(`/api/sav/reparation/${repId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: "TERMINE" }),
+        body: JSON.stringify({ statut: "TESTE" }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Mise à jour impossible");
       }
-      toast.success("Maintenance terminée — données enregistrées");
+      toast.success("Maintenance terminée — dossier envoyé au test final");
       setReparations((prev) => {
         const remaining = prev.filter((r) => r.id !== repId);
         setActiveTab((tab) => {
@@ -1023,7 +1023,7 @@ export default function MaintenanceClient() {
                       className="shrink-0 gap-2 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
                       title={
                         terminerVal.ok
-                          ? "Enregistre la fin de maintenance après contrôle en base (prix et durée)."
+                          ? "Termine la maintenance et envoie le dossier au test final."
                           : terminerVal.error
                       }
                       disabled={finishingRepId === rep.id}
@@ -1037,7 +1037,7 @@ export default function MaintenanceClient() {
                       ) : (
                         <>
                           <CircleCheck className="h-4 w-4" />
-                          Terminer la maintenance
+                          Envoyer au test final
                         </>
                       )}
                     </Button>

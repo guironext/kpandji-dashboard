@@ -1,48 +1,67 @@
 "use client";
 
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import Header from "@/components/Header";
 import SidebarSav from "@/components/SidebarSav";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) setIsSidebarOpen(false);
+  }, [isMobile]);
 
   return (
-    <div className="h-screen overflow-hidden relative">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-16">
+    <div className="relative h-screen overflow-hidden bg-slate-50/50">
+      <div className="fixed left-0 right-0 top-0 z-50 h-16">
         <Header toggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
-      </div>
-
-      {/* Sidebar */}
-      <div
-        className={clsx(
-          "fixed top-24 left-0 h-[calc(100vh-4rem)] z-40 transition-all duration-500 ease-in-out",
-          isSidebarOpen ? "w-52" : "w-20"
-        )}
-      >
-        <SidebarSav isOpen={isSidebarOpen} />
       </div>
 
       {/* Mobile overlay */}
       <div
         className={clsx(
-          "lg:hidden fixed inset-0 z-30 bg-white/65 backdrop-blur-sm transition-opacity",
-          isSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          "fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden",
+          isSidebarOpen && isMobile
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
         )}
         onClick={() => setIsSidebarOpen(false)}
+        aria-hidden={!isSidebarOpen || !isMobile}
       />
+
+      {/* Sidebar */}
+      <div
+        className={clsx(
+          "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] transition-all duration-300 ease-out",
+          isMobile
+            ? clsx(
+                "w-[min(18rem,85vw)]",
+                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+              )
+            : clsx(isSidebarOpen ? "w-52" : "w-[4.5rem]")
+        )}
+      >
+        <SidebarSav isOpen={isMobile ? true : isSidebarOpen} />
+      </div>
 
       {/* Main content */}
       <main
         className={clsx(
-          "pt-16 h-screen overflow-y-auto transition-all duration-500 ease-in-out",
-          isSidebarOpen ? "ml-52" : "ml-20"
+          "h-screen overflow-y-auto pt-16 transition-[margin] duration-300 ease-out",
+          isMobile ? "ml-0" : isSidebarOpen ? "ml-52" : "ml-[4.5rem]"
         )}
       >
-        <div className={clsx(isSidebarOpen ? "ml-13" : "ml-1")}>{children}</div>
+        <div className="min-h-full">{children}</div>
       </main>
     </div>
   );

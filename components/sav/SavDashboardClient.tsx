@@ -10,6 +10,7 @@ import {
   Boxes,
   CalendarDays,
   CarFront,
+  CircleCheck,
   ClipboardList,
   FileText,
   Package,
@@ -84,6 +85,14 @@ const QUICK_LINKS = [
     icon: Wrench,
     gradient: "from-amber-500 to-orange-600",
     glow: "group-hover:shadow-amber-200/60",
+  },
+  {
+    href: "/sav/teste-final",
+    label: "Teste final",
+    description: "Contrôle qualité",
+    icon: CircleCheck,
+    gradient: "from-cyan-500 to-teal-600",
+    glow: "group-hover:shadow-cyan-200/60",
   },
   {
     href: "/sav/proforma-sav",
