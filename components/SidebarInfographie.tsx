@@ -1,415 +1,267 @@
 "use client";
 
 import {
-  LayoutDashboard,
-  FolderKanban,
-  BarChart3,
-  MessageSquare,
-  Megaphone,
-  FileText,
   type LucideIcon,
+  LayoutDashboard,
+  FileText,
+  MessageSquare,
+  Palette,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-type NavItem = {
-  id: number;
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+
+type NavCategory = "main" | "commandes" | "communication";
+
+interface NavItem {
+  id: string;
   icon: LucideIcon;
   label: string;
   href: string;
-  category:
-    | "main"
-    | "projets"
-    | "operations"
-    | "courriers-messages"
-    | "documentation";
-};
+  category: NavCategory;
+}
 
 const navItems: NavItem[] = [
-  {
-    id: 1,
-    icon: LayoutDashboard,
-    label: "Dashboard",
-    href: "/infographie",
-    category: "main",
-  },
-  {
-    id: 2,
-    icon: FolderKanban,
-    label: "Projets",
-    href: "/infographie/projets",
-    category: "projets",
-  },
-  
-  {
-    id: 5,
-    icon: BarChart3,
-    label: "Objectifs Principaux",
-    href: "/infographie/objectifs-principaux",
-    category: "operations",
-  },
-
-  {
-    id: 7,
-    icon: MessageSquare,
-    label: "Publications",
-    href: "/infographie/publications",
-    category: "operations",
-  },
-  {
-    id: 8,
-    icon: MessageSquare,
-    label: "Courriers Messages",
-    href: "/infographie/numero-courrier",
-    category: "courriers-messages",
-  },
-  
-  {
-    id: 10,
-    icon: FileText,
-    label: "Documentation",
-    href: "/infographie/documentation",
-    category: "documentation",
-  },
+  { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/infographie", category: "main" },
+  { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/infographie/projet-ponctuel", category: "commandes" },
+  { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/infographie/projet-permanent", category: "commandes" },
+  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/infographie/performance", category: "communication" },
 ];
 
-const categoryLabels: Record<NavItem["category"], string> = {
-  main: "Principal",
-  projets: "Projets",
-  operations: "Opérations",
-  "courriers-messages": "Courriers Messages",
-  documentation: "Documentation",
-};
-
-const categoryOrder: NavItem["category"][] = [
-  "main",
-  "projets",
-  "operations",
-  "courriers-messages",
-  "documentation",
-];
-
-const categoryThemes: Record<
-  NavItem["category"],
-  { label: string; border: string; dot: string }
-> = {
+const categoryConfig = {
   main: {
-    label: "text-sky-600",
-    border: "border-sky-200/80",
-    dot: "bg-sky-500",
+    label: "Principal",
+    icon: LayoutDashboard,
+    color: "from-violet-500 via-fuchsia-500 to-pink-600",
+    textColor: "text-violet-800",
+    chipGradient: "from-violet-500 to-fuchsia-600",
+    glow: "shadow-violet-500/35",
+    focusRing: "focus-visible:ring-violet-400",
   },
-  projets: {
-    label: "text-violet-600",
-    border: "border-violet-200/80",
-    dot: "bg-violet-500",
+  commandes: {
+    label: "Projets",
+    icon: FileText,
+    color: "from-indigo-500 via-violet-500 to-purple-600",
+    textColor: "text-indigo-800",
+    chipGradient: "from-indigo-500 to-violet-600",
+    glow: "shadow-indigo-500/35",
+    focusRing: "focus-visible:ring-indigo-400",
   },
-  operations: {
-    label: "text-emerald-600",
-    border: "border-emerald-200/80",
-    dot: "bg-emerald-500",
+  communication: {
+    label: "Suivi",
+    icon: MessageSquare,
+    color: "from-rose-400 via-pink-500 to-fuchsia-600",
+    textColor: "text-rose-800",
+    chipGradient: "from-rose-500 to-pink-600",
+    glow: "shadow-rose-500/35",
+    focusRing: "focus-visible:ring-rose-400",
   },
-  "courriers-messages": {
-    label: "text-amber-600",
-    border: "border-amber-200/80",
-    dot: "bg-amber-500",
-  },
-  documentation: {
-    label: "text-fuchsia-600",
-    border: "border-fuchsia-200/80",
-    dot: "bg-fuchsia-500",
-  },
-};
+} as const;
 
-const itemThemes: Record<
-  number,
-  {
-    active: string;
-    idle: string;
-    iconBg: string;
-    iconText: string;
-    iconHover: string;
-    label: string;
-  }
-> = {
-  1: {
-    active: "bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-600 shadow-lg shadow-sky-500/30",
-    idle: "hover:bg-sky-50/90 hover:shadow-md hover:shadow-sky-200/50",
-    iconBg: "bg-gradient-to-br from-sky-400 to-cyan-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-sky-500 group-hover:to-cyan-600",
-    label: "text-sky-800 group-hover:text-sky-900",
-  },
-  2: {
-    active: "bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-600 shadow-lg shadow-violet-500/30",
-    idle: "hover:bg-violet-50/90 hover:shadow-md hover:shadow-violet-200/50",
-    iconBg: "bg-gradient-to-br from-violet-400 to-purple-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-violet-500 group-hover:to-purple-600",
-    label: "text-violet-800 group-hover:text-violet-900",
-  },
-  3: {
-    active: "bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 shadow-lg shadow-emerald-500/30",
-    idle: "hover:bg-emerald-50/90 hover:shadow-md hover:shadow-emerald-200/50",
-    iconBg: "bg-gradient-to-br from-emerald-400 to-teal-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-emerald-500 group-hover:to-teal-600",
-    label: "text-emerald-800 group-hover:text-emerald-900",
-  },
-  4: {
-    active: "bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 shadow-lg shadow-orange-500/30",
-    idle: "hover:bg-orange-50/90 hover:shadow-md hover:shadow-orange-200/50",
-    iconBg: "bg-gradient-to-br from-orange-400 to-amber-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-orange-500 group-hover:to-amber-600",
-    label: "text-orange-800 group-hover:text-orange-900",
-  },
-  5: {
-    active: "bg-gradient-to-r from-rose-500 via-pink-500 to-red-500 shadow-lg shadow-rose-500/30",
-    idle: "hover:bg-rose-50/90 hover:shadow-md hover:shadow-rose-200/50",
-    iconBg: "bg-gradient-to-br from-rose-400 to-pink-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-rose-500 group-hover:to-pink-600",
-    label: "text-rose-800 group-hover:text-rose-900",
-  },
-  6: {
-    active: "bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-600 shadow-lg shadow-blue-500/30",
-    idle: "hover:bg-blue-50/90 hover:shadow-md hover:shadow-blue-200/50",
-    iconBg: "bg-gradient-to-br from-blue-400 to-indigo-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-blue-500 group-hover:to-indigo-600",
-    label: "text-blue-800 group-hover:text-blue-900",
-  },
-  7: {
-    active: "bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-600 shadow-lg shadow-indigo-500/30",
-    idle: "hover:bg-indigo-50/90 hover:shadow-md hover:shadow-indigo-200/50",
-    iconBg: "bg-gradient-to-br from-indigo-400 to-blue-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-indigo-500 group-hover:to-blue-600",
-    label: "text-indigo-800 group-hover:text-indigo-900",
-  },
-  8: {
-    active: "bg-gradient-to-r from-amber-500 via-yellow-500 to-lime-500 shadow-lg shadow-amber-500/30",
-    idle: "hover:bg-amber-50/90 hover:shadow-md hover:shadow-amber-200/50",
-    iconBg: "bg-gradient-to-br from-amber-400 to-yellow-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-amber-500 group-hover:to-yellow-600",
-    label: "text-amber-900 group-hover:text-amber-950",
-  },
-  9: {
-    active: "bg-gradient-to-r from-lime-500 via-green-500 to-emerald-600 shadow-lg shadow-lime-500/30",
-    idle: "hover:bg-lime-50/90 hover:shadow-md hover:shadow-lime-200/50",
-    iconBg: "bg-gradient-to-br from-lime-400 to-green-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-lime-500 group-hover:to-green-600",
-    label: "text-lime-900 group-hover:text-lime-950",
-  },
-  10: {
-    active: "bg-gradient-to-r from-fuchsia-500 via-purple-500 to-violet-600 shadow-lg shadow-fuchsia-500/30",
-    idle: "hover:bg-fuchsia-50/90 hover:shadow-md hover:shadow-fuchsia-200/50",
-    iconBg: "bg-gradient-to-br from-fuchsia-400 to-purple-500",
-    iconText: "text-white",
-    iconHover: "group-hover:from-fuchsia-500 group-hover:to-purple-600",
-    label: "text-fuchsia-800 group-hover:text-fuchsia-900",
-  },
-};
-
-const defaultItemTheme = itemThemes[1];
-
-function isNavActive(pathname: string, href: string) {
-  if (href === "/infographie") {
-    return pathname === href;
-  }
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === "/designer") return pathname === "/designer";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-type SidebarInfographieProps = {
-  isOpen: boolean;
-  onNavigate?: () => void;
-};
-
-const SidebarInfographie = ({ isOpen, onNavigate }: SidebarInfographieProps) => {
+const SidebarInfographie = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const groupedItems = navItems.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<string, typeof navItems>);
 
-  const groupedItems = categoryOrder
-    .map((category) => ({
-      category,
-      items: navItems.filter((item) => item.category === category),
-    }))
-    .filter((group) => group.items.length > 0);
+  const categoryOrder: NavCategory[] = ["main", "commandes", "communication"];
 
-  if (!mounted) {
-    return (
-      <aside
-        className="h-full w-full shrink-0 border-r border-violet-200/60 bg-gradient-to-b from-violet-50 to-fuchsia-50"
-        aria-hidden
-      />
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const cfg = categoryConfig[item.category];
+    const isActive = isRouteActive(pathname, item.href);
+    const Icon = item.icon;
+
+    const linkContent = (
+      <Link
+        href={item.href}
+        className={clsx(
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+          cfg.focusRing,
+          isOpen ? "justify-start" : "justify-center",
+          isActive
+            ? clsx("bg-gradient-to-r text-white shadow-lg", cfg.color, cfg.glow)
+            : clsx(
+                "text-slate-700",
+                "hover:bg-white/90 hover:shadow-md hover:shadow-slate-200/40 hover:ring-1 hover:ring-slate-200/60",
+                "active:scale-[0.98]"
+              )
+        )}
+        aria-label={item.label}
+        aria-current={isActive ? "page" : undefined}
+      >
+        {isActive && (
+          <span
+            className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-white/50 shadow-sm"
+            aria-hidden
+          />
+        )}
+        <div
+          className={clsx(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+            isActive
+              ? "bg-white/20 text-white shadow-inner"
+              : clsx(
+                  "bg-white/95 shadow-sm ring-1 ring-slate-200/70",
+                  cfg.textColor,
+                  "group-hover:scale-[1.03] group-hover:ring-slate-300/80"
+                )
+          )}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2} />
+        </div>
+        <span
+          className={clsx(
+            "text-sm font-medium whitespace-nowrap transition-all duration-300",
+            isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
     );
-  }
+
+    if (!isOpen) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent
+            side="right"
+            sideOffset={14}
+            className="border-0 bg-gradient-to-br from-slate-900 to-slate-800 font-medium text-white shadow-xl shadow-slate-900/30"
+          >
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
+  };
 
   return (
-    <aside
-      className="flex h-full w-full flex-col overflow-hidden border-r border-violet-200/50 shadow-lg shadow-violet-200/30"
-      role="navigation"
-      aria-label="Navigation Infographie"
-    >
-        <div className="relative flex h-full flex-col overflow-hidden bg-gradient-to-br from-sky-50 via-violet-50 to-fuchsia-100 pb-[env(safe-area-inset-bottom)]">
-          <div className="pointer-events-none absolute -right-8 -top-12 h-40 w-40 rounded-full bg-cyan-400/30 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute -bottom-8 -left-6 h-36 w-36 rounded-full bg-fuchsia-400/25 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute right-0 top-1/3 h-28 w-28 rounded-full bg-amber-300/20 blur-2xl" aria-hidden />
-
-          <header className="relative shrink-0 border-b border-white/40 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 px-3 py-3 shadow-lg shadow-fuchsia-500/20 sm:px-4 sm:py-4">
-            <div
-              className={clsx(
-                "flex items-center transition-all duration-300",
-                isOpen ? "justify-start gap-3" : "justify-center"
-              )}
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-2 ring-white/50 backdrop-blur-sm sm:h-9 sm:w-9">
-                <Megaphone className="h-5 w-5 text-white drop-shadow sm:h-[18px] sm:w-[18px]" aria-hidden />
-              </div>
-              <div
-                className={clsx(
-                  "min-w-0 overflow-hidden transition-all duration-300",
-                  isOpen ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-                )}
-              >
-                <h2 className="truncate text-sm font-bold tracking-tight text-white sm:text-base">
+    <TooltipProvider delayDuration={0}>
+      <aside
+        className={clsx(
+          "relative h-full min-h-0 flex flex-col overflow-hidden transition-all duration-300 ease-out",
+          "bg-[linear-gradient(165deg,#faf5ff_0%,#ffffff_35%,#f5f3ff_100%)]",
+          "border-r border-slate-200/70",
+          "shadow-[4px_0_32px_-8px_rgba(139,92,246,0.12),2px_0_20px_-4px_rgba(217,70,239,0.08)]"
+        )}
+        role="navigation"
+        aria-label="Navigation principale designer"
+      >
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-white via-violet-50/50 to-fuchsia-50/40 px-4 py-5 backdrop-blur-sm">
+          <div
+            className={clsx(
+              "relative flex items-center gap-3 transition-all duration-300",
+              isOpen ? "justify-start" : "justify-center"
+            )}
+          >
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-violet-500/35 ring-2 ring-white/60">
+              <Palette className="h-5 w-5 drop-shadow-sm" strokeWidth={2} />
+            </div>
+            {isOpen && (
+              <div className="min-w-0 flex-1">
+                <h2 className="bg-gradient-to-r from-violet-700 via-fuchsia-600 to-pink-600 bg-clip-text text-base font-bold tracking-tight text-transparent">
                   Infographie
                 </h2>
-                <p className="truncate text-[11px] text-white/80 sm:text-xs">
-                  Équipe Infographie
+                <p className="mt-0.5 text-xs font-medium text-slate-600">
+                  Création & gestion des infographies
                 </p>
               </div>
-            </div>
-          </header>
+            )}
+          </div>
+        </div>
 
-          <nav
-            className="relative flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-3 [scrollbar-color:rgb(167_139_250)_transparent] [scrollbar-width:thin] sm:px-3 sm:py-4"
-            aria-label="Menu Infographie"
-          >
-            {groupedItems.map(({ category, items }, groupIndex) => {
-              const catTheme = categoryThemes[category];
+        <nav className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+          <div className="space-y-5">
+            {categoryOrder.map((category) => {
+              const items = groupedItems[category];
+              if (!items?.length) return null;
+
+              const config = categoryConfig[category];
+              const CategoryIcon = config.icon;
 
               return (
-                <div
-                  key={category}
-                  className={clsx(
-                    groupIndex > 0 && clsx("mt-3 border-t pt-3 sm:mt-4 sm:pt-4", catTheme.border)
+                <div key={category} className="space-y-1.5">
+                  {isOpen && (
+                    <div className="mb-1 flex items-center gap-2.5 rounded-xl border border-slate-200/60 bg-white/60 px-2.5 py-2 shadow-sm shadow-slate-200/20 backdrop-blur-sm">
+                      <div
+                        className={clsx(
+                          "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
+                          config.chipGradient,
+                          config.glow
+                        )}
+                      >
+                        <CategoryIcon className="h-4 w-4" strokeWidth={2} />
+                      </div>
+                      <span
+                        className={clsx(
+                          "text-[11px] font-bold uppercase tracking-[0.14em]",
+                          config.textColor
+                        )}
+                      >
+                        {config.label}
+                      </span>
+                    </div>
                   )}
-                >
-                  <h3
-                    className={clsx(
-                      "mb-2 flex items-center gap-2 px-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 sm:text-[11px]",
-                      catTheme.label,
-                      isOpen ? "h-4 opacity-100" : "h-0 overflow-hidden opacity-0"
-                    )}
-                  >
-                    <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", catTheme.dot)} />
-                    {categoryLabels[category]}
-                  </h3>
 
-                  <ul className="space-y-1" role="list">
-                    {items.map((item) => {
-                      const isActive = isNavActive(pathname, item.href);
-                      const Icon = item.icon;
-                      const theme = itemThemes[item.id] ?? defaultItemTheme;
-
-                      return (
-                        <li key={item.id}>
-                          <Link
-                            href={item.href}
-                            onClick={onNavigate}
-                            title={item.label}
-                            className={clsx(
-                              "group relative flex rounded-xl transition-all duration-200",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-500 focus-visible:ring-offset-2",
-                              "active:scale-[0.98]",
-                              isOpen
-                                ? "min-h-10 items-center gap-3 px-2.5 py-2"
-                                : "mx-auto w-full flex-col items-center gap-1.5 px-1.5 py-2",
-                              isActive ? theme.active : theme.idle
-                            )}
-                            aria-current={isActive ? "page" : undefined}
-                          >
-                            {isActive && (
-                              <span
-                                className={clsx(
-                                  "absolute rounded-full bg-white/90 shadow-sm",
-                                  isOpen
-                                    ? "left-0 top-1/2 h-5 w-1 -translate-y-1/2"
-                                    : "bottom-0 left-1/2 h-1 w-5 -translate-x-1/2"
-                                )}
-                                aria-hidden
-                              />
-                            )}
-
-                            <span
-                              className={clsx(
-                                "flex shrink-0 items-center justify-center rounded-lg shadow-md transition-all duration-200 group-hover:scale-110",
-                                isOpen ? "h-8 w-8" : "h-9 w-9",
-                                isActive
-                                  ? "bg-white/25 ring-1 ring-white/40"
-                                  : clsx(theme.iconBg, theme.iconHover)
-                              )}
-                            >
-                              <Icon
-                                className={clsx(
-                                  "transition-transform duration-200",
-                                  isOpen ? "h-4 w-4" : "h-[18px] w-[18px]",
-                                  isActive ? "text-white" : theme.iconText
-                                )}
-                                aria-hidden
-                              />
-                            </span>
-
-                            <span
-                              className={clsx(
-                                "font-semibold leading-tight transition-all duration-300",
-                                isOpen ? "truncate text-sm" : "line-clamp-2 w-full text-center text-[10px]",
-                                isActive ? "text-white" : theme.label
-                              )}
-                            >
-                              {item.label}
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <div className="space-y-0.5">
+                    {items.map((item) => (
+                      <NavLink key={item.id} item={item} />
+                    ))}
+                  </div>
                 </div>
               );
             })}
-          </nav>
+          </div>
+        </nav>
 
-          <footer className="relative shrink-0 border-t border-violet-200/50 bg-gradient-to-r from-emerald-400/20 via-cyan-400/20 to-violet-400/20 px-3 py-3 backdrop-blur-md sm:px-4">
+        <div className="relative shrink-0 overflow-hidden border-t border-slate-200/60 bg-gradient-to-r from-violet-50/80 via-white to-fuchsia-50/60 px-4 py-3 backdrop-blur-sm">
+          <div
+            className={clsx(
+              "flex items-center transition-all duration-300",
+              isOpen ? "justify-start gap-2" : "justify-center"
+            )}
+          >
             <div
               className={clsx(
-                "flex items-center transition-all duration-300",
-                isOpen ? "justify-start gap-2" : "justify-center"
+                "flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 shadow-md shadow-violet-500/10",
+                isOpen ? "" : "justify-center border-transparent bg-violet-50/80 px-2"
               )}
             >
-              <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-r from-emerald-400 to-lime-500 ring-2 ring-white/80" />
-              </span>
-              <p
+              <div className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-500 shadow-sm" />
+              </div>
+              <span
                 className={clsx(
-                  "bg-gradient-to-r from-violet-700 to-fuchsia-600 bg-clip-text text-[11px] font-semibold text-transparent sm:text-xs",
-                  isOpen ? "opacity-100" : "sr-only"
+                  "bg-gradient-to-r from-violet-800 to-fuchsia-700 bg-clip-text text-xs font-semibold text-transparent transition-all duration-300",
+                  isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                 )}
               >
-                En ligne · v1.0
-              </p>
+                En ligne
+              </span>
             </div>
-          </footer>
+          </div>
         </div>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 };
 

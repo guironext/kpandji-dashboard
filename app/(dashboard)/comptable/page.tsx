@@ -182,40 +182,44 @@ export default function Page() {
   }, [isLoaded, user?.firstName, user?.lastName, user?.primaryEmailAddress?.emailAddress]);
 
   return (
-    <div className="relative min-h-[calc(100vh-5rem)] overflow-hidden">
+    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-b from-emerald-50/40 via-white to-slate-50/60">
       <div
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.12),transparent)]"
         aria-hidden
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* Hero */}
-        <div className="relative mb-10 overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-slate-900 px-6 py-8 shadow-lg shadow-emerald-900/20 md:px-10 md:py-10">
+        <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-slate-900 px-5 py-7 shadow-lg shadow-emerald-900/20 sm:mb-10 sm:rounded-3xl sm:px-8 sm:py-9 lg:px-10 lg:py-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.12),transparent_45%)]" />
           <div className="relative">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
-                <CalendarDays className="h-4 w-4 text-white/90" />
-                {todayLabel}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
+                <CalendarDays className="h-4 w-4 shrink-0 text-white/90" />
+                <span className="truncate capitalize">{todayLabel}</span>
               </span>
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
                 Comptabilité
               </span>
             </div>
 
-            <div className="flex items-start justify-between gap-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
                   Tableau de bord Comptable
                 </h1>
-                <p className="mt-2 max-w-2xl text-base leading-relaxed text-emerald-50/80">
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50/80 sm:text-base">
                   Bienvenue, <span className="font-semibold text-white">{userLabel}</span>. Accédez
                   rapidement aux factures, paiements, clients et suivis.
                 </p>
               </div>
 
-              <div className="hidden sm:flex items-center gap-2">
-                <Button asChild variant="secondary" className="bg-white/15 text-white hover:bg-white/20">
+              <div className="flex shrink-0 items-center gap-2 sm:pt-1">
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="w-full bg-white/15 text-white hover:bg-white/20 sm:w-auto"
+                >
                   <Link href="/comptable/facture">
                     Ouvrir les factures
                     <ArrowRight className="h-4 w-4" />
@@ -227,7 +231,7 @@ export default function Page() {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:mb-10 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
           {kpiCards.map((kpi) => (
             <Card key={kpi.label} className={kpi.className}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -257,26 +261,26 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {quickLinks.map((item) => (
               <Link key={item.href} href={item.href} className="group">
-                <Card className="h-full border-0 bg-white/80 backdrop-blur-sm shadow-lg shadow-slate-200/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4 min-w-0">
-                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.bgColor}`}>
-                          <item.icon className={`h-6 w-6 ${item.iconColor}`} />
+                <Card className="h-full border border-slate-200/60 bg-white/90 backdrop-blur-sm shadow-md shadow-slate-200/40 transition-all duration-300 hover:border-emerald-200/80 hover:shadow-xl hover:-translate-y-0.5">
+                  <CardContent className="p-4 sm:p-5 lg:p-6">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                      <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${item.bgColor}`}>
+                          <item.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${item.iconColor}`} />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                          <p className="font-semibold text-slate-900 transition-colors group-hover:text-emerald-800">
                             {item.label}
                           </p>
-                          <p className="text-sm text-slate-600 mt-1 line-clamp-2">
+                          <p className="mt-1 line-clamp-2 text-xs text-slate-600 sm:text-sm">
                             {item.description}
                           </p>
                         </div>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-700 transition-colors shrink-0 mt-1" />
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-emerald-700 sm:h-5 sm:w-5" />
                     </div>
                   </CardContent>
                 </Card>

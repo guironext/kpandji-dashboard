@@ -1,7 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { getRedirectForRole } from "@/lib/role-redirects";
-
+import { resolveEffectiveUserRole } from "@/lib/resolve-effective-user-role";
+import { UserRole } from "@/lib/user-role-constants";
 const isPublicRoute = createRouteMatcher([
 	"/",
 	"/sign-in(.*)",
@@ -99,6 +100,19 @@ const isAssistanteRoute = createRouteMatcher([
 	"/assistante",
 	"/assistante/(.*)",
 ]);
+const isDeveloppeurRoute = createRouteMatcher([
+	"/developpeur",
+	"/developpeur/(.*)",
+]);
+const isDesignerRoute = createRouteMatcher([
+	"/designer",
+	"/designer/(.*)",
+]);
+const isMarketingRoute = createRouteMatcher([
+	"/marketing",
+	"/marketing/(.*)",
+]);
+
 
 type RouteMatcher = (req: NextRequest) => boolean;
 const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
@@ -125,6 +139,10 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isInfographieRoute, role: "INFOGRAPHIE" },
 	{ match: isCommunityManagerRoute, role: "COMMUNITY_MANAGER" },
 	{ match: isAssistanteRoute, role: "ASSISTANTE" },
+	{ match: isDeveloppeurRoute, role: "DEVELOPPEUR" },
+	{ match: isDesignerRoute, role: "DESIGNER" },
+	{ match: isMarketingRoute, role: "MARKETING" },
+
 ];
 
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
@@ -145,7 +163,11 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 		req.nextUrl.pathname === "/" &&
 		sessionClaims?.metadata?.onboardingCompleted
 	) {
-		const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+		const effectiveRole = await resolveEffectiveUserRole(
+			userId,
+			sessionClaims?.metadata?.role,
+		);
+		const redirectUrl = getRedirectForRole(effectiveRole);
 		if (redirectUrl) {
 			return NextResponse.redirect(new URL(redirectUrl, req.url));
 		}
@@ -161,13 +183,13 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	if (isReservationVehiculeApi(req)) return NextResponse.next();
 	if (isCommercialDocumentationDownloadPath(req.nextUrl.pathname))
 		return NextResponse.next();
-	if (isAssistanteRoute(req)) return NextResponse.next();
 
 	if (!userId && !isPublicRoute(req)) {
 		return redirectToSignIn({
 			returnBackUrl: req.url,
 		});
 	}
+	
 
 	// Handle onboarding route redirects for completed users
 	if (
@@ -175,7 +197,11 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 		sessionClaims?.metadata?.onboardingCompleted &&
 		isOnboardingRoute(req)
 	) {
-		const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+		const effectiveRole = await resolveEffectiveUserRole(
+			userId,
+			sessionClaims?.metadata?.role,
+		);
+		const redirectUrl = getRedirectForRole(effectiveRole);
 		if (redirectUrl) {
 			return NextResponse.redirect(new URL(redirectUrl, req.url));
 		}
@@ -185,7 +211,11 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	// Handle onboarding completion via query parameter
 	if (userId && isOnboardingRoute(req)) {
 		if (req.nextUrl.searchParams.get("onboardingCompleted")) {
-			const redirectUrl = getRedirectForRole(sessionClaims?.metadata?.role);
+			const effectiveRole = await resolveEffectiveUserRole(
+				userId,
+				sessionClaims?.metadata?.role,
+			);
+			const redirectUrl = getRedirectForRole(effectiveRole);
 			if (redirectUrl) {
 				return NextResponse.redirect(new URL(redirectUrl, req.url));
 			}
@@ -204,14 +234,17 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	}
 
 	// Role-based route protection
+	const effectiveRole = userId
+		? await resolveEffectiveUserRole(userId, sessionClaims?.metadata?.role)
+		: null;
+
 	for (const { match, role } of ROLE_ROUTES) {
 		if (match(req)) {
-			const userRole = sessionClaims?.metadata?.role;
-			if (userRole === role) {
+			if (effectiveRole === role) {
 				return NextResponse.next();
 			}
 			// Generic employees land on the manager dashboard
-			if (role === "MANAGER" && userRole === "EMPLOYEE") {
+			if (role === "MANAGER" && effectiveRole === UserRole.EMPLOYEE) {
 				return NextResponse.next();
 			}
 			return NextResponse.redirect(new URL("/", req.url));

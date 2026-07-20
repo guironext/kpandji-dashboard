@@ -4,12 +4,11 @@ import {
   LayoutDashboard,
   FolderKanban,
   Target,
-  Rocket,
-  BarChart3,
-  MessageSquare,
+  ListTodo,
   Megaphone,
-  FileText,
+
   type LucideIcon,
+  BarChart,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -39,53 +38,32 @@ const navItems: NavItem[] = [
   {
     id: 2,
     icon: FolderKanban,
-    label: "Projets",
-    href: "/communication/projets",
+    label: "Projets Ponctuels",
+    href: "/communication/projets-ponctuels",
     category: "projets",
   },
   {
     id: 3,
     icon: Target,
-    label: "Mise en oeuvre",
-    href: "/communication/mise-en-oeuvre",
+    label: "Activités Routinières",
+    href: "/communication/activites-routinees",
     category: "projets",
   },
   {
     id: 4,
-    icon: Rocket,
-    label: "Rapports Projets",
-    href: "/communication/rapport-projets",
-    category: "projets",
-  },
-  {
-    id: 5,
-    icon: BarChart3,
-    label: "Objectifs Principaux",
-    href: "/communication/objectifs-principaux",
-    category: "operations",
-  },
-
-  {
-    id: 7,
-    icon: MessageSquare,
-    label: "Performances",
-    href: "/communication/performances",
-    category: "operations",
-  },
-  {
-    id: 8,
-    icon: MessageSquare,
-    label: "Courriers Messages",
-    href: "/communication/numero-courrier",
+    icon: ListTodo,
+    label: "Tâches en cours",
+    href: "/communication/taches-en-cours",
     category: "courriers-messages",
   },
   {
-    id: 10,
-    icon: FileText,
-    label: "Documentation",
-    href: "/communication/documentation",
+    id: 5,
+    icon: BarChart,
+    label: "Indicateurs",
+    href: "/communication/indicateurs",
     category: "documentation",
   },
+ 
 ];
 
 const categoryLabels: Record<NavItem["category"], string> = {

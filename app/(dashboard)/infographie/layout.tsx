@@ -100,10 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         aria-label="Menu Infographie"
         aria-hidden={!isDesktop && !isSidebarOpen}
       >
-        <SidebarInfographie
-          isOpen={sidebarExpanded}
-          onNavigate={!isDesktop ? closeSidebar : undefined}
-        />
+        <SidebarInfographie isOpen={sidebarExpanded} />
       </div>
 
       <main

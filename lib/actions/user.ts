@@ -4,6 +4,19 @@ import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { prisma, executeWithRetry } from "../prisma";
 import { UserRole } from "@prisma/client";
 import { normalizeUserRole } from "../user-role";
+import { shouldPreferDatabaseRole } from "../resolve-effective-user-role";
+
+async function syncClerkPublicRole(clerkId: string, role: UserRole) {
+  const clerkUser = await (await clerkClient()).users.getUser(clerkId);
+  await (
+    await clerkClient()
+  ).users.updateUserMetadata(clerkId, {
+    publicMetadata: {
+      ...clerkUser.publicMetadata,
+      role,
+    },
+  });
+}
 
 /**
  * Get or create a user in the database from Clerk
@@ -57,6 +70,10 @@ export async function getOrCreateUser(clerkId?: string) {
       );
 
       if (existingByEmail) {
+        const role = shouldPreferDatabaseRole(existingByEmail.role, normalizeUserRole(clerkUser.publicMetadata?.role))
+          ? existingByEmail.role
+          : normalizeUserRole(clerkUser.publicMetadata?.role);
+
         dbUser = await executeWithRetry(() =>
           prisma.user.update({
             where: { id: existingByEmail.id },
@@ -64,9 +81,14 @@ export async function getOrCreateUser(clerkId?: string) {
               clerkId: targetClerkId,
               firstName: clerkUser.firstName || existingByEmail.firstName,
               lastName: clerkUser.lastName || existingByEmail.lastName,
+              role,
             },
           }),
         );
+
+        if (shouldPreferDatabaseRole(existingByEmail.role, normalizeUserRole(clerkUser.publicMetadata?.role))) {
+          await syncClerkPublicRole(targetClerkId, existingByEmail.role);
+        }
       } else {
         dbUser = await executeWithRetry(() =>
           prisma.user.create({
@@ -83,6 +105,20 @@ export async function getOrCreateUser(clerkId?: string) {
                 | string
                 | undefined,
             },
+          }),
+        );
+      }
+    } else {
+      const clerkUser = await (await clerkClient()).users.getUser(targetClerkId);
+      const clerkRole = normalizeUserRole(clerkUser.publicMetadata?.role);
+
+      if (shouldPreferDatabaseRole(dbUser.role, clerkRole)) {
+        await syncClerkPublicRole(targetClerkId, dbUser.role);
+      } else if (dbUser.role !== clerkRole && clerkRole !== UserRole.EMPLOYEE) {
+        dbUser = await executeWithRetry(() =>
+          prisma.user.update({
+            where: { id: dbUser!.id },
+            data: { role: clerkRole },
           }),
         );
       }

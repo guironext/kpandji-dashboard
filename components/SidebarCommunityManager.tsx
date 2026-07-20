@@ -1,160 +1,267 @@
 "use client";
 
 import {
-
-  Home,
-  Warehouse,
-  ClipboardCheck,
-
+  type LucideIcon,
+  LayoutDashboard,
+  FileText,
+  MessageSquare,
+  Megaphone,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
-// Organized navigation items with corrected IDs and better icons
-const navItems = [
-  {
-    id: 1,
-    icon: <Home className="w-5 h-5" />,
-    label: "Dashboard",
-    href: "/magasinier",
-    category: "main"
-  },
-  {
-    id: 2,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Projets",
-    href: "/infographie/projets",
-    category: "inventory"
-  },
+type NavCategory = "main" | "commandes" | "communication";
 
+interface NavItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  category: NavCategory;
+}
 
- 
+const navItems: NavItem[] = [
+  { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/communityManager", category: "main" }, 
+  { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/communityManager/projet-ponctuel", category: "commandes" },
+  { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/communityManager/projet-permanent", category: "commandes" },
+  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/communityManager/performance", category: "communication" },
 ];
+
+const categoryConfig = {
+  main: {
+    label: "Principal",
+    icon: LayoutDashboard,
+    color: "from-violet-500 via-fuchsia-500 to-pink-600",
+    textColor: "text-violet-800",
+    chipGradient: "from-violet-500 to-fuchsia-600",
+    glow: "shadow-violet-500/35",
+    focusRing: "focus-visible:ring-violet-400",
+  },
+  commandes: {
+    label: "Projets",
+    icon: FileText,
+    color: "from-indigo-500 via-violet-500 to-purple-600",
+    textColor: "text-indigo-800",
+    chipGradient: "from-indigo-500 to-violet-600",
+    glow: "shadow-indigo-500/35",
+    focusRing: "focus-visible:ring-indigo-400",
+  },
+  communication: {
+    label: "Suivi",
+    icon: MessageSquare,
+    color: "from-rose-400 via-pink-500 to-fuchsia-600",
+    textColor: "text-rose-800",
+    chipGradient: "from-rose-500 to-pink-600",
+    glow: "shadow-rose-500/35",
+    focusRing: "focus-visible:ring-rose-400",
+  },
+} as const;
+
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === "/communityManager") return pathname === "/communityManager";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 const SidebarCommunityManager = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
-
-  // Responsive width calculation
-  const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";
-
-  // Group items by category for better organization
   const groupedItems = navItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
+    if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  const categoryLabels = {
-    main: "Principal",
-    inventory: "Inventaire",
-    operations: "Opérations",
-    reports: "Rapports"
+  const categoryOrder: NavCategory[] = ["main", "commandes", "communication"];
+
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const cfg = categoryConfig[item.category];
+    const isActive = isRouteActive(pathname, item.href);
+    const Icon = item.icon;
+
+    const linkContent = (
+      <Link
+        href={item.href}
+        className={clsx(
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+          cfg.focusRing,
+          isOpen ? "justify-start" : "justify-center",
+          isActive
+            ? clsx("bg-gradient-to-r text-white shadow-lg", cfg.color, cfg.glow)
+            : clsx(
+                "text-slate-700",
+                "hover:bg-white/90 hover:shadow-md hover:shadow-slate-200/40 hover:ring-1 hover:ring-slate-200/60",
+                "active:scale-[0.98]"
+              )
+        )}
+        aria-label={item.label}
+        aria-current={isActive ? "page" : undefined}
+      >
+        {isActive && (
+          <span
+            className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-white/50 shadow-sm"
+            aria-hidden
+          />
+        )}
+        <div
+          className={clsx(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+            isActive
+              ? "bg-white/20 text-white shadow-inner"
+              : clsx(
+                  "bg-white/95 shadow-sm ring-1 ring-slate-200/70",
+                  cfg.textColor,
+                  "group-hover:scale-[1.03] group-hover:ring-slate-300/80"
+                )
+          )}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2} />
+        </div>
+        <span
+          className={clsx(
+            "text-sm font-medium whitespace-nowrap transition-all duration-300",
+            isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
+    );
+
+    if (!isOpen) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent
+            side="right"
+            sideOffset={14}
+            className="border-0 bg-gradient-to-br from-slate-900 to-slate-800 font-medium text-white shadow-xl shadow-slate-900/30"
+          >
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
   };
 
   return (
-    <aside
-      className={clsx(
-        "h-full border-r border-gray-200 bg-white shadow-lg transition-all duration-300 ease-in-out overflow-y-auto -mt-10",
-        responsiveWidth
-      )}
-    >
-      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-              <Warehouse className="w-5 h-5 text-white" />
+    <TooltipProvider delayDuration={0}>
+      <aside
+        className={clsx(
+          "relative h-full min-h-0 flex flex-col overflow-hidden transition-all duration-300 ease-out",
+          "bg-[linear-gradient(165deg,#faf5ff_0%,#ffffff_35%,#f5f3ff_100%)]",
+          "border-r border-slate-200/70",
+          "shadow-[4px_0_32px_-8px_rgba(139,92,246,0.12),2px_0_20px_-4px_rgba(217,70,239,0.08)]"
+        )}
+        role="navigation"
+        aria-label="Navigation principale community manager"
+      >
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-white via-violet-50/50 to-fuchsia-50/40 px-4 py-5 backdrop-blur-sm">
+          <div
+            className={clsx(
+              "relative flex items-center gap-3 transition-all duration-300",
+              isOpen ? "justify-start" : "justify-center"
+            )}
+          >
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-violet-500/35 ring-2 ring-white/60">
+              <Megaphone className="h-5 w-5 drop-shadow-sm" strokeWidth={2} />
             </div>
             {isOpen && (
-              <div className="hidden md:block">
-                <h2 className="text-lg font-bold text-gray-900">Infographie</h2>
-                <p className="text-xs text-gray-500">Gestion des stocks</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="bg-gradient-to-r from-violet-700 via-fuchsia-600 to-pink-600 bg-clip-text text-base font-bold tracking-tight text-transparent">
+                  Community Manager
+                </h2>
+                <p className="mt-0.5 text-xs font-medium text-slate-600">
+                  Réseaux & projets
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Navigation Items */}
-        <div className="flex-1 p-4 space-y-6">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              {isOpen && (
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">
-                  {categoryLabels[category as keyof typeof categoryLabels]}
-                </h3>
-              )}
-              
-              {items.map((item, index) => {
-                const isActive = pathname === item.href;
+        <nav className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+          <div className="space-y-5">
+            {categoryOrder.map((category) => {
+              const items = groupedItems[category];
+              if (!items?.length) return null;
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={clsx(
-                      "group flex items-center text-gray-700 duration-200 ease-in-out transform px-3 py-2.5 rounded-xl",
-                      "hover:bg-white hover:shadow-sm hover:scale-[1.02] transition-all",
-                      isOpen ? "justify-start gap-3" : "justify-center",
-                      isActive
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-[1.02]"
-                        : "hover:text-gray-900"
-                    )}
-                    style={{
-                      transitionDelay: `${index * 50}ms`,
-                    }}
-                    aria-label={item.label}
-                  >
-                    <div className={clsx(
-                      "transition-all duration-200 group-hover:scale-110",
-                      isActive ? "text-white" : "text-gray-600 group-hover:text-blue-600"
-                    )}>
-                      {item.icon}
+              const config = categoryConfig[category];
+              const CategoryIcon = config.icon;
+
+              return (
+                <div key={category} className="space-y-1.5">
+                  {isOpen && (
+                    <div className="mb-1 flex items-center gap-2.5 rounded-xl border border-slate-200/60 bg-white/60 px-2.5 py-2 shadow-sm shadow-slate-200/20 backdrop-blur-sm">
+                      <div
+                        className={clsx(
+                          "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
+                          config.chipGradient,
+                          config.glow
+                        )}
+                      >
+                        <CategoryIcon className="h-4 w-4" strokeWidth={2} />
+                      </div>
+                      <span
+                        className={clsx(
+                          "text-[11px] font-bold uppercase tracking-[0.14em]",
+                          config.textColor
+                        )}
+                      >
+                        {config.label}
+                      </span>
                     </div>
-                    
-                    <span
-                      className={clsx(
-                        "text-sm font-medium transition-all duration-300 whitespace-nowrap",
-                        isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                  )}
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="text-xs text-gray-500">
-              {isOpen ? "Version 1.0" : "v1.0"}
+                  <div className="space-y-0.5">
+                    {items.map((item) => (
+                      <NavLink key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="relative shrink-0 overflow-hidden border-t border-slate-200/60 bg-gradient-to-r from-violet-50/80 via-white to-fuchsia-50/60 px-4 py-3 backdrop-blur-sm">
+          <div
+            className={clsx(
+              "flex items-center transition-all duration-300",
+              isOpen ? "justify-start gap-2" : "justify-center"
+            )}
+          >
+            <div
+              className={clsx(
+                "flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 shadow-md shadow-violet-500/10",
+                isOpen ? "" : "justify-center border-transparent bg-violet-50/80 px-2"
+              )}
+            >
+              <div className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-500 shadow-sm" />
+              </div>
+              <span
+                className={clsx(
+                  "bg-gradient-to-r from-violet-800 to-fuchsia-700 bg-clip-text text-xs font-semibold text-transparent transition-all duration-300",
+                  isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                )}
+              >
+                En ligne
+              </span>
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 };
 

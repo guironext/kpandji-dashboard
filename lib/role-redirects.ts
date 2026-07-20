@@ -1,4 +1,5 @@
-import { UserRole } from "@prisma/client";
+import { normalizeUserRole } from "./user-role";
+import { type UserRole } from "./user-role-constants";
 
 export const ROLE_REDIRECTS: Record<UserRole, string> = {
   ADMIN: "/admin",
@@ -24,9 +25,13 @@ export const ROLE_REDIRECTS: Record<UserRole, string> = {
   INFOGRAPHIE: "/infographie",
   COMMUNITY_MANAGER: "/communityManager",
   ASSISTANTE: "/assistante",
+  MARKETING: "/marketing",
+  DEVELOPPEUR: "/developpeur",
+  DESIGNER: "/designer",
 };
 
 export function getRedirectForRole(role: string | undefined): string | null {
   if (!role) return null;
-  return ROLE_REDIRECTS[role as UserRole] ?? null;
+  const normalized = normalizeUserRole(role);
+  return ROLE_REDIRECTS[normalized] ?? null;
 }

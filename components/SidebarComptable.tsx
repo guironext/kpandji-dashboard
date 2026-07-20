@@ -1,9 +1,9 @@
 "use client";
 
 import {
+  type LucideIcon,
   LayoutDashboard,
   Users,
-  Warehouse,
   FileText,
   FileCheck2,
   FileSpreadsheet,
@@ -16,238 +16,337 @@ import {
   ScrollText,
   Mail,
   MessageSquare,
+  BookOpen,
+  Calculator,
+  Landmark,
+  HandCoins,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
-// Organized navigation items with corrected IDs and best icons
-const navItems = [
-  {
-    id: 1,
-    icon: <LayoutDashboard className="w-5 h-5" />,
-    label: "Dashboard",
-    href: "/comptable",
-    category: "main",
-  },
-  {
-    id: 2,
-    icon: <FileText className="w-5 h-5" />,
-    label: "Bon de Commande",
-    href: "/comptable/bon-de-commande",
-    category: "commandes",
-  },
-  {
-    id: 3,
-    icon: <FileCheck2 className="w-5 h-5" />,
-    label: "Bon Pour Accord",
-    href: "/comptable/bon-pour-accord",
-    category: "commandes",
-  },
-  {
-    id: 4,
-    icon: <FileSpreadsheet className="w-5 h-5" />,
-    label: "Factures",
-    href: "/comptable/facture",
-    category: "commandes",
-  },
-  {
-    id: 5,
-    icon: <Receipt className="w-5 h-5" />,
-    label: "Point Paiement",
-    href: "/comptable/point-paiement",
-    category: "commandes",
-  },
-  {
-    id: 6,
-    icon: <PackageCheck className="w-5 h-5" />,
-    label: "Commandes",
-    href: "/comptable/commandes",
-    category: "commandes",
-  },
-  {
-    id: 7,
-    icon: <ClipboardCheck className="w-5 h-5" />,
-    label: "Suivi Commandes",
-    href: "/comptable/suivi-commandes",
-    category: "commandes",
-  },
-  {
-    id: 8,
-    icon: <Truck className="w-5 h-5" />,
-    label: "Bon Commande Locaux",
-    href: "/comptable/bon-commande-locaux",
-    category: "locaux",
-  },
-  {
-    id: 9,
-    icon: <ShoppingCart className="w-5 h-5" />,
-    label: "Commandes Locaux",
-    href: "/comptable/commandes-locaux",
-    category: "locaux",
-  },
-  {
-    id: 10,
-    icon: <Wallet className="w-5 h-5" />,
-    label: "Fournisseurs Locaux",
-    href: "/comptable/fournisseur-locaux",
-    category: "locaux",
-  },
-  {
-    id: 11,
-    icon: <Users className="w-5 h-5" />,
-    label: "Clients",
-    href: "/comptable/clients",
-    category: "partenaires",
-  },
-  {
-    id: 12,
-    icon: <ScrollText className="w-5 h-5" />,
-    label: "Bon de Livraison",
-    href: "/comptable/bon-de-livraison",
-    category: "partenaires",
-  },
-  {
-    id: 13,
-    icon: <Mail className="w-5 h-5" />,
-    label: "Numéro Courrier",
-    href: "/comptable/numero-courrier",
-    category: "communication",
-  },
-  {
-    id: 14,
-    icon: <MessageSquare className="w-5 h-5" />,
-    label: "Messages",
-    href: "/comptable/messages",
-    category: "communication",
-  },
+type NavCategory =
+  | "main"
+  | "facturation"
+  | "commandes"
+  | "locaux"
+  | "partenaires"
+  | "communication";
+
+interface NavItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  category: NavCategory;
+}
+
+const navItems: NavItem[] = [
+  { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/comptable", category: "main" },
+  { id: "fac-bc", icon: FileText, label: "Bon de Commande", href: "/comptable/bon-de-commande", category: "facturation" },
+  { id: "fac-suivi-bc", icon: ClipboardCheck, label: "Suivi Bon Commande", href: "/comptable/suivi-bon-commande", category: "facturation" },
+  { id: "fac-bpa", icon: FileCheck2, label: "Bon Pour Accord", href: "/comptable/bon-pour-accord", category: "facturation" },
+  { id: "fac-factures", icon: FileSpreadsheet, label: "Factures", href: "/comptable/facture", category: "facturation" },
+  { id: "fac-paiement", icon: HandCoins, label: "Point Paiement", href: "/comptable/point-paiement", category: "facturation" },
+  { id: "cmd-commandes", icon: PackageCheck, label: "Commandes", href: "/comptable/commandes", category: "commandes" },
+  { id: "cmd-suivi", icon: Landmark, label: "Suivi Commandes", href: "/comptable/suivi-commandes", category: "commandes" },
+  { id: "loc-bc", icon: Truck, label: "Bon Commande Locaux", href: "/comptable/bon-commande-locaux", category: "locaux" },
+  { id: "loc-cmd", icon: ShoppingCart, label: "Commandes Locaux", href: "/comptable/commandes-locaux", category: "locaux" },
+  { id: "loc-fourn", icon: Wallet, label: "Fournisseurs Locaux", href: "/comptable/fournisseur-locaux", category: "locaux" },
+  { id: "part-clients", icon: Users, label: "Clients", href: "/comptable/clients", category: "partenaires" },
+  { id: "part-bl", icon: ScrollText, label: "Bon de Livraison", href: "/comptable/bon-de-livraison", category: "partenaires" },
+  { id: "com-courrier", icon: Mail, label: "Numéro Courrier", href: "/comptable/numero-courrier", category: "communication" },
+  { id: "com-messages", icon: MessageSquare, label: "Messages", href: "/comptable/messages", category: "communication" },
+  { id: "com-doc", icon: BookOpen, label: "Documentation", href: "/comptable/documentation", category: "communication" },
 ];
+
+const categoryConfig = {
+  main: {
+    label: "Principal",
+    icon: LayoutDashboard,
+    color: "from-emerald-500 via-teal-500 to-cyan-600",
+    bgColor: "bg-emerald-500/15",
+    textColor: "text-emerald-800",
+    chipGradient: "from-emerald-500 to-teal-600",
+    glow: "shadow-emerald-500/35",
+    focusRing: "focus-visible:ring-emerald-400",
+  },
+  facturation: {
+    label: "Facturation",
+    icon: Receipt,
+    color: "from-teal-500 via-emerald-500 to-green-600",
+    bgColor: "bg-teal-500/15",
+    textColor: "text-teal-800",
+    chipGradient: "from-teal-500 to-emerald-600",
+    glow: "shadow-teal-500/35",
+    focusRing: "focus-visible:ring-teal-400",
+  },
+  commandes: {
+    label: "Commandes",
+    icon: PackageCheck,
+    color: "from-blue-500 via-indigo-500 to-violet-600",
+    bgColor: "bg-indigo-500/15",
+    textColor: "text-indigo-800",
+    chipGradient: "from-blue-500 to-indigo-600",
+    glow: "shadow-indigo-500/35",
+    focusRing: "focus-visible:ring-indigo-400",
+  },
+  locaux: {
+    label: "Achats Locaux",
+    icon: ShoppingCart,
+    color: "from-amber-400 via-orange-500 to-amber-600",
+    bgColor: "bg-amber-500/15",
+    textColor: "text-amber-800",
+    chipGradient: "from-amber-500 to-orange-600",
+    glow: "shadow-orange-500/30",
+    focusRing: "focus-visible:ring-amber-400",
+  },
+  partenaires: {
+    label: "Partenaires",
+    icon: Users,
+    color: "from-violet-500 via-purple-500 to-fuchsia-600",
+    bgColor: "bg-violet-500/15",
+    textColor: "text-violet-800",
+    chipGradient: "from-violet-500 to-purple-600",
+    glow: "shadow-violet-500/35",
+    focusRing: "focus-visible:ring-violet-400",
+  },
+  communication: {
+    label: "Communication",
+    icon: MessageSquare,
+    color: "from-rose-400 via-pink-500 to-fuchsia-600",
+    bgColor: "bg-rose-500/15",
+    textColor: "text-rose-800",
+    chipGradient: "from-rose-500 to-pink-600",
+    glow: "shadow-rose-500/35",
+    focusRing: "focus-visible:ring-rose-400",
+  },
+} as const;
+
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === "/comptable") return pathname === "/comptable";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 const SidebarComptable = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
-  // Responsive width calculation
-  const responsiveWidth = isOpen ? "md:w-64 w-20" : "w-20";
-
-  // Group items by category for better organization
   const groupedItems = navItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
+    if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  const categoryLabels = {
-    main: "Principal",
-    commandes: "Commandes & Ventes",
-    locaux: "Achats Locaux",
-    partenaires: "Partenaires",
-    communication: "Communication",
+  const categoryOrder: NavCategory[] = [
+    "main",
+    "facturation",
+    "commandes",
+    "locaux",
+    "partenaires",
+    "communication",
+  ];
+
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const cfg = categoryConfig[item.category];
+    const isActive = isRouteActive(pathname, item.href);
+    const Icon = item.icon;
+
+    const linkContent = (
+      <Link
+        href={item.href}
+        className={clsx(
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+          cfg.focusRing,
+          isOpen ? "justify-start" : "justify-center",
+          isActive
+            ? clsx("bg-gradient-to-r text-white shadow-lg", cfg.color, cfg.glow)
+            : clsx(
+                "text-slate-700",
+                "hover:bg-white/90 hover:shadow-md hover:shadow-slate-200/40 hover:ring-1 hover:ring-slate-200/60",
+                "active:scale-[0.98]"
+              )
+        )}
+        aria-label={item.label}
+        aria-current={isActive ? "page" : undefined}
+      >
+        {isActive && (
+          <span
+            className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-white/50 shadow-sm"
+            aria-hidden
+          />
+        )}
+        <div
+          className={clsx(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+            isActive
+              ? "bg-white/20 text-white shadow-inner"
+              : clsx(
+                  "bg-white/95 shadow-sm ring-1 ring-slate-200/70",
+                  cfg.textColor,
+                  "group-hover:scale-[1.03] group-hover:ring-slate-300/80"
+                )
+          )}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2} />
+        </div>
+        <span
+          className={clsx(
+            "text-sm font-medium whitespace-nowrap transition-all duration-300",
+            isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
+    );
+
+    if (!isOpen) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent
+            side="right"
+            sideOffset={14}
+            className="border-0 bg-gradient-to-br from-slate-900 to-slate-800 font-medium text-white shadow-xl shadow-slate-900/30"
+          >
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
   };
 
   return (
-    <aside
-      className={clsx(
-        "h-full border-r border-gray-200 bg-white shadow-lg transition-all duration-300 ease-in-out overflow-y-auto -mt-10",
-        responsiveWidth
-      )}
-      role="navigation"
-      aria-label="Navigation principale du manager"
-    >
-      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <TooltipProvider delayDuration={0}>
+      <aside
+        className={clsx(
+          "relative h-full min-h-0 flex flex-col overflow-hidden transition-all duration-300 ease-out",
+          "bg-[linear-gradient(165deg,#f0fdf4_0%,#ffffff_35%,#ecfdf5_100%)]",
+          "border-r border-slate-200/70",
+          "shadow-[4px_0_32px_-8px_rgba(16,185,129,0.12),2px_0_20px_-4px_rgba(20,184,166,0.08)]",
+          "before:pointer-events-none before:absolute before:inset-y-8 before:right-0 before:w-px before:bg-gradient-to-b before:from-transparent before:via-emerald-400/25 before:to-transparent"
+        )}
+        role="navigation"
+        aria-label="Navigation principale comptable"
+      >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-md">
-              <Warehouse className="w-5 h-5 text-white" />
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/40 px-4 py-5 backdrop-blur-sm">
+          <div
+            className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-gradient-to-br from-emerald-300/30 to-teal-400/20 blur-2xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -bottom-6 -left-6 h-28 w-28 rounded-full bg-gradient-to-tr from-cyan-300/25 to-transparent blur-2xl"
+            aria-hidden
+          />
+          <div
+            className={clsx(
+              "relative flex items-center gap-3 transition-all duration-300",
+              isOpen ? "justify-start" : "justify-center"
+            )}
+          >
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white shadow-lg shadow-emerald-500/35 ring-2 ring-white/60">
+              <Calculator className="h-5 w-5 drop-shadow-sm" strokeWidth={2} />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 rounded-full border-2 border-white bg-gradient-to-br from-teal-400 to-emerald-600 shadow-sm" />
             </div>
             {isOpen && (
-              <div className="hidden md:block">
-                <h2 className="text-lg font-bold text-gray-900">Comptable</h2>
-                <p className="text-xs text-gray-500">Gestion des opérations</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="bg-gradient-to-r from-emerald-700 via-teal-600 to-cyan-700 bg-clip-text text-base font-bold tracking-tight text-transparent">
+                  Comptable
+                </h2>
+                <p className="mt-0.5 text-xs font-medium text-slate-600">
+                  Gestion financière
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 p-4 space-y-6" role="navigation">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              {isOpen && (
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
-                  {categoryLabels[category as keyof typeof categoryLabels]}
-                </h3>
-              )}
-              
-              {items.map((item, index) => {
-                const isActive = pathname === item.href;
+        {/* Navigation */}
+        <nav className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+          <div className="space-y-5">
+            {categoryOrder.map((category) => {
+              const items = groupedItems[category];
+              if (!items?.length) return null;
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={clsx(
-                      "group flex items-center text-gray-700 duration-200 ease-in-out transform px-3 py-2.5 rounded-xl",
-                      "hover:bg-white hover:shadow-sm hover:scale-[1.02] transition-all",
-                      isOpen ? "justify-start gap-3" : "justify-center",
-                      isActive
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-[1.02]"
-                        : "hover:text-gray-900"
-                    )}
-                    style={{
-                      transitionDelay: `${Math.min(index * 20, 200)}ms`,
-                    }}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <div className={clsx(
-                      "transition-all duration-200 group-hover:scale-110",
-                      isActive ? "text-white" : "text-gray-600 group-hover:text-blue-600"
-                    )}>
-                      {item.icon}
+              const config = categoryConfig[category];
+              const CategoryIcon = config.icon;
+
+              return (
+                <div key={category} className="space-y-1.5">
+                  {isOpen && (
+                    <div className="mb-1 flex items-center gap-2.5 rounded-xl border border-slate-200/60 bg-white/60 px-2.5 py-2 shadow-sm shadow-slate-200/20 backdrop-blur-sm">
+                      <div
+                        className={clsx(
+                          "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-md",
+                          config.chipGradient,
+                          config.glow
+                        )}
+                      >
+                        <CategoryIcon className="h-4 w-4" strokeWidth={2} />
+                      </div>
+                      <span
+                        className={clsx(
+                          "text-[11px] font-bold uppercase tracking-[0.14em]",
+                          config.textColor
+                        )}
+                      >
+                        {config.label}
+                      </span>
                     </div>
-                    
-                    <span
-                      className={clsx(
-                        "text-sm font-medium transition-all duration-300 whitespace-nowrap",
-                        isOpen 
-                          ? "opacity-100" 
-                          : "opacity-0 w-0 overflow-hidden"
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+                  )}
+
+                  <div className="space-y-0.5">
+                    {items.map((item) => (
+                      <NavLink key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className={clsx(
-            "flex items-center transition-all duration-300",
-            isOpen ? "justify-start gap-3" : "justify-center"
-          )}>
-            <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-500 rounded-lg flex items-center justify-center shadow-md">
-              <Users className="w-4 h-4 text-white" />
-            </div>
-            {isOpen && (
-              <div className="hidden md:block">
-                <p className="text-xs text-gray-500">Session Manager</p>
-                <p className="text-xs text-gray-400">Connecté</p>
-              </div>
+        <div className="relative shrink-0 overflow-hidden border-t border-slate-200/60 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/60 px-4 py-3 backdrop-blur-sm">
+          <div
+            className={clsx(
+              "flex items-center transition-all duration-300",
+              isOpen ? "justify-start gap-2" : "justify-center"
             )}
+          >
+            <div
+              className={clsx(
+                "flex items-center gap-2 rounded-full border border-emerald-200/80 bg-white/90 px-3 py-1.5 shadow-md shadow-emerald-500/10",
+                isOpen ? "" : "justify-center border-transparent bg-emerald-50/80 px-2"
+              )}
+            >
+              <div className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm" />
+              </div>
+              <span
+                className={clsx(
+                  "bg-gradient-to-r from-emerald-800 to-teal-700 bg-clip-text text-xs font-semibold text-transparent transition-all duration-300",
+                  isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                )}
+              >
+                En ligne
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 };
 

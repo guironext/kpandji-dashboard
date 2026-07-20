@@ -57,6 +57,13 @@ const partieSchema = z.object({
   typePartie: z.enum(TYPE_PARTIE),
 });
 
+const PARTIE_FORM_DEFAULTS: z.infer<typeof partieSchema> = {
+  nom: "",
+  prenom: "",
+  email: "",
+  telephone: "",
+  typePartie: "PERSONNE_PHYSIQUE",
+};
 export type PartiePrenanteItem = {
   id: string;
   nom: string;
@@ -91,15 +98,9 @@ export default function PartiesPrenantesDialog({
 
   const form = useForm<z.infer<typeof partieSchema>>({
     resolver: zodResolver(partieSchema),
-    defaultValues: {
-      nom: "",
-      prenom: "",
-      email: "",
-      telephone: "",
-      typePartie: "PERSONNE_PHYSIQUE",
-    },
+    defaultValues: PARTIE_FORM_DEFAULTS,
   });
-
+  const { reset } = form;
   const loadParties = useCallback(async () => {
     setLoadingList(true);
     try {
@@ -120,16 +121,9 @@ export default function PartiesPrenantesDialog({
 
   useEffect(() => {
     if (!open || !dossierId) return;
-    form.reset({
-      nom: "",
-      prenom: "",
-      email: "",
-      telephone: "",
-      typePartie: "PERSONNE_PHYSIQUE",
-    });
+    reset(PARTIE_FORM_DEFAULTS);
     loadParties();
-  }, [open, dossierId, loadParties]);
-
+  }, [open, dossierId, loadParties, reset]);
   const onSubmit = async (data: z.infer<typeof partieSchema>) => {
     setSubmitting(true);
     try {
@@ -156,14 +150,7 @@ export default function PartiesPrenantesDialog({
           },
           ...prev,
         ]);
-        form.reset({
-          nom: "",
-          prenom: "",
-          email: "",
-          telephone: "",
-          typePartie: "PERSONNE_PHYSIQUE",
-        });
-        onPartieAdded?.();
+        reset(PARTIE_FORM_DEFAULTS);        onPartieAdded?.();
       } else {
         toast.error(result.error ?? "Erreur lors de l'ajout de la partie");
       }

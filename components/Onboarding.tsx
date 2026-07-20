@@ -71,6 +71,9 @@ const ROLE_LABELS: Record<UserRole, string> = {
   ASSISTANTE: "Assistante",
   INFOGRAPHIE: "Infographie",
   COMMUNITY_MANAGER: "Community Manager",
+  MARKETING: "Marketing",
+  DEVELOPPEUR: "Développeur",
+  DESIGNER: "Designer",
 };
 
 const USER_ROLES = Object.values(UserRole) as UserRole[];

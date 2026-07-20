@@ -1133,6 +1133,12 @@ export default function Page() {
 								GÉNÉRER NUMÉRO
 							</Button>
 							<Button
+								onClick={() => setShowApportInitial(true)}
+								disabled={showApportInitial}
+								className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm">
+								Apport Initial
+							</Button>
+							<Button
 								onClick={handleValidate}
 								disabled={!numero || validiteAppelOffre || validating}
 								className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm">

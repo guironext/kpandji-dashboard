@@ -64,6 +64,7 @@ const REQUIRED_PRISMA_DELEGATES = [
   "objectifGlobalTask",
   "dossierVeilleJuridique",
   "nonConformiteJuridique",
+  "projetPonctuelActivite",
 ] as const;
 
 function prismaHasRequiredDelegates(client: PrismaClient): boolean {
@@ -71,6 +72,14 @@ function prismaHasRequiredDelegates(client: PrismaClient): boolean {
   return REQUIRED_PRISMA_DELEGATES.every(
     (key) => typeof record[key]?.findMany === "function"
   );
+}
+
+export function invalidatePrismaClient(): void {
+  const cached = globalForPrisma.prisma;
+  if (cached) {
+    void cached.$disconnect().catch(() => {});
+  }
+  globalForPrisma.prisma = undefined;
 }
 
 function resolvePrismaClient(): PrismaClient {
@@ -84,20 +93,36 @@ function resolvePrismaClient(): PrismaClient {
     console.warn(
       "[Prisma] Stale client detected after schema change — reconnecting. Run `npx prisma generate` if this persists."
     );
-    void cached.$disconnect().catch(() => {});
-    globalForPrisma.prisma = undefined;
+    invalidatePrismaClient();
   }
 
-  const client = globalForPrisma.prisma ?? createPrismaClient();
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
   }
 
-  return client;
+  return globalForPrisma.prisma;
 }
 
-export const prisma = resolvePrismaClient();
+/** Always resolves the current singleton (safe after HMR / invalidatePrismaClient). */
+export function getPrisma(): PrismaClient {
+  return resolvePrismaClient();
+}
+
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = resolvePrismaClient();
+    const value = Reflect.get(client, prop, client);
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(client);
+    }
+    return value;
+  },
+});
+
+async function ensurePrismaConnected(): Promise<void> {
+  const client = resolvePrismaClient();
+  await client.$connect();
+}
 
 // Helper function to execute queries with retry logic
 export async function executeWithRetry<T>(
@@ -109,6 +134,7 @@ export async function executeWithRetry<T>(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      await ensurePrismaConnected();
       return await query();
     } catch (error: unknown) {
       lastError = error;
@@ -118,6 +144,8 @@ export async function executeWithRetry<T>(
         typeof error === "object" && error !== null
           ? JSON.stringify(error)
           : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : errorString;
       const prismaCode =
         typeof error === "object" && error !== null && "code" in error
           ? (error as { code?: string }).code
@@ -127,6 +155,8 @@ export async function executeWithRetry<T>(
         prismaCode === "P1017" ||
         prismaCode === "P1008" ||
         prismaCode === "P2024" ||
+        errorMessage.includes("Engine is not yet connected") ||
+        errorMessage.includes("Response from the Engine was empty") ||
         (error instanceof Error &&
           (error.message.includes("connection") ||
             error.message.includes("ConnectionReset") ||
@@ -134,16 +164,27 @@ export async function executeWithRetry<T>(
             error.message.includes("closed by the remote host") ||
             error.message.includes("Closed") ||
             error.message.includes("administrator command") ||
-            error.message.includes("terminating connection"))) ||
+            error.message.includes("terminating connection") ||
+            error.message.includes("Engine is not yet connected") ||
+            error.message.includes("Response from the Engine was empty"))) ||
         (errorString &&
           (errorString.includes("kind: Closed") ||
             errorString.includes('"kind":"Closed"') ||
             errorString.includes("Closed") ||
             errorString.includes("E57P01") ||
             errorString.includes("administrator command") ||
-            errorString.includes("terminating connection")));
+            errorString.includes("terminating connection") ||
+            errorString.includes("Engine is not yet connected") ||
+            errorString.includes("Response from the Engine was empty")));
 
       if (isConnectionError && attempt < maxRetries) {
+        if (
+          errorMessage.includes("Engine is not yet connected") ||
+          errorMessage.includes("Response from the Engine was empty") ||
+          prismaCode === "P1017"
+        ) {
+          invalidatePrismaClient();
+        }
         // Use longer delays for P1001 (Neon cold start can take 15-30s)
         const waitMs = prismaCode === "P1001" ? 8000 * attempt : delay * attempt;
         console.warn(

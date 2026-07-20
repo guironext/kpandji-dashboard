@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { SignInButtonWithFallback } from "./SignInButtonWithFallback";
 import { Button } from "./ui/button";
@@ -12,6 +12,11 @@ import Image from "next/image";
 const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   const { isLoaded, isSignedIn, user } = useUser();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -84,7 +89,7 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 
             {/* User Welcome Message */}
             <div className="hidden sm:block text-right">
-              {isLoaded && user ? (
+              {mounted && isLoaded && user ? (
                 <>
                   <p className="text-sm font-medium text-gray-900">
                     Bienvenue, {user.firstName}
