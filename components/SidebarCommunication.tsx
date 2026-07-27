@@ -316,6 +316,7 @@ const SidebarCommunication = ({ isOpen, onNavigate }: SidebarCommunicationProps)
                         <li key={item.id}>
                           <Link
                             href={item.href}
+                            prefetch={false}
                             onClick={onNavigate}
                             title={item.label}
                             className={clsx(

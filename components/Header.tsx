@@ -103,22 +103,33 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
               )}
             </div>
 
-            {/* User Authentication */}
-            <div className="ml-2">
-              <SignedIn>
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "h-8 w-8"
-                    }
-                  }}
+            {/* User Authentication — mount after hydration to avoid Clerk UserButton SSR mismatch */}
+            <div className="ml-2 flex h-8 min-w-8 items-center justify-center">
+              {!mounted ? (
+                <div
+                  className="h-8 w-8 shrink-0 rounded-full bg-gray-100 animate-pulse"
+                  aria-hidden
                 />
-              </SignedIn>
-              <SignedOut>
-                <Button size="sm" variant="outline" asChild>
-                  <SignInButtonWithFallback href="/sign-in">Se connecter</SignInButtonWithFallback>
-                </Button>
-              </SignedOut>
+              ) : (
+                <>
+                  <SignedIn>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: "h-8 w-8",
+                        },
+                      }}
+                    />
+                  </SignedIn>
+                  <SignedOut>
+                    <Button size="sm" variant="outline" asChild>
+                      <SignInButtonWithFallback href="/sign-in">
+                        Se connecter
+                      </SignInButtonWithFallback>
+                    </Button>
+                  </SignedOut>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -56,11 +56,13 @@ model User {
   ProjetPonctuelActivite             ProjetPonctuelActivite[]
   ProjetPonctuelDocument             ProjetPonctuelDocument[]
   ProjetPonctuelActiviteMessage      ProjetPonctuelActiviteMessage[]
-  ProjetActiviteRoutinee             ProjetActiviteRoutinee[]
-  ProjetActiviteRoutineeResponsable  ProjetActiviteRoutineeResponsable[]
-  TacheProjetActiviteRoutineeResponsable TacheProjetActiviteRoutineeResponsable[]
-  TacheProjetActiviteRoutineeMessage TacheProjetActiviteRoutineeMessage[]
-  TacheProjetActiviteRoutineeDocument TacheProjetActiviteRoutineeDocument[]
+  ResponsableProjetRoutine          ResponsableProjetRoutine[]
+  ResponsableTacheResponsable       ResponsableTacheResponsable[]
+  TacheActiviteProjetRoutineCreated TacheActiviteProjetRoutine[] @relation("TacheCreatedBy")
+
+ 
+  
+
 }
 
 model Message {
@@ -2416,6 +2418,18 @@ model ProjetPonctuelActivite {
   message ProjetPonctuelActiviteMessage[]
 }
 
+model ProjetPonctuelResponsable {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projetPonctuelId String
+  projetPonctuel ProjetPonctuel @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
+  projetPonctuelActiviteId String
+  projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum StatutProjetPonctuelActivite {
   NOUVEAU
   EN_ATTENTE
@@ -2460,117 +2474,133 @@ model ProjetPonctuelDocument {
   projetPonctuelActiviteId String
   projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
 }
-model ProjetPonctuelResponsable {
+
+model ResponsableProjetRoutine{
   id String @id @default(uuid())
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   userId String
-  projetPonctuelId String
-  projetPonctuel ProjetPonctuel @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  projetPonctuelActiviteId String
-  projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
-}
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  responsableProjetRoutineMessage TacheActiviteProjetRoutineMessage[]
 
-model ProjetActiviteRoutinee {
-  id String @id @default(uuid())
-  titre String
-  description String
-  dateDebut DateTime
-  dateCloture DateTime?
+  roleMissionProjetRoutineId String
+  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
+
+  tacheActiviteProjetRoutineId String?
+  tacheActiviteProjetRoutine TacheActiviteProjetRoutine? @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+
+  activiteProjetRoutineId String?
+  activiteProjetRoutine ActiviteProjetRoutine? @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  responsableResponsable ProjetActiviteRoutineeResponsable[]
-  activiteProjetActiviteRoutinee ActiviteProjetActiviteRoutinee[]
-  tacheProjetActiviteRoutinee TacheProjetActiviteRoutinee[]
 }
-model ProjetActiviteRoutineeResponsable {
+
+model RoleMissionProjetRoutine{
   id String @id @default(uuid())
-  role String
-  mission String
+  libelle String
+  description String?
+
+  responsableProjetRoutine ResponsableProjetRoutine[]
+
+  activiteProjetRoutine ActiviteProjetRoutine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  indicateurObjectifMensuelProjetRoutine IndicateurObjectifMensuelProjetRoutine[]
+}
+
+model IndicateurObjectifMensuelProjetRoutine{
+  id String @id @default(uuid())
+  libelle String
+  description String?
   objectifMensuel String
-  objectifMensuelAtteint String
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projetActiviteRoutineeId String
-  projetActiviteRoutinee ProjetActiviteRoutinee @relation(fields: [projetActiviteRoutineeId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  nombreObjectifsMensuels Int
+  nombreObjectifsMensuelsAtteints Int
+  nombreObjectifsMensuelsNonAtteints Int
+  roleMissionProjetRoutineId String
+  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
 }
 
-model ActiviteProjetActiviteRoutinee {
+model ActiviteProjetRoutine{
   id String @id @default(uuid())
-  titre String
-  description String
-  objectifMensuel String
-  objectifMensuelAtteint String
-  statutActiviteProjetActiviteRoutinee StatutActiviteProjetActiviteRoutinee @default(EN_ATTENTE)
+  libelle String
+  description String?
   dateDebut DateTime
   dateCloture DateTime?
+  mois String?
+  statutActivite StatutActiviteProjetRoutine @default(NOUVEAU)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tacheProjetActiviteRoutinee TacheProjetActiviteRoutinee[]
-  projetActiviteRoutineeId String
-  projetActiviteRoutinee ProjetActiviteRoutinee @relation(fields: [projetActiviteRoutineeId], references: [id], onDelete: Cascade)
-
+  roleMissionProjetRoutineId String
+  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
+  tacheActiviteProjetRoutine TacheActiviteProjetRoutine[]
+  responsableProjetRoutine ResponsableProjetRoutine[]
 }
 
-enum StatutActiviteProjetActiviteRoutinee {
-  EN_ATTENTE
-  EN_COURS
-  EN_ATTENTE_VALIDATION
-  VALIDEE
-  NON_VALIDEE
-  TRANSFEREE
-  TERMINEE
-  ANNULE
-}
-
-
-model TacheProjetActiviteRoutinee {
+model TacheActiviteProjetRoutine{
   id String @id @default(uuid())
-  titre String
-  description String
+  libelle String
+  description String?
   dateDebut DateTime
   dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  activiteProjetActiviteRoutineeId String
-  activiteProjetActiviteRoutinee ActiviteProjetActiviteRoutinee @relation(fields: [activiteProjetActiviteRoutineeId], references: [id], onDelete: Cascade)
-  projetActiviteRoutineeId String
-  projetActiviteRoutinee ProjetActiviteRoutinee @relation(fields: [projetActiviteRoutineeId], references: [id], onDelete: Cascade)
-  statutTache StatutTacheProjetActiviteRoutinee @default(EN_ATTENTE)
-  responsableResponsable TacheProjetActiviteRoutineeResponsable[]
-  message TacheProjetActiviteRoutineeMessage[]
-  document TacheProjetActiviteRoutineeDocument[]
-}
+  statutTache StatutTacheActiviteProjetRoutine @default(NOUVEAU)
 
-model TacheProjetActiviteRoutineeResponsable {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tacheProjetActiviteRoutineeId String
-  tacheProjetActiviteRoutinee TacheProjetActiviteRoutinee @relation(fields: [tacheProjetActiviteRoutineeId], references: [id], onDelete: Cascade)
+  responsableTacheResponsable ResponsableTacheResponsable[]
+
+  createdByUserId String?
+  createdBy User? @relation("TacheCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  activiteProjetRoutineId String
+  activiteProjetRoutine ActiviteProjetRoutine @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
+  responsableProjetRoutine ResponsableProjetRoutine[]
+  message TacheActiviteProjetRoutineMessage[]
+  document TacheActiviteProjetRoutineDocument[] @relation("TacheDocuments")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model TacheProjetActiviteRoutineeMessage{
+model TacheActiviteProjetRoutineMessage{
   id String @id @default(uuid())
   message String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  typeMessage TypeMessageTacheProjetActiviteRoutinee
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tacheProjetActiviteRoutineeId String
-  tacheProjetActiviteRoutinee TacheProjetActiviteRoutinee @relation(fields: [tacheProjetActiviteRoutineeId], references: [id], onDelete: Cascade)
+  typeMessage TypeMessageTacheActiviteProjetRoutine
+
+  responsableProjetRoutineId String
+  responsableProjetRoutine ResponsableProjetRoutine @relation(fields: [responsableProjetRoutineId], references: [id], onDelete: Cascade)
+
+  tacheActiviteProjetRoutineId String
+  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+  document TacheActiviteProjetRoutineDocument[] @relation("MessageDocuments")
 }
 
-enum TypeMessageTacheProjetActiviteRoutinee {
+model TacheActiviteProjetRoutineDocument{
+  id String @id @default(uuid())
+  nom String
+  typeDocument TypeDocumentTacheActiviteProjetRoutine
+  url String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  responsableTacheResponsableId String
+  responsableTacheResponsable ResponsableTacheResponsable @relation(fields: [responsableTacheResponsableId], references: [id], onDelete: Cascade)
+  tacheActiviteProjetRoutineId String
+  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation("TacheDocuments", fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_tache_fkey")
+  tacheActiviteProjetRoutineMessageId String?
+  tacheActiviteProjetRoutineMessage TacheActiviteProjetRoutineMessage? @relation("MessageDocuments", fields: [tacheActiviteProjetRoutineMessageId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_message_fkey")
+}
+
+enum TypeDocumentTacheActiviteProjetRoutine {
+  DOCUMENTATION
+  MEMOIRE
+  AVIS_TECHNIQUE
+  IMAGE
+  VIDEO
+  AUDIO
+  AUTRE
+}
+enum TypeMessageTacheActiviteProjetRoutine {
   EN_ATTENTE
   LU
   NON_LU
@@ -2578,29 +2608,19 @@ enum TypeMessageTacheProjetActiviteRoutinee {
   SUPPRIME
 }
 
-enum TypeDocumentTacheProjetActiviteRoutinee {
-  DOCUMENTATION
-  MEMOIRE
-  REPORT
-  PRESENTATION
-  AUTRE
-}
-
-model TacheProjetActiviteRoutineeDocument {
+model ResponsableTacheResponsable {
   id String @id @default(uuid())
-  nom String
-  typeDocument TypeDocumentTacheProjetActiviteRoutinee
-  url String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
   userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tacheProjetActiviteRoutineeId String
-  tacheProjetActiviteRoutinee TacheProjetActiviteRoutinee @relation(fields: [tacheProjetActiviteRoutineeId], references: [id], onDelete: Cascade)
+  tacheActiviteProjetRoutineId String
+  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+  document TacheActiviteProjetRoutineDocument[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
-enum StatutTacheProjetActiviteRoutinee {
+enum StatutTacheActiviteProjetRoutine {
+  NOUVEAU
   EN_ATTENTE
   EN_COURS
   EN_ATTENTE_VALIDATION
@@ -2610,6 +2630,21 @@ enum StatutTacheProjetActiviteRoutinee {
   TERMINEE
   ANNULE
 }
+
+enum StatutActiviteProjetRoutine {
+  NOUVEAU
+  EN_ATTENTE
+  EN_COURS
+  EN_ATTENTE_VALIDATION
+  VALIDEE
+  NON_VALIDEE
+  TRANSFEREE
+  TERMINEE
+  ANNULE
+}
+
+
+
 
 enum StatutDecisionDeJustice {
   EN_ATTENTE
