@@ -316,7 +316,7 @@ export default function NumeroCourrierClient() {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: `N°: KA/DCM/${savedCourrier.numero_courrier}`,
+                    text: `N°: KA/DAF/${savedCourrier.numero_courrier}`,
                     bold: true,
                     size: 24,
                   }),
@@ -736,7 +736,7 @@ export default function NumeroCourrierClient() {
                       <div className="mt-6 text-center">
                         
                         <div className="mt-2 text-sm font-semibold text-slate-700">
-                          N°: KA/DC/{savedCourrier.numero_courrier}
+                          N°: KA/DAF/{savedCourrier.numero_courrier}
                         </div>
                       </div>
                         <div>

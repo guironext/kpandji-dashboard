@@ -316,7 +316,7 @@ export default function NumeroCourrierClient() {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: `N°: KA/DCM/${savedCourrier.numero_courrier}`,
+                    text: `N°: KA/DJ/${savedCourrier.numero_courrier}`,
                     bold: true,
                     size: 24,
                   }),
