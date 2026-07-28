@@ -1,10 +1,20 @@
+import { AlertCircle } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+
+import MarketingDashboardClient from "@/components/marketing/MarketingDashboardClient";
+import { Card, CardContent } from "@/components/ui/card";
+import { getMarketingDashboard } from "@/lib/actions/marketing-dashboard";
 import { getOrCreateUser } from "@/lib/actions/user";
 import { getRedirectForRole } from "@/lib/role-redirects";
-import { getActivitesForCurrentResponsable } from "@/lib/actions/projet-ponctuel-activite";
-import ProjetPonctuelResponsableKanban from "@/components/projet-ponctuel/ProjetPonctuelResponsableKanban";
+
+export const metadata: Metadata = {
+  title: "Dashboard | Marketing",
+  description:
+    "Tableau de bord marketing — projets ponctuels et activités de routine",
+};
 
 export default async function MarketingPage() {
   const { userId } = await auth();
@@ -13,11 +23,7 @@ export default async function MarketingPage() {
   }
 
   const result = await getOrCreateUser(userId);
-  if (!result.success || !result.data) {
-    return <ProjetPonctuelResponsableKanban initialActivites={[]} variant="marketing" />;
-  }
-
-  const role = result.data.role;
+  const role = result.data?.role;
 
   if (role && role !== UserRole.MARKETING) {
     const redirectPath = getRedirectForRole(role);
@@ -26,12 +32,36 @@ export default async function MarketingPage() {
     }
   }
 
-  const activitesResult = await getActivitesForCurrentResponsable(userId);
+  const dashboardResult = await getMarketingDashboard(userId);
+
+  if (
+    !dashboardResult.success &&
+    dashboardResult.data.projetsPonctuels.length === 0
+  ) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-6">
+        <Card className="max-w-md border-rose-200 bg-rose-50/50">
+          <CardContent className="flex items-center gap-4 p-6">
+            <AlertCircle className="h-8 w-8 shrink-0 text-rose-500" />
+            <div>
+              <p className="font-semibold text-rose-900">
+                Impossible de charger le tableau de bord
+              </p>
+              <p className="mt-1 text-sm text-rose-700">
+                {dashboardResult.error ??
+                  "Une erreur inattendue s'est produite."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <ProjetPonctuelResponsableKanban
-      initialActivites={activitesResult.success ? activitesResult.activites : []}
-      variant="marketing"
+    <MarketingDashboardClient
+      initialData={dashboardResult.data}
+      initialError={dashboardResult.success ? null : dashboardResult.error}
     />
   );
 }

@@ -9,6 +9,7 @@ import {
 
   type LucideIcon,
   BarChart,
+  MailIcon,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -61,6 +62,13 @@ const navItems: NavItem[] = [
     icon: BarChart,
     label: "Indicateurs",
     href: "/communication/indicateurs",
+    category: "documentation",
+  },
+  {
+    id: 6,
+    icon: MailIcon, 
+    label: "Courriers et Messages ",
+    href: "/communication/courriers-et-messages",
     category: "documentation",
   },
  

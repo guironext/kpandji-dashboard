@@ -1,8 +1,20 @@
+import { AlertCircle } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+
+import DesignerDashboardClient from "@/components/designer/DesignerDashboardClient";
+import { Card, CardContent } from "@/components/ui/card";
+import { getDesignerDashboardData } from "@/lib/actions/designer-dashboard";
 import { getOrCreateUser } from "@/lib/actions/user";
 import { getRedirectForRole } from "@/lib/role-redirects";
+
+export const metadata: Metadata = {
+  title: "Dashboard | Designer",
+  description:
+    "Tableau de bord designer — performance, graphiques et suivi des projets",
+};
 
 export default async function DesignerPage() {
   const { userId } = await auth();
@@ -20,14 +32,27 @@ export default async function DesignerPage() {
     }
   }
 
-  return (
-    <div className="flex min-h-[50vh] items-center justify-center p-6">
-      <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 px-8 py-10 text-center shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">Espace Designer</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Bienvenue sur votre tableau de bord designer.
-        </p>
+  const dashboardResult = await getDesignerDashboardData(userId);
+
+  if (!dashboardResult.success) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-6">
+        <Card className="max-w-md border-rose-200 bg-rose-50/50">
+          <CardContent className="flex items-center gap-4 p-6">
+            <AlertCircle className="h-8 w-8 shrink-0 text-rose-500" />
+            <div>
+              <p className="font-semibold text-rose-900">
+                Impossible de charger le tableau de bord
+              </p>
+              <p className="mt-1 text-sm text-rose-700">
+                {dashboardResult.error ?? "Une erreur inattendue s'est produite."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <DesignerDashboardClient data={dashboardResult.data} />;
 }

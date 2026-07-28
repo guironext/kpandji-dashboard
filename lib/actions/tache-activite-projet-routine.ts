@@ -17,6 +17,8 @@ const DESIGNER_PROJET_PERMANENT_PATH = "/designer/projet-permanent";
 const COMMUNITY_MANAGER_PROJET_PERMANENT_PATH = "/communityManager/projet-permanent";
 const INFOGRAPHIE_PROJET_PERMANENT_PATH = "/infographie/projet-permanent";
 const MARKETING_PROJET_PERMANENT_PATH = "/marketing/projet-permanent";
+const MARKETING_PROJETS_MARKETING_PERMANENTS_PATH =
+  "/marketing/projets-marketing-permanents";
 
 export type TacheResponsableItem = {
   id: string;
@@ -99,6 +101,7 @@ function revalidateTachePaths() {
     revalidatePath(COMMUNITY_MANAGER_PROJET_PERMANENT_PATH);
     revalidatePath(INFOGRAPHIE_PROJET_PERMANENT_PATH);
     revalidatePath(MARKETING_PROJET_PERMANENT_PATH);
+    revalidatePath(MARKETING_PROJETS_MARKETING_PERMANENTS_PATH);
   } catch {
     // ignore
   }

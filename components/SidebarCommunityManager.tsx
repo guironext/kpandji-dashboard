@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/communityManager", category: "main" }, 
   { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/communityManager/projet-ponctuel", category: "commandes" },
   { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/communityManager/projet-permanent", category: "commandes" },
-  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/communityManager/performance", category: "communication" },
+  //{ id: "com-perf", icon: MessageSquare, label: "Performance", href: "/communityManager/performance", category: "communication" },
 ];
 
 const categoryConfig = {

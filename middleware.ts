@@ -145,6 +145,11 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 
 ];
 
+/** Windows clocks often lag NTP by >5s (Clerk default), which rejects JWTs as iat-in-the-future. */
+const CLERK_OPTIONS = {
+	clockSkewInMs: 30_000,
+} as const;
+
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	const { userId, sessionClaims, redirectToSignIn } = await auth();
 
@@ -252,10 +257,10 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	}
 
 	return NextResponse.next();
-});
+}, CLERK_OPTIONS);
 
 // Minimal Clerk handler for server actions: runs Clerk so auth() works, but no redirects
-const serverActionClerkHandler = clerkMiddleware(() => NextResponse.next());
+const serverActionClerkHandler = clerkMiddleware(() => NextResponse.next(), CLERK_OPTIONS);
 
 export default async function middleware(req: NextRequest, event: NextFetchEvent) {
 	// Server actions: run Clerk (no redirects) so auth() works in server actions

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getOrCreateUser } from "@/lib/actions/user";
 import { getRedirectForRole } from "@/lib/role-redirects";
 import { getTachesForCurrentResponsable } from "@/lib/actions/tache-activite-projet-routine";
-import ProjetPermanentResponsableKanban from "@/components/projet-permanent/ProjetPermanentResponsableKanban";
+import ProjetPermanentResponsableSplit from "@/components/projet-permanent/ProjetPermanentResponsableSplit";
 
 export default async function DesignerProjetPermanentPage() {
   const { userId } = await auth();
@@ -14,7 +14,7 @@ export default async function DesignerProjetPermanentPage() {
 
   const result = await getOrCreateUser(userId);
   if (!result.success || !result.data) {
-    return <ProjetPermanentResponsableKanban initialTaches={[]} variant="designer" />;
+    return <ProjetPermanentResponsableSplit initialTaches={[]} />;
   }
 
   const role = result.data.role;
@@ -29,9 +29,8 @@ export default async function DesignerProjetPermanentPage() {
   const tachesResult = await getTachesForCurrentResponsable(userId);
 
   return (
-    <ProjetPermanentResponsableKanban
+    <ProjetPermanentResponsableSplit
       initialTaches={tachesResult.success ? tachesResult.taches : []}
-      variant="designer"
     />
   );
 }

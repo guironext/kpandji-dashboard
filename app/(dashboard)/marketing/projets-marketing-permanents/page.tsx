@@ -6,7 +6,7 @@ import { getRedirectForRole } from "@/lib/role-redirects";
 import { getTachesForCurrentResponsable } from "@/lib/actions/tache-activite-projet-routine";
 import ProjetPermanentResponsableSplit from "@/components/projet-permanent/ProjetPermanentResponsableSplit";
 
-export default async function CommunityManagerProjetPermanentPage() {
+export default async function MarketingProjetsPermanentsPage() {
   const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
@@ -19,7 +19,7 @@ export default async function CommunityManagerProjetPermanentPage() {
 
   const role = result.data.role;
 
-  if (role && role !== UserRole.COMMUNITY_MANAGER) {
+  if (role && role !== UserRole.MARKETING) {
     const redirectPath = getRedirectForRole(role);
     if (redirectPath) {
       redirect(redirectPath);

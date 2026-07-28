@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
@@ -271,12 +271,22 @@ export default function CommunicationDashboardClient({
   const [performanceData, setPerformanceData] = useState(initialPerformanceData);
   const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  const todayLabel = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
-  const userLabel =
-    user?.firstName?.trim() ||
-    user?.fullName?.trim()?.split(" ")[0] ||
-    "l'équipe communication";
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Keep SSR and first client render identical to avoid hydration mismatch
+  // (Clerk user + locale dates are only available after mount).
+  const todayLabel = mounted
+    ? format(new Date(), "EEEE d MMMM yyyy", { locale: fr })
+    : "";
+  const userLabel = mounted
+    ? user?.firstName?.trim() ||
+      user?.fullName?.trim()?.split(" ")[0] ||
+      "l'équipe communication"
+    : "l'équipe communication";
 
   const acteurs = useMemo(() => buildActeurMeta(performanceData), [performanceData]);
   const monthlyChartData = useMemo(
@@ -426,9 +436,9 @@ export default function CommunicationDashboardClient({
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium capitalize text-slate-200 backdrop-blur-sm">
+                <span className="inline-flex min-h-[30px] min-w-[12rem] items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium capitalize text-slate-200 backdrop-blur-sm">
                   <CalendarDays className="h-3.5 w-3.5 text-sky-300" />
-                  {todayLabel}
+                  {todayLabel || "\u00a0"}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-medium text-emerald-100">
                   <span className="relative flex h-2 w-2">

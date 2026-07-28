@@ -29,9 +29,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/marketing", category: "main" },
-  { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/marketing", category: "commandes" },
-  { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/marketing/projet-permanent", category: "commandes" },
-  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/marketing/performance", category: "communication" },
+  { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/marketing/projet-ponctuel", category: "commandes" },
+  { id: "cmd-permanent", icon: FileText, label: "Marketing", href: "/marketing/projets-marketing-permanents", category: "commandes" },
+  //{ id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/marketing/projet-permanent", category: "commandes" },
+  //{ id: "com-perf", icon: MessageSquare, label: "Performance", href: "/marketing/performance", category: "communication" },
 ];
 
 const categoryConfig = {
@@ -65,11 +66,11 @@ const categoryConfig = {
 } as const;
 
 function isRouteActive(pathname: string, href: string): boolean {
-  if (href === "/designer") return pathname === "/designer";
+  if (href === "/marketing") return pathname === "/marketing";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const SidebarMarketing = ({ isOpen }: { isOpen: boolean }) => {
+const SidebarDesigner = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
   const groupedItems = navItems.reduce((acc, item) => {
@@ -178,7 +179,7 @@ const SidebarMarketing = ({ isOpen }: { isOpen: boolean }) => {
             {isOpen && (
               <div className="min-w-0 flex-1">
                 <h2 className="bg-gradient-to-r from-violet-700 via-fuchsia-600 to-pink-600 bg-clip-text text-base font-bold tracking-tight text-transparent">
-                  Marketing 
+                  Marketing
                 </h2>
                 <p className="mt-0.5 text-xs font-medium text-slate-600">
                   Création & gestion des campagnes marketing
@@ -265,4 +266,4 @@ const SidebarMarketing = ({ isOpen }: { isOpen: boolean }) => {
   );
 };
 
-export default SidebarMarketing;
+export default SidebarDesigner;

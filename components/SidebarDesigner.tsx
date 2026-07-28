@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/designer", category: "main" },
   { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/designer/projet-ponctuel", category: "commandes" },
   { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/designer/projet-permanent", category: "commandes" },
-  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/designer/performance", category: "communication" },
+  //{ id: "com-perf", icon: MessageSquare, label: "Performance", href: "/designer/performance", category: "communication" },
 ];
 
 const categoryConfig = {
@@ -181,7 +181,7 @@ const SidebarDesigner = ({ isOpen }: { isOpen: boolean }) => {
                   Designer
                 </h2>
                 <p className="mt-0.5 text-xs font-medium text-slate-600">
-                  Création & projets
+                  Création & gestion des projets
                 </p>
               </div>
             )}

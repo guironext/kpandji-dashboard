@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/infographie", category: "main" },
   { id: "cmd-ponctuel", icon: FileText, label: "Projet Ponctuel", href: "/infographie/projet-ponctuel", category: "commandes" },
   { id: "cmd-permanent", icon: FileText, label: "Projet Permanent", href: "/infographie/projet-permanent", category: "commandes" },
-  { id: "com-perf", icon: MessageSquare, label: "Performance", href: "/infographie/performance", category: "communication" },
+  //{ id: "com-perf", icon: MessageSquare, label: "Performance", href: "/infographie/performance", category: "communication" },
 ];
 
 const categoryConfig = {
