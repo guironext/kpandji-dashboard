@@ -269,6 +269,12 @@ function toDateInputValue(value?: string | Date | null) {
   return d.toISOString().slice(0, 10);
 }
 
+function generateNumeroOrdreReparation() {
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `OR-${datePart}-${randomPart}`;
+}
+
 function buildInitialForm(
   voiture: VoitureSAV,
   type: TypeCheckListSAV = "RECEPTION",
@@ -280,7 +286,7 @@ function buildInitialForm(
     type,
     statut: "EN_ATTENTE",
     date: toDateInputValue(new Date()),
-    numeroOrdreReparation: "",
+    numeroOrdreReparation: generateNumeroOrdreReparation(),
     nomClient: clientName,
     telephone: voiture.ClientSAV?.contact || "",
     marque: "KPANDJI",
@@ -324,7 +330,9 @@ function mapApiToForm(
         : "EN_ATTENTE",
     date: toDateInputValue((data.date as string | Date | null) ?? null),
     numeroOrdreReparation:
-      typeof data.numeroOrdreReparation === "string" ? data.numeroOrdreReparation : "",
+      typeof data.numeroOrdreReparation === "string" && data.numeroOrdreReparation.trim()
+        ? data.numeroOrdreReparation
+        : generateNumeroOrdreReparation(),
     nomClient: typeof data.nomClient === "string" ? data.nomClient : base.nomClient,
     telephone: typeof data.telephone === "string" ? data.telephone : base.telephone,
     marque: typeof data.marque === "string" ? data.marque : base.marque,
@@ -358,7 +366,8 @@ async function saveChecklist(voitureSAVId: string, form: CheckListFormState) {
     titre: form.titre,
     statut: form.statut,
     date: form.date,
-    numeroOrdreReparation: form.numeroOrdreReparation,
+    numeroOrdreReparation:
+      form.numeroOrdreReparation.trim() || generateNumeroOrdreReparation(),
     nomClient: form.nomClient,
     telephone: form.telephone,
     marque: form.marque,
@@ -596,9 +605,9 @@ export default function CheckListVerificationForm({
           <Field label="N° ordre de réparation">
             <Input
               value={form.numeroOrdreReparation}
-              onChange={(e) => setField("numeroOrdreReparation", e.target.value)}
+              readOnly
               placeholder="OR-…"
-              className="h-11 rounded-xl border-slate-200"
+              className="h-11 rounded-xl border-slate-200 bg-slate-50 font-mono tracking-wide text-slate-700"
             />
           </Field>
           <Field label="Nom du client">

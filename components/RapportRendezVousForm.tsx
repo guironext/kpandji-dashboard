@@ -1489,6 +1489,8 @@ export function RapportRendezVousForm({
 													<SelectItem value="Especes">Especes</SelectItem>
 													<SelectItem value="Leasing">Leasing</SelectItem>
 													<SelectItem value="Carplan">Car-Plan</SelectItem>
+													<SelectItem value="Autre">LVM</SelectItem>
+													<SelectItem value="Autre">Autre</SelectItem>
 												</SelectContent>
 											</Select>
 										</div>
