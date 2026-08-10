@@ -758,7 +758,7 @@ export default function ProjetPermanentResponsableSplit({ initialTaches }: Props
                         titre={selectedTache.libelle}
                         description={selectedTache.description ?? ""}
                         className="text-sm leading-relaxed text-slate-700"
-                        lineClamp={8}
+                        lineClamp="none"
                       />
                     </div>
 

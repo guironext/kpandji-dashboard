@@ -31,14 +31,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit2, Palette } from "lucide-react";
 import {
 	getFacturesByUser,
 	deleteFacture,
 	updateProformaNotes,
 	updateProformaTotalTtc,
+	updateFactureLigneCouleur,
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
+import { getAllModele } from "@/lib/actions/modele";
 import { getUserSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
@@ -198,9 +200,11 @@ type Facture = {
 	} | null;
 	voiture: {
 		voitureModel: {
+			id?: string;
 			model: string;
 			image?: string;
 			description?: string;
+			couleur?: string | null;
 		} | null;
 	} | null;
 	lignes?: Array<{
@@ -213,9 +217,18 @@ type Facture = {
 		transmission?: string;
 		motorisation?: string;
 		voitureModel: {
+			id?: string;
 			model: string;
 			image?: string;
 			description?: string;
+			couleur?: string | null;
+		} | null;
+		VoitureModel?: {
+			id?: string;
+			model: string;
+			image?: string;
+			description?: string;
+			couleur?: string | null;
 		} | null;
 	}>;
 	accessoires?: Array<{
@@ -243,6 +256,84 @@ function getAccessoireImage(
 	const name = accessoireNom.split(",")[0]?.split(" (x")[0]?.trim();
 	const matched = accessoiresList.find((acc) => acc.nom === name);
 	return matched?.image || null;
+}
+
+function getLigneVehicleImage(
+	ligne: {
+		voitureModel?: { image?: string | null; model?: string | null } | null;
+		VoitureModel?: { image?: string | null; model?: string | null } | null;
+	},
+): string | null {
+	return ligne.voitureModel?.image || ligne.VoitureModel?.image || null;
+}
+
+function getLigneVehicleModel(
+	ligne: {
+		voitureModel?: {
+			id?: string | null;
+			model?: string | null;
+			description?: string | null;
+			image?: string | null;
+			couleur?: string | null;
+		} | null;
+		VoitureModel?: {
+			id?: string | null;
+			model?: string | null;
+			description?: string | null;
+			image?: string | null;
+			couleur?: string | null;
+		} | null;
+	},
+) {
+	return ligne.voitureModel || ligne.VoitureModel || null;
+}
+
+type ModeleColorOption = {
+	couleur: string;
+	image: string | null;
+	voitureModelId: string;
+};
+
+function parseModelColors(couleur?: string | null): string[] {
+	if (!couleur) return [];
+	return couleur
+		.split(/[,;/|]+/)
+		.map((c) => c.trim())
+		.filter(Boolean);
+}
+
+function getColorOptionsForModelName(
+	modelName: string | null | undefined,
+	modeles: Array<{
+		id: string;
+		model: string;
+		image?: string | null;
+		couleur?: string | null;
+	}>,
+): ModeleColorOption[] {
+	if (!modelName) return [];
+	const matching = modeles.filter(
+		(m) => m.model.trim().toLowerCase() === modelName.trim().toLowerCase(),
+	);
+	const byCouleur = new Map<string, ModeleColorOption>();
+
+	for (const modele of matching) {
+		const colors = parseModelColors(modele.couleur);
+		if (colors.length === 0) continue;
+		for (const couleur of colors) {
+			const key = couleur.toLowerCase();
+			if (byCouleur.has(key)) continue;
+			byCouleur.set(key, {
+				couleur,
+				image: modele.image || null,
+				voitureModelId: modele.id,
+			});
+		}
+	}
+
+	return Array.from(byCouleur.values()).sort((a, b) =>
+		a.couleur.localeCompare(b.couleur, "fr", { sensitivity: "base" }),
+	);
 }
 
 function getAccessoirePrice(
@@ -302,6 +393,22 @@ export default function Page() {
 	}>({ code: "XOF", rate: 1, symbol: "FCFA" });
 	const [customExchangeRate, setCustomExchangeRate] = useState<string>("");
 	const [currencyDialogSelection, setCurrencyDialogSelection] = useState("XOF");
+	const [voitureModeles, setVoitureModeles] = useState<
+		Array<{
+			id: string;
+			model: string;
+			image?: string | null;
+			couleur?: string | null;
+		}>
+	>([]);
+	const [colorModalOpen, setColorModalOpen] = useState(false);
+	const [colorModalLigneId, setColorModalLigneId] = useState<string | null>(
+		null,
+	);
+	const [colorModalModelName, setColorModalModelName] = useState<string>("");
+	const [colorModalCurrentCouleur, setColorModalCurrentCouleur] =
+		useState<string>("");
+	const [savingCouleur, setSavingCouleur] = useState(false);
 	const paginationScrollRef = useRef<HTMLDivElement>(null);
 
 	const convertAmount = (amountCfa: number): number => {
@@ -374,10 +481,12 @@ export default function Page() {
 			if (!clerkId) return;
 
 			console.log("=== FETCHING DATA ===");
-			const [facturesResult, accessoiresResult] = await Promise.all([
-				getFacturesByUser(clerkId),
-				getAllAccessoires(),
-			]);
+			const [facturesResult, accessoiresResult, modelesResult] =
+				await Promise.all([
+					getFacturesByUser(clerkId),
+					getAllAccessoires(),
+					getAllModele(),
+				]);
 
 			console.log("Factures result:", facturesResult);
 			console.log("Accessoires result:", accessoiresResult);
@@ -410,9 +519,99 @@ export default function Page() {
 					})),
 				);
 			}
+			if (modelesResult.success && modelesResult.data) {
+				setVoitureModeles(
+					modelesResult.data.map((m) => ({
+						id: m.id,
+						model: m.model,
+						image: m.image || null,
+						couleur: m.couleur || null,
+					})),
+				);
+			}
 		};
 		fetchData();
 	}, [clerkId]);
+
+	const openColorModal = (ligne: {
+		id: string;
+		couleur?: string;
+		voitureModel?: { model?: string | null } | null;
+		VoitureModel?: { model?: string | null } | null;
+	}) => {
+		const vehicleModel = getLigneVehicleModel(ligne);
+		const modelName = vehicleModel?.model || "";
+		if (!modelName) {
+			toast.error("Aucun modèle associé à cette ligne");
+			return;
+		}
+		if (!ligne.id || ligne.id === "1") {
+			toast.error(
+				"Impossible de modifier la couleur sur cette proforma (ligne manquante)",
+			);
+			return;
+		}
+		setColorModalLigneId(ligne.id);
+		setColorModalModelName(modelName);
+		setColorModalCurrentCouleur(ligne.couleur || "");
+		setColorModalOpen(true);
+	};
+
+	const handleSelectCouleur = async (option: ModeleColorOption) => {
+		if (!colorModalLigneId) return;
+		setSavingCouleur(true);
+		const result = await updateFactureLigneCouleur(
+			colorModalLigneId,
+			option.couleur,
+			option.voitureModelId,
+		);
+		setSavingCouleur(false);
+
+		if (!result.success) {
+			toast.error(result.error || "Erreur lors de la mise à jour de la couleur");
+			return;
+		}
+
+		setFactures((prev) =>
+			prev.map((facture) => ({
+				...facture,
+				lignes: facture.lignes?.map((ligne) => {
+					if (ligne.id !== colorModalLigneId) return ligne;
+					const matchedModele = voitureModeles.find(
+						(m) => m.id === option.voitureModelId,
+					);
+					const nextVoitureModel = {
+						...(ligne.voitureModel || ligne.VoitureModel || {}),
+						id: option.voitureModelId,
+						model:
+							matchedModele?.model ||
+							ligne.voitureModel?.model ||
+							ligne.VoitureModel?.model ||
+							colorModalModelName,
+						image:
+							option.image ||
+							matchedModele?.image ||
+							ligne.voitureModel?.image ||
+							ligne.VoitureModel?.image,
+						description:
+							ligne.voitureModel?.description ||
+							ligne.VoitureModel?.description,
+						couleur: option.couleur,
+					};
+					return {
+						...ligne,
+						couleur: option.couleur,
+						voitureModelId: option.voitureModelId,
+						voitureModel: nextVoitureModel,
+						VoitureModel: nextVoitureModel,
+					};
+				}),
+			})),
+		);
+		setColorModalCurrentCouleur(option.couleur);
+		setColorModalOpen(false);
+		toast.success(`Couleur « ${option.couleur} » sélectionnée`);
+	};
 
 	const totalPages = Math.ceil(factures.length / itemsPerPage);
 	const startIndex = (currentPage - 1) * itemsPerPage;
@@ -455,12 +654,14 @@ export default function Page() {
 		// Generate table rows for vehicles
 		const vehicleRows = lignes
 			.map((ligne, index) => {
-				const vehicleModelName = escapeHtml(ligne.voitureModel?.model || "N/A");
+				const vehicleModel = getLigneVehicleModel(ligne);
+				const vehicleModelName = escapeHtml(vehicleModel?.model || "N/A");
 				const vehicleDescription = escapeHtml(
-					ligne.voitureModel?.description || "N/A",
+					vehicleModel?.description || "N/A",
 				);
-				const vehicleImage = ligne.voitureModel?.image
-					? `<img src="${escapeAttr(ligne.voitureModel.image)}" alt="${vehicleModelName}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
+				const vehicleImageSrc = getLigneVehicleImage(ligne);
+				const vehicleImage = vehicleImageSrc
+					? `<img src="${escapeAttr(vehicleImageSrc)}" alt="${vehicleModelName}" style="max-width: 140px; max-height: 110px; object-fit: contain;" />`
 					: "N/A";
 
 				const colorInfo = ligne.couleur
@@ -1387,6 +1588,93 @@ export default function Page() {
 				</DialogContent>
 			</Dialog>
 
+			<Dialog open={colorModalOpen} onOpenChange={setColorModalOpen}>
+				<DialogContent className="sm:max-w-lg">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Palette className="h-5 w-5 text-amber-600" />
+							Choisir une couleur
+						</DialogTitle>
+						<DialogDescription>
+							Couleurs disponibles pour le modèle{" "}
+							<span className="font-semibold text-foreground">
+								{colorModalModelName}
+							</span>
+							{colorModalCurrentCouleur
+								? ` — actuelle : ${colorModalCurrentCouleur}`
+								: ""}
+						</DialogDescription>
+					</DialogHeader>
+					<div className="max-h-[60vh] overflow-y-auto py-2">
+						{(() => {
+							const options = getColorOptionsForModelName(
+								colorModalModelName,
+								voitureModeles,
+							);
+							if (options.length === 0) {
+								return (
+									<p className="text-sm text-muted-foreground py-6 text-center">
+										Aucune couleur n&apos;est définie pour ce modèle. Ajoutez-en
+										depuis la page Modèles.
+									</p>
+								);
+							}
+							return (
+								<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+									{options.map((option) => {
+										const isSelected =
+											colorModalCurrentCouleur.trim().toLowerCase() ===
+											option.couleur.trim().toLowerCase();
+										return (
+											<button
+												key={`${option.voitureModelId}-${option.couleur}`}
+												type="button"
+												disabled={savingCouleur}
+												onClick={() => handleSelectCouleur(option)}
+												className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 text-left transition-colors hover:border-amber-500 hover:bg-amber-50 disabled:opacity-60 ${
+													isSelected
+														? "border-amber-600 bg-amber-50 ring-2 ring-amber-200"
+														: "border-gray-200 bg-white"
+												}`}>
+												<div className="flex h-20 w-full items-center justify-center rounded-md bg-gray-50">
+													{option.image ? (
+														<img
+															src={option.image}
+															alt={option.couleur}
+															className="h-20 w-full object-contain"
+														/>
+													) : (
+														<span className="text-xs text-gray-400">
+															Pas d&apos;image
+														</span>
+													)}
+												</div>
+												<span className="text-sm font-semibold text-center text-gray-900">
+													{option.couleur}
+												</span>
+												{isSelected && (
+													<span className="text-[10px] font-medium text-amber-700">
+														Sélectionnée
+													</span>
+												)}
+											</button>
+										);
+									})}
+								</div>
+							);
+						})()}
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setColorModalOpen(false)}
+							disabled={savingCouleur}>
+							Fermer
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			<div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
 				<div className="bg-white rounded-lg shadow-2xl p-2">
 					<div className="flex w-full justify-between mb-6 print-hide">
@@ -1577,7 +1865,10 @@ export default function Page() {
 																},
 															];
 
-												return lignes.map((ligne, index) => (
+												return lignes.map((ligne, index) => {
+													const vehicleModel = getLigneVehicleModel(ligne);
+													const vehicleImageSrc = getLigneVehicleImage(ligne);
+													return (
 													<TableRow
 														key={`${factureItem.id}-${ligne.id}`}
 														className={
@@ -1588,24 +1879,34 @@ export default function Page() {
 														<TableCell className="text-black font-semibold">
 															{index + 1}
 														</TableCell>
-														<TableCell className="text-black">
-															{ligne.voitureModel?.image ? (
-																<Image
-																	src={ligne.voitureModel.image}
-																	alt={ligne.voitureModel.model || "Vehicle"}
-																	width={110}
-																	height={90}
-																	unoptimized
-																	className="object-contain"
-																/>
-															) : (
-																"N/A"
-															)}
+														<TableCell className="text-black whitespace-normal">
+															<button
+																type="button"
+																onClick={() => openColorModal(ligne)}
+																title="Cliquer pour choisir une couleur"
+																className="group relative flex h-[110px] w-[140px] items-center justify-center rounded-md border border-transparent hover:border-amber-400 hover:bg-amber-50/60 transition-colors cursor-pointer">
+																{vehicleImageSrc ? (
+																	<img
+																		src={vehicleImageSrc}
+																		alt={vehicleModel?.model || "Véhicule"}
+																		width={140}
+																		height={110}
+																		className="h-[110px] w-[140px] object-contain"
+																	/>
+																) : (
+																	<span className="text-xs text-gray-500">
+																		Pas d&apos;image
+																	</span>
+																)}
+																<span className="absolute bottom-1 right-1 rounded bg-amber-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity">
+																	Couleur
+																</span>
+															</button>
 														</TableCell>
-														<TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-															{ligne.voitureModel?.model || "N/A"}
+														<TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold whitespace-normal">
+															{vehicleModel?.model || "N/A"}
 															<p className="text-[10px] font-normal text-black w-full text-wrap max-w-80 ">
-																{ligne.voitureModel?.description || "N/A"}
+																{vehicleModel?.description || "N/A"}
 															</p>
 															{ligne.couleur && (
 																<div className="flex  gap-x-1">
@@ -1635,7 +1936,8 @@ export default function Page() {
 															{formatAmount(Number(ligne.montant_ligne))}
 														</TableCell>
 													</TableRow>
-												));
+													);
+												});
 											})}
 
 											{facture.accessoires &&

@@ -54,7 +54,16 @@ function serializeFacture(facture: unknown) {
     clientEntreprise: f.Client_entreprise,
     voiture: f.Voiture ? {
       ...f.Voiture,
-      voitureModel: f.Voiture.VoitureModel,
+      voitureModel: f.Voiture.VoitureModel
+        ? {
+            ...(f.Voiture.VoitureModel as Record<string, unknown>),
+            image:
+              ((f.Voiture.VoitureModel as { image?: string | null }).image as
+                | string
+                | null
+                | undefined) || null,
+          }
+        : null,
     } : null,
     user: f.User,
     prix_unitaire: f.prix_unitaire ? Number(f.prix_unitaire) : 0,
@@ -76,12 +85,29 @@ function serializeFacture(facture: unknown) {
       : null,
     bon_pour_acquis: (f.bon_pour_acquis as boolean) ?? false,
     notes_proforma: (f.notes_proforma as string) || null,
-    lignes: lignes.map((ligne) => ({
-      ...ligne,
-      prix_unitaire: ligne.prix_unitaire ? Number(ligne.prix_unitaire) : 0,
-      montant_ligne: ligne.montant_ligne ? Number(ligne.montant_ligne) : 0,
-      voitureModel: ligne.VoitureModel,
-    })),
+    lignes: lignes.map((ligne) => {
+      const voitureModelRaw = (ligne.VoitureModel || null) as {
+        id?: string;
+        model?: string;
+        image?: string | null;
+        description?: string | null;
+        couleur?: string | null;
+      } | null;
+      return {
+        ...ligne,
+        prix_unitaire: ligne.prix_unitaire ? Number(ligne.prix_unitaire) : 0,
+        montant_ligne: ligne.montant_ligne ? Number(ligne.montant_ligne) : 0,
+        voitureModel: voitureModelRaw
+          ? {
+              id: voitureModelRaw.id,
+              model: voitureModelRaw.model || "",
+              image: voitureModelRaw.image || null,
+              description: voitureModelRaw.description || null,
+              couleur: voitureModelRaw.couleur || null,
+            }
+          : null,
+      };
+    }),
     accessoires: accessoires.map((accessoire) => ({
       id: (accessoire.id as string) || "",
       nom: (accessoire.nom as string) || "",
@@ -1252,6 +1278,58 @@ export async function updateProformaNotes(factureId: string, notes: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error updating proforma notes:", error);
+    return { success: false, error: message };
+  }
+}
+
+export async function updateFactureLigneCouleur(
+  ligneId: string,
+  couleur: string,
+  voitureModelId?: string | null,
+) {
+  try {
+    if (!ligneId || ligneId === "1") {
+      return { success: false, error: "Ligne de facture invalide" };
+    }
+    const trimmedCouleur = couleur.trim();
+    if (!trimmedCouleur) {
+      return { success: false, error: "La couleur est requise" };
+    }
+
+    const existing = await prisma.factureLigne.findUnique({
+      where: { id: ligneId },
+      select: { id: true },
+    });
+    if (!existing) {
+      return { success: false, error: "Ligne de facture introuvable" };
+    }
+
+    if (voitureModelId) {
+      const modelExists = await prisma.voitureModel.findUnique({
+        where: { id: voitureModelId },
+        select: { id: true },
+      });
+      if (!modelExists) {
+        return { success: false, error: "Modèle de véhicule introuvable" };
+      }
+    }
+
+    await executeWithRetry(async () => {
+      await prisma.factureLigne.update({
+        where: { id: ligneId },
+        data: {
+          couleur: trimmedCouleur,
+          ...(voitureModelId ? { voitureModelId } : {}),
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    revalidatePath("/commercial/proformas");
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error updating facture ligne couleur:", error);
     return { success: false, error: message };
   }
 }

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SignInButtonWithFallback } from "@/components/SignInButtonWithFallback";
@@ -18,15 +17,19 @@ export default function Home() {
               <div className="flex-1 flex justify-center lg:justify-start">
                 <div className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-orange-200/50 shadow-lg">
-                    <Image
-                      src="/logo.png"
-                      alt="KPANDJI Management Board Logo"
-                      width={280}
-                      height={90}
-                      priority
-                      className="drop-shadow-lg"
-                    />
+                  <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl  overflow-hidden">
+                    <video
+                      src="/logoanime.mp4"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      className="block w-full max-w-sm h-auto rounded-xl object-contain"
+                      aria-label="Logo KPANDJI animé"
+                    >
+                      <source src="/logoanime.mp4" type="video/mp4" />
+                    </video>
                   </div>
                 </div>
               </div>

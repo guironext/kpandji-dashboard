@@ -280,7 +280,7 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
 export const config = {
 	matcher: [
 		// Skip Next.js internals and all static files, unless found in search params
-		"/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|pdf|docx?|pptx?|odt|ods|rtf|txt|xlsx?|zip|webmanifest)).*)",
+		"/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|pdf|docx?|pptx?|odt|ods|rtf|txt|xlsx?|zip|webmanifest|mp4|webm|mov|m4v)).*)",
 		// Always run for API routes
 		"/(api|trpc)(.*)",
 	],

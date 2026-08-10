@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { PlusCircle, Trash2, Calendar, FileText, X, Image as ImageIcon, Car, Edit, Sparkles, Zap, Printer } from "lucide-react";
+import { PlusCircle, Trash2, Calendar, FileText, X, Image as ImageIcon, Car, Edit, Sparkles, Zap, Printer, Palette } from "lucide-react";
 
 export default function AjouterModelePage() {
   
@@ -21,6 +21,7 @@ export default function AjouterModelePage() {
       fiche_technique: string | null;
       description?: string | null;
       image?: string | null;
+      couleur?: string | null;
       createdAt: string;
       updatedAt: string;
     }>
@@ -34,6 +35,7 @@ export default function AjouterModelePage() {
     model: "",
     fiche_technique: "",
     description: "",
+    couleur: "",
   });
   useEffect(() => {
     loadModels();
@@ -52,7 +54,11 @@ export default function AjouterModelePage() {
   const loadModels = async () => {
     const result = await getAllModele();
     if (result.success && result.data) {
-      setModels(result.data);
+      setModels(
+        [...result.data].sort((a, b) =>
+          a.model.localeCompare(b.model, "fr", { sensitivity: "base" })
+        )
+      );
     }
   };
 
@@ -68,7 +74,7 @@ export default function AjouterModelePage() {
 
     if (result.success) {
       toast.success(result.message);
-      setFormData({ model: "", fiche_technique: "", description: "" });
+      setFormData({ model: "", fiche_technique: "", description: "", couleur: "" });
       setImageFiles([]);
       setFicheTechFiles([]);
       setPreview(null);
@@ -97,12 +103,14 @@ export default function AjouterModelePage() {
     fiche_technique: string | null;
     description?: string | null;
     image?: string | null;
+    couleur?: string | null;
   }) => {
     setEditingId(model.id);
     setFormData({
       model: model.model,
       fiche_technique: model.fiche_technique || "",
       description: model.description || "",
+      couleur: model.couleur || "",
     });
     if (model.image) {
       setPreview(model.image);
@@ -207,6 +215,20 @@ export default function AjouterModelePage() {
                     value={formData.model}
                     onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                     required
+                    className="h-12 border-2 border-orange-200 focus:border-orange-500 focus:ring-orange-500 bg-white rounded-xl"
+                  />
+                </div>
+
+                {/* Couleur */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-orange-900 flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-orange-500" />
+                    Couleur
+                  </Label>
+                  <Input
+                    placeholder="Ex: Blanc, Noir, Rouge..."
+                    value={formData.couleur}
+                    onChange={(e) => setFormData({ ...formData, couleur: e.target.value })}
                     className="h-12 border-2 border-orange-200 focus:border-orange-500 focus:ring-orange-500 bg-white rounded-xl"
                   />
                 </div>
@@ -329,7 +351,7 @@ export default function AjouterModelePage() {
                     variant="outline"
                     onClick={() => {
                       setEditingId(null);
-                      setFormData({ model: "", fiche_technique: "", description: "" });
+                      setFormData({ model: "", fiche_technique: "", description: "", couleur: "" });
                       setImageFiles([]);
                       setFicheTechFiles([]);
                       setPreview(null);
@@ -420,6 +442,12 @@ export default function AjouterModelePage() {
                             <h3 className="font-bold text-lg sm:text-xl md:text-2xl bg-gradient-to-r from-orange-700 to-amber-700 bg-clip-text text-transparent mb-2 break-words">
                               {model.model}
                             </h3>
+                            {model.couleur && (
+                              <p className="text-sm text-orange-800/80 font-semibold mb-1 flex items-center gap-1.5 justify-center sm:justify-start">
+                                <Palette className="w-3.5 h-3.5 text-orange-500" />
+                                {model.couleur}
+                              </p>
+                            )}
                             {model.description && (
                               <p className="text-sm text-orange-800/70 line-clamp-3 sm:line-clamp-2 font-medium">
                                 {model.description}

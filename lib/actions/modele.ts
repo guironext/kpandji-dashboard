@@ -5,7 +5,7 @@ import { writeFile, mkdir, readdir, unlink, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
 import { prisma, executeWithRetry } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, type VoitureModel } from "@prisma/client";
 import { put } from "@vercel/blob";
 
 // Schema for model creation - matches VoitureModel from Prisma schema
@@ -14,6 +14,7 @@ const createModelSchema = z.object({
   fiche_technique: z.string().optional(),
   description: z.string().optional(),
   image: z.string().optional(),
+  couleur: z.string().optional(),
 });
 
 export type CreateModelInput = z.infer<typeof createModelSchema>;
@@ -96,16 +97,19 @@ export async function createModel(
     }
     
     // Save model to database with file paths
-    const modele = await prisma.voitureModel.create({
-      data: {
-        id: crypto.randomUUID(),
-        model: data.model,
-        fiche_technique: ficheTechniquePath || data.fiche_technique || null,
-        description: data.description,
-        image: imagePath || null,
-        updatedAt: new Date(),
-      },
-    });
+    const modele = await executeWithRetry(() =>
+      prisma.voitureModel.create({
+        data: {
+          id: crypto.randomUUID(),
+          model: data.model,
+          fiche_technique: ficheTechniquePath || data.fiche_technique || null,
+          description: data.description,
+          image: imagePath || null,
+          couleur: data.couleur?.trim() || null,
+          updatedAt: new Date(),
+        },
+      })
+    );
     
     // Revalidate relevant paths
     revalidatePath("/manager/ajouter-modele");
@@ -182,9 +186,25 @@ type ModeleData = {
   fiche_technique: string | null;
   description?: string | null;
   image?: string | null;
+  couleur?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+function toModeleData(modele: VoitureModel): ModeleData {
+  // Prisma client must include `couleur` after `npx prisma generate`
+  const row = modele as VoitureModel & { couleur: string | null };
+  return {
+    id: row.id,
+    model: row.model,
+    fiche_technique: row.fiche_technique,
+    description: row.description,
+    image: row.image,
+    couleur: row.couleur,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 // Get a single model by ID from database
 export async function getModele(modelId: string): Promise<{ success: boolean; data?: ModeleData; message: string }> {
@@ -200,19 +220,9 @@ export async function getModele(modelId: string): Promise<{ success: boolean; da
       };
     }
     
-    const modeleData: ModeleData = {
-      id: modele.id,
-      model: modele.model,
-      fiche_technique: modele.fiche_technique,
-      description: modele.description,
-      image: modele.image,
-      createdAt: modele.createdAt.toISOString(),
-      updatedAt: modele.updatedAt.toISOString(),
-    };
-    
     return {
       success: true,
-      data: modeleData,
+      data: toModeleData(modele),
       message: "Modèle récupéré avec succès",
     };
   } catch (error) {
@@ -272,15 +282,7 @@ export async function getAllModele(): Promise<{ success: boolean; data?: ModeleD
       1000 // delay between retries
     );
     
-    const modeleData: ModeleData[] = modeles.map(modele => ({
-      id: modele.id,
-      model: modele.model,
-      fiche_technique: modele.fiche_technique,
-      description: modele.description,
-      image: modele.image,
-      createdAt: modele.createdAt.toISOString(),
-      updatedAt: modele.updatedAt.toISOString(),
-    }));
+    const modeleData: ModeleData[] = modeles.map(toModeleData);
     
     return {
       success: true,
@@ -370,20 +372,24 @@ export async function updateModele(
       description?: string;
       fiche_technique?: string;
       image?: string;
+      couleur?: string | null;
     } = {};
 
     if (data.model !== undefined) updateData.model = data.model;
     if (data.description !== undefined) updateData.description = data.description;
+    if (data.couleur !== undefined) updateData.couleur = data.couleur.trim() || null;
     if (ficheTechniquePath) updateData.fiche_technique = ficheTechniquePath;
     if (imagePath) updateData.image = imagePath;
 
-    await prisma.voitureModel.update({
-      where: { id: modelId },
-      data: {
-        ...updateData,
-        updatedAt: new Date(),
-      },
-    });
+    await executeWithRetry(() =>
+      prisma.voitureModel.update({
+        where: { id: modelId },
+        data: {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+      })
+    );
     
     revalidatePath("/manager/ajouter-modele");
     revalidatePath("/commercial/ajouter-modele");
@@ -399,6 +405,17 @@ export async function updateModele(
       return {
         success: false,
         message: `Données invalides: ${error.issues.map(e => e.message).join(", ")}`,
+      };
+    }
+    const prismaCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? (error as { code?: string }).code
+        : undefined;
+    if (prismaCode === "P2024") {
+      return {
+        success: false,
+        message:
+          "Connexion base de données saturée. Réessayez dans quelques secondes.",
       };
     }
     return {

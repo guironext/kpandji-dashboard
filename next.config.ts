@@ -48,6 +48,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://js.clerk.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://*.hcaptcha.com https://challenges.cloudflare.com",
               "img-src 'self' data: blob: https://*.clerk.accounts.dev https://*.clerk.com https://img.clerk.com https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://challenges.cloudflare.com",
+              "media-src 'self' blob:",
               "font-src 'self' data: https://www.google.com https://*.gstatic.com",
               "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.com https://*.neon.tech https://*.blob.vercel-storage.com https://*.vercel-storage.com wss://*.clerk.accounts.dev wss://*.clerk.com https://www.google.com https://*.googleapis.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://*.google.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",

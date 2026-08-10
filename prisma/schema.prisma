@@ -1126,6 +1126,7 @@ model VoitureModel {
   updatedAt         DateTime
   description       String?
   image             String?
+  couleur           String?
   Commande          Commande[]
   CommandeEnAttente CommandeEnAttente[]
   FactureLigne      FactureLigne[]

@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
+/** Bump when schema fields/models change so the global singleton reloads after `prisma generate`. */
+const PRISMA_SCHEMA_REVISION = 2;
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaSchemaRevision?: number;
 };
 
 function configureDatabaseUrl(): void {
@@ -19,8 +23,14 @@ function configureDatabaseUrl(): void {
     const isDev = process.env.NODE_ENV !== "production";
     // In dev, Next/Turbopack can trigger many concurrent queries (RSC + API + prefetch),
     // which can easily exhaust a small pool and surface as P2024 / "Failed to fetch".
+    // Neon pooler: keep Prisma's client pool small — PgBouncer handles multiplexing.
+    const usesNeonPooler =
+      url.hostname.includes("neon.tech") && url.hostname.includes("pooler");
     if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", isDev ? "10" : "5");
+      url.searchParams.set(
+        "connection_limit",
+        usesNeonPooler ? (isDev ? "5" : "3") : isDev ? "10" : "5",
+      );
     }
     if (!url.searchParams.has("pool_timeout")) {
       url.searchParams.set("pool_timeout", isDev ? "60" : "20");
@@ -83,6 +93,16 @@ export function invalidatePrismaClient(): void {
 }
 
 function resolvePrismaClient(): PrismaClient {
+  if (globalForPrisma.prismaSchemaRevision !== PRISMA_SCHEMA_REVISION) {
+    if (globalForPrisma.prisma) {
+      console.warn(
+        `[Prisma] Schema revision ${globalForPrisma.prismaSchemaRevision ?? 0} → ${PRISMA_SCHEMA_REVISION}; reconnecting client.`
+      );
+      invalidatePrismaClient();
+    }
+    globalForPrisma.prismaSchemaRevision = PRISMA_SCHEMA_REVISION;
+  }
+
   const cached = globalForPrisma.prisma;
 
   if (
@@ -181,12 +201,19 @@ export async function executeWithRetry<T>(
         if (
           errorMessage.includes("Engine is not yet connected") ||
           errorMessage.includes("Response from the Engine was empty") ||
-          prismaCode === "P1017"
+          prismaCode === "P1017" ||
+          prismaCode === "P2024"
         ) {
+          // P2024 = pool exhausted/stuck; drop the client so retries get a fresh pool
           invalidatePrismaClient();
         }
-        // Use longer delays for P1001 (Neon cold start can take 15-30s)
-        const waitMs = prismaCode === "P1001" ? 8000 * attempt : delay * attempt;
+        // Use longer delays for P1001 (Neon cold start) and P2024 (pool recovery)
+        const waitMs =
+          prismaCode === "P1001"
+            ? 8000 * attempt
+            : prismaCode === "P2024"
+              ? 2000 * attempt
+              : delay * attempt;
         console.warn(
           `Database connection error (attempt ${attempt}/${maxRetries}), retrying in ${waitMs / 1000}s...`,
         );
