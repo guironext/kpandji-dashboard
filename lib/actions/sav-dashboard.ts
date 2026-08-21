@@ -87,6 +87,10 @@ const CHART_COLORS = [
 
 const VOITURE_STATUT_LABELS: Record<StatutVoitureSAV, string> = {
   ARRIVE: "Arrivée",
+  DIAGNOSTIC_FINI: "Diagnostic fini",
+  DISPATCHE: "Dispatchée",
+  GARANTIESAV_EN_COURS: "Garantie en cours",
+  GARANTIESAV_TERMINE: "Garantie terminée",
   EN_TRAITEMENT: "En traitement",
   TESTE: "Testée",
   TERMINE: "Terminée",
@@ -117,7 +121,14 @@ const FACTURE_STATUS_LABELS: Record<StatusFacture, string> = {
   ANNULEE: "Annulée",
 };
 
-const VOITURES_EN_ATELIER: StatutVoitureSAV[] = ["ARRIVE", "EN_TRAITEMENT", "TESTE"];
+const VOITURES_EN_ATELIER: StatutVoitureSAV[] = [
+  "ARRIVE",
+  "DIAGNOSTIC_FINI",
+  "DISPATCHE",
+  "GARANTIESAV_EN_COURS",
+  "EN_TRAITEMENT",
+  "TESTE",
+];
 const REPARATIONS_EN_COURS: StatutReparation[] = [
   "EN_ATTENTE",
   "EN_TRAITEMENT",
@@ -310,7 +321,7 @@ export async function getSavDashboardData(): Promise<{
       id: v.id,
       model: v.model,
       immatriculation: v.immatriculation,
-      statut: VOITURE_STATUT_LABELS[v.statut],
+      statut: VOITURE_STATUT_LABELS[v.statut] ?? v.statut,
       clientName: `${v.ClientSAV.prenom} ${v.ClientSAV.nom}`.trim(),
       createdAt: v.createdAt.toISOString(),
     }));

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
-  createInterventionOffertRaw,
   ensureInterventionOffertSchema,
   listInterventionsOffertRaw,
-  maxInterventionNiveauRaw,
 } from "@/lib/interventionDiagnosticOffertSql";
 
 export const dynamic = "force-dynamic";
@@ -291,9 +290,11 @@ export async function POST(request: Request) {
 
     await ensureInterventionOffertSchema();
 
-    const existingCount = (
-      await listInterventionsOffertRaw(voitureSAVId, detailDiagnosticId)
-    ).length;
+    const existingRows = await listInterventionsOffertRaw(
+      voitureSAVId,
+      detailDiagnosticId,
+    );
+    const existingCount = existingRows.length;
 
     if (detailDiagnosticId) {
       const quotaCheck = await resolveGarantieQuota(
@@ -315,83 +316,94 @@ export async function POST(request: Request) {
       }
     }
 
-    const intervention = await prisma.$transaction(async (tx) => {
-      const maxNiveau = await maxInterventionNiveauRaw(
-        voitureSAVId,
-        detailDiagnosticId,
-        tx,
-      );
-      const niveau_Intervention =
-        Number.isFinite(niveauRaw) && Math.trunc(niveauRaw) > 0
-          ? Math.trunc(niveauRaw)
-          : maxNiveau + 1;
+    const maxNiveau = existingRows.reduce(
+      (max, row) => Math.max(max, row.niveau_Intervention ?? 0),
+      0,
+    );
+    const niveau_Intervention =
+      Number.isFinite(niveauRaw) && Math.trunc(niveauRaw) > 0
+        ? Math.trunc(niveauRaw)
+        : maxNiveau + 1;
 
-      const created = await createInterventionOffertRaw(
-        {
-          typeProduitUtilise,
-          niveau_Intervention,
-          voitureSAVId,
-          detailDiagnosticId,
-          groupePersonnelSAVId,
-        },
-        tx,
-      );
+    const interventionId = randomUUID();
 
-      await tx.pieceSAV.update({
-        where: { id: pieceSAVId },
-        data: {
-          quantite_sortie: { increment: quantite_sortie },
-          quantite_restante: { decrement: quantite_sortie },
-        },
-      });
-
-      await tx.pieceSAV.create({
-        data: {
-          nom: stockPiece.nom,
-          model_voiture: stockPiece.model_voiture,
-          marque_piece: stockPiece.marque_piece,
-          part_code: stockPiece.part_code,
-          description: stockPiece.description,
-          prix_achat: stockPiece.prix_achat,
-          prix_vente: stockPiece.prix_vente,
-          quantite_sortie,
-          quantite_restante: 0,
-          interventionDiagnosticOffert: { connect: { id: created.id } },
-          ...(diagnosticArriveeId
-            ? { diagnosticArrivee: { connect: { id: diagnosticArriveeId } } }
-            : {}),
-        },
-      });
-
-      if (offert) {
-        await tx.diagnosticOffert.update({
-          where: { id: offert.id },
+    // Sequential (batched) transaction: interactive $transaction(async tx)
+    // + $queryRaw is incompatible with Neon PgBouncer (Prisma P2028).
+    await prisma.$transaction(
+      [
+        prisma.interventionDiagnosticOffert.create({
           data: {
-            interventionDiagnosticOffert: { connect: { id: created.id } },
-            ...(diagnosticArriveeId
-              ? { diagnosticArrivee: { connect: { id: diagnosticArriveeId } } }
-              : {}),
-            ...(offert.voitureSAVId
-              ? {}
-              : { voitureSAV: { connect: { id: voitureSAVId } } }),
+            id: interventionId,
+            date_Intervention: now,
+            typeProduitUtilise,
+            niveau_Intervention,
+            voitureSAVId,
+            detailDiagnosticId,
+            groupePersonnelSAVId,
           },
-        });
-      }
+        }),
+        prisma.pieceSAV.update({
+          where: { id: pieceSAVId },
+          data: {
+            quantite_sortie: { increment: quantite_sortie },
+            quantite_restante: { decrement: quantite_sortie },
+          },
+        }),
+        prisma.pieceSAV.create({
+          data: {
+            nom: stockPiece.nom,
+            model_voiture: stockPiece.model_voiture,
+            marque_piece: stockPiece.marque_piece,
+            part_code: stockPiece.part_code,
+            description: stockPiece.description,
+            prix_achat: stockPiece.prix_achat,
+            prix_vente: stockPiece.prix_vente,
+            quantite_sortie,
+            quantite_restante: 0,
+            interventionDiagnosticOffertId: interventionId,
+            ...(diagnosticArriveeId ? { diagnosticArriveeId } : {}),
+          },
+        }),
+        ...(offert
+          ? [
+              prisma.diagnosticOffert.update({
+                where: { id: offert.id },
+                data: {
+                  interventionDiagnosticOffertId: interventionId,
+                  ...(diagnosticArriveeId ? { diagnosticArriveeId } : {}),
+                  ...(offert.voitureSAVId ? {} : { voitureSAVId }),
+                },
+              }),
+            ]
+          : []),
+      ],
+      { maxWait: 15_000, timeout: 20_000 },
+    );
 
-      const usagePieces = await tx.pieceSAV.findMany({
-        where: { interventionDiagnosticOffertId: created.id },
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          nom: true,
-          quantite_sortie: true,
-          quantite_restante: true,
-          part_code: true,
-        },
-      });
-
-      return { ...created, PieceSAV: usagePieces };
+    const usagePieces = await prisma.pieceSAV.findMany({
+      where: { interventionDiagnosticOffertId: interventionId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        nom: true,
+        quantite_sortie: true,
+        quantite_restante: true,
+        part_code: true,
+      },
     });
+
+    const intervention = {
+      id: interventionId,
+      date_Intervention: now,
+      typeProduitUtilise,
+      niveau_Intervention,
+      voitureSAVId,
+      detailDiagnosticId,
+      groupePersonnelSAVId,
+      createdAt: now,
+      updatedAt: now,
+      PieceSAV: usagePieces,
+    };
 
     if (detailDiagnosticId) {
       const countAfter = (
