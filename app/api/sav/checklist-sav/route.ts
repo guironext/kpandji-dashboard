@@ -212,24 +212,35 @@ export async function POST(request: Request) {
         : "RECEPTION";
     data.type = type;
 
-    const existing = await prisma.checkListsSAV.findFirst({
-      where: { voitureSAVId, type },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true },
-    });
+    const saved = await prisma.$transaction(async (tx) => {
+      const existing = await tx.checkListsSAV.findFirst({
+        where: { voitureSAVId, type },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true },
+      });
 
-    const saved = existing
-      ? await prisma.checkListsSAV.update({
-          where: { id: existing.id },
-          data,
-        })
-      : await prisma.checkListsSAV.create({
-          data: {
-            ...data,
-            voitureSAVId,
-            type,
-          },
+      const checklist = existing
+        ? await tx.checkListsSAV.update({
+            where: { id: existing.id },
+            data,
+          })
+        : await tx.checkListsSAV.create({
+            data: {
+              ...data,
+              voitureSAVId,
+              type,
+            },
+          });
+
+      if (data.statut === "VALIDE") {
+        await tx.voitureSAV.update({
+          where: { id: voitureSAVId },
+          data: { statut: "DIAGNOSTIC_FINI" },
         });
+      }
+
+      return checklist;
+    });
 
     return NextResponse.json({ success: true, data: saved });
   } catch (error) {

@@ -7,6 +7,10 @@ export const dynamic = "force-dynamic";
 
 const STATUTS_VOITURE_SAV: StatutVoitureSAV[] = [
   "ARRIVE",
+  "DIAGNOSTIC_FINI",
+  "DISPATCHE",
+  "GARANTIESAV_EN_COURS",
+  "GARANTIESAV_TERMINE",
   "EN_TRAITEMENT",
   "TESTE",
   "TERMINE",
@@ -18,36 +22,66 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const statutParam = searchParams.get("statut");
     const includeDiagnostic = searchParams.get("includeDiagnostic") === "1";
+    const includeGarantie = searchParams.get("includeGarantie") === "1";
 
     const where =
       statutParam && STATUTS_VOITURE_SAV.includes(statutParam as StatutVoitureSAV)
         ? { statut: statutParam as StatutVoitureSAV }
         : undefined;
 
-    const voitures = await prisma.voitureSAV.findMany({
-      where,
-      include: {
-        ClientSAV: true,
-        Voiture: true,
-        ...(includeDiagnostic
-          ? {
-              diagnosticArrivee: {
-                orderBy: { createdAt: "asc" as const },
-                include: {
-                  catergorieDiagnostic: true,
-                  DetailDiagnostic: {
-                    orderBy: { createdAt: "asc" as const },
-                  },
-                  // Include full rows so we don’t reference fields missing from a stale generated client.
-                  // After `npx prisma generate`, detailDiagnosticId / quantiteSortieDetail are returned automatically.
-                  PieceSAV: true,
+    const include = {
+      ClientSAV: true,
+      Voiture: true,
+      ...(includeDiagnostic
+        ? {
+            diagnosticArrivee: {
+              orderBy: { createdAt: "asc" as const },
+              include: {
+                catergorieDiagnostic: true,
+                DetailDiagnostic: {
+                  orderBy: { createdAt: "asc" as const },
+                },
+                PieceSAV: true,
+              },
+            },
+          }
+        : {}),
+      ...(includeGarantie
+        ? {
+            GarantieSAV: {
+              orderBy: { createdAt: "desc" as const },
+              include: {
+                groupePersonnelSAV: {
+                  select: { id: true, nom: true },
                 },
               },
-            }
-          : {}),
-      },
-      orderBy: { createdAt: "desc" },
-    });
+            },
+          }
+        : {}),
+    } as const;
+
+    let voitures;
+    try {
+      voitures = await prisma.voitureSAV.findMany({
+        where,
+        include,
+        orderBy: { createdAt: "desc" },
+      });
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? (error as { code?: string }).code
+          : undefined;
+      // Some rows have null chassisNumber while an older Prisma client still
+      // typed the column as required. Skip the column so the list can load.
+      if (code !== "P2032") throw error;
+      voitures = await prisma.voitureSAV.findMany({
+        where,
+        include,
+        omit: { chassisNumber: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
     return NextResponse.json({ success: true, data: voitures });
   } catch (error) {
     console.error("API getVoitureSAV error:", error);

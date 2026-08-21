@@ -50,7 +50,7 @@ interface DetailDiagnostic {
 const emptyForm = { nom: "", description: "", prix_unitaire: "", catergorieDiagnosticId: "" };
 
 async function fetchDetails() {
-  const res = await fetch("/api/sav/detail-diagnostic");
+  const res = await fetch("/api/sav/detail-diagnostic?catalog=1");
   return res.json();
 }
 
@@ -436,7 +436,7 @@ export default function DetailsDiagnostiqueTab({ embedded = false }: { embedded?
           <Button
             onClick={handleOpenAdd}
             size="default"
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 rounded-xl px-6 font-medium shrink-0"
+            className="h-11 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 rounded-xl px-6 font-medium shrink-0 sm:h-10 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nouveau détail
@@ -499,7 +499,54 @@ export default function DetailsDiagnostiqueTab({ embedded = false }: { embedded?
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
+          <>
+          <div className="space-y-2.5 p-2 md:hidden">
+            {filteredDetails.map((d) => (
+              <div
+                key={d.id}
+                className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900">{d.nom}</p>
+                    {d.catergorieDiagnostic && (
+                      <Badge
+                        variant="outline"
+                        className={`mt-1.5 border text-[10px] ${categoryColorMap[d.catergorieDiagnosticId] ?? "bg-slate-100 text-slate-700 border-slate-200"}`}
+                      >
+                        {d.catergorieDiagnostic.nom}
+                      </Badge>
+                    )}
+                    {d.description && (
+                      <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">{d.description}</p>
+                    )}
+                    <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-700">
+                      {formatPrixFCFA(d.prix_unitaire)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => handleOpenEdit(d)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => handleOpenDelete(d)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto custom-scrollbar md:block">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/80 border-b border-slate-200 hover:bg-slate-50">
@@ -574,6 +621,7 @@ export default function DetailsDiagnostiqueTab({ embedded = false }: { embedded?
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </div>
 

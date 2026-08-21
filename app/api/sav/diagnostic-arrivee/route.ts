@@ -68,42 +68,100 @@ export async function POST(request: Request) {
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.diagnosticArrivee.deleteMany({
+      const existingArrivees = await tx.diagnosticArrivee.findMany({
         where: { voitureSAVId },
+        include: { DetailDiagnostic: true },
       });
+      const existingDetails = existingArrivees.flatMap(
+        (da) => da.DetailDiagnostic,
+      );
+      const daByCategory = new Map(
+        existingArrivees.map((da) => [da.catergorieDiagnosticId, da.id]),
+      );
 
-      const byCategory = new Map<string, typeof templates>();
-      for (const t of templates) {
-        if (!byCategory.has(t.catergorieDiagnosticId)) {
-          byCategory.set(t.catergorieDiagnosticId, []);
-        }
-        byCategory.get(t.catergorieDiagnosticId)!.push(t);
+      let referencedIds = new Set<string>();
+      try {
+        const rows = await tx.$queryRaw<{ id: string }[]>`
+          SELECT DISTINCT "detailDiagnosticId" AS id
+          FROM "InterventionDiagnosticOffert"
+          WHERE "voitureSAVId" = ${voitureSAVId}
+            AND "detailDiagnosticId" IS NOT NULL
+        `;
+        referencedIds = new Set(rows.map((r) => r.id));
+      } catch {
+        referencedIds = new Set();
       }
 
-      for (const [catergorieId, items] of byCategory) {
-        const diag = await tx.diagnosticArrivee.create({
-          data: {
-            voitureSAVId,
-            catergorieDiagnosticId: catergorieId,
-          },
-        });
-        for (const item of items) {
-          await tx.detailDiagnostic.create({
+      const keepIds = new Set<string>();
+
+      for (const t of templates) {
+        let daId = daByCategory.get(t.catergorieDiagnosticId);
+        if (!daId) {
+          const createdDa = await tx.diagnosticArrivee.create({
             data: {
-              nom: item.nom,
-              description: item.description,
-              prix_unitaire: item.prix_unitaire,
-              catergorieDiagnosticId: item.catergorieDiagnosticId,
-              diagnosticArriveeId: diag.id,
+              voitureSAVId,
+              catergorieDiagnosticId: t.catergorieDiagnosticId,
             },
           });
+          daId = createdDa.id;
+          daByCategory.set(t.catergorieDiagnosticId, daId);
+        }
+
+        const existing = existingDetails.find(
+          (d) =>
+            d.catergorieDiagnosticId === t.catergorieDiagnosticId &&
+            d.nom === t.nom,
+        );
+        if (existing) {
+          keepIds.add(existing.id);
+          if (existing.diagnosticArriveeId !== daId) {
+            await tx.detailDiagnostic.update({
+              where: { id: existing.id },
+              data: { diagnosticArriveeId: daId },
+            });
+          }
+          continue;
+        }
+
+        const created = await tx.detailDiagnostic.create({
+          data: {
+            nom: t.nom,
+            description: t.description,
+            prix_unitaire: t.prix_unitaire,
+            catergorieDiagnosticId: t.catergorieDiagnosticId,
+            diagnosticArriveeId: daId,
+          },
+        });
+        keepIds.add(created.id);
+      }
+
+      for (const d of existingDetails) {
+        if (d.garantieSAVId || d.reparationId || referencedIds.has(d.id)) {
+          keepIds.add(d.id);
         }
       }
 
-      await tx.voitureSAV.update({
-        where: { id: voitureSAVId },
-        data: { statut: "EN_TRAITEMENT" },
+      for (const d of existingDetails) {
+        if (keepIds.has(d.id)) continue;
+        await tx.detailDiagnostic.delete({ where: { id: d.id } });
+      }
+
+      const remainingDas = await tx.diagnosticArrivee.findMany({
+        where: { voitureSAVId },
+        include: { _count: { select: { DetailDiagnostic: true } } },
       });
+      for (const da of remainingDas) {
+        if (da._count.DetailDiagnostic === 0) {
+          await tx.diagnosticArrivee.delete({ where: { id: da.id } });
+        }
+      }
+
+      if (templates.length > 0 || keepIds.size > 0) {
+        await tx.voitureSAV.update({
+          where: { id: voitureSAVId },
+          data: { statut: "DIAGNOSTIC_FINI" },
+        });
+      }
     });
 
     const saved = await prisma.diagnosticArrivee.findMany({

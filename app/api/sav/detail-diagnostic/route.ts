@@ -3,9 +3,19 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const catalogOnly = searchParams.get("catalog") === "1";
+
     const details = await prisma.detailDiagnostic.findMany({
+      where: catalogOnly
+        ? {
+            diagnosticArriveeId: null,
+            reparationId: null,
+            garantieSAVId: null,
+          }
+        : undefined,
       include: {
         catergorieDiagnostic: true,
       },

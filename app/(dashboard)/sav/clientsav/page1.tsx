@@ -382,11 +382,11 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
       )}
 
       {embedded && (
-        <div className="mb-6 flex justify-end">
+        <div className="mb-3 flex justify-end sm:mb-5">
           <Button
             onClick={handleOpenAdd}
             size="default"
-            className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+            className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 sm:h-10 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Ajouter Client
@@ -395,7 +395,13 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
       )}
 
       {/* Table Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50 overflow-hidden">
+      <div
+        className={
+          embedded
+            ? "overflow-hidden"
+            : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50"
+        }
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
@@ -416,7 +422,54 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-2.5 md:hidden">
+            {clients.map((client) => (
+              <div
+                key={client.id}
+                className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3.5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-sm font-bold text-emerald-700">
+                    {(client.prenom?.[0] || "") + (client.nom?.[0] || "")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-900">
+                      {client.prenom} {client.nom}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-600">
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{client.contact}</span>
+                    </p>
+                    {(client.entreprise || client.localisation) && (
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        {[client.entreprise, client.localisation].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => handleOpenEdit(client)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => handleOpenDelete(client)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b-2 border-slate-200 hover:bg-slate-50">
@@ -480,6 +533,7 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </div>
 

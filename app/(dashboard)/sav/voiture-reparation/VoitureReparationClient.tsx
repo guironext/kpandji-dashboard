@@ -111,14 +111,29 @@ const CATEGORY_ACCENTS = [
 ];
 
 async function fetchVoituresEnTraitement(): Promise<VoitureSAVRow[]> {
-  const res = await fetch(
-    "/api/sav/voiture-sav?statut=EN_TRAITEMENT&includeDiagnostic=1"
-  );
-  const json = await res.json();
-  if (!res.ok || !json.success) {
-    throw new Error(json.error || "Erreur chargement des véhicules");
+  const [dispatched, enTraitement] = await Promise.all([
+    fetch("/api/sav/voiture-sav?statut=DISPATCHE&includeDiagnostic=1").then((r) =>
+      r.json(),
+    ),
+    fetch("/api/sav/voiture-sav?statut=EN_TRAITEMENT&includeDiagnostic=1").then(
+      (r) => r.json(),
+    ),
+  ]);
+
+  if (!dispatched.success && !enTraitement.success) {
+    throw new Error(
+      dispatched.error ||
+        enTraitement.error ||
+        "Erreur chargement des véhicules",
+    );
   }
-  return json.data || [];
+
+  const list = [
+    ...((dispatched.data || []) as VoitureSAVRow[]),
+    ...((enTraitement.data || []) as VoitureSAVRow[]),
+  ];
+  const byId = new Map(list.map((v) => [v.id, v]));
+  return Array.from(byId.values());
 }
 
 async function fetchPiecesStock(): Promise<PieceStockOption[]> {
@@ -816,8 +831,9 @@ export default function VoitureReparationClient() {
                 </h3>
                 <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
                   Les véhicules au statut{" "}
-                  <span className="font-medium text-slate-700">EN_TRAITEMENT</span> apparaîtront ici
-                  avec leurs diagnostics d&apos;arrivée.
+                  <span className="font-medium text-slate-700">DISPATCHE</span> ou{" "}
+                  <span className="font-medium text-slate-700">EN_TRAITEMENT</span>{" "}
+                  apparaîtront ici avec leurs diagnostics d&apos;arrivée.
                 </p>
               </CardContent>
             </div>

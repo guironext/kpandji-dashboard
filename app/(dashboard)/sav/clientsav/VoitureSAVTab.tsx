@@ -244,7 +244,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
 
   const renderForm = (prefix: string) => (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-model`}>Modèle *</Label>
           <Input
@@ -268,7 +268,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Motorisation *</Label>
           <Select
@@ -306,7 +306,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-couleur`}>Couleur *</Label>
           <Input
@@ -356,7 +356,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
 
   return (
     <div>
-      <div className={embedded ? "mb-6 flex justify-end" : "mb-6 flex items-center justify-between"}>
+      <div className={embedded ? "mb-3 flex justify-end sm:mb-5" : "mb-6 flex items-center justify-between"}>
         {!embedded && (
           <div className="flex items-center gap-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2">
@@ -368,14 +368,20 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
         <Button
           onClick={handleOpenAdd}
           size="default"
-          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+          className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 sm:h-10 sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Ajouter Voiture SAV
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50 overflow-hidden">
+      <div
+        className={
+          embedded
+            ? "overflow-hidden"
+            : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50"
+        }
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
@@ -396,7 +402,55 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-2.5 md:hidden">
+            {voitures.map((v) => (
+              <div
+                key={v.id}
+                className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3.5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <Car className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-900">{v.model}</p>
+                    <p className="mt-0.5 font-mono text-sm text-slate-600">
+                      {v.immatriculation || "—"}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {[
+                        MOTORISATIONS.find((m) => m.value === v.motorisation)?.label ?? v.motorisation,
+                        TRANSMISSIONS.find((t) => t.value === v.transmission)?.label ?? v.transmission,
+                        v.ClientSAV ? `${v.ClientSAV.prenom} ${v.ClientSAV.nom}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => handleOpenEdit(v)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => handleOpenDelete(v)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b-2 border-slate-200 hover:bg-slate-50">
@@ -452,6 +506,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </div>
 

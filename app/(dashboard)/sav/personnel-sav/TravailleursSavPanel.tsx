@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { Loader2, Plus, UserPlus } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 type GroupeLite = {
@@ -58,7 +58,13 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
   const [groupes, setGroupes] = useState<GroupeLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPersonnel, setEditingPersonnel] = useState<PersonnelRow | null>(
+    null,
+  );
+  const [personnelToDelete, setPersonnelToDelete] =
+    useState<PersonnelRow | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [nouveauGroupeNom, setNouveauGroupeNom] = useState("");
   const [creatingGroupe, setCreatingGroupe] = useState(false);
 
@@ -106,11 +112,28 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
     setTelephone("");
     setSpecialite("");
     setGroupeId("");
+    setEditingPersonnel(null);
   };
 
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) resetForm();
+  };
+
+  const handleOpenAdd = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (personnel: PersonnelRow) => {
+    setEditingPersonnel(personnel);
+    setNom(personnel.nom);
+    setPrenom(personnel.prenom);
+    setEmail(personnel.email);
+    setTelephone(personnel.telephone);
+    setSpecialite(personnel.specialite);
+    setGroupeId(personnel.groupePersonnelSAVId);
+    setDialogOpen(true);
   };
 
   const handleCreateGroupeRapide = async (e: React.FormEvent) => {
@@ -150,23 +173,32 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/sav/personnel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom,
-          prenom,
-          email,
-          telephone,
-          specialite,
-          groupePersonnelSAVId: groupeId,
-        }),
-      });
+      const res = await fetch(
+        editingPersonnel
+          ? `/api/sav/personnel/${editingPersonnel.id}`
+          : "/api/sav/personnel",
+        {
+          method: editingPersonnel ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nom,
+            prenom,
+            email,
+            telephone,
+            specialite,
+            groupePersonnelSAVId: groupeId,
+          }),
+        },
+      );
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Enregistrement impossible");
       }
-      toast.success("Travailleur enregistré");
+      toast.success(
+        editingPersonnel
+          ? "Travailleur mis à jour"
+          : "Travailleur enregistré",
+      );
       handleOpenChange(false);
       await load();
       onStatsChange?.();
@@ -174,6 +206,28 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
       toast.error(err instanceof Error ? err.message : "Erreur");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!personnelToDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/sav/personnel/${personnelToDelete.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Suppression impossible");
+      }
+      toast.success("Travailleur supprimé");
+      setPersonnelToDelete(null);
+      await load();
+      onStatsChange?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -192,7 +246,7 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
         </div>
         <Button
           type="button"
-          onClick={() => setDialogOpen(true)}
+          onClick={handleOpenAdd}
           disabled={!hasGroupes}
           className="shrink-0 gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md hover:from-emerald-700 hover:to-teal-800 disabled:opacity-60"
         >
@@ -245,10 +299,15 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
       <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nouveau travailleur</DialogTitle>
+            <DialogTitle>
+              {editingPersonnel
+                ? "Modifier le travailleur"
+                : "Nouveau travailleur"}
+            </DialogTitle>
             <DialogDescription>
-              Renseignez les informations du membre du personnel SAV. Tous les
-              champs sont obligatoires.
+              {editingPersonnel
+                ? "Mettez à jour les informations du membre du personnel SAV."
+                : "Renseignez les informations du membre du personnel SAV. Tous les champs sont obligatoires."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitPersonnel} className="space-y-4">
@@ -343,6 +402,54 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={Boolean(personnelToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPersonnelToDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Supprimer le travailleur</DialogTitle>
+            <DialogDescription>
+              {personnelToDelete ? (
+                <>
+                  Êtes-vous sûr de vouloir supprimer{" "}
+                  <strong>
+                    {personnelToDelete.prenom} {personnelToDelete.nom}
+                  </strong>{" "}
+                  ? Cette action est irréversible.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleting}
+              onClick={() => setPersonnelToDelete(null)}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleting}
+              className="gap-2"
+              onClick={() => void handleConfirmDelete()}
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950/40">
         <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -371,6 +478,7 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
                 <TableHead>Contact</TableHead>
                 <TableHead>Spécialité</TableHead>
                 <TableHead className="hidden sm:table-cell">Groupe</TableHead>
+                <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -392,6 +500,32 @@ export default function TravailleursSavPanel({ onStatsChange }: Props) {
                   <TableCell>{p.specialite}</TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
                     {p.groupePersonnelSAV.nom}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg text-slate-600 hover:bg-emerald-100/80 hover:text-emerald-700"
+                        aria-label={`Modifier ${p.prenom} ${p.nom}`}
+                        title="Modifier"
+                        onClick={() => handleOpenEdit(p)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg text-slate-600 hover:bg-red-100/80 hover:text-red-600"
+                        aria-label={`Supprimer ${p.prenom} ${p.nom}`}
+                        title="Supprimer"
+                        onClick={() => setPersonnelToDelete(p)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

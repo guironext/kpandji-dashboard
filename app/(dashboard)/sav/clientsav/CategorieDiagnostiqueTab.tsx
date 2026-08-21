@@ -206,7 +206,7 @@ export default function CategorieDiagnostiqueTab({ embedded = false }: { embedde
 
   return (
     <div>
-      <div className={embedded ? "mb-6 flex justify-end" : "mb-6 flex items-center justify-between"}>
+      <div className={embedded ? "mb-4 flex justify-end sm:mb-6" : "mb-6 flex items-center justify-between"}>
         {!embedded && (
           <div className="flex items-center gap-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2">
@@ -218,7 +218,7 @@ export default function CategorieDiagnostiqueTab({ embedded = false }: { embedde
         <Button
           onClick={handleOpenAdd}
           size="default"
-          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700"
+          className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 sm:h-10 sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Ajouter Nouvelle Catégorie
@@ -246,7 +246,46 @@ export default function CategorieDiagnostiqueTab({ embedded = false }: { embedde
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-2.5 p-2 md:hidden">
+            {categories.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                    <FolderOpen className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-900">{c.nom}</p>
+                    <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">
+                      {c.description || "Aucune description"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => handleOpenEdit(c)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => handleOpenDelete(c)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b-2 border-slate-200 hover:bg-slate-50">
@@ -290,6 +329,7 @@ export default function CategorieDiagnostiqueTab({ embedded = false }: { embedde
               </TableBody>
             </Table>
           </div>
+          </>
         )}
       </div>
 

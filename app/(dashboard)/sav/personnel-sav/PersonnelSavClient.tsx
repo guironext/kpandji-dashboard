@@ -15,58 +15,7 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import TravailleursSavPanel from "./TravailleursSavPanel";
-
-function EmptyPanel({
-  icon: Icon,
-  title,
-  description,
-  accentClass,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  accentClass: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-dashed bg-gradient-to-br p-10 sm:p-14",
-        "from-slate-50/90 via-white to-slate-50/50 dark:from-slate-950/40 dark:via-slate-900/30 dark:to-slate-950/50",
-        "border-slate-200/90 dark:border-slate-700/80",
-        "shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset] dark:shadow-none",
-        "animate-in fade-in slide-in-from-bottom-3 duration-500",
-      )}
-    >
-      <div
-        className={cn(
-          "pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-[0.12] blur-3xl",
-          accentClass,
-        )}
-        aria-hidden
-      />
-      <div className="relative mx-auto flex max-w-md flex-col items-center text-center">
-        <div
-          className={cn(
-            "mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border shadow-sm",
-            "border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-900",
-          )}
-        >
-          <Icon className="h-8 w-8 text-slate-500 dark:text-slate-400" strokeWidth={1.5} />
-        </div>
-        <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-          {title}
-        </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-          {description}
-        </p>
-        <div className="mt-8 h-px w-24 bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-600" />
-        <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Liste à venir
-        </p>
-      </div>
-    </div>
-  );
-}
+import GroupesSavPanel from "./GroupesSavPanel";
 
 export default function PersonnelSavClient() {
   const [statsTick, setStatsTick] = useState(0);
@@ -208,12 +157,7 @@ export default function PersonnelSavClient() {
           value="groupe"
           className="mt-8 focus-visible:outline-none focus-visible:ring-0"
         >
-          <EmptyPanel
-            icon={UsersRound}
-            title="Aucun groupe défini"
-            description="Créez des groupes pour organiser les équipes par atelier, spécialité ou créneau. Les groupes pourront être liés aux interventions et plannings."
-            accentClass="bg-cyan-500"
-          />
+          <GroupesSavPanel onStatsChange={refreshStats} />
         </TabsContent>
       </Tabs>
     </div>

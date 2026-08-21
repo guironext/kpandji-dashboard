@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowRightLeft,
   Boxes,
   Home,
   PackagePlus,
@@ -15,6 +16,7 @@ import {
   CircleCheck,
   BadgePercent,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -31,90 +33,104 @@ const navItems = [
   },
   {
     id: 2,
+    icon: Settings,
+    label: "Configuration SAV",
+    href: "/sav/configuration-sav",
+    category: "main",
+  },
+  {
+    id: 3,
+    icon: UserCog,
+    label: "Personnel SAV",
+    href: "/sav/personnel-sav",
+    category: "main",
+  },
+  {
+    id: 4,
     icon: Users,
     label: "Clients SAV",
     href: "/sav/clientsav",
     category: "operations",
   },
   {
-    id: 3,
+    id: 5,
     icon: ClipboardList,
     label: "Diagnostique Arrivée",
     href: "/sav/diagnostique-arrivee",
     category: "operations",
   },
   {
-    id: 4,
+    id: 6,
+    icon: ArrowRightLeft,
+    label: "Dispatching",
+    href: "/sav/dispatching",
+    category: "operations",
+  },
+  {
+    id: 7,
     icon: BadgePercent,
     label: "Offre Spéciale",
     href: "/sav/offre-speciale",
     category: "operations",
   },
   {
-    id: 5,
+    id: 8,
     icon: CarFront,
     label: "Voiture Réparation",
     href: "/sav/voiture-reparation",
     category: "operations",
   },
   {
-    id: 6,
+    id: 9,
     icon: FileSpreadsheet,
     label: "Proforma SAV",
     href: "/sav/proforma-sav",
     category: "operations",
   },
   {
-    id: 7,
+    id: 10,
     icon: Wrench,
     label: "Maintenance",
     href: "/sav/maintenance",
     category: "operations",
   },
   {
-    id: 8,
+    id: 11,
     icon: CircleCheck,
-    label: "Teste final",
+    label: "Test final",
     href: "/sav/teste-final",
     category: "operations",
   },
   {
-    id: 9,
+    id: 12,
     icon: Receipt,
     label: "Facturation SAV",
     href: "/sav/facturation-sav",
     category: "operations",
   },
   {
-    id: 10,
-    icon: FileText,
-    label: "Rapport Maintenance",
-    href: "/sav/rapport-maintenance",
-    category: "reports",
-  },
-  {
-    id: 11,
+    id: 13,
     icon: PackagePlus,
     label: "Ajouter Pièces SAV",
     href: "/sav/ajouter-pieces-sav",
     category: "inventory",
   },
   {
-    id: 12,
+    id: 14,
     icon: Boxes,
     label: "Gestion pièces SAV",
     href: "/sav/gestion-pieces-sav",
     category: "inventory",
   },
   {
-    id: 13,
-    icon: UserCog,
-    label: "Personnel SAV",
-    href: "/sav/personnel-sav",
-    category: "operations",
+    id: 15,
+    icon: FileText,
+    label: "Rapport Maintenance",
+    href: "/sav/rapport-maintenance",
+    category: "reports",
   },
   {
-    id: 14,
+    id: 16,
     icon: BarChart3,
     label: "Statistiques SAV",
     href: "/sav/statistiques-sav",
@@ -130,6 +146,11 @@ const categoryLabels: Record<(typeof CATEGORY_ORDER)[number], string> = {
   operations: "Opérations",
   reports: "Rapports",
 };
+
+function isNavActive(pathname: string, href: string) {
+  if (href === "/sav") return pathname === "/sav";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 const SidebarSav = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
@@ -193,7 +214,7 @@ const SidebarSav = ({ isOpen }: { isOpen: boolean }) => {
               )}
 
               {items.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isNavActive(pathname, item.href);
                 const Icon = item.icon;
 
                 return (

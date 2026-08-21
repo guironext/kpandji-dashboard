@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 /** Bump when schema fields/models change so the global singleton reloads after `prisma generate`. */
-const PRISMA_SCHEMA_REVISION = 2;
+const PRISMA_SCHEMA_REVISION = 8;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

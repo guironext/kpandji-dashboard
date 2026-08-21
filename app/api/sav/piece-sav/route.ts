@@ -15,6 +15,7 @@ export async function GET() {
         part_code: true,
         quantite_restante: true,
         quantite_sortie: true,
+        interventionDiagnosticOffertId: true,
       },
     });
     return NextResponse.json({ success: true, data: pieces });

@@ -1596,7 +1596,8 @@ model VoitureSAV {
   transmission      Transmission
   couleur           String
   nbr_portes        String
-  immatriculation   String
+  immatriculation   String?
+  chassisNumber     String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   statut            StatutVoitureSAV    @default(ARRIVE)
@@ -1604,11 +1605,26 @@ model VoitureSAV {
   Voiture           Voiture             @relation(fields: [voitureId], references: [id], onDelete: Cascade)
   diagnosticArrivee       DiagnosticArrivee[]
   Reparation              Reparation[]
+  GarantieSAV             GarantieSAV[]
   VisuelDefaut            VisuelDefaut[]
   RapportMaintenanceSAV   RapportMaintenanceSAV[]
   CheckListsSAV           CheckListsSAV[]
+  voitureSavGarantieId    String?
+  VoitureSavGarantie      VoitureSavGarantie? @relation(fields: [voitureSavGarantieId], references: [id], onDelete: SetNull)
   clientSAVId             String
   ClientSAV               ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
+  diagnosticOffert        DiagnosticOffert[]
+  InterventionDiagnosticOffert InterventionDiagnosticOffert[]
+}
+
+model VoitureSavGarantie {
+  id              String       @id @default(uuid())
+  marqueVoiture   String       @default("KPANDJI")
+  modelVoiture    String
+  chassisNumber   String?
+  immatriculation String?
+  couleur         String
+  VoitureSAV      VoitureSAV[]
 }
 
 enum TypeRapportMaintenanceSAV {
@@ -1651,6 +1667,10 @@ model RapportMaintenanceSAV {
 
 enum StatutVoitureSAV {
   ARRIVE
+  DIAGNOSTIC_FINI
+  DISPATCHE
+  GARANTIESAV_EN_COURS
+  GARANTIESAV_TERMINE
   EN_TRAITEMENT
   TESTE
   TERMINE
@@ -1688,11 +1708,14 @@ model DetailDiagnostic {
   diagnosticArrivee      DiagnosticArrivee?   @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
   reparationId           String?
   reparation             Reparation?          @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  garantieSAVId          String?
+  garantieSAV            GarantieSAV?         @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   catergorieDiagnosticId String
   catergorieDiagnostic   CatergorieDiagnostic @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
   PieceSAV               PieceSAV[]
+  InterventionDiagnosticOffert InterventionDiagnosticOffert[]
 }
 
 model DiagnosticArrivee {
@@ -1705,6 +1728,42 @@ model DiagnosticArrivee {
   catergorieDiagnostic   CatergorieDiagnostic @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
   DetailDiagnostic       DetailDiagnostic[]
   PieceSAV               PieceSAV[]
+  DiagnosticOffert       DiagnosticOffert[]
+}
+
+model DiagnosticOffert {
+  id                               String                         @id @default(uuid())
+  libelle                          String
+  date_activation                  DateTime
+  date_fin                         DateTime
+  voitureSAVId                     String?
+  voitureSAV                       VoitureSAV?                    @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  diagnosticArriveeId              String?
+  diagnosticArrivee                DiagnosticArrivee?             @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
+  interventionDiagnosticOffertId   String?
+  interventionDiagnosticOffert     InterventionDiagnosticOffert?  @relation(fields: [interventionDiagnosticOffertId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime                       @default(now())
+  updatedAt                        DateTime                       @updatedAt
+}
+
+model InterventionDiagnosticOffert {
+  id                   String              @id @default(uuid())
+  date_Intervention    DateTime
+  typeProduitUtilise   String
+  niveau_Intervention  Int                 @default(1)
+  typeDiagnosticOffert DiagnosticOffert[]
+  PieceSAV             PieceSAV[]
+  voitureSAVId         String
+  voitureSAV           VoitureSAV          @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  detailDiagnosticId   String?
+  detailDiagnostic     DetailDiagnostic?   @relation(fields: [detailDiagnosticId], references: [id], onDelete: SetNull)
+  groupePersonnelSAVId String?
+  groupePersonnelSAV   GroupePersonnelSAV? @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([voitureSAVId])
+  @@index([detailDiagnosticId])
 }
 
 model PieceSAV {
@@ -1723,6 +1782,8 @@ model PieceSAV {
 
   reparationId String?
   reparation   Reparation? @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  garantieSAVId String?
+  garantieSAV   GarantieSAV? @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
 
   diagnosticArriveeId String?
   diagnosticArrivee   DiagnosticArrivee? @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
@@ -1731,6 +1792,9 @@ model PieceSAV {
   detailDiagnostic     DetailDiagnostic? @relation(fields: [detailDiagnosticId], references: [id], onDelete: SetNull)
   /// Quantité sortie réservée à cette ligne de diagnostic (même ligne que detailDiagnosticId)
   quantiteSortieDetail Int               @default(0)
+
+  interventionDiagnosticOffertId String?
+  interventionDiagnosticOffert   InterventionDiagnosticOffert? @relation(fields: [interventionDiagnosticOffertId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1754,6 +1818,8 @@ model Reparation {
   PieceSAV           PieceSAV[]
   FactureProformaSAV FactureProformaSAV[]
   Maintenance        Maintenance[]
+  groupePersonnelSAVId String?
+  groupePersonnelSAV   GroupePersonnelSAV? @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
 }
 
 enum StatutReparation {
@@ -1765,6 +1831,38 @@ enum StatutReparation {
   EN_MAINTENANCE
 }
 
+model GarantieSAV {
+  id                       String   @id @default(uuid())
+  categorie_garantie       String
+  nom_garantie             String?
+  quantite_garantie_offert Int?
+  prix_unitaire            Decimal? @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  voitureSAVId       String?
+  voitureSAV         VoitureSAV?          @relation(fields: [voitureSAVId], references: [id], onDelete: SetNull)
+  statut             StatutGarantie     @default(EN_TRAITEMENT)
+  DetailDiagnostic   DetailDiagnostic[]
+  PieceSAV           PieceSAV[]
+  FactureProformaSAV FactureProformaSAV[]
+  Maintenance        Maintenance[]
+  groupePersonnelSAVId String?
+  groupePersonnelSAV   GroupePersonnelSAV? @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
+}
+
+enum StatutGarantie{
+  EN_ATTENTE
+  EN_TRAITEMENT
+  TESTE
+  TERMINE
+  ANNULE
+  EN_MAINTENANCE
+}
+
+
+
+
 model Maintenance {
   id                     String                @id @default(uuid())
   nom                    String
@@ -1773,6 +1871,8 @@ model Maintenance {
   prix_maintenance       Decimal?
   reparationId           String
   reparation             Reparation            @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  garantieSAVId          String?
+  garantieSAV            GarantieSAV?          @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
   catergorieDiagnosticId String?
   catergorieDiagnostic   CatergorieDiagnostic? @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: SetNull)
   factureProformaSAVs    FactureProformaSAV[]
@@ -1807,6 +1907,8 @@ model FactureProformaSAV {
   reparation     Reparation  @relation(fields: [reparationId], references: [id], onDelete: Cascade)
   maintenanceId  String
   maintenance    Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  garantieSAVId  String?
+  garantieSAV    GarantieSAV? @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
 }
 
 model PersonnelSAV {
@@ -1829,6 +1931,9 @@ model GroupePersonnelSAV {
   personnelSAVs PersonnelSAV[] @relation("PersonnelGroupeMembres")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  reparations   Reparation[]
+  garanties     GarantieSAV[]
+  InterventionDiagnosticOffert InterventionDiagnosticOffert[]
 }
 
 enum StatutCheckListSAV {

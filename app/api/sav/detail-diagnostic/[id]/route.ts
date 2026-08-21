@@ -42,6 +42,30 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const existing = await prisma.detailDiagnostic.findUnique({
+      where: { id },
+      select: {
+        diagnosticArriveeId: true,
+        reparationId: true,
+        garantieSAVId: true,
+      },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Détail diagnostique introuvable" },
+        { status: 404 },
+      );
+    }
+    if (existing.diagnosticArriveeId || existing.reparationId || existing.garantieSAVId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Ce détail est déjà utilisé sur un diagnostic véhicule et ne peut pas être supprimé",
+        },
+        { status: 409 },
+      );
+    }
     await prisma.detailDiagnostic.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

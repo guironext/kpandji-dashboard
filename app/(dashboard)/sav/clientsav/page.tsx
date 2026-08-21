@@ -3,96 +3,50 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowUpRight,
-  Car,
-  ChevronRight,
-  FileText,
-  FolderOpen,
-  LayoutGrid,
-  Sparkles,
-  User,
-  Wrench,
-} from "lucide-react";
+import { Car, ChevronRight, LayoutGrid, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ClientSAVPage from "./page1";
 import VoitureSAVTab from "./VoitureSAVTab";
-import CategorieDiagnostiqueTab from "./CategorieDiagnostiqueTab";
-import DetailsDiagnostiqueTab from "./DetailsDiagnostiqueTab";
 
-type TabValue = "client" | "voiture" | "categorie-diagnostique" | "details-diagnostique";
+type TabValue = "client" | "voiture";
 
 const tabConfig: {
   value: TabValue;
   label: string;
-  shortLabel: string;
-  icon: typeof User;
   description: string;
+  icon: typeof User;
   accent: string;
   iconBg: string;
-  ring: string;
   statKey: keyof PageStats;
 }[] = [
   {
     value: "client",
     label: "Clients",
-    shortLabel: "Clients SAV",
+    description: "Dossiers et contacts",
     icon: User,
-    description: "Dossiers et contacts clients",
-    accent: "from-teal-500 via-cyan-500 to-sky-500",
-    iconBg: "bg-teal-50 text-teal-700 border-teal-100",
-    ring: "ring-teal-500/30",
+    accent: "from-teal-500 to-cyan-600",
+    iconBg: "bg-teal-50 text-teal-700",
     statKey: "clients",
   },
   {
     value: "voiture",
     label: "Véhicules",
-    shortLabel: "Parc auto",
+    description: "Parc rattaché aux clients",
     icon: Car,
-    description: "Véhicules rattachés aux clients",
-    accent: "from-emerald-500 via-green-500 to-teal-500",
-    iconBg: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    ring: "ring-emerald-500/30",
+    accent: "from-emerald-500 to-teal-600",
+    iconBg: "bg-emerald-50 text-emerald-700",
     statKey: "voitures",
-  },
-  {
-    value: "categorie-diagnostique",
-    label: "Catégories",
-    shortLabel: "Diagnostics",
-    icon: FolderOpen,
-    description: "Types et familles d'interventions",
-    accent: "from-sky-500 via-blue-500 to-indigo-500",
-    iconBg: "bg-sky-50 text-sky-700 border-sky-100",
-    ring: "ring-sky-500/30",
-    statKey: "categories",
-  },
-  {
-    value: "details-diagnostique",
-    label: "Détails",
-    shortLabel: "Prestations",
-    icon: FileText,
-    description: "Interventions et tarification FCFA",
-    accent: "from-violet-500 via-purple-500 to-fuchsia-500",
-    iconBg: "bg-violet-50 text-violet-700 border-violet-100",
-    ring: "ring-violet-500/30",
-    statKey: "details",
   },
 ];
 
 type PageStats = {
   clients: number;
   voitures: number;
-  categories: number;
-  details: number;
 };
 
 const emptyStats: PageStats = {
   clients: 0,
   voitures: 0,
-  categories: 0,
-  details: 0,
 };
 
 async function fetchStatCount(url: string): Promise<number> {
@@ -116,15 +70,13 @@ export default function ClientSavPage() {
 
     async function loadStats() {
       setStatsLoading(true);
-      const [clients, voitures, categories, details] = await Promise.all([
+      const [clients, voitures] = await Promise.all([
         fetchStatCount("/api/sav/client-sav"),
         fetchStatCount("/api/sav/voiture-sav"),
-        fetchStatCount("/api/sav/categorie-diagnostic"),
-        fetchStatCount("/api/sav/detail-diagnostic"),
       ]);
 
       if (!cancelled) {
-        setStats({ clients, voitures, categories, details });
+        setStats({ clients, voitures });
         setStatsLoading(false);
       }
     }
@@ -137,224 +89,184 @@ export default function ClientSavPage() {
 
   const activeConfig = tabConfig.find((t) => t.value === activeTab)!;
   const ActiveIcon = activeConfig.icon;
-  const totalRecords = stats.clients + stats.voitures + stats.categories + stats.details;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="relative min-h-full bg-[#f3f6fa]">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(8,145,178,0.08),transparent_24%),linear-gradient(to_bottom,#f8fafc,#ffffff_40%,#f1f5f9)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.08),transparent_26%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.06),transparent_22%)]"
         aria-hidden
       />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-teal-950 to-cyan-950" />
-        <div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(13,148,136,0.28),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(8,145,178,0.24),transparent_28%),radial-gradient(circle_at_70%_80%,rgba(52,211,153,0.12),transparent_30%)]"
-          aria-hidden
-        />
-
-        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 sm:pb-28 sm:pt-8 lg:px-8 lg:pb-32">
-          <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+      <div className="relative mx-auto max-w-7xl px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-12 sm:pt-6 lg:px-8">
+        <header className="mb-3 sm:mb-6">
+          <nav className="mb-2.5 flex flex-wrap items-center gap-1 text-[11px] text-slate-400 sm:mb-3 sm:text-sm">
             <Link
               href="/sav"
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors hover:bg-white hover:text-slate-700"
             >
               <LayoutGrid className="h-3.5 w-3.5" />
               SAV
             </Link>
             <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" />
-            <span className="font-medium text-teal-200">Dossiers référentiels</span>
+            <span className="font-medium text-slate-600">Clients SAV</span>
           </nav>
 
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-teal-100 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-teal-300" />
-                SAV · Référentiels
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/25 sm:h-12 sm:w-12">
+                <ActiveIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 shadow-2xl ring-1 ring-white/20 backdrop-blur-md">
-                  <Wrench className="h-7 w-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                    Client SAV
-                  </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Gestion centralisée des clients, véhicules et catalogue de diagnostics —
-                    la base de tous vos dossiers après-vente.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge
-                  variant="outline"
-                  className="rounded-full border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 backdrop-blur-sm"
-                >
-                  {statsLoading ? "…" : `${totalRecords} enregistrement(s)`}
-                </Badge>
-                {!statsLoading && stats.clients === 0 && (
-                  <Badge className="rounded-full border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-100 hover:bg-amber-400/10">
-                    Commencez par ajouter un client
-                  </Badge>
-                )}
+              <div className="min-w-0 pt-0.5">
+                <h1 className="text-[1.35rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-2xl lg:text-[1.75rem]">
+                  Client SAV
+                </h1>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                  Clients et véhicules du service après-vente.
+                </p>
               </div>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:flex-col">
-              <button
-                type="button"
-                onClick={() => setActiveTab("client")}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-0 bg-white px-6 py-3 text-sm font-semibold text-teal-950 shadow-xl shadow-black/20 transition hover:bg-teal-50 sm:w-auto"
-              >
-                Gérer les clients
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-              <Link
-                href="/sav/diagnostique-arrivee"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/10 sm:w-auto"
-              >
-                Diagnostic arrivée
-                <ChevronRight className="h-4 w-4" />
-              </Link>
+            <div className="hidden shrink-0 items-center gap-2 sm:flex">
+              {tabConfig.map((tab) => {
+                const count = stats[tab.statKey];
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveTab(tab.value)}
+                    className={cn(
+                      "rounded-2xl px-3.5 py-2 text-left ring-1 transition",
+                      activeTab === tab.value
+                        ? "bg-white shadow-sm ring-slate-200"
+                        : "bg-white/60 ring-transparent hover:bg-white hover:ring-slate-200"
+                    )}
+                  >
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      {tab.label}
+                    </p>
+                    <p className="font-mono text-xl font-semibold tabular-nums text-slate-900">
+                      {statsLoading ? "—" : count}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
-      </section>
+        </header>
 
-      {/* KPI tab selectors + content */}
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-        <div className="-mt-16 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {tabConfig.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.value;
-            const count = stats[tab.statKey];
+        {/* Mobile + all: sticky 2-way segmented control */}
+        <nav
+          className="sticky top-16 z-30 -mx-3 mb-3 border-b border-slate-200/70 bg-[#f3f6fa]/92 px-3 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:mb-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none"
+          aria-label="Sections clients SAV"
+        >
+          <div
+            role="tablist"
+            className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200/80"
+          >
+            {tabConfig.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.value;
+              const count = stats[tab.statKey];
 
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setActiveTab(tab.value)}
-                className={cn(
-                  "group block w-full text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2",
-                  isActive ? "-translate-y-0.5" : "hover:-translate-y-1"
-                )}
-              >
-                <Card
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.value)}
                   className={cn(
-                    "overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/50 backdrop-blur-xl transition duration-300",
+                    "relative flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center transition touch-manipulation sm:min-h-[3.5rem] sm:justify-start sm:px-4",
                     isActive
-                      ? cn("shadow-2xl shadow-slate-200/70 ring-2 ring-offset-2", tab.ring)
-                      : "hover:shadow-2xl hover:shadow-slate-200/70"
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "text-slate-500 active:bg-slate-50 sm:hover:bg-slate-50"
                   )}
                 >
-                  <div className={cn("h-1 bg-gradient-to-r", tab.accent)} />
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          {tab.shortLabel}
-                        </p>
-                        <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-slate-950">
-                          {statsLoading ? "—" : count}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-slate-500">{tab.description}</p>
-                      </div>
-                      <div
-                        className={cn(
-                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition",
-                          isActive ? tab.iconBg : "border-slate-100 bg-slate-50 text-slate-500 group-hover:border-slate-200"
-                        )}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </button>
-            );
-          })}
-        </div>
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                      isActive ? "bg-white/15 text-white" : tab.iconBg
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block truncate text-[13px] font-semibold leading-tight sm:text-sm">
+                      {tab.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "hidden truncate text-[11px] sm:block",
+                        isActive ? "text-white/70" : "text-slate-400"
+                      )}
+                    >
+                      {tab.description}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "ml-auto hidden min-w-[1.5rem] rounded-full px-2 py-0.5 text-xs font-bold tabular-nums sm:inline-block",
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    )}
+                  >
+                    {statsLoading ? "—" : count}
+                  </span>
+                  <span
+                    className={cn(
+                      "absolute right-2 top-1.5 min-w-[1.15rem] rounded-full px-1 text-[10px] font-bold tabular-nums leading-4 sm:hidden",
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    )}
+                  >
+                    {statsLoading ? "·" : count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-        {/* Active section header */}
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+        <section>
+          <div className="mb-3 hidden items-center gap-3 sm:mb-4 sm:flex">
             <div
               className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-xl border bg-gradient-to-br text-white shadow-lg",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md",
                 activeConfig.accent
               )}
             >
               <ActiveIcon className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold tracking-tight text-slate-900">
                 {activeConfig.label}
               </h2>
-              <p className="text-sm text-slate-500">{activeConfig.description}</p>
+              <p className="truncate text-sm text-slate-500">{activeConfig.description}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {tabConfig.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => setActiveTab(tab.value)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
-                    isActive
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                  )}
+
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as TabValue)}
+            className="mt-0"
+          >
+            <div className="overflow-hidden rounded-[1.25rem] bg-white shadow-sm ring-1 ring-slate-200/80 sm:rounded-3xl">
+              <div className="p-3 sm:p-5 lg:p-6">
+                <TabsContent
+                  value="client"
+                  className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
                 >
-                  <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  <ClientSAVPage embedded />
+                </TabsContent>
 
-        {/* Tab content */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="mt-6">
-          <Card className="overflow-hidden border-0 bg-white/95 shadow-xl shadow-slate-200/40 ring-1 ring-slate-100 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6 lg:p-8">
-              <TabsContent
-                value="client"
-                className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300"
-              >
-                <ClientSAVPage embedded />
-              </TabsContent>
-
-              <TabsContent
-                value="voiture"
-                className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300"
-              >
-                <VoitureSAVTab embedded />
-              </TabsContent>
-
-              <TabsContent
-                value="categorie-diagnostique"
-                className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300"
-              >
-                <CategorieDiagnostiqueTab embedded />
-              </TabsContent>
-
-              <TabsContent
-                value="details-diagnostique"
-                className="mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300"
-              >
-                <DetailsDiagnostiqueTab embedded />
-              </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
+                <TabsContent
+                  value="voiture"
+                  className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
+                >
+                  <VoitureSAVTab embedded />
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
+        </section>
       </div>
     </div>
   );

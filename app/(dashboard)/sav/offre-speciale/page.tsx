@@ -1,9 +1,5 @@
-import React from 'react'
+import OffreSpecialeClient from "./OffreSpecialeClient";
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function OffreSpecialePage() {
+  return <OffreSpecialeClient />;
 }
-
-export default page
