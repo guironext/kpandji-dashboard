@@ -18,10 +18,8 @@ import {
 import {
   Loader2,
   Car,
-  ClipboardList,
   Save,
   User,
-  Hash,
   CheckCircle2,
   Fuel,
   Gauge,

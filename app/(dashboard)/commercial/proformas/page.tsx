@@ -1638,9 +1638,12 @@ export default function Page() {
 												}`}>
 												<div className="flex h-20 w-full items-center justify-center rounded-md bg-gray-50">
 													{option.image ? (
-														<img
+														<Image
 															src={option.image}
 															alt={option.couleur}
+															width={160}
+															height={80}
+															unoptimized
 															className="h-20 w-full object-contain"
 														/>
 													) : (
@@ -1886,11 +1889,12 @@ export default function Page() {
 																title="Cliquer pour choisir une couleur"
 																className="group relative flex h-[110px] w-[140px] items-center justify-center rounded-md border border-transparent hover:border-amber-400 hover:bg-amber-50/60 transition-colors cursor-pointer">
 																{vehicleImageSrc ? (
-																	<img
+																	<Image
 																		src={vehicleImageSrc}
 																		alt={vehicleModel?.model || "Véhicule"}
 																		width={140}
 																		height={110}
+																		unoptimized
 																		className="h-[110px] w-[140px] object-contain"
 																	/>
 																) : (

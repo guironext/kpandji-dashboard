@@ -14,6 +14,7 @@ import {
   Trash2,
   X,
   Building2,
+  User,
 } from "lucide-react";
 import { formatNumberWithSpaces, fetchWithRetry } from "@/lib/utils";
 import { registerLocale } from "react-datepicker";
@@ -95,6 +96,14 @@ const TABS = [
 
 ];
 
+const DEFAULT_POLE_NAMES = [
+  "VIP & Sociétés",
+  "SUV & Pickup",
+  "OmniCanal",
+  "Showroom",
+  "Autre",
+];
+
 interface ObjectifFinanciereData {
   id: string;
   nomDuCommercial: string;
@@ -137,6 +146,51 @@ function parsePeriodFromApi(p: { id: string; start: Date | string; end: Date | s
     start: typeof p.start === "string" ? new Date(p.start) : p.start,
     end: typeof p.end === "string" ? new Date(p.end) : p.end,
   };
+}
+
+const POLE_DIALOG_CONTENT =
+  "sm:max-w-md p-0 gap-0 border-0 shadow-2xl rounded-2xl overflow-hidden [&>button]:text-white [&>button]:opacity-90 [&>button:hover]:opacity-100";
+
+const POLE_PRIMARY_BTN =
+  "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md hover:from-violet-600 hover:to-purple-700 border-0";
+
+const POLE_CARD_ACCENTS = [
+  { bg: "bg-violet-50", icon: "text-violet-600", ring: "ring-violet-100/80", bar: "from-violet-500 to-purple-500" },
+  { bg: "bg-fuchsia-50", icon: "text-fuchsia-600", ring: "ring-fuchsia-100/80", bar: "from-fuchsia-500 to-pink-500" },
+  { bg: "bg-indigo-50", icon: "text-indigo-600", ring: "ring-indigo-100/80", bar: "from-indigo-500 to-violet-500" },
+  { bg: "bg-purple-50", icon: "text-purple-600", ring: "ring-purple-100/80", bar: "from-purple-500 to-violet-500" },
+  { bg: "bg-sky-50", icon: "text-sky-600", ring: "ring-sky-100/80", bar: "from-sky-500 to-indigo-500" },
+];
+
+function initialsFromName(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function PoleModalHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-br from-[#061f5a] to-[#0a2d6e] px-6 pt-6 pb-5">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,rgba(139,92,246,0.14)_50%,transparent_100%)]" />
+      <div className="relative">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/20 ring-1 ring-violet-400/30">
+              <Building2 className="h-6 w-6 text-violet-300" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-white">{title}</DialogTitle>
+              <DialogDescription className="text-slate-400 mt-0.5">{description}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+      </div>
+    </div>
+  );
 }
 
 export function ObjectifsContent() {
@@ -210,6 +264,9 @@ export function ObjectifsContent() {
   const [poleDialogOpen, setPoleDialogOpen] = useState(false);
   const [poleFormData, setPoleFormData] = useState({ userId: "", pole: "" });
   const [poleSubmitting, setPoleSubmitting] = useState(false);
+  const [createPoleDialogOpen, setCreatePoleDialogOpen] = useState(false);
+  const [newPoleName, setNewPoleName] = useState("");
+  const [createPoleSubmitting, setCreatePoleSubmitting] = useState(false);
   const [poleEditDialogOpen, setPoleEditDialogOpen] = useState(false);
   const [editingPole, setEditingPole] = useState<{
     id: string;
@@ -501,6 +558,29 @@ export function ObjectifsContent() {
       ? `${periodStart.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })} – ${periodEnd.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}`
       : "Période non définie";
 
+  const poleNameOptions = Array.from(
+    new Set([
+      ...DEFAULT_POLE_NAMES,
+      ...objectifsPoles
+        .map((p) => p.objectifPoleCible.trim())
+        .filter(Boolean),
+    ])
+  );
+
+  const polesForPeriod = selectedPeriodId
+    ? objectifsPoles.filter((p) => p.objectifPeriodId === selectedPeriodId)
+    : objectifsPoles;
+
+  const uniquePoleStats = Object.values(
+    polesForPeriod.reduce<Record<string, { name: string; count: number }>>((acc, p) => {
+      const name = p.objectifPoleCible.trim();
+      if (!name) return acc;
+      if (!acc[name]) acc[name] = { name, count: 0 };
+      acc[name].count += 1;
+      return acc;
+    }, {})
+  );
+
   const formatPeriodLabel = (p: ObjectifPeriod) =>
     `${p.start.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })} – ${p.end.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}`;
 
@@ -747,6 +827,49 @@ export function ObjectifsContent() {
       );
     } finally {
       setPoleSubmitting(false);
+    }
+  };
+
+  const handleCreatePoleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const poleName = newPoleName.trim();
+    if (!selectedPeriodId || !poleName) {
+      toast.error("Veuillez saisir le nom du pôle et sélectionner une période");
+      return;
+    }
+    setCreatePoleSubmitting(true);
+    try {
+      const res = await fetchWithRetry("/api/objectifs-poles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          objectifPeriodId: selectedPeriodId,
+          objectifPoleCible: poleName,
+        }),
+      });
+      let result: { success?: boolean; error?: string };
+      try {
+        result = await res.json();
+      } catch {
+        result = { success: false, error: `Erreur serveur (${res.status})` };
+      }
+      if (result.success) {
+        setCreatePoleDialogOpen(false);
+        setNewPoleName("");
+        toast.success("Pôle créé avec succès");
+        fetchObjectifsPoles();
+      } else {
+        toast.error(result.error || "Erreur lors de la création du pôle");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur réseau";
+      toast.error(
+        msg.includes("fetch") || msg.includes("Failed")
+          ? "Connexion impossible. Réessayez dans quelques secondes."
+          : msg || "Erreur lors de la création du pôle"
+      );
+    } finally {
+      setCreatePoleSubmitting(false);
     }
   };
 
@@ -1751,108 +1874,167 @@ export function ObjectifsContent() {
             <TabsContent value="pole" className="mt-6 animate-in fade-in-50 duration-200 space-y-6">
               <Card className="overflow-hidden border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
                 <div className="h-0.5 bg-gradient-to-r from-violet-500 to-purple-500" />
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <Dialog
-                        open={poleDialogOpen}
-                        onOpenChange={(open) => {
-                          setPoleDialogOpen(open);
-                          if (!open) setPoleFormData({ userId: "", pole: "" });
-                        }}
-                      >
-                        <Button
-                          onClick={() => setPoleDialogOpen(true)}
-                          className="bg-violet-600 hover:bg-violet-700 text-white"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Définir Pôle
-                        </Button>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Définir Pôle</DialogTitle>
-                            <DialogDescription>
-                              Assignez un commercial à un pôle pour la période sélectionnée.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form onSubmit={handlePoleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Commercial</Label>
-                              <Select
-                                value={poleFormData.userId}
-                                onValueChange={(v) => setPoleFormData((p) => ({ ...p, userId: v }))}
-                                required
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner un commercial" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {commercialUsers.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>
-                                      {u.fullName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Pôle</Label>
-                              <Select
-                                value={poleFormData.pole}
-                                onValueChange={(v) => setPoleFormData((p) => ({ ...p, pole: v }))}
-                                required
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner un pôle" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="VIP & Sociétés">VIP & Sociétés</SelectItem>
-                                  <SelectItem value="SUV & Pickup">SUV & Pickup</SelectItem>
-                                  <SelectItem value="OmniCanal">OmniCanal</SelectItem>
-                                  <SelectItem value="Showroom">Showroom</SelectItem>
-                                  <SelectItem value="Autre">Autre</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <DialogFooter>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setPoleDialogOpen(false)}
-                              >
-                                Annuler
-                              </Button>
-                              <Button
-                                type="submit"
-                                disabled={poleSubmitting || !selectedPeriodId}
-                                className="bg-violet-600 hover:bg-violet-700"
-                              >
-                                {poleSubmitting ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    Enregistrement...
-                                  </>
-                                ) : (
-                                  "Enregistrer"
-                                )}
-                              </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/15">
+                        <Building2 className="h-5 w-5 text-violet-600" />
+                      </div>
                       <div>
-                        <CardTitle className="flex items-center gap-2.5 text-slate-900">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
-                            <Building2 className="h-5 w-5 text-violet-600" />
-                          </div>
-                          Objectifs par Pôle
-                        </CardTitle>
-                        <CardDescription className="text-slate-500">
-                          Vue agrégée des objectifs financiers par pôle pour la période {periodLabel}
+                        <CardTitle className="text-lg font-semibold text-slate-900">Pôles commerciaux</CardTitle>
+                        <CardDescription className="text-slate-500 mt-0.5">
+                          Créez des pôles et assignez-les aux commerciaux · {periodLabel}
                         </CardDescription>
                       </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={() => setCreatePoleDialogOpen(true)}
+                        className={clsx(POLE_PRIMARY_BTN, "rounded-xl")}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Créer Nouveau Pôle
+                      </Button>
+                      <Button
+                        onClick={() => setPoleDialogOpen(true)}
+                        variant="outline"
+                        className="rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800"
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Assigner un commercial
+                      </Button>
+                    </div>
                   </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {objectifsPolesLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                    </div>
+                  ) : uniquePoleStats.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-violet-200 bg-gradient-to-b from-violet-50/70 to-white px-8 py-12 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100">
+                        <Building2 className="h-7 w-7 text-violet-500" />
+                      </div>
+                      <p className="text-base font-semibold text-slate-800">Aucun pôle pour cette période</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Créez un pôle, puis assignez-le à vos commerciaux.
+                      </p>
+                      <Button
+                        onClick={() => setCreatePoleDialogOpen(true)}
+                        className={clsx(POLE_PRIMARY_BTN, "mt-5 rounded-xl")}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Créer un pôle
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {uniquePoleStats.map((pole, index) => {
+                        const accent = POLE_CARD_ACCENTS[index % POLE_CARD_ACCENTS.length];
+                        return (
+                          <div
+                            key={pole.name}
+                            className={clsx(
+                              "group relative overflow-hidden rounded-2xl ring-1 p-4 transition-shadow hover:shadow-md",
+                              accent.ring,
+                              "bg-white"
+                            )}
+                          >
+                            <div className={clsx("absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r", accent.bar)} />
+                            <div className="flex items-start gap-3">
+                              <div className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", accent.bg)}>
+                                <Building2 className={clsx("h-5 w-5", accent.icon)} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-slate-900">{pole.name}</p>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                  {pole.count} commercial{pole.count > 1 ? "aux" : ""}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {polesForPeriod.length > 0 && (
+                    <div>
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Assignations
+                        </span>
+                        <div className="h-px flex-1 bg-gradient-to-l from-slate-200 to-transparent" />
+                      </div>
+                      <div className="overflow-hidden rounded-2xl border border-slate-100">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                              <TableHead className="font-semibold text-slate-600">Commercial</TableHead>
+                              <TableHead className="font-semibold text-slate-600">Pôle</TableHead>
+                              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {polesForPeriod.map((p) => (
+                              <TableRow key={p.id} className="hover:bg-violet-50/40">
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
+                                      {initialsFromName(p.commercialName || "?")}
+                                    </div>
+                                    <span className="font-medium text-slate-900">{p.commercialName || "—"}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-violet-100">
+                                    {p.objectifPoleCible}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openPoleEditDialog(p)}
+                                      className="h-8 w-8 text-slate-500 hover:bg-violet-50 hover:text-violet-700"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handlePoleDelete(p.id)}
+                                      className="h-8 w-8 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="overflow-hidden border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
+                <div className="h-0.5 bg-gradient-to-r from-violet-500 to-purple-500" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2.5 text-slate-900">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                      <DollarSign className="h-5 w-5 text-violet-600" />
+                    </div>
+                    Objectifs financiers par pôle
+                  </CardTitle>
+                  <CardDescription className="text-slate-500">
+                    Vue agrégée du chiffre d&apos;affaires pour la période {periodLabel}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -1873,185 +2055,287 @@ export function ObjectifsContent() {
                       );
                       const poleEntries = Object.entries(byPole).sort((a, b) => b[1].totalCA - a[1].totalCA);
                       return (
-                        <div className="overflow-hidden rounded-xl border border-slate-100">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Pôle</TableHead>
-                                <TableHead>Nombre d&apos;objectifs</TableHead>
-                                <TableHead>Chiffre d&apos;affaires total (FCFA)</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {poleEntries.map(([pole, { count, totalCA }]) => (
-                                <TableRow key={pole}>
-                                  <TableCell className="font-medium">{pole}</TableCell>
-                                  <TableCell>{count}</TableCell>
-                                  <TableCell>{formatNumberWithSpaces(totalCA)}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {poleEntries.map(([pole, { count, totalCA }], index) => {
+                            const accent = POLE_CARD_ACCENTS[index % POLE_CARD_ACCENTS.length];
+                            return (
+                              <div
+                                key={pole}
+                                className="relative overflow-hidden rounded-2xl bg-white p-5 ring-1 ring-slate-100 shadow-sm"
+                              >
+                                <div className={clsx("absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r", accent.bar)} />
+                                <p className="text-sm font-medium text-slate-500">{pole}</p>
+                                <p className="mt-2 text-xl font-bold tracking-tight text-slate-900">
+                                  {formatNumberWithSpaces(totalCA)}
+                                  <span className="ml-1 text-sm font-medium text-slate-400">FCFA</span>
+                                </p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {count} objectif{count > 1 ? "s" : ""}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })()
                   ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-8 py-12 text-center">
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-8 py-10 text-center">
                       <p className="text-slate-600">Aucun objectif financier. Les données par pôle apparaîtront ici.</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Liste des pôles définis par commercial */}
-              <Card className="overflow-hidden border-0 bg-white shadow-sm ring-1 ring-slate-200/60">
-                <div className="h-0.5 bg-gradient-to-r from-violet-500 to-purple-500" />
-                <CardHeader>
-                  <CardTitle className="text-slate-900">Pôles définis par commercial</CardTitle>
-                  <CardDescription className="text-slate-500">
-                    Assignations commercial → pôle pour la période {periodLabel}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {objectifsPolesLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-                    </div>
-                  ) : (() => {
-                    const filtered = selectedPeriodId
-                      ? objectifsPoles.filter((p) => p.objectifPeriodId === selectedPeriodId)
-                      : objectifsPoles;
-                    return filtered.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-8 py-12 text-center">
-                        <p className="text-slate-600">Aucun pôle défini. Cliquez sur &quot;Définir Pôle&quot; pour en ajouter.</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="overflow-hidden rounded-xl border border-slate-100">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Commercial</TableHead>
-                                <TableHead>Pôle</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filtered.map((p) => (
-                                <TableRow key={p.id}>
-                                  <TableCell className="font-medium">{p.commercialName}</TableCell>
-                                  <TableCell>{p.objectifPoleCible}</TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openPoleEditDialog(p)}
-                                        className="h-8"
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handlePoleDelete(p.id)}
-                                        className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+              <Dialog
+                open={createPoleDialogOpen}
+                onOpenChange={(open) => {
+                  setCreatePoleDialogOpen(open);
+                  if (!open) setNewPoleName("");
+                }}
+              >
+                <DialogContent className={POLE_DIALOG_CONTENT}>
+                  <PoleModalHeader
+                    title="Créer un nouveau pôle"
+                    description="Donnez un nom clair à ce pôle commercial"
+                  />
+                  <form onSubmit={handleCreatePoleSubmit}>
+                    <div className="space-y-5 px-6 py-5">
+                      {selectedPeriod && (
+                        <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                          <CalendarIcon className="h-4 w-4 text-violet-500" />
+                          <span className="text-xs font-medium text-slate-600">{periodLabel}</span>
                         </div>
-                        <Dialog
-                          open={poleEditDialogOpen}
-                          onOpenChange={(open) => {
-                            setPoleEditDialogOpen(open);
-                            if (!open) setEditingPole(null);
-                          }}
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="nomPole" className="text-slate-700 font-medium">
+                          Nom du pôle
+                        </Label>
+                        <div className="relative">
+                          <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            id="nomPole"
+                            value={newPoleName}
+                            onChange={(e) => setNewPoleName(e.target.value)}
+                            placeholder="Ex. VIP & Sociétés"
+                            required
+                            autoFocus
+                            className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pl-10 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Suggestions</p>
+                        <div className="flex flex-wrap gap-2">
+                          {DEFAULT_POLE_NAMES.map((name) => {
+                            const selected = newPoleName === name;
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => setNewPoleName(name)}
+                                className={clsx(
+                                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors ring-1",
+                                  selected
+                                    ? "bg-violet-600 text-white ring-violet-600"
+                                    : "bg-white text-slate-600 ring-slate-200 hover:bg-violet-50 hover:text-violet-700 hover:ring-violet-200"
+                                )}
+                              >
+                                {name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => setCreatePoleDialogOpen(false)}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={createPoleSubmitting || !selectedPeriodId || !newPoleName.trim()}
+                        className={clsx(POLE_PRIMARY_BTN, "rounded-xl")}
+                      >
+                        {createPoleSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          "Enregistrer"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={poleDialogOpen}
+                onOpenChange={(open) => {
+                  setPoleDialogOpen(open);
+                  if (!open) setPoleFormData({ userId: "", pole: "" });
+                }}
+              >
+                <DialogContent className={POLE_DIALOG_CONTENT}>
+                  <PoleModalHeader
+                    title="Assigner un commercial"
+                    description="Associez un commercial à un pôle pour cette période"
+                  />
+                  <form onSubmit={handlePoleSubmit}>
+                    <div className="space-y-4 px-6 py-5">
+                      <div className="space-y-2">
+                        <Label className="text-slate-700 font-medium">Commercial</Label>
+                        <Select
+                          value={poleFormData.userId}
+                          onValueChange={(v) => setPoleFormData((p) => ({ ...p, userId: v }))}
+                          required
                         >
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>Modifier le pôle</DialogTitle>
-                              <DialogDescription>
-                                Modifiez le commercial et/ou le pôle assigné.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handlePoleEditSubmit} className="space-y-4">
-                              <div className="space-y-2">
-                                <Label>Commercial</Label>
-                                <Select
-                                  value={poleEditFormData.userId}
-                                  onValueChange={(v) => setPoleEditFormData((prev) => ({ ...prev, userId: v }))}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionner un commercial" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {commercialUsers.map((u) => (
-                                      <SelectItem key={u.id} value={u.id}>
-                                        {u.fullName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Pôle</Label>
-                                <Select
-                                  value={poleEditFormData.pole}
-                                  onValueChange={(v) => setPoleEditFormData((prev) => ({ ...prev, pole: v }))}
-                                  required
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionner un pôle" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="VIP & Sociétés">VIP & Sociétés</SelectItem>
-                                    <SelectItem value="SUV & Pickup">SUV & Pickup</SelectItem>
-                                    <SelectItem value="OmniCanal">OmniCanal</SelectItem>
-                                    <SelectItem value="Showroom">Showroom</SelectItem>
-                                    <SelectItem value="Autre">Autre</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <DialogFooter>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => setPoleEditDialogOpen(false)}
-                                >
-                                  Annuler
-                                </Button>
-                                <Button
-                                  type="submit"
-                                  disabled={poleEditSubmitting}
-                                  className="bg-violet-600 hover:bg-violet-700"
-                                >
-                                  {poleEditSubmitting ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                      Enregistrement...
-                                    </>
-                                  ) : (
-                                    "Enregistrer"
-                                  )}
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                      </>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
+                          <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                            <SelectValue placeholder="Sélectionner un commercial" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {commercialUsers.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.fullName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-700 font-medium">Pôle</Label>
+                        <Select
+                          value={poleFormData.pole}
+                          onValueChange={(v) => setPoleFormData((p) => ({ ...p, pole: v }))}
+                          required
+                        >
+                          <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                            <SelectValue placeholder="Sélectionner un pôle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {poleNameOptions.map((name) => (
+                              <SelectItem key={name} value={name}>
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => setPoleDialogOpen(false)}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={poleSubmitting || !selectedPeriodId}
+                        className={clsx(POLE_PRIMARY_BTN, "rounded-xl")}
+                      >
+                        {poleSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          "Enregistrer"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={poleEditDialogOpen}
+                onOpenChange={(open) => {
+                  setPoleEditDialogOpen(open);
+                  if (!open) setEditingPole(null);
+                }}
+              >
+                <DialogContent className={POLE_DIALOG_CONTENT}>
+                  <PoleModalHeader
+                    title="Modifier le pôle"
+                    description="Mettez à jour le commercial ou le pôle assigné"
+                  />
+                  <form onSubmit={handlePoleEditSubmit}>
+                    <div className="space-y-4 px-6 py-5">
+                      <div className="space-y-2">
+                        <Label className="text-slate-700 font-medium">Commercial</Label>
+                        <Select
+                          value={poleEditFormData.userId}
+                          onValueChange={(v) => setPoleEditFormData((prev) => ({ ...prev, userId: v }))}
+                          required
+                        >
+                          <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                            <SelectValue placeholder="Sélectionner un commercial" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {commercialUsers.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.fullName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-slate-700 font-medium">Pôle</Label>
+                        <Select
+                          value={poleEditFormData.pole}
+                          onValueChange={(v) => setPoleEditFormData((prev) => ({ ...prev, pole: v }))}
+                          required
+                        >
+                          <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                            <SelectValue placeholder="Sélectionner un pôle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {poleNameOptions.map((name) => (
+                              <SelectItem key={name} value={name}>
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => setPoleEditDialogOpen(false)}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={poleEditSubmitting}
+                        className={clsx(POLE_PRIMARY_BTN, "rounded-xl")}
+                      >
+                        {poleEditSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          "Enregistrer"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         </div>

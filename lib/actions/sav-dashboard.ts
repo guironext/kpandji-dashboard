@@ -156,6 +156,10 @@ function buildMonthlyKeys(months: number) {
   return result;
 }
 
+function toImmatriculation(value: string | null | undefined): string {
+  return value && value.trim().length > 0 ? value : "—";
+}
+
 function toChartData<T extends string>(
   groups: { key: T; count: number }[],
   labels: Record<T, string>
@@ -320,7 +324,7 @@ export async function getSavDashboardData(): Promise<{
     const recentVoitures: RecentVoitureSav[] = recentVoituresRaw.map((v) => ({
       id: v.id,
       model: v.model,
-      immatriculation: v.immatriculation,
+      immatriculation: toImmatriculation(v.immatriculation),
       statut: VOITURE_STATUT_LABELS[v.statut] ?? v.statut,
       clientName: `${v.ClientSAV.prenom} ${v.ClientSAV.nom}`.trim(),
       createdAt: v.createdAt.toISOString(),
@@ -329,9 +333,9 @@ export async function getSavDashboardData(): Promise<{
     const recentMaintenances: RecentMaintenance[] = recentMaintenancesRaw.map((m) => ({
       id: m.id,
       nom: m.nom,
-      statut: MAINTENANCE_STATUT_LABELS[m.statut],
+      statut: MAINTENANCE_STATUT_LABELS[m.statut] ?? m.statut,
       voitureModel: m.reparation.voitureSAV.model,
-      immatriculation: m.reparation.voitureSAV.immatriculation,
+      immatriculation: toImmatriculation(m.reparation.voitureSAV.immatriculation),
       createdAt: m.createdAt.toISOString(),
     }));
 

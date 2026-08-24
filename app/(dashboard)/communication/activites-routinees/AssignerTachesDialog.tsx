@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import {
   ClipboardList,
   ListChecks,

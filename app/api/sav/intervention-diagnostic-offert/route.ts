@@ -377,7 +377,6 @@ export async function POST(request: Request) {
             ]
           : []),
       ],
-      { maxWait: 15_000, timeout: 20_000 },
     );
 
     const usagePieces = await prisma.pieceSAV.findMany({

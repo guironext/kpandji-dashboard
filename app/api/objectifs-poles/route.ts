@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma, executeWithRetry } from "@/lib/prisma";
+import { getOrCreateUser } from "@/lib/actions/user";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +66,10 @@ export async function POST(request: NextRequest) {
       objectifPoleCible?: string;
     };
 
-    if (!objectifPeriodId || !targetUserId || !objectifPoleCible) {
+    const poleName = typeof objectifPoleCible === "string" ? objectifPoleCible.trim() : "";
+    if (!objectifPeriodId || !poleName) {
       return NextResponse.json(
-        { success: false, error: "objectifPeriodId, userId et objectifPoleCible sont requis" },
+        { success: false, error: "Le nom du pôle et la période sont requis" },
         { status: 400 }
       );
     }
@@ -82,12 +84,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userExists = await executeWithRetry(() =>
-      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } })
-    );
-    if (!userExists) {
+    let resolvedUserId = targetUserId;
+    if (resolvedUserId) {
+      const userExists = await executeWithRetry(() =>
+        prisma.user.findUnique({ where: { id: resolvedUserId }, select: { id: true } })
+      );
+      if (!userExists) {
+        return NextResponse.json(
+          { success: false, error: "Commercial introuvable." },
+          { status: 400 }
+        );
+      }
+    } else {
+      const userResult = await getOrCreateUser(userId);
+      if (!userResult.success || !userResult.data) {
+        return NextResponse.json(
+          { success: false, error: "Utilisateur non trouvé" },
+          { status: 404 }
+        );
+      }
+      resolvedUserId = userResult.data.id;
+    }
+
+    if (!resolvedUserId) {
       return NextResponse.json(
-        { success: false, error: "Commercial introuvable." },
+        { success: false, error: "Utilisateur non trouvé" },
+        { status: 404 }
+      );
+    }
+
+    const duplicate = await executeWithRetry(() =>
+      prisma.objectifPole.findFirst({
+        where: {
+          objectifPeriodId,
+          userId: resolvedUserId,
+          objectifPoleCible: poleName,
+        },
+        select: { id: true },
+      })
+    );
+    if (duplicate) {
+      return NextResponse.json(
+        { success: false, error: "Ce pôle existe déjà pour cette période." },
         { status: 400 }
       );
     }
@@ -96,8 +134,8 @@ export async function POST(request: NextRequest) {
       prisma.objectifPole.create({
         data: {
           objectifPeriodId,
-          userId: targetUserId,
-          objectifPoleCible: String(objectifPoleCible).trim(),
+          userId: resolvedUserId,
+          objectifPoleCible: poleName,
         },
       })
     );

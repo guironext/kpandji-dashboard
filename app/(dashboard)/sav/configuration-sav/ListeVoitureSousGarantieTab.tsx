@@ -293,13 +293,15 @@ export default function ListeVoitureSousGarantieTab({
 
   return (
     <div>
-      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2">
-            <span className="text-2xl font-bold text-rose-700">{items.length}</span>
-            <span className="ml-1 text-sm text-rose-600">véhicule(s)</span>
+      <div className={embedded ? "mb-3 flex justify-end sm:mb-5" : "mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"}>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2">
+              <span className="text-2xl font-bold text-rose-700">{items.length}</span>
+              <span className="ml-1 text-sm text-rose-600">véhicule(s)</span>
+            </div>
           </div>
-        </div>
+        )}
         <Button
           onClick={handleOpenAdd}
           size="default"
@@ -310,7 +312,13 @@ export default function ListeVoitureSousGarantieTab({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50">
+      <div
+        className={
+          embedded
+            ? "overflow-hidden rounded-xl border border-slate-100"
+            : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50"
+        }
+      >
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-4 py-24">
             <Loader2 className="h-10 w-10 animate-spin text-rose-600" />

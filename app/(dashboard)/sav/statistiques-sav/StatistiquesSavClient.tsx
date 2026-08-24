@@ -5,23 +5,13 @@ import {
   BarChart3,
   TrendingUp,
   Clock,
-  Wrench,
-  CarFront,
-  Receipt,
-  Users,
-  Calendar,
   Download,
-  Filter,
-  Sparkles,
-  ChevronDown,
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   CartesianGrid,
   Cell,
   Legend,
@@ -170,7 +160,7 @@ export default function StatistiquesSavClient() {
                 </div>
               </div>
               <p className="mt-3 text-2xl font-black tracking-tight text-slate-900">238 véhicules</p>
-              <p className="mt-1 text-xs text-slate-500 font-medium">98.5% taux d'accord qualité</p>
+              <p className="mt-1 text-xs text-slate-500 font-medium">98.5% taux d&apos;accord qualité</p>
             </CardContent>
           </Card>
 
@@ -193,7 +183,7 @@ export default function StatistiquesSavClient() {
           {/* CA Trend */}
           <Card className="border-0 bg-white shadow-xl shadow-slate-200/50">
             <CardHeader>
-              <CardTitle className="text-lg font-bold text-slate-900">Évolution du Chiffre d'Affaires</CardTitle>
+              <CardTitle className="text-lg font-bold text-slate-900">Évolution du Chiffre d&apos;Affaires</CardTitle>
               <CardDescription>Facturation des réparations et pièces (en FCFA)</CardDescription>
             </CardHeader>
             <CardContent>
@@ -212,7 +202,7 @@ export default function StatistiquesSavClient() {
                     tickFormatter={(val) => `${val / 1000000}M`}
                   />
                   <Tooltip
-                    formatter={(value: any) => [formatCFA(value), "Chiffre d'affaires"]}
+                    formatter={(value) => [formatCFA(Number(value ?? 0)), "Chiffre d'affaires"]}
                     contentStyle={{ borderRadius: 16, border: "1px solid #e2e8f0" }}
                   />
                   <Area
@@ -231,7 +221,7 @@ export default function StatistiquesSavClient() {
           {/* Breakdown by Category */}
           <Card className="border-0 bg-white shadow-xl shadow-slate-200/50">
             <CardHeader>
-              <CardTitle className="text-lg font-bold text-slate-900">Types d'Interventions</CardTitle>
+              <CardTitle className="text-lg font-bold text-slate-900">Types d&apos;Interventions</CardTitle>
               <CardDescription>Répartition par domaine technique</CardDescription>
             </CardHeader>
             <CardContent>
@@ -251,7 +241,7 @@ export default function StatistiquesSavClient() {
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: any) => [`${value}%`, "Part d'intervention"]} />
+                  <Tooltip formatter={(value) => [`${value ?? 0}%`, "Part d'intervention"]} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

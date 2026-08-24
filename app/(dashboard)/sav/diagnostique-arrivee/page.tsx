@@ -24,7 +24,6 @@ import {
   ClipboardCheck,
   Save,
   User,
-  Hash,
   CheckCircle2,
   ChevronRight,
   ImagePlus,

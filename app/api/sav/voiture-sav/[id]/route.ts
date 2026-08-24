@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { StatutVoitureSAV } from "@prisma/client";
+import type { Prisma, StatutVoitureSAV } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +26,11 @@ function isPrismaP2032(error: unknown): boolean {
 }
 
 /** Some VoitureSAV rows have null chassisNumber; skip the column if Prisma rejects it. */
-async function findVoitureSavById<T extends Record<string, unknown>>(
+async function findVoitureSavById(
   id: string,
-  extra: T = {} as T,
+  extra: Omit<Prisma.VoitureSAVFindUniqueArgs, "where"> = {},
 ) {
-  const args = { where: { id }, ...extra };
+  const args = { ...extra, where: { id } } as Prisma.VoitureSAVFindUniqueArgs;
   try {
     return await prisma.voitureSAV.findUnique(args);
   } catch (error) {

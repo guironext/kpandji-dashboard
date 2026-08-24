@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Briefcase,
-  CalendarRange,
   ClipboardList,
   Loader2,
   Plus,
