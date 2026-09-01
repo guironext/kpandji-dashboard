@@ -34,16 +34,12 @@ export async function POST(request: Request) {
         : "KPANDJI";
     const modelVoiture =
       typeof body.modelVoiture === "string" ? body.modelVoiture.trim() : "";
-    const couleur =
-      typeof body.couleur === "string" ? body.couleur.trim() : "";
     const chassisNumber =
       typeof body.chassisNumber === "string" && body.chassisNumber.trim()
         ? body.chassisNumber.trim()
         : null;
     const immatriculation =
-      typeof body.immatriculation === "string" && body.immatriculation.trim()
-        ? body.immatriculation.trim()
-        : null;
+      typeof body.immatriculation === "string" ? body.immatriculation.trim() : "";
 
     if (!modelVoiture) {
       return NextResponse.json(
@@ -51,9 +47,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!couleur) {
+    if (!immatriculation) {
       return NextResponse.json(
-        { success: false, error: "La couleur est requise" },
+        { success: false, error: "L'immatriculation est requise" },
         { status: 400 }
       );
     }
@@ -62,7 +58,6 @@ export async function POST(request: Request) {
       data: {
         marqueVoiture,
         modelVoiture,
-        couleur,
         chassisNumber,
         immatriculation,
       },

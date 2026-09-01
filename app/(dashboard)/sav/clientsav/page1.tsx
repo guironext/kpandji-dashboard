@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Plus,
   Edit,
   Trash2,
@@ -31,6 +23,9 @@ import {
   Building2,
   User,
   Sparkles,
+  MapPin,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -121,7 +116,7 @@ function ClientFormFields({
           <User className="h-4 w-4 text-emerald-600" />
           Identité
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-nom`}>Nom *</Label>
             <Input
@@ -129,7 +124,7 @@ function ClientFormFields({
               value={formData.nom}
               onChange={(e) => setFormData((p) => ({ ...p, nom: e.target.value }))}
               placeholder="Dupont"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
               required
             />
           </div>
@@ -140,7 +135,7 @@ function ClientFormFields({
               value={formData.prenom}
               onChange={(e) => setFormData((p) => ({ ...p, prenom: e.target.value }))}
               placeholder="Jean"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
               required
             />
           </div>
@@ -161,7 +156,7 @@ function ClientFormFields({
               value={formData.contact}
               onChange={(e) => setFormData((p) => ({ ...p, contact: e.target.value }))}
               placeholder="+33 6 12 34 56 78"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
               required
             />
           </div>
@@ -173,7 +168,7 @@ function ClientFormFields({
               value={formData.email}
               onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
               placeholder="jean.dupont@example.com"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
             />
           </div>
         </div>
@@ -193,7 +188,7 @@ function ClientFormFields({
               value={formData.entreprise}
               onChange={(e) => setFormData((p) => ({ ...p, entreprise: e.target.value }))}
               placeholder="Nom de l&apos;entreprise"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
             />
           </div>
           <div className="space-y-2">
@@ -203,7 +198,7 @@ function ClientFormFields({
               value={formData.localisation}
               onChange={(e) => setFormData((p) => ({ ...p, localisation: e.target.value }))}
               placeholder="Paris, France"
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -213,12 +208,131 @@ function ClientFormFields({
               value={formData.secteur_activite}
               onChange={(e) => setFormData((p) => ({ ...p, secteur_activite: e.target.value }))}
               placeholder="Automobile, BTP, Transport..."
-              className="rounded-lg border-slate-200"
+              className="h-11 rounded-xl border-slate-200 sm:h-10"
             />
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ClientCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200/70">
+      <div className="h-1 bg-slate-100" />
+      <div className="p-4 sm:p-5">
+        <div className="flex gap-3">
+          <div className="h-12 w-12 animate-pulse rounded-2xl bg-slate-100 sm:h-14 sm:w-14" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 w-2/3 animate-pulse rounded-md bg-slate-100" />
+            <div className="h-3 w-1/2 animate-pulse rounded-md bg-slate-100" />
+          </div>
+        </div>
+        <div className="mt-4 h-11 animate-pulse rounded-2xl bg-slate-50" />
+        <div className="mt-4 h-11 animate-pulse rounded-xl bg-slate-50" />
+      </div>
+    </div>
+  );
+}
+
+function ClientCard({
+  client,
+  onEdit,
+  onDelete,
+}: {
+  client: ClientSAV;
+  onEdit: (client: ClientSAV) => void;
+  onDelete: (client: ClientSAV) => void;
+}) {
+  const initials =
+    `${client.prenom?.[0] || ""}${client.nom?.[0] || ""}`.toUpperCase() || "?";
+  const phoneHref = `tel:${client.contact.replace(/\s+/g, "")}`;
+
+  return (
+    <article className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/80 transition-all duration-200 sm:hover:-translate-y-1 sm:hover:shadow-[0_12px_32px_rgba(13,148,136,0.12)]">
+      <div className="h-1 bg-gradient-to-r from-teal-500 via-cyan-500 to-emerald-400" />
+
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-sm font-bold tracking-wide text-white shadow-md shadow-teal-500/25 sm:h-14 sm:w-14 sm:text-base">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h3 className="truncate text-[15px] font-bold tracking-tight text-slate-900 sm:text-base">
+              {client.prenom} {client.nom}
+            </h3>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 sm:text-sm">
+              <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{client.entreprise || "Particulier"}</span>
+            </p>
+            {client.secteur_activite && (
+              <span className="mt-1.5 inline-flex max-w-full truncate rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700 ring-1 ring-teal-100">
+                {client.secteur_activite}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-1 flex-col gap-2">
+          <a
+            href={phoneHref}
+            className="flex min-h-11 items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 transition-colors active:bg-teal-50 sm:hover:bg-teal-50 sm:hover:ring-teal-100"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-teal-600 shadow-sm">
+              <Phone className="h-3.5 w-3.5" />
+            </span>
+            <span className="min-w-0 truncate text-sm font-semibold text-slate-800">
+              {client.contact}
+            </span>
+          </a>
+
+          {client.email && (
+            <a
+              href={`mailto:${client.email}`}
+              className="flex min-h-11 items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 transition-colors active:bg-cyan-50 sm:hover:bg-cyan-50 sm:hover:ring-cyan-100"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-600 shadow-sm">
+                <Mail className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0 truncate text-sm font-medium text-slate-700">
+                {client.email}
+              </span>
+            </a>
+          )}
+
+          {client.localisation && (
+            <p className="flex items-center gap-3 px-3 py-1 text-sm text-slate-500">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                <MapPin className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0 truncate">{client.localisation}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onEdit(client)}
+            className="h-11 flex-1 rounded-xl border-slate-200 text-slate-700 touch-manipulation hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800 sm:h-10"
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Modifier
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={`Supprimer ${client.prenom} ${client.nom}`}
+            onClick={() => onDelete(client)}
+            className="h-11 w-11 shrink-0 rounded-xl border-slate-200 text-slate-500 touch-manipulation hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:h-10 sm:w-10"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -232,6 +346,7 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
   const [editingClient, setEditingClient] = useState<ClientSAV | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [query, setQuery] = useState("");
 
   const loadClients = async () => {
     setLoading(true);
@@ -253,6 +368,24 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => {
     loadClients();
   }, []);
+
+  const filteredClients = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((client) =>
+      [
+        client.nom,
+        client.prenom,
+        client.contact,
+        client.email,
+        client.entreprise,
+        client.localisation,
+        client.secteur_activite,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q))
+    );
+  }, [clients, query]);
 
   const handleOpenAdd = () => {
     setFormData(emptyForm);
@@ -381,169 +514,107 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
         </div>
       )}
 
-      {embedded && (
-        <div className="mb-3 flex justify-end sm:mb-5">
+      {embedded && (loading || clients.length > 0) && (
+        <div className="mb-3 flex items-center gap-2 sm:mb-5 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher un client..."
+              aria-label="Rechercher un client"
+              disabled={loading}
+              className="h-12 rounded-2xl border-slate-200 bg-white pl-10 pr-10 text-base shadow-sm ring-1 ring-slate-200/60 sm:h-11 md:text-sm"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Effacer la recherche"
+                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           <Button
             onClick={handleOpenAdd}
             size="default"
-            className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 sm:h-10 sm:w-auto"
+            aria-label="Ajouter un client"
+            className="h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 shadow-md shadow-teal-500/20 touch-manipulation hover:from-teal-700 hover:to-cyan-700 sm:h-11 sm:w-auto sm:px-5"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter Client
+            <Plus className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Ajouter Client</span>
           </Button>
         </div>
       )}
 
-      {/* Table Card */}
-      <div
-        className={
-          embedded
-            ? "overflow-hidden"
-            : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/50"
-        }
-      >
+      <div>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
-            <p className="text-slate-500">Chargement des clients...</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ClientCardSkeleton key={i} />
+            ))}
           </div>
         ) : clients.length === 0 ? (
-          <div className="text-center py-24 px-6">
-            <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center mb-6">
-              <Users className="h-10 w-10 text-emerald-600" />
+          <div className="rounded-3xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-200/80 sm:py-24">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100">
+              <Users className="h-10 w-10 text-teal-600" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">Aucun client enregistré</h3>
-            <p className="text-slate-500 max-w-sm mx-auto mb-6">
+            <h3 className="mb-2 text-xl font-semibold text-slate-800">Aucun client enregistré</h3>
+            <p className="mx-auto mb-6 max-w-sm text-slate-500">
               Commencez par ajouter votre premier client pour gérer les dossiers SAV
             </p>
-            <Button onClick={handleOpenAdd} size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleOpenAdd} size="lg" className="h-12 rounded-2xl bg-teal-600 hover:bg-teal-700">
+              <Plus className="mr-2 h-4 w-4" />
               Ajouter Client
+            </Button>
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="rounded-3xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-200/80">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+              <Search className="h-7 w-7 text-slate-400" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-slate-800">Aucun résultat</h3>
+            <p className="mx-auto mb-5 max-w-sm text-sm text-slate-500">
+              Aucun client ne correspond à « {query} ».
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => setQuery("")}
+              className="h-11 rounded-xl border-slate-200"
+            >
+              Effacer la recherche
             </Button>
           </div>
         ) : (
           <>
-          <div className="space-y-2.5 md:hidden">
-            {clients.map((client) => (
-              <div
-                key={client.id}
-                className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3.5"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-sm font-bold text-emerald-700">
-                    {(client.prenom?.[0] || "") + (client.nom?.[0] || "")}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-slate-900">
-                      {client.prenom} {client.nom}
-                    </p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-600">
-                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <span className="truncate">{client.contact}</span>
-                    </p>
-                    {(client.entreprise || client.localisation) && (
-                      <p className="mt-1 truncate text-xs text-slate-500">
-                        {[client.entreprise, client.localisation].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
-                      onClick={() => handleOpenEdit(client)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => handleOpenDelete(client)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="hidden overflow-x-auto md:block">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b-2 border-slate-200 hover:bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700 py-4">Nom</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Prénom</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4">Contact</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4 hidden md:table-cell">Email</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4 hidden lg:table-cell">Entreprise</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4 hidden lg:table-cell">Localisation</TableHead>
-                  <TableHead className="font-semibold text-slate-700 py-4 text-right w-28">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client, i) => (
-                  <TableRow
-                    key={client.id}
-                    className={`border-b border-slate-100 transition-colors hover:bg-emerald-50/30 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}
-                  >
-                    <TableCell className="font-medium text-slate-900 py-3">{client.nom}</TableCell>
-                    <TableCell className="text-slate-700 py-3">{client.prenom}</TableCell>
-                    <TableCell className="text-slate-700 py-3">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
-                        {client.contact}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-600 py-3 hidden md:table-cell">
-                      {client.email ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {client.email}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-slate-600 py-3 hidden lg:table-cell">{client.entreprise || "—"}</TableCell>
-                    <TableCell className="text-slate-600 py-3 hidden lg:table-cell">{client.localisation || "—"}</TableCell>
-                    <TableCell className="text-right py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-slate-600 hover:text-emerald-600 hover:bg-emerald-100/80 rounded-lg"
-                          onClick={() => handleOpenEdit(client)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-slate-600 hover:text-red-600 hover:bg-red-100/80 rounded-lg"
-                          onClick={() => handleOpenDelete(client)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            <p className="mb-3 text-xs font-medium tabular-nums text-slate-400 sm:mb-4">
+              {filteredClients.length === clients.length
+                ? `${clients.length} client${clients.length > 1 ? "s" : ""}`
+                : `${filteredClients.length} sur ${clients.length} client${clients.length > 1 ? "s" : ""}`}
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+              {filteredClients.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleOpenDelete}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>
 
       {/* Add Client Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-0 shadow-2xl shadow-slate-300/50 rounded-2xl">
-          <DialogHeader className="pb-4 border-b border-slate-100">
+        <DialogContent className="max-h-[min(90dvh,90vh)] w-[calc(100%-1.25rem)] max-w-lg overflow-y-auto rounded-3xl border-0 p-4 shadow-2xl shadow-slate-300/50 sm:p-6">
+          <DialogHeader className="border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-emerald-100">
-                <Plus className="h-6 w-6 text-emerald-600" />
+              <div className="rounded-xl bg-teal-100 p-2.5">
+                <Plus className="h-6 w-6 text-teal-600" />
               </div>
               <div>
                 <DialogTitle className="text-xl">Nouveau client</DialogTitle>
@@ -559,17 +630,26 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
               handleSubmitAdd();
             }}
           >
-            <div className="py-6">
+            <div className="py-4 sm:py-6">
               <ClientFormFields formData={formData} setFormData={setFormData} prefix="add" />
             </div>
-            <DialogFooter className="gap-2 pt-4 border-t border-slate-100 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)} className="rounded-lg">
+            <DialogFooter className="gap-2 border-t border-slate-100 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddDialogOpen(false)}
+                className="h-11 rounded-xl sm:h-10"
+              >
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 rounded-lg px-6">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-11 rounded-xl bg-teal-600 px-6 hover:bg-teal-700 sm:h-10"
+              >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enregistrement...
                   </>
                 ) : (
@@ -583,11 +663,11 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
 
       {/* Edit Client Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-0 shadow-2xl shadow-slate-300/50 rounded-2xl">
-          <DialogHeader className="pb-4 border-b border-slate-100">
+        <DialogContent className="max-h-[min(90dvh,90vh)] w-[calc(100%-1.25rem)] max-w-lg overflow-y-auto rounded-3xl border-0 p-4 shadow-2xl shadow-slate-300/50 sm:p-6">
+          <DialogHeader className="border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-teal-100">
-                <Edit className="h-6 w-6 text-teal-600" />
+              <div className="rounded-xl bg-cyan-100 p-2.5">
+                <Edit className="h-6 w-6 text-cyan-600" />
               </div>
               <div>
                 <DialogTitle className="text-xl">Modifier le client</DialogTitle>
@@ -603,17 +683,26 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
               handleSubmitEdit();
             }}
           >
-            <div className="py-6">
+            <div className="py-4 sm:py-6">
               <ClientFormFields formData={formData} setFormData={setFormData} prefix="edit" />
             </div>
-            <DialogFooter className="gap-2 pt-4 border-t border-slate-100 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-lg">
+            <DialogFooter className="gap-2 border-t border-slate-100 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="h-11 rounded-xl sm:h-10"
+              >
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 rounded-lg px-6">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-11 rounded-xl bg-teal-600 px-6 hover:bg-teal-700 sm:h-10"
+              >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Enregistrement...
                   </>
                 ) : (
@@ -627,7 +716,7 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md border-0 shadow-2xl shadow-slate-300/50 rounded-2xl">
+        <DialogContent className="w-[calc(100%-1.25rem)] max-w-md rounded-3xl border-0 p-4 shadow-2xl shadow-slate-300/50 sm:p-6">
           <DialogHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-red-100">
@@ -646,14 +735,18 @@ export default function ClientSAVPage({ embedded }: { embedded?: boolean }) {
               </div>
             </div>
           </DialogHeader>
-          <DialogFooter className="gap-2 pt-4 border-t border-slate-100 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="rounded-lg">
+          <DialogFooter className="gap-2 border-t border-slate-100 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="h-11 rounded-xl sm:h-10"
+            >
               Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirmDelete}
-              className="rounded-lg px-6 bg-red-600 hover:bg-red-700"
+              className="h-11 rounded-xl bg-red-600 px-6 hover:bg-red-700 sm:h-10"
             >
               Supprimer
             </Button>

@@ -2,8 +2,61 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
+import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
 
 export const dynamic = "force-dynamic";
+
+/** Neon/PgBouncer-safe: one statement, no mixed Prisma+$executeRaw $transaction. */
+async function persistPreparationFini(params: {
+  reparationId: string;
+  voitureSAVId: string;
+  detailIds: string[];
+  pieceIds: string[];
+}) {
+  const { reparationId, voitureSAVId, detailIds, pieceIds } = params;
+  const piecesCte =
+    pieceIds.length === 0
+      ? Prisma.sql``
+      : Prisma.sql`, pieces AS (
+          UPDATE "PieceSAV"
+          SET "reparationId" = ${reparationId},
+              "updatedAt" = CURRENT_TIMESTAMP
+          WHERE id IN (${Prisma.join(pieceIds)})
+          RETURNING id
+        )`;
+
+  await prisma.$executeRaw(
+    Prisma.sql`
+      WITH details AS (
+        UPDATE "DetailDiagnostic"
+        SET "reparationId" = ${reparationId},
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE id IN (${Prisma.join(detailIds)})
+        RETURNING id
+      ),
+      voiture AS (
+        UPDATE "VoitureSAV"
+        SET statut = 'PREPARATION_FINI'::"StatutVoitureSAV",
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE id = ${voitureSAVId}
+        RETURNING id
+      )
+      ${piecesCte}
+      SELECT 1
+    `
+  );
+}
+
+async function setVoiturePreparationFini(voitureSAVId: string) {
+  await prisma.$executeRaw(
+    Prisma.sql`
+      UPDATE "VoitureSAV"
+      SET statut = 'PREPARATION_FINI'::"StatutVoitureSAV",
+          "updatedAt" = CURRENT_TIMESTAMP
+      WHERE id = ${voitureSAVId}
+    `
+  );
+}
 
 export async function POST(
   _request: NextRequest,
@@ -15,6 +68,7 @@ export async function POST(
     const voiture = await prisma.voitureSAV.findUnique({
       where: { id: voitureSAVId },
       include: {
+        GarantieSAV: true,
         diagnosticArrivee: {
           include: {
             catergorieDiagnostic: true,
@@ -46,6 +100,9 @@ export async function POST(
     const withRep = allDetails.filter((d) => d.reparationId != null);
     if (withRep.length === allDetails.length) {
       const rid = withRep[0]!.reparationId!;
+      if (voiture.statut === "DIAGNOSTIC_FINI") {
+        await setVoiturePreparationFini(voitureSAVId);
+      }
       const rep = await prisma.reparation.findUnique({ where: { id: rid } });
       return NextResponse.json({
         success: true,
@@ -61,6 +118,53 @@ export async function POST(
             "État incohérent : certaines lignes de diagnostic sont déjà liées à une réparation.",
         },
         { status: 409 }
+      );
+    }
+
+    if (voiture.statut !== "DIAGNOSTIC_FINI") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Seuls les véhicules au statut DIAGNOSTIC_FINI peuvent enregistrer la préparation.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const piecesByDetailId = new Set(
+      voiture.diagnosticArrivee.flatMap((da) =>
+        (da.PieceSAV ?? [])
+          .map((p) => p.detailDiagnosticId)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    const catalog = await prisma.garantieSAV.findMany({
+      select: {
+        nom_garantie: true,
+        statut: true,
+        voitureSAVId: true,
+      },
+    });
+    const detailsNeedingPieces = allDetails.filter(
+      (d) =>
+        !isGarantieOffertDetailLocked(
+          voiture.StatutGarantie,
+          d,
+          voiture.GarantieSAV,
+          catalog
+        )
+    );
+    const detailsWithoutPiece = detailsNeedingPieces.filter(
+      (d) => !piecesByDetailId.has(d.id)
+    );
+    if (detailsWithoutPiece.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Ajoutez une pièce à chaque ligne de diagnostic (${detailsWithoutPiece.length} restante${detailsWithoutPiece.length > 1 ? "s" : ""}).`,
+        },
+        { status: 400 }
       );
     }
 
@@ -112,28 +216,17 @@ export async function POST(
         detail_reparation: detail_reparation || null,
         quantite: qtyTotal,
         prix_unitaire: prixSum.gt(0) ? prixSum : null,
-        statut: "TERMINE",
+        statut: "EN_ATTENTE",
       },
     });
 
     try {
-      // Batch transaction (non-interactive) — compatible Neon pooler / PgBouncer (évite P2028).
-      await prisma.$transaction([
-        prisma.detailDiagnostic.updateMany({
-          where: { id: { in: allDetails.map((d) => d.id) } },
-          data: { reparationId: rep.id },
-        }),
-        ...pieceRows.map((p) =>
-          prisma.$executeRaw(
-            Prisma.sql`
-              UPDATE "PieceSAV"
-              SET "reparationId" = ${rep.id},
-                  "updatedAt" = CURRENT_TIMESTAMP
-              WHERE id = ${p.id}
-            `
-          )
-        ),
-      ]);
+      await persistPreparationFini({
+        reparationId: rep.id,
+        voitureSAVId,
+        detailIds: allDetails.map((d) => d.id),
+        pieceIds: pieceRows.map((p) => p.id),
+      });
     } catch (e) {
       await prisma.reparation.delete({ where: { id: rep.id } }).catch(() => {});
       throw e;

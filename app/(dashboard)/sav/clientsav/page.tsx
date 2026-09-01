@@ -248,23 +248,19 @@ export default function ClientSavPage() {
             onValueChange={(v) => setActiveTab(v as TabValue)}
             className="mt-0"
           >
-            <div className="overflow-hidden rounded-[1.25rem] bg-white shadow-sm ring-1 ring-slate-200/80 sm:rounded-3xl">
-              <div className="p-3 sm:p-5 lg:p-6">
-                <TabsContent
-                  value="client"
-                  className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
-                >
-                  <ClientSAVPage embedded />
-                </TabsContent>
+            <TabsContent
+              value="client"
+              className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
+            >
+              <ClientSAVPage embedded />
+            </TabsContent>
 
-                <TabsContent
-                  value="voiture"
-                  className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
-                >
-                  <VoitureSAVTab embedded />
-                </TabsContent>
-              </div>
-            </div>
+            <TabsContent
+              value="voiture"
+              className="mt-0 focus-visible:outline-none animate-in fade-in duration-200"
+            >
+              <VoitureSAVTab embedded />
+            </TabsContent>
           </Tabs>
         </section>
       </div>

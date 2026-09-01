@@ -40,8 +40,7 @@ interface VoitureSavGarantie {
   marqueVoiture: string;
   modelVoiture: string;
   chassisNumber?: string | null;
-  immatriculation?: string | null;
-  couleur: string;
+  immatriculation: string;
   _count?: { VoitureSAV: number };
 }
 
@@ -50,7 +49,6 @@ const emptyForm = {
   modelVoiture: "",
   chassisNumber: "",
   immatriculation: "",
-  couleur: "",
 };
 
 async function fetchGaranties() {
@@ -141,7 +139,6 @@ export default function ListeVoitureSousGarantieTab({
       modelVoiture: item.modelVoiture,
       chassisNumber: item.chassisNumber || "",
       immatriculation: item.immatriculation || "",
-      couleur: item.couleur,
     });
     setEditDialogOpen(true);
   };
@@ -152,8 +149,8 @@ export default function ListeVoitureSousGarantieTab({
   };
 
   const handleSubmitAdd = async () => {
-    if (!formData.modelVoiture.trim() || !formData.couleur.trim()) {
-      toast.error("Le modèle et la couleur sont requis");
+    if (!formData.modelVoiture.trim() || !formData.immatriculation.trim()) {
+      toast.error("Le modèle et l'immatriculation sont requis");
       return;
     }
     setIsSubmitting(true);
@@ -172,8 +169,8 @@ export default function ListeVoitureSousGarantieTab({
   };
 
   const handleSubmitEdit = async () => {
-    if (!editingItem || !formData.modelVoiture.trim() || !formData.couleur.trim()) {
-      toast.error("Le modèle et la couleur sont requis");
+    if (!editingItem || !formData.modelVoiture.trim() || !formData.immatriculation.trim()) {
+      toast.error("Le modèle et l'immatriculation sont requis");
       return;
     }
     setIsSubmitting(true);
@@ -257,36 +254,26 @@ export default function ListeVoitureSousGarantieTab({
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={`${prefix}-couleur`}>Couleur *</Label>
-          <Input
-            id={`${prefix}-couleur`}
-            value={formData.couleur}
-            onChange={(e) => setFormData((p) => ({ ...p, couleur: e.target.value }))}
-            placeholder="Ex: Blanc"
-            className="rounded-lg"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`${prefix}-immat`}>Immatriculation</Label>
+          <Label htmlFor={`${prefix}-immat`}>Immatriculation *</Label>
           <Input
             id={`${prefix}-immat`}
             value={formData.immatriculation}
             onChange={(e) => setFormData((p) => ({ ...p, immatriculation: e.target.value }))}
             placeholder="AB-123-CD"
             className="rounded-lg"
+            required
           />
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`${prefix}-chassis`}>N° de châssis</Label>
-        <Input
-          id={`${prefix}-chassis`}
-          value={formData.chassisNumber}
-          onChange={(e) => setFormData((p) => ({ ...p, chassisNumber: e.target.value }))}
-          placeholder="VIN / châssis"
-          className="rounded-lg"
-        />
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-chassis`}>N° de châssis</Label>
+          <Input
+            id={`${prefix}-chassis`}
+            value={formData.chassisNumber}
+            onChange={(e) => setFormData((p) => ({ ...p, chassisNumber: e.target.value }))}
+            placeholder="VIN / châssis"
+            className="rounded-lg"
+          />
+        </div>
       </div>
     </div>
   );
@@ -354,9 +341,11 @@ export default function ListeVoitureSousGarantieTab({
                       <p className="truncate font-semibold text-slate-900">
                         {item.marqueVoiture} {item.modelVoiture}
                       </p>
-                      <p className="mt-0.5 text-sm text-slate-600">{item.couleur}</p>
+                      <p className="mt-0.5 font-mono text-sm text-slate-600">
+                        {item.immatriculation}
+                      </p>
                       <p className="mt-1 truncate font-mono text-xs text-slate-500">
-                        {item.immatriculation || item.chassisNumber || "Sans immat. / châssis"}
+                        {item.chassisNumber || "Sans n° de châssis"}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
@@ -387,11 +376,10 @@ export default function ListeVoitureSousGarantieTab({
                   <TableRow className="border-b-2 border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/80 hover:bg-slate-50">
                     <TableHead className="py-4 font-semibold text-slate-700">Marque</TableHead>
                     <TableHead className="py-4 font-semibold text-slate-700">Modèle</TableHead>
-                    <TableHead className="py-4 font-semibold text-slate-700">Couleur</TableHead>
-                    <TableHead className="hidden py-4 font-semibold text-slate-700 md:table-cell">
+                    <TableHead className="py-4 font-semibold text-slate-700">
                       Immatriculation
                     </TableHead>
-                    <TableHead className="hidden py-4 font-semibold text-slate-700 lg:table-cell">
+                    <TableHead className="hidden py-4 font-semibold text-slate-700 md:table-cell">
                       Châssis
                     </TableHead>
                     <TableHead className="w-28 py-4 text-right font-semibold text-slate-700">
@@ -411,11 +399,10 @@ export default function ListeVoitureSousGarantieTab({
                         {item.marqueVoiture}
                       </TableCell>
                       <TableCell className="py-3 text-slate-800">{item.modelVoiture}</TableCell>
-                      <TableCell className="py-3 text-slate-600">{item.couleur}</TableCell>
-                      <TableCell className="hidden py-3 text-slate-600 md:table-cell">
-                        {item.immatriculation || "—"}
+                      <TableCell className="py-3 font-mono text-sm text-slate-600">
+                        {item.immatriculation}
                       </TableCell>
-                      <TableCell className="hidden py-3 font-mono text-xs text-slate-600 lg:table-cell">
+                      <TableCell className="hidden py-3 font-mono text-xs text-slate-600 md:table-cell">
                         {item.chassisNumber || "—"}
                       </TableCell>
                       <TableCell className="py-3 text-right">

@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CheckListVerificationForm from "./CheckListVerificationForm";
 import VehiclePicker from "./VehiclePicker";
+import CameraCapture, { requestCarCamera } from "./CameraCapture";
 
 interface CatergorieDiagnostic {
   id: string;
@@ -55,6 +56,7 @@ interface VoitureSAV {
   id: string;
   model: string;
   immatriculation: string;
+  chassisNumber?: string | null;
   couleur: string;
   statut: string;
   ClientSAV?: { nom?: string; prenom?: string; contact?: string };
@@ -166,7 +168,23 @@ function DiagnostiqueForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<VisuelDefaut | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [startingCamera, setStartingCamera] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+
+  const stopCameraTracks = (stream: MediaStream | null) => {
+    stream?.getTracks().forEach((track) => track.stop());
+  };
+
+  const replaceCameraStream = (stream: MediaStream | null) => {
+    if (cameraStreamRef.current && cameraStreamRef.current !== stream) {
+      stopCameraTracks(cameraStreamRef.current);
+    }
+    cameraStreamRef.current = stream;
+    setCameraStream(stream);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -215,11 +233,39 @@ function DiagnostiqueForm({
     setVisuelNom("");
     setVisuelDescription("");
     setVisuelImage(null);
+    setCameraOpen(false);
+    replaceCameraStream(null);
     if (visuelImagePreview) URL.revokeObjectURL(visuelImagePreview);
     setVisuelImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
+
+  const openLiveCamera = async () => {
+    setStartingCamera(true);
+    try {
+      const stream = await requestCarCamera("environment");
+      replaceCameraStream(stream);
+      setCameraOpen(true);
+    } catch {
+      toast.error("Impossible d'accéder à la caméra. Vous pouvez utiliser l'appareil photo natif.");
+      cameraInputRef.current?.click();
+    } finally {
+      setStartingCamera(false);
+    }
+  };
+
+  const closeLiveCamera = () => {
+    setCameraOpen(false);
+    replaceCameraStream(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCameraTracks(cameraStreamRef.current);
+      cameraStreamRef.current = null;
+    };
+  }, []);
 
   const handleImageSelect = (file: File | null) => {
     if (visuelImagePreview) URL.revokeObjectURL(visuelImagePreview);
@@ -640,20 +686,40 @@ function DiagnostiqueForm({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => handleImageSelect(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  handleImageSelect(e.target.files?.[0] ?? null);
+                  setCameraOpen(false);
+                }}
               />
 
-              {/* Mobile Direct Camera Capture Input */}
+              {/* Native camera fallback (mobile OS picker) */}
               <input
                 ref={cameraInputRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(e) => handleImageSelect(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  handleImageSelect(e.target.files?.[0] ?? null);
+                  setCameraOpen(false);
+                }}
               />
 
-              {visuelImagePreview ? (
+              {cameraOpen && cameraStream ? (
+                <CameraCapture
+                  initialStream={cameraStream}
+                  onCapture={(file) => {
+                    handleImageSelect(file);
+                    closeLiveCamera();
+                  }}
+                  onCancel={closeLiveCamera}
+                  onStreamChange={replaceCameraStream}
+                  onNativeFallback={() => {
+                    closeLiveCamera();
+                    cameraInputRef.current?.click();
+                  }}
+                />
+              ) : visuelImagePreview ? (
                 <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -661,28 +727,52 @@ function DiagnostiqueForm({
                     alt="Aperçu"
                     className="aspect-[4/3] w-full object-cover"
                   />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white active:scale-95"
-                    onClick={() => handleImageSelect(null)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute right-2 top-2 flex gap-1.5">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 rounded-full bg-white/90 px-3 text-xs font-semibold shadow-md hover:bg-white active:scale-95"
+                      disabled={startingCamera}
+                      onClick={openLiveCamera}
+                    >
+                      {startingCamera ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Camera className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Reprendre
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white active:scale-95"
+                      onClick={() => handleImageSelect(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/40 p-6 transition-all hover:bg-rose-50 active:scale-95"
+                    onClick={openLiveCamera}
+                    disabled={startingCamera}
+                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/40 p-6 transition-all hover:bg-rose-50 active:scale-95 disabled:opacity-70"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500 text-white shadow-md">
-                      <Camera className="h-5 w-5" />
+                      {startingCamera ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Camera className="h-5 w-5" />
+                      )}
                     </div>
-                    <span className="text-xs font-bold text-rose-900">Prendre une photo</span>
-                    <span className="text-[10px] text-rose-600">Ouvre l&apos;appareil photo</span>
+                    <span className="text-xs font-bold text-rose-900">
+                      {startingCamera ? "Ouverture…" : "Prendre une photo"}
+                    </span>
+                    <span className="text-[10px] text-rose-600">Utiliser la caméra</span>
                   </button>
 
                   <button

@@ -69,14 +69,14 @@ const navItems = [
   {
     id: 7,
     icon: BadgePercent,
-    label: "Offre Spéciale",
+    label: "Offre spéciale",
     href: "/sav/offre-speciale",
     category: "operations",
   },
   {
     id: 8,
     icon: CarFront,
-    label: "Voiture Réparation",
+    label: "Voiture Préparation",
     href: "/sav/voiture-reparation",
     category: "operations",
   },
@@ -108,6 +108,7 @@ const navItems = [
     href: "/sav/facturation-sav",
     category: "operations",
   },
+
   {
     id: 13,
     icon: PackagePlus,
@@ -136,6 +137,13 @@ const navItems = [
     href: "/sav/statistiques-sav",
     category: "reports",
   },
+  {
+    id: 17,
+    icon: CarFront,
+    label: "Voiture S.A.V",
+    href: "/sav/voiture-sav",
+    category: "operations",
+  }
 ];
 
 const CATEGORY_ORDER = ["main", "operations", "inventory", "reports"] as const;
@@ -219,7 +227,7 @@ const SidebarSav = ({ isOpen }: { isOpen: boolean }) => {
 
                 return (
                   <Link
-                    key={item.id}
+                    key={item.href}
                     href={item.href}
                     title={!isOpen ? item.label : undefined}
                     className={clsx(

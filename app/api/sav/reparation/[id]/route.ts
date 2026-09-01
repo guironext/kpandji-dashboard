@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateTerminerMaintenance } from "@/lib/sav/terminerMaintenanceValidation";
+import { filterUnlockedDetails } from "@/lib/sav/garantieOffertMatch";
 import {
   StatutMaintenance,
   StatutReparation,
   StatutVoitureSAV,
 } from "@prisma/client";
+import { setVoitureSavStatutSql } from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,24 @@ export async function GET(
         voitureSAVId: true,
         Maintenance: true,
         DetailDiagnostic: {
-          select: { catergorieDiagnosticId: true },
+          select: {
+            id: true,
+            nom: true,
+            garantieSAVId: true,
+            catergorieDiagnosticId: true,
+          },
+        },
+        voitureSAV: {
+          select: {
+            StatutGarantie: true,
+            GarantieSAV: {
+              select: {
+                nom_garantie: true,
+                statut: true,
+                voitureSAVId: true,
+              },
+            },
+          },
         },
       },
     });
@@ -100,7 +119,24 @@ export async function PATCH(
         horaire_travail_duration: true,
         Maintenance: true,
         DetailDiagnostic: {
-          select: { catergorieDiagnosticId: true },
+          select: {
+            id: true,
+            nom: true,
+            garantieSAVId: true,
+            catergorieDiagnosticId: true,
+          },
+        },
+        voitureSAV: {
+          select: {
+            StatutGarantie: true,
+            GarantieSAV: {
+              select: {
+                nom_garantie: true,
+                statut: true,
+                voitureSAVId: true,
+              },
+            },
+          },
         },
       },
     });
@@ -124,10 +160,24 @@ export async function PATCH(
         );
       }
 
+      const catalog = await prisma.garantieSAV.findMany({
+        select: {
+          nom_garantie: true,
+          statut: true,
+          voitureSAVId: true,
+        },
+      });
+      const unlockedDetails = filterUnlockedDetails(
+        snapshot.voitureSAV.StatutGarantie,
+        snapshot.DetailDiagnostic,
+        snapshot.voitureSAV.GarantieSAV,
+        catalog
+      );
+
       const check = validateTerminerMaintenance(
         snapshot,
         snapshot.Maintenance,
-        snapshot.DetailDiagnostic.map((d) => d.catergorieDiagnosticId)
+        unlockedDetails.map((d) => d.catergorieDiagnosticId)
       );
       if (!check.ok) {
         return NextResponse.json(
@@ -141,9 +191,9 @@ export async function PATCH(
 
       const catIds = [
         ...new Set(
-          snapshot.DetailDiagnostic.map((d) => d.catergorieDiagnosticId).filter(
-            (cid): cid is string => cid != null && cid !== ""
-          )
+          unlockedDetails
+            .map((d) => d.catergorieDiagnosticId)
+            .filter((cid): cid is string => cid != null && cid !== "")
         ),
       ];
 
@@ -162,11 +212,8 @@ export async function PATCH(
           where: { id: repId },
           data: { statut: StatutReparation.TESTE },
         }),
-        prisma.voitureSAV.update({
-          where: { id: snapshot.voitureSAVId },
-          data: { statut: StatutVoitureSAV.TESTE },
-        }),
       ]);
+      await setVoitureSavStatutSql(snapshot.voitureSAVId, "TESTE");
 
       return NextResponse.json({ success: true, data: updated });
     }
@@ -256,6 +303,9 @@ export async function PATCH(
       where: { id: repId },
       data: { statut: raw },
     });
+    if (snapshot.voitureSAVId) {
+      await setVoitureSavStatutSql(snapshot.voitureSAVId, "EN_MAINTENANCE");
+    }
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {

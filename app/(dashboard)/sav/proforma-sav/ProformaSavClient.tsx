@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, PlusIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatNumberWithSpaces } from "@/lib/utils";
 import FactureSavDocumentView from "@/components/sav/FactureSavDocumentView";
@@ -55,7 +55,19 @@ export default function ProformaSavClient() {
   }, [load]);
 
   const totalPages = Math.max(1, Math.ceil(reparations.length / itemsPerPage));
+  const alreadySentToMaintenance = (rep: ReparationRow | undefined) => {
+    if (!rep) return false;
+    const statut = rep.voitureSAV.statut;
+    return (
+      statut === "EN_MAINTENANCE_EN_ATTENTE" ||
+      statut === "EN_MAINTENANCE" ||
+      statut === "EN_MAINTENANCE_EN_COURS" ||
+      rep.voitureSAV.deplacementSAV === "MAINTENANCE"
+    );
+  };
+
   const currentRep = reparations[(currentPage - 1) * itemsPerPage];
+  const isEnMaintenance = alreadySentToMaintenance(currentRep);
 
   const lineRows = useMemo(
     () => (currentRep ? buildLineRows(currentRep) : []),
@@ -71,13 +83,16 @@ export default function ProformaSavClient() {
 
   const handleActiverMaintenance = async () => {
     if (!currentRep || maintenanceLoading) return;
-    if (currentRep.statut === "EN_MAINTENANCE") return;
+    if (alreadySentToMaintenance(currentRep)) return;
     setMaintenanceLoading(true);
     try {
-      const res = await fetch(`/api/sav/reparation/${currentRep.id}`, {
+      const res = await fetch(`/api/sav/voiture-sav/${currentRep.voitureSAV.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: "EN_MAINTENANCE" }),
+        body: JSON.stringify({
+          statut: "EN_MAINTENANCE_EN_ATTENTE",
+          deplacementSAV: "MAINTENANCE",
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -85,10 +100,19 @@ export default function ProformaSavClient() {
       }
       setReparations((prev) =>
         prev.map((r) =>
-          r.id === currentRep.id ? { ...r, statut: "EN_MAINTENANCE" } : r
+          r.id === currentRep.id
+            ? {
+                ...r,
+                voitureSAV: {
+                  ...r.voitureSAV,
+                  statut: "EN_MAINTENANCE_EN_ATTENTE",
+                  deplacementSAV: "MAINTENANCE",
+                },
+              }
+            : r
         )
       );
-      toast.success("Réparation passée en maintenance");
+      toast.success("Véhicule envoyé à la maintenance");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -135,30 +159,119 @@ export default function ProformaSavClient() {
           <title>Proforma SAV — ${repId}</title>
           <meta charset="UTF-8">
           <style>
-            @page { size: A4; margin: 8mm; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            html, body { font-family: Arial, sans-serif; margin: 0; padding: 0; color: #000; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #059669; padding-bottom: 8px; margin-bottom: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            thead tr { background-color: #ecfdf5; border-bottom: 1px solid #000; }
-            th, td { padding: 8px; font-size: 13px; }
-            tfoot tr { background-color: #ecfdf5; }
-            .total-row { font-weight: 600; text-transform: uppercase; }
+            @page { size: A4 portrait; margin: 0; }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            html, body {
+              font-family: Arial, Helvetica, sans-serif;
+              margin: 0;
+              padding: 0;
+              color: #000;
+              background: #fff;
+              font-size: 14px;
+              line-height: 1.35;
+              width: 210mm;
+            }
+            .sheet {
+              width: 210mm;
+              min-height: 297mm;
+              padding: 12mm 14mm 14mm;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 16px;
+              border-bottom: 4px solid #059669;
+              padding-bottom: 8px;
+              margin-bottom: 10px;
+            }
+            .header img { width: 110px; height: 55px; object-fit: contain; }
+            .header h1 { margin: 0; font-size: 24px; line-height: 1.15; }
+            .header p { margin: 4px 0 0; font-size: 13px; }
+            .meta-date { text-align: right; font-size: 13px; margin-bottom: 8px; }
+            .doc-title { text-align: center; margin: 10px 0 12px; }
+            .doc-title h1 {
+              border: 1px solid #000;
+              padding: 8px 18px;
+              display: inline-block;
+              font-size: 18px;
+              margin: 0;
+            }
+            .parties {
+              display: flex;
+              justify-content: space-between;
+              gap: 200px;
+              margin-top: 12px;
+              margin-bottom: 12px;
+              font-size: 14px;
+            }
+            .parties > div { flex: 1; min-width: 0; }
+            .vehicle { margin-bottom: 10px; font-size: 14px; }
+            table {
+              width: 100%;
+              max-width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+            }
+            table thead tr { background-color: #ecfdf5; border-bottom: 1px solid #000; }
+            table th, table td {
+              padding: 7px 8px;
+              font-size: 14px !important;
+              word-wrap: break-word;
+              overflow-wrap: anywhere;
+            }
+            table thead th[colspan="5"] { font-size: 15px !important; }
+            table td div { font-size: 12px !important; }
+            table tfoot tr { background-color: #ecfdf5; }
+            .totals { margin-top: 6px; }
+            .totals td:nth-child(1) { width: auto; }
+            .totals td:nth-child(2),
+            .totals td:nth-child(3) { width: 18%; }
+            .total-row { font-weight: 700; text-transform: uppercase; font-size: 15px !important; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr { page-break-inside: avoid; }
+            .note {
+              margin-top: 12px;
+              padding: 10px 12px;
+              border: 1px solid #cbd5e1;
+              border-radius: 10px;
+              max-width: 58%;
+              font-size: 13px;
+            }
+            .footer {
+              margin-top: 14px;
+              padding-top: 10px;
+              border-top: 1px solid #e2e8f0;
+              font-size: 11px;
+              color: #64748b;
+              text-align: center;
+              line-height: 1.45;
+            }
+            @media print {
+              html, body, .sheet { width: 210mm; }
+              .sheet { min-height: 297mm; }
+            }
           </style>
         </head>
         <body>
+          <div class="sheet">
           <div class="header">
-            <div><img src="${escapeAttr(typeof window !== "undefined" ? window.location.origin : "")}/logo.png" alt="Logo" style="width: 100px; height: 50px; object-fit: contain;" /></div>
+            <div><img src="${escapeAttr(typeof window !== "undefined" ? window.location.origin : "")}/logo.png" alt="Logo" /></div>
             <div>
-              <h1 style="margin:0;font-size:22px;">KPANDJI AUTOMOBILES</h1>
-              <p style="margin:4px 0 0;font-size:12px;">Services Après-Vente — Proforma</p>
+              <h1>KPANDJI AUTOMOBILES</h1>
+              <p>Services Après-Vente — Proforma</p>
             </div>
           </div>
-          <div style="text-align: right; font-size: 12px;">Date: ${factureDate}</div>
-          <div style="text-align: center; margin: 16px 0;">
-            <h1 style="border: 1px solid #000; padding: 8px 16px; display: inline-block; font-size: 16px; margin: 0;">PROFORMA S.A.V.</h1>
+          <div class="meta-date">Date: ${factureDate}</div>
+          <div class="doc-title">
+            <h1>PROFORMA S.A.V.</h1>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
+          <div class="parties">
             <div>
               <div><strong>Réf. réparation:</strong> ${repId}</div>
               <div><strong>Intitulé:</strong> ${escapeHtml(currentRep.categorie_reparation)}</div>
@@ -169,25 +282,31 @@ export default function ProformaSavClient() {
               ${client.entreprise ? `<div><strong>Entreprise:</strong> ${escapeHtml(client.entreprise)}</div>` : ""}
             </div>
           </div>
-          <div style="margin-bottom: 12px; font-size: 12px;">
+          <div class="vehicle">
             <strong>Véhicule:</strong> ${escapeHtml(currentRep.voitureSAV.model)} — ${escapeHtml(currentRep.voitureSAV.immatriculation)} — ${escapeHtml(currentRep.voitureSAV.couleur)}
             (${escapeHtml(currentRep.voitureSAV.motorisation)}, ${escapeHtml(currentRep.voitureSAV.transmission)})
           </div>
           ${factureSectionsHtml}
-          <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+          <table class="totals">
+            <colgroup>
+              <col>
+              <col style="width:18%">
+              <col style="width:22%">
+            </colgroup>
             <tfoot>
-              <tr style="background:#ecfdf5;"><td colspan="3" style="padding:8px;"></td><td style="text-align:right;padding:8px;font-weight:600;">Total HT</td><td style="text-align:right;padding:8px;">${formatNumberWithSpaces(ht)} FCFA</td></tr>
-              <tr><td colspan="3" style="padding:8px;"></td><td style="text-align:right;padding:8px;">TVA (${TVA_RATE}%)</td><td style="text-align:right;padding:8px;">${formatNumberWithSpaces(tva)} FCFA</td></tr>
-              <tr class="total-row" style="background:#ecfdf5;"><td colspan="3" style="padding:10px;"></td><td style="text-align:right;padding:10px;">Total TTC</td><td style="text-align:right;padding:10px;">${formatNumberWithSpaces(ttc)} FCFA</td></tr>
+              <tr style="background:#ecfdf5;"><td></td><td style="text-align:right;font-weight:600;">Total HT</td><td style="text-align:right;">${formatNumberWithSpaces(ht)} FCFA</td></tr>
+              <tr><td></td><td style="text-align:right;">TVA (${TVA_RATE}%)</td><td style="text-align:right;">${formatNumberWithSpaces(tva)} FCFA</td></tr>
+              <tr class="total-row" style="background:#ecfdf5;"><td></td><td style="text-align:right;">Total TTC</td><td style="text-align:right;">${formatNumberWithSpaces(ttc)} FCFA</td></tr>
             </tfoot>
           </table>
-          <div style="margin-top:16px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:12px;max-width:50%;font-size:12px;">
+          <div class="note">
             <div style="font-weight:700;margin-bottom:4px;">Note:</div>
             <div>Sur la facture finale, il vous sera ajouter les frais des horaires-travail.</div>
           </div>
-          <div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b;text-align:center;line-height:1.5;">
+          <div class="footer">
             <p style="margin:0;">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
             <p style="margin:4px 0 0;">Email: info@kpandji.com — www.kpandji.com</p>
+          </div>
           </div>
         </body>
       </html>
@@ -211,7 +330,7 @@ export default function ProformaSavClient() {
     return (
       <div className="p-6">
         <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-600">
-          Aucune réparation enregistrée. Les proformas apparaissent après enregistrement d&apos;une réparation
+          Aucune Préparation enregistrée. Les proformas apparaissent après enregistrement d&apos;une préparation
           depuis &quot;Voiture réparation&quot;.
         </div>
       </div>
@@ -251,19 +370,23 @@ export default function ProformaSavClient() {
           </div>
           <Button
             type="button"
-            disabled={!currentRep || maintenanceLoading}
+            disabled={!currentRep || maintenanceLoading || isEnMaintenance}
             onClick={() => void handleActiverMaintenance()}
             className={cn(
               "font-semibold border-2 transition-colors",
-              currentRep?.statut === "EN_MAINTENANCE"
+              isEnMaintenance
                 ? "bg-violet-600 hover:bg-violet-600 text-white border-violet-400 cursor-default"
                 : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500"
             )}
           >
-            <PlusIcon className="w-4 h-4" />
-            {currentRep?.statut === "EN_MAINTENANCE"
+            {maintenanceLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <PlusIcon className="w-4 h-4" />
+            )}
+            {isEnMaintenance
               ? "En maintenance"
-              : "Ajouter Maintenance"}
+              : "Envoyer à la maintenance"}
           </Button>
         </div>
 

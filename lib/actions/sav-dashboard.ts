@@ -3,12 +3,13 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "./user";
+import { Prisma } from "@prisma/client";
 import type {
   StatutMaintenance,
   StatutReparation,
-  StatutVoitureSAV,
   StatusFacture,
 } from "@prisma/client";
+import { withVoitureSavStatut } from "@/lib/sav/voitureSavStatutSql";
 
 export type ChartDatum = {
   label: string;
@@ -85,10 +86,12 @@ const CHART_COLORS = [
   "#f97316",
 ] as const;
 
-const VOITURE_STATUT_LABELS: Record<StatutVoitureSAV, string> = {
+const VOITURE_STATUT_LABELS: Record<string, string> = {
   ARRIVE: "Arrivée",
   DIAGNOSTIC_FINI: "Diagnostic fini",
+  PREPARATION_FINI: "Préparation finie",
   DISPATCHE: "Dispatchée",
+  FIN_INTERVENTION_GARANTIESAV_EN_COURS: "Fin intervention garantie",
   GARANTIESAV_EN_COURS: "Garantie en cours",
   GARANTIESAV_TERMINE: "Garantie terminée",
   EN_TRAITEMENT: "En traitement",
@@ -121,9 +124,10 @@ const FACTURE_STATUS_LABELS: Record<StatusFacture, string> = {
   ANNULEE: "Annulée",
 };
 
-const VOITURES_EN_ATELIER: StatutVoitureSAV[] = [
+const VOITURES_EN_ATELIER: string[] = [
   "ARRIVE",
   "DIAGNOSTIC_FINI",
+  "PREPARATION_FINI",
   "DISPATCHE",
   "GARANTIESAV_EN_COURS",
   "EN_TRAITEMENT",
@@ -230,7 +234,13 @@ export async function getSavDashboardData(): Promise<{
     ] = await Promise.all([
       prisma.clientSAV.count(),
       prisma.voitureSAV.count(),
-      prisma.voitureSAV.count({ where: { statut: { in: VOITURES_EN_ATELIER } } }),
+      prisma.$queryRaw<[{ count: bigint }]>(
+        Prisma.sql`
+          SELECT COUNT(*)::bigint AS count
+          FROM "VoitureSAV"
+          WHERE statut::text IN (${Prisma.join(VOITURES_EN_ATELIER)})
+        `
+      ).then((rows) => Number(rows[0]?.count ?? 0)),
       prisma.voitureSAV.count({ where: { statut: "TERMINE" } }),
       prisma.diagnosticArrivee.count(),
       prisma.reparation.count(),
@@ -244,7 +254,13 @@ export async function getSavDashboardData(): Promise<{
         where: { statut_facture: { in: FACTURES_EN_ATTENTE } },
       }),
       prisma.personnelSAV.count(),
-      prisma.voitureSAV.groupBy({ by: ["statut"], _count: { _all: true } }),
+      prisma.$queryRaw<Array<{ statut: string; count: bigint }>>(
+        Prisma.sql`
+          SELECT statut::text AS statut, COUNT(*)::bigint AS count
+          FROM "VoitureSAV"
+          GROUP BY statut
+        `
+      ),
       prisma.reparation.groupBy({ by: ["statut"], _count: { _all: true } }),
       prisma.factureProformaSAV.groupBy({ by: ["statut_facture"], _count: { _all: true } }),
       prisma.voitureSAV.findMany({
@@ -271,7 +287,6 @@ export async function getSavDashboardData(): Promise<{
           id: true,
           model: true,
           immatriculation: true,
-          statut: true,
           createdAt: true,
           ClientSAV: { select: { nom: true, prenom: true } },
         },
@@ -307,7 +322,10 @@ export async function getSavDashboardData(): Promise<{
     );
 
     const voituresByStatut = toChartData(
-      voituresByStatutRaw.map((g) => ({ key: g.statut, count: g._count._all })),
+      voituresByStatutRaw.map((g) => ({
+        key: g.statut as string,
+        count: Number(g.count),
+      })),
       VOITURE_STATUT_LABELS
     );
 
@@ -321,7 +339,8 @@ export async function getSavDashboardData(): Promise<{
       FACTURE_STATUS_LABELS
     );
 
-    const recentVoitures: RecentVoitureSav[] = recentVoituresRaw.map((v) => ({
+    const recentVoituresWithStatut = await withVoitureSavStatut(recentVoituresRaw);
+    const recentVoitures: RecentVoitureSav[] = recentVoituresWithStatut.map((v) => ({
       id: v.id,
       model: v.model,
       immatriculation: toImmatriculation(v.immatriculation),

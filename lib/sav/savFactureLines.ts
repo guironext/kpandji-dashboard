@@ -41,6 +41,8 @@ export type ReparationRow = {
     couleur: string;
     motorisation: string;
     transmission: string;
+    statut?: string;
+    deplacementSAV?: string;
     ClientSAV: {
       nom: string;
       prenom: string;
@@ -62,10 +64,96 @@ export type MaintenanceHoraire = {
 /** Maintenance terminée (même réparation) pour une ligne MO par catégorie diagnostic */
 export type MaintenanceSAVFactureRow = {
   id?: string;
+  statut?: string;
   catergorieDiagnosticId: string | null;
   duree_maintenance: string | null | undefined;
   prix_maintenance: string | number | { toString(): string } | null | undefined;
 };
+
+export type FactureSavLite = {
+  id: string;
+  numero_facture: string;
+  date_facture: string | Date;
+};
+
+export type ReparationFactureSource = Omit<ReparationRow, "voitureSAV"> & {
+  Maintenance?: MaintenanceSAVFactureRow[];
+  FactureProformaSAV?: FactureSavLite[];
+};
+
+/** Véhicule SAV + ses réparations, pour une facture unique par voiture. */
+export type VoitureSavFactureSource = {
+  id: string;
+  model: string;
+  immatriculation: string | null;
+  couleur: string;
+  motorisation: string;
+  transmission: string;
+  updatedAt?: string | Date;
+  ClientSAV: ReparationRow["voitureSAV"]["ClientSAV"];
+  Reparation: ReparationFactureSource[];
+};
+
+export type VoitureSavFactureRow = ReparationRow & {
+  Maintenance: MaintenanceSAVFactureRow[];
+  FactureProformaSAV: FactureSavLite[];
+};
+
+/**
+ * Une facture = un véhicule TERMINE. Agrège toutes les réparations,
+ * diagnostics, pièces et maintenances de ce dossier.
+ */
+export function mergeVoitureSavReparationsForFacture(
+  v: VoitureSavFactureSource,
+): VoitureSavFactureRow {
+  const reps = v.Reparation ?? [];
+  const first = reps[0];
+  const details = reps.flatMap((r) => r.DetailDiagnostic ?? []);
+  const pieces = reps.flatMap((r) => r.PieceSAV ?? []);
+  const maints = reps.flatMap((r) => r.Maintenance ?? []);
+  const terminees = maints.filter(
+    (m) => !m.statut || m.statut === "TERMINEE",
+  );
+  const factures = reps.flatMap((r) => r.FactureProformaSAV ?? []);
+  const totalMo = reps.reduce((s, r) => s + toNum(r.horaire_travail_prix), 0);
+  const durations = [
+    ...new Set(
+      reps
+        .map((r) => r.horaire_travail_duration?.trim())
+        .filter((d): d is string => Boolean(d)),
+    ),
+  ];
+  const categories = [
+    ...new Set(
+      reps
+        .map((r) => r.categorie_reparation?.trim())
+        .filter((c): c is string => Boolean(c)),
+    ),
+  ];
+
+  return {
+    id: first?.id ?? v.id,
+    statut: first?.statut,
+    categorie_reparation: categories.join(" / ") || "Facture SAV",
+    detail_reparation: first?.detail_reparation ?? null,
+    horaire_travail_prix: totalMo,
+    horaire_travail_duration: durations.join(" + ") || null,
+    createdAt: first?.createdAt ?? v.updatedAt ?? new Date(),
+    voitureSAV: {
+      id: v.id,
+      model: v.model,
+      immatriculation: v.immatriculation ?? "",
+      couleur: v.couleur,
+      motorisation: v.motorisation,
+      transmission: v.transmission,
+      ClientSAV: v.ClientSAV,
+    },
+    DetailDiagnostic: details,
+    PieceSAV: pieces,
+    Maintenance: terminees.length > 0 ? terminees : maints,
+    FactureProformaSAV: factures.slice(0, 1),
+  };
+}
 
 export function toNum(
   v: string | number | { toString(): string } | null | undefined | unknown,

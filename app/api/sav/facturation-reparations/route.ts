@@ -1,45 +1,53 @@
 import { NextResponse } from "next/server";
-import { StatutMaintenance } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
+import {
+  fetchVoitureSavIdsByStatut,
+  voitureSavFactureSelect,
+} from "@/lib/sav/voitureSavStatutSql";
+import { mergeVoitureSavReparationsForFacture } from "@/lib/sav/savFactureLines";
 
 export const dynamic = "force-dynamic";
 
-/** Réparations avec au moins une maintenance terminée (facturation SAV). */
+/** Une facture par véhicule SAV au statut TERMINE. */
 export async function GET() {
   try {
-    const reparations = await executeWithRetry(() =>
-      prisma.reparation.findMany({
-        where: {
-          Maintenance: { some: { statut: StatutMaintenance.TERMINEE } },
-        },
-        orderBy: { updatedAt: "desc" },
-        include: {
-          voitureSAV: {
-            include: {
-              ClientSAV: true,
-            },
-          },
-          DetailDiagnostic: {
-            orderBy: { createdAt: "asc" },
-            include: {
-              catergorieDiagnostic: true,
-            },
-          },
-          PieceSAV: true,
-          Maintenance: {
-            where: { statut: StatutMaintenance.TERMINEE },
-            orderBy: { createdAt: "asc" },
-            include: { catergorieDiagnostic: true },
-          },
-          FactureProformaSAV: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
-      }),
-    );
+    const factures = await executeWithRetry(async () => {
+      const termineIds = await fetchVoitureSavIdsByStatut("TERMINE");
+      if (termineIds.length === 0) return [];
 
-    return NextResponse.json({ success: true, data: reparations });
+      const vehicles = await prisma.voitureSAV.findMany({
+        where: { id: { in: termineIds } },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          ...voitureSavFactureSelect,
+          updatedAt: true,
+          Reparation: {
+            orderBy: { createdAt: "asc" },
+            include: {
+              DetailDiagnostic: {
+                orderBy: { createdAt: "asc" },
+                include: {
+                  catergorieDiagnostic: true,
+                },
+              },
+              PieceSAV: true,
+              Maintenance: {
+                orderBy: { createdAt: "asc" },
+                include: { catergorieDiagnostic: true },
+              },
+              FactureProformaSAV: {
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
+            },
+          },
+        },
+      });
+
+      return vehicles.map((v) => mergeVoitureSavReparationsForFacture(v));
+    });
+
+    return NextResponse.json({ success: true, data: factures });
   } catch (error) {
     console.error("API facturation-reparations GET error:", error);
     return NextResponse.json(

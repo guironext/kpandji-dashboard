@@ -59,10 +59,9 @@ model User {
   ResponsableProjetRoutine          ResponsableProjetRoutine[]
   ResponsableTacheResponsable       ResponsableTacheResponsable[]
   TacheActiviteProjetRoutineCreated TacheActiviteProjetRoutine[] @relation("TacheCreatedBy")
-
- 
-  
-
+  JournalProspect                    JournalProspect[]
+  CartographieCompte                 CartographieCompte[]
+  Portefeuille                       Portefeuille[]
 }
 
 model Message {
@@ -904,6 +903,189 @@ model RapportVerification {
   VerificationConteneur   VerificationConteneur @relation(fields: [verificationConteneurId], references: [id])
 }
 
+model JournalProspect {
+  id                    String                     @id @default(uuid())
+  heure                 DateTime
+  typeContact           TypeContactJournalProspect
+  nomEntreprise         String
+  secteurActivite       String?
+  interlocuteur         String?
+  fonction              String?
+  telephone             String?
+  email                 String?
+  tailleParcEquipements String?
+  besoinIdentifie       String?
+  statutEtape           StatutEtapeJournalProspect @default(PREMIER_CONTACT)
+  actionSuivante        String?
+  dateRelance           DateTime?
+  commentaires          String?
+  resume                String?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  userId                String
+  User                  User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dateRelance])
+  @@index([statutEtape])
+}
+
+enum TypeContactJournalProspect {
+  APPEL_PHONING_B2B
+  VISITE_TERRAIN
+  EMAIL
+  WHATSAPP
+  SALON
+  RESEAU
+  AUTRE
+}
+
+enum StatutEtapeJournalProspect {
+  PREMIER_CONTACT
+  QUALIFICATION
+  EN_COURS
+  RDV_PLANIFIE
+  OFFRE_ENVOYEE
+  NEGOCIATION
+  RELANCE
+  GAGNE
+  PERDU
+  SANS_SUITE
+}
+
+
+model CartographieCompte {
+  id                         String                              @id @default(uuid())
+  zone                       String?
+  secteur                    String?
+  raisonSociale              String
+  typeStructure              TypeStructureCartographieCompte
+  decideurCle                DecideurCleCartographieCompte
+  telephone                  String?
+  email                      String?
+  parcActuelEstimation       Int?
+  marquesModelesPredominants String?
+  contratMaintenance         ContratMaintenanceCartographieCompte
+  offreKpandjiPrioritaire    OffreKpandjiCartographieCompte
+  statutProspection          StatutProspectionCartographieCompte @default(A_APPROCHER)
+  datePrevueApproche         DateTime?
+  createdAt                  DateTime                            @default(now())
+  updatedAt                  DateTime                            @updatedAt
+  userId                     String
+  User                       User                                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([statutProspection])
+  @@index([datePrevueApproche])
+  @@index([typeStructure])
+}
+
+model Portefeuille {
+  id                          String                         @id @default(uuid())
+  provenanceContact           ProvenanceContactPortefeuille
+  nomEntreprise               String
+  interlocuteurCle            String?
+  telephone                   String?
+  email                       String?
+  ageParcActuel               String?
+  marquesModelesActuels       String?
+  opportuniteVente            OpportuniteVentePortefeuille
+  opportuniteEntretienGarage  Boolean                        @default(false)
+  statutPriseContact          StatutPriseContactPortefeuille @default(NON_CONTACTE)
+  dateDernierEchange          DateTime?
+  resultat                    String?
+  prochaineEtape              String?
+  createdAt                   DateTime                       @default(now())
+  updatedAt                   DateTime                       @updatedAt
+  userId                      String
+  User                        User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([statutPriseContact])
+  @@index([dateDernierEchange])
+  @@index([provenanceContact])
+}
+
+enum TypeStructureCartographieCompte {
+  PME
+  SANTE
+  EDUCATION
+  HUMANITAIRE
+  ADMINISTRATION
+  BTP_INFRASTRUCTURES
+  LOGISTIQUE_TRANSPORT
+  AGRO_ALIMENTAIRE
+  AGRO_INDUSTRIE
+  ENERGIES_HYDROCARBURES
+  DISTRIBUTION
+  SECURITE_PRIVEE_GARDINAGE
+  ADMINISTRATION_PUBLIQUE
+  EPN_SOCIETE_ETAT
+  INDUSTRIE
+  AGRICULTURE_AGRO_PASTORAL
+  PECHE_AQUACULTURE
+  ELEVAGE
+  HOTELLERIE_TOURISME_RESTAURATION
+  INFORMATIQUE_TECHNOLOGIES
+  SPORT
+  PRESTATION_DE_SERVICES
+  ENVIRONNEMENT_ECOLOGIE
+  SCIENCES_RECHERCHES
+  MINES
+  COMMERCE_GENERAL
+  AUTRE
+}
+
+enum DecideurCleCartographieCompte {
+  MOYEN_GENERAL
+  CHARROI
+  DG
+}
+
+enum ContratMaintenanceCartographieCompte {
+  OUI
+  NON
+  GARAGE_EXTERNE
+}
+
+enum OffreKpandjiCartographieCompte {
+  VEHICULES
+  CAMIONS
+  GARAGE
+}
+
+enum StatutProspectionCartographieCompte {
+  A_APPROCHER
+  EN_COURS
+  QUALIFIE
+  RDV_PLANIFIE
+  OFFRE_ENVOYEE
+  GAGNE
+  PERDU
+  EN_SOMMEIL
+}
+
+enum ProvenanceContactPortefeuille {
+  ANCIEN_EMPLOYEUR
+  RESEAU_PERSO
+}
+
+enum OpportuniteVentePortefeuille {
+  ENGINS
+  CAMIONS
+  PICK_UP
+}
+
+enum StatutPriseContactPortefeuille {
+  NON_CONTACTE
+  CONTACT_EN_COURS
+  CONTACTE
+  EN_ATTENTE_RETOUR
+  RDV_PLANIFIE
+  RELANCE
+  SANS_SUITE
+}
+
 model Signature {
   id        String   @id
   createdAt DateTime @default(now())
@@ -1606,6 +1788,8 @@ model VoitureSAV {
   diagnosticArrivee       DiagnosticArrivee[]
   Reparation              Reparation[]
   GarantieSAV             GarantieSAV[]
+  StatutGarantie          StatutGarantieSAV @default(EN_COURS)
+  deplacementSAV          DeplacementSAV  @default(ARRIVEE)           
   VisuelDefaut            VisuelDefaut[]
   RapportMaintenanceSAV   RapportMaintenanceSAV[]
   CheckListsSAV           CheckListsSAV[]
@@ -1622,9 +1806,30 @@ model VoitureSavGarantie {
   marqueVoiture   String       @default("KPANDJI")
   modelVoiture    String
   chassisNumber   String?
-  immatriculation String?
-  couleur         String
+  immatriculation String
+  garantieSAVbadge Boolean @default(true)
   VoitureSAV      VoitureSAV[]
+}
+
+enum DeplacementSAV {
+  ARRIVEE
+  DIAGNOSTIQUE
+  PREPARATION
+  PROFORMA
+  MAINTENANCE
+  SORTIE_MAINTENANCE
+  TEST_FINAL
+  RAPPORT_FINAL
+  RETOUR_EN_SAV
+}
+
+
+
+enum StatutGarantieSAV {
+  EN_COURS
+  FIN_INTERVENTION_GARANTIESAV_EN_COURS
+  GARANTIESAV_EN_COURS
+  GARANTIESAV_TERMINE
 }
 
 enum TypeRapportMaintenanceSAV {
@@ -1641,6 +1846,7 @@ enum StatutRapportMaintenanceSAV {
 
 /// Rapport consolidé de toutes les activités SAV d'un véhicule
 /// (diagnostic à l'arrivée, défauts visuels, réparations, pièces, maintenance).
+
 model RapportMaintenanceSAV {
   id           String                      @id @default(uuid())
   titre        String
@@ -1668,11 +1874,16 @@ model RapportMaintenanceSAV {
 enum StatutVoitureSAV {
   ARRIVE
   DIAGNOSTIC_FINI
-  DISPATCHE
-  GARANTIESAV_EN_COURS
-  GARANTIESAV_TERMINE
-  EN_TRAITEMENT
-  TESTE
+  PREPARATION_FINI
+  EN_MAINTENANCE
+  EN_MAINTENANCE_EN_ATTENTE
+  EN_MAINTENANCE_EN_COURS
+  EN_MAINTENANCE_FINI
+  EN_TRAITEMENT_EN_COURS
+  EN_TRAITEMENT_FINI
+  FIN_INTERVENTION_GARANTIESAV_EN_COURS
+  TESTE_EN_COURS
+  TESTE_FINAL
   TERMINE
   ANNULE
 }
@@ -1879,6 +2090,7 @@ model Maintenance {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   statut                 StatutMaintenance     @default(EN_ATTENTE)
+  
 }
 
 enum StatutMaintenance {
@@ -1952,6 +2164,7 @@ enum TypeCheckListSAV {
 }
 
 /// Check-list de réception et de contrôle du véhicule (SAV).
+
 model CheckListsSAV {
   id     String               @id @default(uuid())
   titre  String               @default("Check-list de réception et de contrôle du véhicule")
@@ -2054,6 +2267,9 @@ model CheckListsSAV {
 
   // 10. Observations
   observations String? @db.Text
+
+  /// Photos du véhicule prises pendant la check-list (URLs).
+  photos String[] @default([])
 
   voitureSAVId String
   voitureSAV   VoitureSAV @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)

@@ -4,17 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Loader2,
   Car,
@@ -22,18 +11,15 @@ import {
   RefreshCw,
   Sparkles,
   CircleCheck,
-  Gauge,
   Wrench,
   ListChecks,
-  Route,
-  ShieldCheck,
-  AlertTriangle,
   CheckCircle2,
   Palette,
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import CheckListVerificationForm from "../diagnostique-arrivee/CheckListVerificationForm";
 
 type ClientSAV = { nom: string; prenom: string; contact?: string | null };
 
@@ -71,69 +57,12 @@ export type ReparationTeste = {
     immatriculation: string;
     model: string;
     couleur: string;
+    chassisNumber?: string | null;
     ClientSAV: ClientSAV;
   };
   DetailDiagnostic: DetailRow[];
   Maintenance: MaintenanceRow[];
 };
-
-type CheckKey =
-  | "controleMoteur"
-  | "controleEmbrayage"
-  | "controleBoiteVitesses"
-  | "controleDirection"
-  | "controleSuspension"
-  | "controleFreinage"
-  | "controleTransmission"
-  | "demarrageNormal"
-  | "accelerationCorrecte"
-  | "freinageEfficace"
-  | "directionStable"
-  | "absenceVibrations"
-  | "absenceBruitAnormal";
-
-type CheckSection = {
-  title: string;
-  icon: typeof Gauge;
-  items: { key: CheckKey; label: string }[];
-};
-
-const CHECK_SECTIONS: CheckSection[] = [
-  {
-    title: "Contrôle mécanique",
-    icon: Wrench,
-    items: [
-      { key: "controleMoteur", label: "Moteur" },
-      { key: "controleEmbrayage", label: "Embrayage" },
-      { key: "controleBoiteVitesses", label: "Boîte de vitesses" },
-      { key: "controleDirection", label: "Direction" },
-      { key: "controleSuspension", label: "Suspension" },
-      { key: "controleFreinage", label: "Freinage" },
-      { key: "controleTransmission", label: "Transmission" },
-    ],
-  },
-  {
-    title: "Essai routier",
-    icon: Route,
-    items: [
-      { key: "demarrageNormal", label: "Démarrage normal" },
-      { key: "accelerationCorrecte", label: "Accélération correcte" },
-      { key: "freinageEfficace", label: "Freinage efficace" },
-      { key: "directionStable", label: "Direction stable" },
-      { key: "absenceVibrations", label: "Absence de vibrations" },
-      { key: "absenceBruitAnormal", label: "Absence de bruit anormal" },
-    ],
-  },
-];
-
-const ALL_KEYS = CHECK_SECTIONS.flatMap((s) => s.items.map((i) => i.key));
-
-function emptyChecks(): Record<CheckKey, boolean> {
-  return Object.fromEntries(ALL_KEYS.map((k) => [k, false])) as Record<
-    CheckKey,
-    boolean
-  >;
-}
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", {
@@ -145,68 +74,11 @@ function formatDate(d: string) {
   });
 }
 
-function ProgressRing({
-  value,
-  size = 56,
-  stroke = 5,
-}: {
-  value: number;
-  size?: number;
-  stroke?: number;
-}) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c - (value / 100) * c;
-  const done = value >= 100;
-
-  return (
-    <div
-      className="relative shrink-0"
-      style={{ width: size, height: size }}
-      aria-hidden
-    >
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={stroke}
-          className="text-muted/60"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          className={cn(
-            "transition-[stroke-dashoffset] duration-500 ease-out",
-            done ? "text-emerald-500" : "text-teal-500",
-          )}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold tabular-nums text-foreground">
-        {value}%
-      </span>
-    </div>
-  );
-}
-
 export default function TesteFinalClient() {
   const [reparations, setReparations] = useState<ReparationTeste[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState("");
-  const [checks, setChecks] = useState<Record<CheckKey, boolean>>(emptyChecks);
-  const [observations, setObservations] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent ?? false;
@@ -241,72 +113,24 @@ export default function TesteFinalClient() {
     [reparations, selectedId],
   );
 
-  useEffect(() => {
-    setChecks(emptyChecks());
-    setObservations("");
-  }, [selectedId]);
-
-  const checkedCount = useMemo(
-    () => ALL_KEYS.filter((k) => checks[k]).length,
-    [checks],
-  );
-  const progress = Math.round((checkedCount / ALL_KEYS.length) * 100);
-  const allChecked = checkedCount === ALL_KEYS.length;
-  const remaining = ALL_KEYS.length - checkedCount;
-
-  const toggleCheck = (key: CheckKey) => {
-    setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const toggleSection = (section: CheckSection, value: boolean) => {
-    setChecks((prev) => {
-      const next = { ...prev };
-      for (const item of section.items) next[item.key] = value;
-      return next;
+  const completeReparation = async (reparationId: string, observations: string) => {
+    const res = await fetch(`/api/sav/reparation/${reparationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        statut: "TERMINE",
+        observations: observations.trim() || "Contrôle final validé",
+      }),
     });
-  };
-
-  const markAll = (value: boolean) => {
-    setChecks(
-      Object.fromEntries(ALL_KEYS.map((k) => [k, value])) as Record<
-        CheckKey,
-        boolean
-      >,
-    );
-  };
-
-  const handleValidate = async () => {
-    if (!selected) return;
-    if (!allChecked) {
-      toast.error("Tous les points de contrôle doivent être validés");
-      return;
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Validation impossible");
     }
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/sav/reparation/${selected.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          statut: "TERMINE",
-          observations: observations.trim() || "Contrôle final validé",
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Validation impossible");
-      }
-      toast.success("Test final validé — véhicule terminé");
-      setConfirmOpen(false);
-      setReparations((prev) => {
-        const remainingList = prev.filter((r) => r.id !== selected.id);
-        setSelectedId(remainingList[0]?.id ?? "");
-        return remainingList;
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setSubmitting(false);
-    }
+    setReparations((prev) => {
+      const remainingList = prev.filter((r) => r.id !== reparationId);
+      setSelectedId(remainingList[0]?.id ?? "");
+      return remainingList;
+    });
   };
 
   if (loading) {
@@ -331,7 +155,7 @@ export default function TesteFinalClient() {
   }
 
   return (
-    <div className="space-y-5 pb-28 sm:space-y-7 sm:pb-8">
+    <div className="space-y-5 pb-8 sm:space-y-7">
       {/* Hero */}
       <section className="relative overflow-hidden rounded-2xl border border-teal-900/10 bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-900 shadow-[0_20px_50px_-18px_rgba(15,118,110,0.5)] sm:rounded-3xl dark:border-teal-400/10">
         <div
@@ -364,8 +188,8 @@ export default function TesteFinalClient() {
                   Teste final
                 </h1>
                 <p className="max-w-xl text-sm leading-relaxed text-teal-50/85 sm:text-base">
-                  Validation mécanique et essai routier avant clôture du dossier
-                  et passage en facturation.
+                  Grille de contrôle CheckListsSAV (type Teste finale) avant
+                  clôture du dossier et passage en facturation.
                 </p>
               </div>
             </div>
@@ -377,14 +201,6 @@ export default function TesteFinalClient() {
                 </span>
                 <span className="mt-0.5 font-mono text-2xl font-semibold tabular-nums text-white">
                   {reparations.length}
-                </span>
-              </div>
-              <div className="flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-md sm:min-w-[8.5rem] sm:flex-none">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-teal-100/80">
-                  Points
-                </span>
-                <span className="mt-0.5 font-mono text-2xl font-semibold tabular-nums text-white">
-                  {ALL_KEYS.length}
                 </span>
               </div>
               <Button
@@ -530,70 +346,48 @@ export default function TesteFinalClient() {
             </div>
           </aside>
 
-          {/* Detail + checklist */}
           {selected && (
             <div className="min-w-0 space-y-4 sm:space-y-5">
-              {/* Vehicle summary */}
               <Card className="overflow-hidden border-border/60 shadow-sm ring-1 ring-black/[0.02] dark:ring-white/5">
                 <CardHeader className="border-b border-border/50 bg-gradient-to-r from-muted/50 via-muted/20 to-transparent pb-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 space-y-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle className="truncate text-lg sm:text-xl">
-                          {selected.voitureSAV.model}
-                        </CardTitle>
-                        <Badge className="bg-teal-600 hover:bg-teal-600">
-                          En test
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        <Badge
-                          variant="secondary"
-                          className="gap-1 font-mono text-[11px] sm:text-xs"
-                        >
-                          <Car className="h-3 w-3" />
-                          {selected.voitureSAV.immatriculation}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="gap-1 text-[11px] sm:text-xs"
-                        >
-                          <User className="h-3 w-3" />
-                          {selected.voitureSAV.ClientSAV.prenom}{" "}
-                          {selected.voitureSAV.ClientSAV.nom}
-                        </Badge>
-                        {selected.voitureSAV.couleur && (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 text-[11px] sm:text-xs"
-                          >
-                            <Palette className="h-3 w-3" />
-                            {selected.voitureSAV.couleur}
-                          </Badge>
-                        )}
-                        <Badge
-                          variant="outline"
-                          className="gap-1 text-[11px] sm:text-xs"
-                        >
-                          <Clock className="h-3 w-3" />
-                          {formatDate(selected.updatedAt)}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/80 px-3.5 py-2.5 sm:bg-background">
-                      <ProgressRing value={progress} />
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                          Progression
-                        </p>
-                        <p className="text-sm font-semibold tabular-nums text-foreground">
-                          {checkedCount}
-                          <span className="font-normal text-muted-foreground">
-                            /{ALL_KEYS.length}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="truncate text-lg sm:text-xl">
+                      {selected.voitureSAV.model}
+                    </CardTitle>
+                    <Badge className="bg-teal-600 hover:bg-teal-600">
+                      En test
+                    </Badge>
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 font-mono text-[11px] sm:text-xs"
+                    >
+                      <Car className="h-3 w-3" />
+                      {selected.voitureSAV.immatriculation}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="gap-1 text-[11px] sm:text-xs"
+                    >
+                      <User className="h-3 w-3" />
+                      {selected.voitureSAV.ClientSAV.prenom}{" "}
+                      {selected.voitureSAV.ClientSAV.nom}
+                    </Badge>
+                    {selected.voitureSAV.couleur && (
+                      <Badge
+                        variant="outline"
+                        className="gap-1 text-[11px] sm:text-xs"
+                      >
+                        <Palette className="h-3 w-3" />
+                        {selected.voitureSAV.couleur}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className="gap-1 text-[11px] sm:text-xs"
+                    >
+                      <Clock className="h-3 w-3" />
+                      {formatDate(selected.updatedAt)}
+                    </Badge>
                   </div>
                 </CardHeader>
 
@@ -656,270 +450,47 @@ export default function TesteFinalClient() {
                 </CardContent>
               </Card>
 
-              {/* Checklist header */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-                    Grille de contrôle
-                  </h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    Cochez chaque point après vérification sur le véhicule.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 sm:flex-none"
-                    onClick={() => markAll(true)}
-                  >
-                    Tout cocher
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 sm:flex-none"
-                    onClick={() => markAll(false)}
-                  >
-                    Réinitialiser
-                  </Button>
-                </div>
+              <div>
+                <h2 className="text-base font-semibold tracking-tight sm:text-lg">
+                  Grille de contrôle
+                </h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Check-list CheckListsSAV — type verrouillé sur Teste finale.
+                </p>
               </div>
 
-              {/* Checklist sections */}
-              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-                {CHECK_SECTIONS.map((section) => {
-                  const SectionIcon = section.icon;
-                  const sectionDone = section.items.every(
-                    (i) => checks[i.key],
+              <CheckListVerificationForm
+                key={selected.voitureSAV.id}
+                voiture={{
+                  id: selected.voitureSAV.id,
+                  model: selected.voitureSAV.model,
+                  immatriculation: selected.voitureSAV.immatriculation,
+                  chassisNumber: selected.voitureSAV.chassisNumber,
+                  couleur: selected.voitureSAV.couleur,
+                  statut: "TESTE",
+                  ClientSAV: {
+                    nom: selected.voitureSAV.ClientSAV.nom,
+                    prenom: selected.voitureSAV.ClientSAV.prenom,
+                    contact: selected.voitureSAV.ClientSAV.contact ?? undefined,
+                  },
+                }}
+                defaultType="FINALE"
+                allowedTypes={["FINALE"]}
+                requireAllChecked
+                showDraftButton={false}
+                footerHint="Check-list de test final"
+                validateSuccessMessage="Test final validé — véhicule terminé"
+                onSaved={async (payload) => {
+                  await completeReparation(
+                    selected.id,
+                    payload?.observations ?? "",
                   );
-                  const sectionCount = section.items.filter(
-                    (i) => checks[i.key],
-                  ).length;
-                  return (
-                    <Card
-                      key={section.title}
-                      className={cn(
-                        "border-border/60 shadow-sm transition-colors duration-300",
-                        sectionDone &&
-                          "border-emerald-400/50 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-950/20",
-                      )}
-                    >
-                      <CardHeader className="pb-2.5 sm:pb-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <span
-                              className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                                sectionDone
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              <SectionIcon className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0">
-                              <CardTitle className="truncate text-[15px] sm:text-base">
-                                {section.title}
-                              </CardTitle>
-                              <p className="text-[11px] tabular-nums text-muted-foreground">
-                                {sectionCount}/{section.items.length}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 shrink-0 px-2.5 text-xs"
-                            onClick={() =>
-                              toggleSection(section, !sectionDone)
-                            }
-                          >
-                            {sectionDone ? "Décocher" : "Tout"}
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-0.5 pb-3.5 sm:pb-4">
-                        {section.items.map((item) => (
-                          <label
-                            key={item.key}
-                            htmlFor={`check-${item.key}`}
-                            className={cn(
-                              "flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 transition-colors active:scale-[0.99]",
-                              checks[item.key]
-                                ? "bg-emerald-50/90 dark:bg-emerald-950/40"
-                                : "hover:bg-muted/50",
-                            )}
-                          >
-                            <Checkbox
-                              id={`check-${item.key}`}
-                              checked={checks[item.key]}
-                              onCheckedChange={() => toggleCheck(item.key)}
-                              className="h-5 w-5"
-                            />
-                            <span
-                              className={cn(
-                                "flex-1 text-sm leading-snug",
-                                checks[item.key]
-                                  ? "font-medium text-emerald-900 dark:text-emerald-100"
-                                  : "text-foreground/90",
-                              )}
-                            >
-                              {item.label}
-                            </span>
-                            {checks[item.key] && (
-                              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                            )}
-                          </label>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Observations + desktop CTA */}
-              <Card className="border-border/60 shadow-sm">
-                <CardContent className="space-y-4 pt-5 sm:pt-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="obs-final">
-                      Observations du testeur{" "}
-                      <span className="font-normal text-muted-foreground">
-                        (optionnel)
-                      </span>
-                    </Label>
-                    <Textarea
-                      id="obs-final"
-                      rows={3}
-                      placeholder="Remarques sur l'essai, points d'attention, recommandations…"
-                      value={observations}
-                      onChange={(e) => setObservations(e.target.value)}
-                      className="min-h-[88px] resize-none"
-                    />
-                  </div>
-
-                  {!allChecked && (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3.5 py-3 text-sm text-amber-950 dark:border-amber-500/25 dark:bg-amber-950/30 dark:text-amber-100">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                      <p>
-                        Validez les {remaining} point
-                        {remaining > 1 ? "s" : ""} restant
-                        {remaining > 1 ? "s" : ""} avant de clôturer le dossier.
-                      </p>
-                    </div>
-                  )}
-
-                  {allChecked && (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3.5 py-3 text-sm text-emerald-950 dark:border-emerald-500/25 dark:bg-emerald-950/30 dark:text-emerald-100">
-                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                      <p>
-                        Tous les points sont validés. Vous pouvez clôturer le
-                        test final.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Desktop validate */}
-                  <div className="hidden sm:flex sm:justify-end">
-                    <Button
-                      type="button"
-                      size="lg"
-                      disabled={!allChecked}
-                      className="h-11 min-w-[240px] gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 font-semibold text-white shadow-md shadow-teal-600/20 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50"
-                      onClick={() => setConfirmOpen(true)}
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                      Valider le test final
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                }}
+              />
             </div>
           )}
         </div>
       )}
-
-      {/* Mobile sticky CTA */}
-      {selected && reparations.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-3 py-3 backdrop-blur-md sm:hidden supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex max-w-6xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-muted-foreground">
-                {selected.voitureSAV.immatriculation}
-              </p>
-              <p className="text-sm font-semibold tabular-nums">
-                {checkedCount}/{ALL_KEYS.length}
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  · {progress}%
-                </span>
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="lg"
-              disabled={!allChecked}
-              className="h-11 shrink-0 gap-2 bg-gradient-to-r from-teal-600 to-emerald-600 px-4 font-semibold text-white shadow-md shadow-teal-600/20 disabled:opacity-50"
-              onClick={() => setConfirmOpen(true)}
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Valider
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-          <div className="border-b border-border/60 bg-gradient-to-br from-teal-600/10 via-transparent to-emerald-600/5 px-6 pb-4 pt-6">
-            <DialogHeader className="space-y-2 text-left">
-              <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <DialogTitle>Confirmer le test final</DialogTitle>
-              <DialogDescription className="text-sm leading-relaxed">
-                Le véhicule{" "}
-                <span className="font-semibold text-foreground">
-                  {selected?.voitureSAV.immatriculation}
-                </span>{" "}
-                ({selected?.voitureSAV.model}) passera au statut « Terminé » et
-                quittera cette liste. Il pourra ensuite être facturé.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <DialogFooter className="gap-2 border-t border-border/50 bg-muted/20 px-6 py-4 sm:gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={submitting}
-              className="sm:flex-1"
-              onClick={() => setConfirmOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 sm:flex-1"
-              onClick={() => void handleValidate()}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Validation…
-                </>
-              ) : (
-                <>
-                  <CircleCheck className="mr-2 h-4 w-4" />
-                  Confirmer
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

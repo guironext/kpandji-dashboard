@@ -1,39 +1,24 @@
 import { NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
+import {
+  fetchVoitureSavIdsByStatut,
+  fetchVoitureSavStatuts,
+  setVoitureSavStatutSql,
+} from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
 /** Vehicles eligible for special warranty offers + existing garanties */
 export async function GET() {
   try {
-    const [voitures, garanties, groupes] = await Promise.all([
-      prisma.voitureSAV.findMany({
-        where: {
-          statut: {
-            in: [
-              "DIAGNOSTIC_FINI",
-              "DISPATCHE",
-              "EN_TRAITEMENT",
-              "GARANTIESAV_EN_COURS",
-            ],
-          },
-        },
-        include: {
-          ClientSAV: true,
-          diagnosticArrivee: {
-            include: {
-              catergorieDiagnostic: true,
-              DetailDiagnostic: true,
-            },
-          },
-          GarantieSAV: {
-            orderBy: { createdAt: "desc" },
-            include: { DetailDiagnostic: true },
-          },
-        },
-        orderBy: { updatedAt: "desc" },
-      }),
+    const [eligibleIdsNested, garanties, groupes] = await Promise.all([
+      Promise.all([
+        fetchVoitureSavIdsByStatut("DIAGNOSTIC_FINI"),
+        fetchVoitureSavIdsByStatut("DISPATCHE"),
+        fetchVoitureSavIdsByStatut("EN_TRAITEMENT"),
+        fetchVoitureSavIdsByStatut("GARANTIESAV_EN_COURS"),
+      ]),
       prisma.garantieSAV.findMany({
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -49,6 +34,27 @@ export async function GET() {
         select: { id: true, nom: true },
       }),
     ]);
+    const eligibleIds = [...new Set(eligibleIdsNested.flat())];
+    const voitures =
+      eligibleIds.length === 0
+        ? []
+        : await prisma.voitureSAV.findMany({
+            where: { id: { in: eligibleIds } },
+            include: {
+              ClientSAV: true,
+              diagnosticArrivee: {
+                include: {
+                  catergorieDiagnostic: true,
+                  DetailDiagnostic: true,
+                },
+              },
+              GarantieSAV: {
+                orderBy: { createdAt: "desc" },
+                include: { DetailDiagnostic: true },
+              },
+            },
+            orderBy: { updatedAt: "desc" },
+          });
 
     return NextResponse.json({
       success: true,
@@ -114,7 +120,7 @@ export async function POST(request: Request) {
 
     const voiture = await prisma.voitureSAV.findUnique({
       where: { id: voitureSAVId },
-      select: { id: true, statut: true },
+      select: { id: true },
     });
     if (!voiture) {
       return NextResponse.json(
@@ -122,6 +128,9 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+
+    const currentStatut =
+      (await fetchVoitureSavStatuts([voitureSAVId])).get(voitureSAVId) ?? "";
 
     if (groupePersonnelSAVId) {
       const groupe = await prisma.groupePersonnelSAV.findUnique({
@@ -168,19 +177,16 @@ export async function POST(request: Request) {
         });
       }
 
-      if (
-        voiture.statut === "DIAGNOSTIC_FINI" ||
-        voiture.statut === "DISPATCHE" ||
-        voiture.statut === "EN_TRAITEMENT"
-      ) {
-        await tx.voitureSAV.update({
-          where: { id: voitureSAVId },
-          data: { statut: "GARANTIESAV_EN_COURS" },
-        });
-      }
-
       return created;
     });
+
+    if (
+      currentStatut === "DIAGNOSTIC_FINI" ||
+      currentStatut === "DISPATCHE" ||
+      currentStatut === "EN_TRAITEMENT"
+    ) {
+      await setVoitureSavStatutSql(voitureSAVId, "GARANTIESAV_EN_COURS");
+    }
 
     return NextResponse.json({ success: true, data: garantie });
   } catch (error) {
@@ -281,7 +287,7 @@ export async function PATCH(request: Request) {
 
     const voiture = await prisma.voitureSAV.findUnique({
       where: { id: voitureSAVId },
-      select: { id: true, statut: true },
+      select: { id: true },
     });
     if (!voiture) {
       return NextResponse.json(
@@ -290,9 +296,12 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const currentStatut =
+      (await fetchVoitureSavStatuts([voitureSAVId])).get(voitureSAVId) ?? "";
+
     if (
-      voiture.statut !== "GARANTIESAV_EN_COURS" &&
-      voiture.statut !== "GARANTIESAV_TERMINE"
+      currentStatut !== "GARANTIESAV_EN_COURS" &&
+      currentStatut !== "GARANTIESAV_TERMINE"
     ) {
       return NextResponse.json(
         {

@@ -96,19 +96,18 @@ export default function FacturationSavClient() {
 
   const existingFacture = currentRep?.FactureProformaSAV?.[0];
   const canEnregistrer =
-    currentRep &&
+    Boolean(currentRep?.voitureSAV?.id) &&
     !existingFacture &&
-    currentRep.Maintenance &&
-    currentRep.Maintenance.length > 0;
+    (currentRep?.Maintenance?.length ?? 0) > 0;
 
   const goToNextPage = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const goToPrevPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
 
   const handleEnregistrerFacture = async () => {
     if (!currentRep || saving || !canEnregistrer) return;
-    const maintenanceId = currentRep.Maintenance?.[0]?.id?.trim();
-    if (!maintenanceId) {
-      toast.error("Maintenance introuvable pour enregistrer la facture");
+    const voitureSAVId = currentRep.voitureSAV?.id?.trim();
+    if (!voitureSAVId) {
+      toast.error("Véhicule introuvable pour enregistrer la facture");
       return;
     }
     setSaving(true);
@@ -116,7 +115,7 @@ export default function FacturationSavClient() {
       const res = await fetch("/api/sav/facture-maintenance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ maintenanceId }),
+        body: JSON.stringify({ voitureSAVId }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -157,14 +156,16 @@ export default function FacturationSavClient() {
       maintenancesMo,
     );
 
-    const repId = escapeHtml(currentRep.id.slice(-7));
+    const vehiculeRef = escapeHtml(
+      currentRep.voitureSAV.immatriculation || currentRep.voitureSAV.model,
+    );
     const factureDate = escapeHtml(new Date().toLocaleDateString("fr-FR"));
 
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Facture SAV — ${repId}</title>
+          <title>Facture SAV — ${vehiculeRef}</title>
           <meta charset="UTF-8">
           <style>
             @page { size: A4; margin: 8mm; }
@@ -192,7 +193,7 @@ export default function FacturationSavClient() {
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px;">
             <div>
-              <div><strong>Réf. réparation:</strong> ${repId}</div>
+              <div><strong>Véhicule:</strong> ${vehiculeRef}</div>
               <div><strong>Intitulé:</strong> ${escapeHtml(currentRep.categorie_reparation)}</div>
             </div>
             <div>
@@ -248,8 +249,8 @@ export default function FacturationSavClient() {
     return (
       <div className="p-6">
         <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-600">
-          Aucune réparation avec maintenance terminée. Les factures apparaissent lorsque la
-          maintenance est au statut « terminée » pour au moins une catégorie.
+          Aucune facture SAV. Une facture est établie pour chaque véhicule
+          au statut « terminé ».
         </div>
       </div>
     );
@@ -260,7 +261,7 @@ export default function FacturationSavClient() {
       <div className="bg-white rounded-lg shadow-xl p-4 m-4">
         <div className="flex w-full justify-between items-center mb-6 flex-wrap gap-4 print-hide">
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-semibold text-slate-700">Réparation:</span>
+            <span className="text-sm font-semibold text-slate-700">Véhicule:</span>
             <Select
               value={String(currentPage)}
               onValueChange={(v) => setCurrentPage(Number(v))}
@@ -269,13 +270,18 @@ export default function FacturationSavClient() {
                 <SelectValue placeholder="Sélectionner" />
               </SelectTrigger>
               <SelectContent>
-                {reparations.map((r, i) => (
-                  <SelectItem key={r.id} value={String(i + 1)}>
-                    {r.categorie_reparation.slice(0, 48)}
-                    {r.categorie_reparation.length > 48 ? "…" : ""} —{" "}
-                    {r.voitureSAV.immatriculation}
-                  </SelectItem>
-                ))}
+                {reparations.map((r, i) => {
+                  const client = r.voitureSAV.ClientSAV;
+                  const plate = r.voitureSAV.immatriculation || r.voitureSAV.model;
+                  return (
+                    <SelectItem key={r.voitureSAV.id} value={String(i + 1)}>
+                      {plate} — {r.voitureSAV.model}
+                      {client
+                        ? ` — ${`${client.prenom} ${client.nom}`.trim()}`
+                        : ""}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <Button

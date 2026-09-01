@@ -10,6 +10,8 @@ export type RapportMaintenanceVoiture = {
   transmission: string;
   nbr_portes: string;
   statut: string;
+  StatutGarantie?: string | null;
+  sousGarantie?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
   ClientSAV: {
@@ -68,6 +70,18 @@ export type AutoReportSection = {
   lines: string[];
 };
 
+const GARANTIE_STATUT_LABELS: Record<string, string> = {
+  EN_COURS: "En cours",
+  FIN_INTERVENTION_GARANTIESAV_EN_COURS: "Fin d'intervention en cours",
+  GARANTIESAV_EN_COURS: "Garantie SAV en cours",
+  GARANTIESAV_TERMINE: "Garantie terminée",
+};
+
+export function garantieStatutLabel(value: string | null | undefined): string {
+  if (!value) return "Non renseigné";
+  return GARANTIE_STATUT_LABELS[value] ?? value;
+}
+
 export function buildAutoReportSections(
   voiture: RapportMaintenanceVoiture,
 ): AutoReportSection[] {
@@ -94,6 +108,8 @@ export function buildAutoReportSections(
       `Transmission : ${voiture.transmission}`,
       `Portes : ${voiture.nbr_portes}`,
       `Statut dossier : Terminé`,
+      `Couverture garantie : ${voiture.sousGarantie ? "Sous garantie" : "Hors garantie"}`,
+      `Statut garantie : ${garantieStatutLabel(voiture.StatutGarantie)}`,
     ],
   });
 

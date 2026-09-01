@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Car,
   Save,
@@ -23,22 +30,29 @@ import {
   CheckCircle2,
   Fuel,
   Gauge,
+  Camera,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import CameraCapture, { requestCarCamera } from "./CameraCapture";
 
 type TypeCheckListSAV = "RECEPTION" | "PREPARATION" | "FINALE";
 
 const CHECKLIST_TYPE_OPTIONS: { value: TypeCheckListSAV; label: string }[] = [
   { value: "RECEPTION", label: "Réception" },
   { value: "PREPARATION", label: "Préparation" },
-  { value: "FINALE", label: "Finale" },
+  { value: "FINALE", label: "Teste finale" },
 ];
+
+const ALL_CHECKLIST_TYPES = CHECKLIST_TYPE_OPTIONS.map((o) => o.value);
 
 interface VoitureSAV {
   id: string;
   model: string;
   immatriculation: string;
+  chassisNumber?: string | null;
   couleur: string;
   statut: string;
   ClientSAV?: { nom?: string; prenom?: string; contact?: string };
@@ -128,6 +142,7 @@ interface CheckListFormState {
   kilometrage: string;
   niveauCarburant: string;
   observations: string;
+  photos: string[];
   checks: Record<BooleanKey, boolean>;
 }
 
@@ -290,10 +305,11 @@ function buildInitialForm(
     marque: "KPANDJI",
     modele: voiture.model || "",
     immatriculation: voiture.immatriculation || "",
-    numeroChassis: "",
+    numeroChassis: voiture.chassisNumber || "",
     kilometrage: "",
     niveauCarburant: "",
     observations: "",
+    photos: [],
     checks: emptyChecks(),
   };
 }
@@ -337,13 +353,18 @@ function mapApiToForm(
     modele: typeof data.modele === "string" ? data.modele : base.modele,
     immatriculation:
       typeof data.immatriculation === "string" ? data.immatriculation : base.immatriculation,
-    numeroChassis: typeof data.numeroChassis === "string" ? data.numeroChassis : "",
+    numeroChassis:
+      voiture.chassisNumber ||
+      (typeof data.numeroChassis === "string" ? data.numeroChassis : ""),
     kilometrage:
       data.kilometrage === null || data.kilometrage === undefined
         ? ""
         : String(data.kilometrage),
     niveauCarburant: typeof data.niveauCarburant === "string" ? data.niveauCarburant : "",
     observations: typeof data.observations === "string" ? data.observations : "",
+    photos: Array.isArray(data.photos)
+      ? data.photos.filter((p): p is string => typeof p === "string" && p.length > 0)
+      : [],
     checks,
   };
 }
@@ -375,6 +396,7 @@ async function saveChecklist(voitureSAVId: string, form: CheckListFormState) {
     kilometrage: form.kilometrage === "" ? null : Number(form.kilometrage),
     niveauCarburant: form.niveauCarburant,
     observations: form.observations,
+    photos: form.photos,
     ...form.checks,
   };
 
@@ -408,16 +430,97 @@ function Field({
 export default function CheckListVerificationForm({
   voiture,
   onSaved,
+  defaultType = "RECEPTION",
+  allowedTypes,
+  validateSuccessMessage,
+  footerHint,
+  requireAllChecked = false,
+  showDraftButton = true,
 }: {
   voiture: VoitureSAV;
-  onSaved?: () => void;
+  onSaved?: (payload?: { observations: string }) => void | Promise<void>;
+  defaultType?: TypeCheckListSAV;
+  allowedTypes?: TypeCheckListSAV[];
+  validateSuccessMessage?: string;
+  footerHint?: string;
+  requireAllChecked?: boolean;
+  showDraftButton?: boolean;
 }) {
-  const [checklistType, setChecklistType] = useState<TypeCheckListSAV>("RECEPTION");
+  const typeOptions = useMemo(() => {
+    const allowed = allowedTypes?.length ? allowedTypes : ALL_CHECKLIST_TYPES;
+    return CHECKLIST_TYPE_OPTIONS.filter((o) => allowed.includes(o.value));
+  }, [allowedTypes]);
+
+  const resolvedDefault: TypeCheckListSAV =
+    typeOptions.some((o) => o.value === defaultType)
+      ? defaultType
+      : (typeOptions[0]?.value ?? "RECEPTION");
+
+  const [checklistType, setChecklistType] =
+    useState<TypeCheckListSAV>(resolvedDefault);
   const [form, setForm] = useState<CheckListFormState>(() =>
-    buildInitialForm(voiture, "RECEPTION"),
+    buildInitialForm(voiture, resolvedDefault),
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [startingCamera, setStartingCamera] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+
+  const stopCameraTracks = (stream: MediaStream | null) => {
+    stream?.getTracks().forEach((track) => track.stop());
+  };
+
+  const replaceCameraStream = (stream: MediaStream | null) => {
+    if (cameraStreamRef.current && cameraStreamRef.current !== stream) {
+      stopCameraTracks(cameraStreamRef.current);
+    }
+    cameraStreamRef.current = stream;
+    setCameraStream(stream);
+  };
+
+  const closeLiveCamera = () => {
+    setCameraOpen(false);
+    replaceCameraStream(null);
+  };
+
+  const closeCameraDialog = () => {
+    setCameraDialogOpen(false);
+    closeLiveCamera();
+  };
+
+  const openLiveCamera = async () => {
+    setStartingCamera(true);
+    try {
+      const stream = await requestCarCamera("environment");
+      replaceCameraStream(stream);
+      setCameraOpen(true);
+    } catch {
+      toast.error(
+        "Impossible d'accéder à la caméra. Vous pouvez utiliser l'appareil photo natif.",
+      );
+      cameraInputRef.current?.click();
+    } finally {
+      setStartingCamera(false);
+    }
+  };
+
+  const openCameraDialog = () => {
+    setCameraDialogOpen(true);
+    void openLiveCamera();
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCameraTracks(cameraStreamRef.current);
+      cameraStreamRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -457,6 +560,66 @@ export default function CheckListVerificationForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const uploadCarPhoto = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Veuillez sélectionner une image");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("voitureSAVId", voiture.id);
+      formData.append("type", checklistType);
+      formData.append("image", file);
+      const res = await fetch("/api/sav/checklist-sav/photo", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Enregistrement de la photo impossible");
+      }
+      const photos = Array.isArray(json.data?.photos)
+        ? (json.data.photos as string[])
+        : [...form.photos, json.url as string];
+      setForm((prev) => ({
+        ...prev,
+        id: typeof json.data?.id === "string" ? json.data.id : prev.id,
+        photos,
+      }));
+      toast.success("Photo du véhicule enregistrée");
+      closeCameraDialog();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const removeCarPhoto = async (url: string) => {
+    try {
+      const res = await fetch("/api/sav/checklist-sav/photo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voitureSAVId: voiture.id,
+          type: checklistType,
+          url,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Suppression impossible");
+      }
+      const photos = Array.isArray(json.data?.photos)
+        ? (json.data.photos as string[])
+        : form.photos.filter((p) => p !== url);
+      setForm((prev) => ({ ...prev, photos }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur suppression");
+    }
+  };
+
   const handleTypeChange = (type: TypeCheckListSAV) => {
     setChecklistType(type);
   };
@@ -469,6 +632,10 @@ export default function CheckListVerificationForm({
   };
 
   const handleSave = async (statut: "EN_ATTENTE" | "EN_COURS" | "VALIDE") => {
+    if (statut === "VALIDE" && requireAllChecked && progress < 100) {
+      toast.error("Tous les points de contrôle doivent être validés");
+      return;
+    }
     setSaving(true);
     try {
       const saved = await saveChecklist(voiture.id, {
@@ -477,14 +644,15 @@ export default function CheckListVerificationForm({
         statut,
       });
       setForm(mapApiToForm(saved, voiture, checklistType));
+      if (statut === "VALIDE") {
+        await onSaved?.({ observations: form.observations });
+      }
       toast.success(
         statut === "VALIDE"
-          ? "Check-list validée — véhicule prêt pour le dispatching"
-          : "Check-list enregistrée"
+          ? (validateSuccessMessage ??
+            "Check-list validée — véhicule prêt pour le dispatching")
+          : "Check-list enregistrée",
       );
-      if (statut === "VALIDE") {
-        onSaved?.();
-      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur enregistrement");
     } finally {
@@ -551,6 +719,22 @@ export default function CheckListVerificationForm({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-xl border-sky-200 bg-sky-50 text-sky-700 shadow-sm hover:bg-sky-100 hover:text-sky-900"
+              onClick={openCameraDialog}
+              disabled={startingCamera || uploadingPhoto}
+              aria-label="Photographier le véhicule"
+              title="Photographier le véhicule"
+            >
+              {startingCamera || uploadingPhoto ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
+            </Button>
             <Badge
               variant="secondary"
               className="rounded-xl bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 border border-sky-100"
@@ -589,9 +773,119 @@ export default function CheckListVerificationForm({
         </div>
       </div>
 
+      {/* Photos du véhicule */}
+      <Card id="section-photos" className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-slate-100 bg-white px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 shadow-sm">
+              <Camera className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-base font-bold text-slate-900">
+                Photos du véhicule
+              </CardTitle>
+              <p className="mt-0.5 truncate text-xs text-slate-500">
+                Photographiez l&apos;état du véhicule pendant le contrôle
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className="shrink-0 rounded-xl border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800"
+            >
+              {form.photos.length} photo{form.photos.length > 1 ? "s" : ""}
+            </Badge>
+            <Button
+              type="button"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-sky-600 text-white shadow-sm hover:bg-sky-700"
+              onClick={openCameraDialog}
+              disabled={startingCamera || uploadingPhoto}
+              aria-label="Prendre une photo"
+            >
+              {startingCamera || uploadingPhoto ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-5">
+          {form.photos.length === 0 ? (
+            <button
+              type="button"
+              onClick={openCameraDialog}
+              disabled={startingCamera || uploadingPhoto}
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 px-4 py-10 text-center transition-all hover:bg-sky-50 active:scale-[0.99] disabled:opacity-70"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-md">
+                {startingCamera || uploadingPhoto ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Camera className="h-6 w-6" />
+                )}
+              </div>
+              <p className="text-sm font-bold text-sky-950">Photographier le véhicule</p>
+              <p className="text-xs text-sky-700">Ouvrir la caméra pour prendre une photo</p>
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {form.photos.map((url) => (
+                <div
+                  key={url}
+                  className="group relative overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setLightboxUrl(url)}
+                    className="block w-full"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt="Photo véhicule"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-1.5 top-1.5 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+                    onClick={() => void removeCarPhoto(url)}
+                    aria-label="Supprimer la photo"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={openCameraDialog}
+                disabled={startingCamera || uploadingPhoto}
+                className="flex min-h-[96px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-sky-200 bg-sky-50/50 text-sky-800 transition-all hover:bg-sky-50 active:scale-95"
+              >
+                <ImagePlus className="h-6 w-6" />
+                <span className="text-xs font-semibold">Ajouter</span>
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Section Quick-Nav Pill Carousel */}
       <div className="sticky top-14 z-20 -mx-1 bg-slate-50/90 py-2 backdrop-blur-md">
         <div className="flex items-center gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none snap-x">
+          <button
+            type="button"
+            onClick={() => scrollToSection("section-photos")}
+            className="snap-start shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+          >
+            Photos
+            {form.photos.length > 0 ? ` ${form.photos.length}` : ""}
+          </button>
           <button
             type="button"
             onClick={() => scrollToSection("section-infos")}
@@ -646,12 +940,13 @@ export default function CheckListVerificationForm({
             <Select
               value={checklistType}
               onValueChange={(v) => handleTypeChange(v as TypeCheckListSAV)}
+              disabled={typeOptions.length <= 1}
             >
               <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white shadow-sm font-medium">
                 <SelectValue placeholder="Sélectionner le type" />
               </SelectTrigger>
               <SelectContent>
-                {CHECKLIST_TYPE_OPTIONS.map((opt) => (
+                {typeOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -721,9 +1016,9 @@ export default function CheckListVerificationForm({
           <Field label="N° châssis">
             <Input
               value={form.numeroChassis}
-              onChange={(e) => setField("numeroChassis", e.target.value)}
-              placeholder="Ex. VF3..."
-              className="h-11 rounded-xl border-slate-200 shadow-sm font-medium"
+              readOnly
+              placeholder="—"
+              className="h-11 rounded-xl border-slate-200 bg-slate-100/70 font-mono text-xs font-bold tracking-wide text-slate-700 uppercase"
             />
           </Field>
 
@@ -903,23 +1198,44 @@ export default function CheckListVerificationForm({
                 {checkedCount} / {ALL_BOOLEAN_KEYS.length} points vérifiés ({progress}%)
               </p>
             </div>
-            <p className="text-xs text-slate-500">Check-list de réception</p>
+            <p className="text-xs text-slate-500">
+              {footerHint ?? "Check-list de réception"}
+            </p>
           </div>
 
           <div className="flex w-full items-center justify-end gap-2.5 sm:w-auto">
             <Button
+              type="button"
               variant="outline"
-              disabled={saving}
-              onClick={() => handleSave("EN_ATTENTE")}
-              className="h-11 flex-1 rounded-xl border-slate-300 font-semibold shadow-sm sm:flex-none sm:min-w-[9rem] active:scale-95 transition-transform"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+              onClick={openCameraDialog}
+              disabled={startingCamera || uploadingPhoto}
+              aria-label="Photographier le véhicule"
+              title="Photographier le véhicule"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              <span className="ml-2">Brouillon</span>
+              {startingCamera || uploadingPhoto ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
             </Button>
+            {showDraftButton && (
+              <Button
+                variant="outline"
+                disabled={saving}
+                onClick={() => handleSave("EN_ATTENTE")}
+                className="h-11 flex-1 rounded-xl border-slate-300 font-semibold shadow-sm sm:flex-none sm:min-w-[9rem] active:scale-95 transition-transform"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <span className="ml-2">Brouillon</span>
+              </Button>
+            )}
 
             <Button
+              type="button"
+              disabled={saving || (requireAllChecked && progress < 100)}
               onClick={() => handleSave("VALIDE")}
-              disabled={saving}
               className="h-11 flex-[1.4] rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-sky-500/25 hover:from-sky-600 hover:to-indigo-700 sm:flex-none sm:min-w-[13rem] active:scale-95 transition-transform"
             >
               {saving ? (
@@ -932,6 +1248,110 @@ export default function CheckListVerificationForm({
           </div>
         </div>
       </div>
+
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          if (file) void uploadCarPhoto(file);
+          e.target.value = "";
+        }}
+      />
+
+      <Dialog
+        open={cameraDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeCameraDialog();
+        }}
+      >
+        <DialogContent className="max-h-[min(92vh,760px)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 sm:max-w-lg">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-sky-50/80 via-white to-indigo-50/40 px-6 py-5">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-xl font-bold text-slate-900">
+                Photographier le véhicule
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-600 sm:text-sm">
+                Prenez une photo de {voiture.model} ({voiture.immatriculation}).
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="space-y-4 px-6 py-5">
+            {uploadingPhoto ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-sky-600" />
+                <p className="text-sm font-medium text-slate-500">
+                  Enregistrement de la photo…
+                </p>
+              </div>
+            ) : cameraOpen && cameraStream ? (
+              <CameraCapture
+                initialStream={cameraStream}
+                onCapture={(file) => {
+                  void uploadCarPhoto(file);
+                }}
+                onCancel={closeCameraDialog}
+                onStreamChange={replaceCameraStream}
+                onNativeFallback={() => {
+                  closeLiveCamera();
+                  cameraInputRef.current?.click();
+                }}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => void openLiveCamera()}
+                  disabled={startingCamera}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 p-6 transition-all hover:bg-sky-50 active:scale-95 disabled:opacity-70"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-600 text-white shadow-md">
+                    {startingCamera ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Camera className="h-5 w-5" />
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-sky-950">
+                    {startingCamera ? "Ouverture…" : "Prendre une photo"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-6 transition-all hover:border-slate-400 hover:bg-slate-100 active:scale-95"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-700 text-white shadow-md">
+                    <ImagePlus className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">
+                    Galerie / Fichier
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!lightboxUrl} onOpenChange={(open) => !open && setLightboxUrl(null)}>
+        <DialogContent className="max-w-3xl overflow-hidden rounded-2xl p-2 sm:p-3">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Aperçu photo</DialogTitle>
+          </DialogHeader>
+          {lightboxUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={lightboxUrl}
+              alt="Photo du véhicule"
+              className="max-h-[80vh] w-full rounded-xl object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

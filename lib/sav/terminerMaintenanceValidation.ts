@@ -17,17 +17,11 @@ function decimalEq(a: unknown, b: unknown): boolean {
   return Number.isFinite(na) && Number.isFinite(nb) && na === nb;
 }
 
-function strEqNormalized(
-  a: string | null | undefined,
-  b: string | null | undefined
-): boolean {
-  return (a ?? "").trim() === (b ?? "").trim();
-}
-
 /**
- * Vérifie que chaque ligne maintenance a le même prix / durée que les champs
- * horaire de la réparation, et qu’une maintenance existe pour chaque catégorie
- * de diagnostic concernée.
+ * Vérifie qu’une fiche maintenance existe pour chaque catégorie de diagnostic,
+ * et que les prix, s’ils sont saisis, sont alignés sur la réparation.
+ * Le prix est optionnel : une maintenance peut être enregistrée / terminée sans Prix.
+ * Les durées par ligne (duree_maintenance) ne sont pas comparées à horaire_travail_duration.
  */
 export function validateTerminerMaintenance(
   rep: ReparationHoraireSlice,
@@ -36,12 +30,13 @@ export function validateTerminerMaintenance(
 ): { ok: true } | { ok: false; error: string } {
   const prixRef = rep.horaire_travail_prix;
   const dureeRef = rep.horaire_travail_duration;
+  const hasPrixRef = prixRef != null && prixRef !== "";
 
-  if (prixRef == null || dureeRef == null || dureeRef.trim() === "") {
+  if (dureeRef == null || dureeRef.trim() === "") {
     return {
       ok: false,
       error:
-        "La réparation doit avoir un prix horaire (horaire_travail_prix) et une durée horaire (horaire_travail_duration) renseignés.",
+        "La réparation doit avoir une durée horaire (horaire_travail_duration) renseignée.",
     };
   }
 
@@ -73,18 +68,17 @@ export function validateTerminerMaintenance(
   }
 
   for (const m of maintenances) {
-    if (!decimalEq(m.prix_maintenance, prixRef)) {
+    const hasLinePrix =
+      m.prix_maintenance != null && m.prix_maintenance !== "";
+    if (
+      hasPrixRef &&
+      hasLinePrix &&
+      !decimalEq(m.prix_maintenance, prixRef)
+    ) {
       return {
         ok: false,
         error:
           "Le prix maintenance de chaque ligne doit être égal au prix horaire de travail de la réparation (horaire_travail_prix = prix_maintenance).",
-      };
-    }
-    if (!strEqNormalized(m.duree_maintenance, dureeRef)) {
-      return {
-        ok: false,
-        error:
-          "La durée maintenance de chaque ligne doit être égale à la durée horaire de la réparation (horaire_travail_duration = duree_maintenance).",
       };
     }
   }

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
+import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ type Body = {
 };
 
 function toDecimal(v: string | number | null | undefined): Decimal | null {
-  if (v === undefined || v === null || v === "") return null;
+  if (v === undefined || v === null) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
   const n =
     typeof v === "number"
       ? v
@@ -46,6 +48,67 @@ export async function POST(request: NextRequest) {
     const catergorieDiagnosticId =
       body.catergorieDiagnosticId?.trim() || null;
 
+    if (catergorieDiagnosticId) {
+      const [rep, catalogGaranties] = await Promise.all([
+        prisma.reparation.findUnique({
+          where: { id: reparationId },
+          select: {
+            voitureSAV: {
+              select: {
+                StatutGarantie: true,
+                GarantieSAV: {
+                  select: {
+                    nom_garantie: true,
+                    statut: true,
+                    voitureSAVId: true,
+                  },
+                },
+              },
+            },
+            DetailDiagnostic: {
+              select: {
+                nom: true,
+                garantieSAVId: true,
+                catergorieDiagnosticId: true,
+              },
+            },
+          },
+        }),
+        prisma.garantieSAV.findMany({
+          select: {
+            nom_garantie: true,
+            statut: true,
+            voitureSAVId: true,
+          },
+        }),
+      ]);
+      if (rep) {
+        const details = rep.DetailDiagnostic.filter(
+          (d) => d.catergorieDiagnosticId === catergorieDiagnosticId
+        );
+        if (
+          details.length > 0 &&
+          details.every((d) =>
+            isGarantieOffertDetailLocked(
+              rep.voitureSAV.StatutGarantie,
+              d,
+              rep.voitureSAV.GarantieSAV,
+              catalogGaranties
+            )
+          )
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "La saisie maintenance est désactivée pour cette catégorie : les lignes sont couvertes par une garantie offerte tant que la garantie n'est pas terminée.",
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const existing = await prisma.maintenance.findFirst({
       where: {
         reparationId,
@@ -59,6 +122,7 @@ export async function POST(request: NextRequest) {
       nom,
       description: body.description?.trim() || null,
       duree_maintenance: body.duree_maintenance?.trim() || null,
+      /** Prix is optional — empty / missing values are stored as null. */
       prix_maintenance: toDecimal(body.prix_maintenance ?? null),
       reparationId,
       catergorieDiagnosticId,
@@ -81,22 +145,27 @@ export async function POST(request: NextRequest) {
           data,
         });
 
-    /** Aligne la réparation sur le prix / durée saisis (requis pour terminer la maintenance). */
+    /** Aligne la réparation sur le prix / durée saisis. Le prix est optionnel. */
+    const dureeTrim = data.duree_maintenance?.trim() || null;
+    const horairePatch: {
+      horaire_travail_prix?: InstanceType<typeof Decimal> | null;
+      horaire_travail_duration?: string | null;
+    } = {};
+    if (data.prix_maintenance != null) {
+      horairePatch.horaire_travail_prix = data.prix_maintenance;
+    }
+    if (dureeTrim) {
+      horairePatch.horaire_travail_duration = dureeTrim;
+    }
+
     let reparationHoraire: {
       horaire_travail_prix: InstanceType<typeof Decimal> | null;
       horaire_travail_duration: string | null;
     } | null = null;
-    if (
-      data.prix_maintenance != null &&
-      data.duree_maintenance != null &&
-      data.duree_maintenance.trim() !== ""
-    ) {
+    if (Object.keys(horairePatch).length > 0) {
       reparationHoraire = await prisma.reparation.update({
         where: { id: reparationId },
-        data: {
-          horaire_travail_prix: data.prix_maintenance,
-          horaire_travail_duration: data.duree_maintenance.trim(),
-        },
+        data: horairePatch,
         select: {
           horaire_travail_prix: true,
           horaire_travail_duration: true,

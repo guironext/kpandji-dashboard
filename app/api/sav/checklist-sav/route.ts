@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { StatutCheckListSAV } from "@prisma/client";
+import {
+  attachCheckListPhotos,
+  setCheckListPhotos,
+} from "@/lib/sav/checklistPhotos";
+import { setVoitureSavStatutSql } from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
@@ -132,15 +137,17 @@ export async function GET(request: Request) {
       );
     }
 
-    const checklist = await prisma.checkListsSAV.findFirst({
-      where: {
-        voitureSAVId,
-        ...(type && TYPES.includes(type as (typeof TYPES)[number])
-          ? { type: type as (typeof TYPES)[number] }
-          : {}),
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+    const checklist = await attachCheckListPhotos(
+      await prisma.checkListsSAV.findFirst({
+        where: {
+          voitureSAVId,
+          ...(type && TYPES.includes(type as (typeof TYPES)[number])
+            ? { type: type as (typeof TYPES)[number] }
+            : {}),
+        },
+        orderBy: { updatedAt: "desc" },
+      }),
+    );
 
     return NextResponse.json({ success: true, data: checklist });
   } catch (error) {
@@ -212,6 +219,12 @@ export async function POST(request: Request) {
         : "RECEPTION";
     data.type = type;
 
+    const photosInput = Array.isArray(body.photos)
+      ? body.photos.filter(
+          (p: unknown): p is string => typeof p === "string" && p.trim().length > 0,
+        )
+      : undefined;
+
     const saved = await prisma.$transaction(async (tx) => {
       const existing = await tx.checkListsSAV.findFirst({
         where: { voitureSAVId, type },
@@ -232,7 +245,7 @@ export async function POST(request: Request) {
             },
           });
 
-      if (data.statut === "VALIDE") {
+      if (data.statut === "VALIDE" && type === "RECEPTION") {
         await tx.voitureSAV.update({
           where: { id: voitureSAVId },
           data: { statut: "DIAGNOSTIC_FINI" },
@@ -242,7 +255,22 @@ export async function POST(request: Request) {
       return checklist;
     });
 
-    return NextResponse.json({ success: true, data: saved });
+    if (data.statut === "VALIDE" && type === "FINALE") {
+      await setVoitureSavStatutSql(voitureSAVId, "TERMINE");
+    }
+
+    const photos =
+      photosInput !== undefined
+        ? await setCheckListPhotos(saved.id, photosInput)
+        : undefined;
+    const withPhotos = await attachCheckListPhotos(saved);
+
+    return NextResponse.json({
+      success: true,
+      data: withPhotos
+        ? { ...withPhotos, ...(photos ? { photos } : {}) }
+        : saved,
+    });
   } catch (error) {
     console.error("API saveCheckListsSAV error:", error);
     return NextResponse.json(

@@ -6,6 +6,7 @@ import {
   pieceSAVUpdateDiagnosticSortieRaw,
   pieceSAVUpdateReparationSortieRaw,
 } from "@/lib/pieceSavMouvementSql";
+import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
 
 export const dynamic = "force-dynamic";
 
@@ -188,6 +189,47 @@ export async function POST(
         {
           success: false,
           error: "Le détail diagnostic ne correspond pas au diagnostic choisi",
+        },
+        { status: 400 }
+      );
+    }
+
+    const [voitureGarantie, catalogGaranties] = await Promise.all([
+      prisma.voitureSAV.findUnique({
+        where: { id: voitureSAVId },
+        select: {
+          StatutGarantie: true,
+          GarantieSAV: {
+            select: {
+              nom_garantie: true,
+              statut: true,
+              voitureSAVId: true,
+            },
+          },
+        },
+      }),
+      prisma.garantieSAV.findMany({
+        select: {
+          nom_garantie: true,
+          statut: true,
+          voitureSAVId: true,
+        },
+      }),
+    ]);
+    if (
+      voitureGarantie &&
+      isGarantieOffertDetailLocked(
+        voitureGarantie.StatutGarantie,
+        detail,
+        voitureGarantie.GarantieSAV,
+        catalogGaranties
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Cette ligne est couverte par une garantie offerte et reste désactivée tant que la garantie n'est pas terminée.",
         },
         { status: 400 }
       );

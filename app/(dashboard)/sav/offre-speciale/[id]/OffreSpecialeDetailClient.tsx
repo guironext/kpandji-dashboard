@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft,
+  CheckCircle2,
   ClipboardList,
   Cog,
   Copy,
@@ -125,6 +126,7 @@ interface VoitureDetail {
   transmission: string;
   nbr_portes?: string;
   statut: string;
+  StatutGarantie?: string;
   createdAt?: string;
   ClientSAV?: {
     nom?: string;
@@ -174,6 +176,10 @@ function colorHex(couleur: string) {
 function statutLabel(statut: string) {
   if (statut === "GARANTIESAV_EN_COURS") return "Garantie en cours";
   if (statut === "GARANTIESAV_TERMINE") return "Garantie terminée";
+  if (statut === "FIN_INTERVENTION_GARANTIESAV_EN_COURS") {
+    return "Fin d'intervention";
+  }
+  if (statut === "TESTE") return "Testé";
   return statut;
 }
 
@@ -348,6 +354,7 @@ export default function OffreSpecialeDetailClient({ id }: { id: string }) {
     Record<string, InterventionDraft[]>
   >({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [finishingIntervention, setFinishingIntervention] = useState(false);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -586,6 +593,38 @@ export default function OffreSpecialeDetailClient({ id }: { id: string }) {
     }
   };
 
+  const handleFinIntervention = async () => {
+    if (!voiture) return;
+    if (
+      voiture.statut === "TESTE" &&
+      voiture.StatutGarantie === "FIN_INTERVENTION_GARANTIESAV_EN_COURS"
+    ) {
+      return;
+    }
+    setFinishingIntervention(true);
+    try {
+      const { res, json } = await fetchJson(`/api/sav/voiture-sav/${voiture.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          statut: "TESTE",
+          StatutGarantie: "FIN_INTERVENTION_GARANTIESAV_EN_COURS",
+        }),
+      });
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || "Impossible de clôturer l'intervention");
+      }
+      toast.success("Intervention terminée — véhicule en test");
+      await load({ silent: true });
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Erreur clôture d'intervention",
+      );
+    } finally {
+      setFinishingIntervention(false);
+    }
+  };
+
   if (loading) return <PageSkeleton />;
 
   if (!voiture) {
@@ -619,6 +658,9 @@ export default function OffreSpecialeDetailClient({ id }: { id: string }) {
       .join(" ") || "Client non renseigné";
   const contact = voiture.ClientSAV?.contact?.trim() || "";
   const enCours = voiture.statut === "GARANTIESAV_EN_COURS";
+  const interventionTerminee =
+    voiture.statut === "TESTE" &&
+    voiture.StatutGarantie === "FIN_INTERVENTION_GARANTIESAV_EN_COURS";
   const diagnostics = voiture.diagnosticArrivee ?? [];
   const findingCount = diagnostics.reduce(
     (n, da) => n + (da.DetailDiagnostic?.length ?? 0),
@@ -705,7 +747,9 @@ export default function OffreSpecialeDetailClient({ id }: { id: string }) {
                   "rounded-xl px-3 py-1.5 text-xs font-bold",
                   enCours
                     ? "bg-emerald-500 text-white hover:bg-emerald-500"
-                    : "bg-white/15 text-white hover:bg-white/15",
+                    : voiture.statut === "TESTE"
+                      ? "bg-teal-500 text-white hover:bg-teal-500"
+                      : "bg-white/15 text-white hover:bg-white/15",
                 )}
               >
                 {statutLabel(voiture.statut)}
@@ -1092,6 +1136,29 @@ export default function OffreSpecialeDetailClient({ id }: { id: string }) {
                                                 ? `Quota atteint (${saved.length}/${quota})`
                                                 : "Nouvelle Intervention"
                                               : "Nouvelle Intervention"}
+                                          </Button>
+                                        </div>
+                                        <div className="mt-4">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={
+                                              finishingIntervention ||
+                                              interventionTerminee
+                                            }
+                                            onClick={() => {
+                                              void handleFinIntervention();
+                                            }}
+                                            className="h-11 w-full rounded-xl border-emerald-200 bg-white font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                                          >
+                                            {finishingIntervention ? (
+                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                                            )}
+                                            {interventionTerminee
+                                              ? "Intervention terminée"
+                                              : "Fin Intervention"}
                                           </Button>
                                         </div>
                                       </AccordionContent>

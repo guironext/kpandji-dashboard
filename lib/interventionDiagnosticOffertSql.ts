@@ -99,6 +99,29 @@ export async function maxInterventionNiveauRaw(
   return rows[0]?.max ?? 0;
 }
 
+export async function listInterventionsOffertByVoitureIdsRaw(
+  voitureSAVIds: string[],
+  db: SqlClient = prisma,
+): Promise<InterventionOffertRow[]> {
+  if (voitureSAVIds.length === 0) return [];
+  await ensureInterventionOffertSchema(db);
+  return db.$queryRaw<InterventionOffertRow[]>(Prisma.sql`
+    SELECT
+      i.id,
+      i."date_Intervention",
+      i."typeProduitUtilise",
+      COALESCE(i."niveau_Intervention", 1) AS "niveau_Intervention",
+      i."voitureSAVId",
+      i."detailDiagnosticId",
+      i."groupePersonnelSAVId",
+      i."createdAt",
+      i."updatedAt"
+    FROM "InterventionDiagnosticOffert" i
+    WHERE i."voitureSAVId" IN (${Prisma.join(voitureSAVIds)})
+    ORDER BY i."voitureSAVId" ASC, COALESCE(i."niveau_Intervention", 1) ASC, i."createdAt" ASC
+  `);
+}
+
 export async function createInterventionOffertRaw(
   data: {
     typeProduitUtilise: string;

@@ -8,19 +8,26 @@ import {
   Car,
   UserCheck,
   FileText,
-  Calendar,
   Receipt,
   ClipboardList,
   Package,
   TrendingUp,
   FileCheck,
-  Pen,
   Target,
   CalendarRange,
   KeyRound,
   Activity,
   Mail,
   BookOpen,
+  NotebookPen,
+  Building2,
+  Briefcase,
+  LineChart,
+  Landmark,
+  ScrollText,
+  FileSignature,
+  MessageSquare,
+  CircleDollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -41,6 +48,10 @@ const navCategories = [
       { id: 3, icon: <CalendarRange className={iconClass} />, label: "Calendrier Sortie", href: "/responsablecommercial/calendrier-sortie" },
       { id: 4, icon: <KeyRound className={iconClass} />, label: "Reservation Véhicule", href: "/responsablecommercial/reservation-vehicule" },
       { id: 5, icon: <Activity className={iconClass} />, label: "Performences", href: "/responsablecommercial/performences" },
+      { id: 6, icon: <NotebookPen className={iconClass} />, label: "Journal Prospect", href: "/responsablecommercial/journal-prospect" },
+      { id: 7, icon: <Building2 className={iconClass} />, label: "Comptes B2B", href: "/responsablecommercial/comptes-b2b" },
+      { id: 8, icon: <Briefcase className={iconClass} />, label: "Portefeuille Prospect", href: "/responsablecommercial/portefeuille-prospect" },
+      { id: 9, icon: <LineChart className={iconClass} />, label: "Suivi Commercial", href: "/responsablecommercial/suivi-commercial" },
     ],
   },
   {
@@ -49,9 +60,9 @@ const navCategories = [
     color: "#0ea5e9",
     bg: "#0ea5e91a", // sky-500 @ 10% opacity
     items: [
-      { id: 6, icon: <Car className={iconClass} />, label: "Modèles Voitures", href: "/responsablecommercial/ajouter-modele" },
-      { id: 7, icon: <Package className={iconClass} />, label: "Accessoires", href: "/responsablecommercial/ajouter-accessoires" },
-      { id: 8, icon: <Warehouse className={iconClass} />, label: "Goodies-Brochures", href: "/responsablecommercial/goodies-brochures" },
+      { id: 10, icon: <Car className={iconClass} />, label: "Modèles Voitures", href: "/responsablecommercial/ajouter-modele" },
+      { id: 11, icon: <Package className={iconClass} />, label: "Accessoires", href: "/responsablecommercial/ajouter-accessoires" },
+      { id: 12, icon: <Warehouse className={iconClass} />, label: "Goodies-Brochures", href: "/responsablecommercial/goodies-brochures" },
     ],
   },
   {
@@ -60,8 +71,8 @@ const navCategories = [
     color: "#22c55e",
     bg: "#22c55e1a", // green-500 @ 10% opacity
     items: [
-      { id: 9, icon: <UserCheck className={iconClass} />, label: "Prospects", href: "/responsablecommercial/prospects" },
-      { id: 10, icon: <Users className={iconClass} />, label: "Clients", href: "/responsablecommercial/clients" },
+      { id: 13, icon: <UserCheck className={iconClass} />, label: "Prospects", href: "/responsablecommercial/prospects" },
+      { id: 14, icon: <Users className={iconClass} />, label: "Clients", href: "/responsablecommercial/clients" },
     ],
   },
   {
@@ -70,9 +81,8 @@ const navCategories = [
     color: "#f59e0b",
     bg: "#f59e0b1a", // amber-500 @ 10% opacity
     items: [
-      { id: 11, icon: <Calendar className={iconClass} />, label: "Coût Rendez-vous", href: "/responsablecommercial/cout-rendez-vous" },
-      { id: 12, icon: <ClipboardList className={iconClass} />, label: "Rapport Rendez-vous", href: "/responsablecommercial/rapport-rendez-vous" },
-      
+      { id: 15, icon: <CircleDollarSign className={iconClass} />, label: "Coût Rendez-vous", href: "/responsablecommercial/cout-rendez-vous" },
+      { id: 16, icon: <ClipboardList className={iconClass} />, label: "Rapport Rendez-vous", href: "/responsablecommercial/rapport-rendez-vous" },
     ],
   },
   {
@@ -81,9 +91,9 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 13, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
-      { id: 14, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
-      { id: 15, icon: <TrendingUp className={iconClass} />, label: "Suivi Versement", href: "/responsablecommercial/versement" },
+      { id: 17, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
+      { id: 18, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
+      { id: 19, icon: <Landmark className={iconClass} />, label: "Suivi Versement", href: "/responsablecommercial/versement" },
     ],
   },
   {
@@ -92,11 +102,11 @@ const navCategories = [
     color: "#ec4899",
     bg: "#ec48991a", // pink-500 @ 10% opacity
     items: [
-      { id: 16, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
-      { id: 17, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
-      { id: 18, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
-      { id: 23, icon: <FileCheck className={iconClass} />, label: "Lettre Commande", href: "/responsablecommercial/lettre-commande" },
-      { id: 19, icon: <Pen className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
+      { id: 20, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
+      { id: 21, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
+      { id: 22, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
+      { id: 23, icon: <ScrollText className={iconClass} />, label: "Lettre Commande", href: "/responsablecommercial/lettre-commande" },
+      { id: 24, icon: <FileSignature className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },
   {
@@ -105,11 +115,11 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 20, icon: <Mail className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
-      { id: 21, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
-      { id: 22, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/responsablecommercial/documentation" },
+      { id: 25, icon: <MessageSquare className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
+      { id: 26, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
+      { id: 27, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/responsablecommercial/documentation" },
     ],
-  }
+  },
 ];
 
 const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {

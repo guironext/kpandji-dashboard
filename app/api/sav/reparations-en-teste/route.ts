@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { StatutReparation } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
+import { voitureSavFactureSelect } from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,9 @@ export async function GET() {
         orderBy: { updatedAt: "desc" },
         include: {
           voitureSAV: {
-            include: {
-              ClientSAV: true,
+            select: {
+              ...voitureSavFactureSelect,
+              chassisNumber: true,
             },
           },
           DetailDiagnostic: {

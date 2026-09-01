@@ -38,17 +38,6 @@ export async function PATCH(
       }
       updateData.modelVoiture = modelVoiture;
     }
-    if (body.couleur !== undefined) {
-      const couleur =
-        typeof body.couleur === "string" ? body.couleur.trim() : "";
-      if (!couleur) {
-        return NextResponse.json(
-          { success: false, error: "La couleur est requise" },
-          { status: 400 }
-        );
-      }
-      updateData.couleur = couleur;
-    }
     if (body.chassisNumber !== undefined) {
       updateData.chassisNumber =
         typeof body.chassisNumber === "string" && body.chassisNumber.trim()
@@ -56,10 +45,17 @@ export async function PATCH(
           : null;
     }
     if (body.immatriculation !== undefined) {
-      updateData.immatriculation =
-        typeof body.immatriculation === "string" && body.immatriculation.trim()
+      const immatriculation =
+        typeof body.immatriculation === "string"
           ? body.immatriculation.trim()
-          : null;
+          : "";
+      if (!immatriculation) {
+        return NextResponse.json(
+          { success: false, error: "L'immatriculation est requise" },
+          { status: 400 }
+        );
+      }
+      updateData.immatriculation = immatriculation;
     }
 
     const item = await prisma.voitureSavGarantie.update({

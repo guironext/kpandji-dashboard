@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
+import { setVoitureSavStatutSql } from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
@@ -248,12 +249,7 @@ export async function POST(request: Request) {
           data: { garantieSAVId: garantie.id },
         });
 
-        const updatedVoiture = await tx.voitureSAV.update({
-          where: { id: voitureSAVId },
-          data: { statut: voitureStatut },
-        });
-
-        return { garantieId: garantie.id, reparationId: null, updatedVoiture };
+        return { garantieId: garantie.id, reparationId: null };
       }
 
       const reparation = await tx.reparation.create({
@@ -273,13 +269,10 @@ export async function POST(request: Request) {
         data: { reparationId: reparation.id },
       });
 
-      const updatedVoiture = await tx.voitureSAV.update({
-        where: { id: voitureSAVId },
-        data: { statut: voitureStatut },
-      });
-
-      return { garantieId: null, reparationId: reparation.id, updatedVoiture };
+      return { garantieId: null, reparationId: reparation.id };
     });
+
+    await setVoitureSavStatutSql(voitureSAVId, voitureStatut);
 
     return NextResponse.json({
       success: true,
@@ -287,7 +280,7 @@ export async function POST(request: Request) {
         reparationId: result.reparationId,
         garantieId: result.garantieId,
         voitureSAVId,
-        statut: result.updatedVoiture.statut,
+        statut: voitureStatut,
         mode,
         groupe: groupe.nom,
       },

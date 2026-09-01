@@ -1,41 +1,80 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { StatutReparation } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
+import { voitureSavFactureSelect } from "@/lib/sav/voitureSavStatutSql";
 
 export const dynamic = "force-dynamic";
 
-/** Réparations au statut EN_MAINTENANCE avec client, véhicule, diagnostics, pièces et maintenances */
-export async function GET() {
+const QUEUE_STATUTS: StatutReparation[] = [
+  StatutReparation.EN_ATTENTE,
+  StatutReparation.EN_TRAITEMENT,
+  StatutReparation.EN_MAINTENANCE,
+];
+
+const reparationInclude = {
+  voitureSAV: {
+    select: {
+      ...voitureSavFactureSelect,
+      StatutGarantie: true,
+      GarantieSAV: {
+        select: {
+          nom_garantie: true,
+          statut: true,
+          voitureSAVId: true,
+        },
+      },
+    },
+  },
+  DetailDiagnostic: {
+    orderBy: { createdAt: "asc" as const },
+    include: {
+      catergorieDiagnostic: true,
+      PieceSAV: true,
+    },
+  },
+  PieceSAV: true,
+  Maintenance: {
+    orderBy: { createdAt: "desc" as const },
+    include: {
+      catergorieDiagnostic: true,
+      factureProformaSAVs: {
+        orderBy: { createdAt: "desc" as const },
+        take: 1,
+      },
+    },
+  },
+};
+
+function parseStatuts(
+  raw: string | null,
+  fallback: StatutReparation[]
+): StatutReparation[] {
+  if (!raw?.trim()) return fallback;
+  const parsed = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is StatutReparation =>
+      QUEUE_STATUTS.includes(s as StatutReparation)
+    );
+  return parsed.length > 0 ? parsed : fallback;
+}
+
+/** Réparations atelier (attente / traitement / maintenance) avec client, véhicule, diagnostics, pièces */
+export async function GET(request: NextRequest) {
   try {
+    const voitureSAVId = request.nextUrl.searchParams.get("voitureSAVId")?.trim();
+    const statuts = parseStatuts(
+      request.nextUrl.searchParams.get("statut"),
+      voitureSAVId ? QUEUE_STATUTS : [StatutReparation.EN_MAINTENANCE]
+    );
     const reparations = await executeWithRetry(() =>
       prisma.reparation.findMany({
-        where: { statut: StatutReparation.EN_MAINTENANCE },
-        orderBy: { updatedAt: "desc" },
-        include: {
-          voitureSAV: {
-            include: {
-              ClientSAV: true,
-            },
-          },
-          DetailDiagnostic: {
-            orderBy: { createdAt: "asc" },
-            include: {
-              catergorieDiagnostic: true,
-              PieceSAV: true,
-            },
-          },
-          PieceSAV: true,
-          Maintenance: {
-            orderBy: { createdAt: "desc" },
-            include: {
-              catergorieDiagnostic: true,
-              factureProformaSAVs: {
-                orderBy: { createdAt: "desc" },
-                take: 1,
-              },
-            },
-          },
+        where: {
+          ...(voitureSAVId ? { voitureSAVId } : {}),
+          statut: statuts.length === 1 ? statuts[0] : { in: statuts },
         },
+        orderBy: { updatedAt: "desc" },
+        include: reparationInclude,
       }),
     );
 

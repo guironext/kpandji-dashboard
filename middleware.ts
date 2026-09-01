@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
 	"/api/reservation-vehicule",
 	// Auto-inscription des participants via QR code (accessible sans compte)
 	"/participer/(.*)",
+	"/rapport-sav/(.*)",
 	"/api/public/(.*)",
 ]);
 // Skip middleware for prospects API - uses userId from body, avoids fetch issues
