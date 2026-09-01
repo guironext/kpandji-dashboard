@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export async function POST(
   try {
     const { id: voitureSAVId } = await params;
 
-    const voiture = await prisma.voitureSAV.findUnique({
+    const voitureRow = await prisma.voitureSAV.findUnique({
       where: { id: voitureSAVId },
       include: {
         GarantieSAV: true,
@@ -77,14 +78,16 @@ export async function POST(
           },
         },
       },
+      omit: { StatutGarantie: true },
     });
 
-    if (!voiture) {
+    if (!voitureRow) {
       return NextResponse.json(
         { success: false, error: "Véhicule introuvable" },
         { status: 404 }
       );
     }
+    const [voiture] = await withVoitureSavStatutGarantie([voitureRow]);
 
     const allDetails = voiture.diagnosticArrivee.flatMap((da) => da.DetailDiagnostic);
     if (allDetails.length === 0) {

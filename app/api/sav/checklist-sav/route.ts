@@ -225,35 +225,30 @@ export async function POST(request: Request) {
         )
       : undefined;
 
-    const saved = await prisma.$transaction(async (tx) => {
-      const existing = await tx.checkListsSAV.findFirst({
-        where: { voitureSAVId, type },
-        orderBy: { updatedAt: "desc" },
-        select: { id: true },
-      });
-
-      const checklist = existing
-        ? await tx.checkListsSAV.update({
-            where: { id: existing.id },
-            data,
-          })
-        : await tx.checkListsSAV.create({
-            data: {
-              ...data,
-              voitureSAVId,
-              type,
-            },
-          });
-
-      if (data.statut === "VALIDE" && type === "RECEPTION") {
-        await tx.voitureSAV.update({
-          where: { id: voitureSAVId },
-          data: { statut: "DIAGNOSTIC_FINI" },
-        });
-      }
-
-      return checklist;
+    // Neon/PgBouncer: avoid interactive $transaction — find + write already
+    // exceeds the 5s default timeout after a slow query (P2028).
+    const existing = await prisma.checkListsSAV.findFirst({
+      where: { voitureSAVId, type },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
     });
+
+    const saved = existing
+      ? await prisma.checkListsSAV.update({
+          where: { id: existing.id },
+          data,
+        })
+      : await prisma.checkListsSAV.create({
+          data: {
+            ...data,
+            voitureSAVId,
+            type,
+          },
+        });
+
+    if (data.statut === "VALIDE" && type === "RECEPTION") {
+      await setVoitureSavStatutSql(voitureSAVId, "DIAGNOSTIC_FINI");
+    }
 
     if (data.statut === "VALIDE" && type === "FINALE") {
       await setVoitureSavStatutSql(voitureSAVId, "TERMINE");

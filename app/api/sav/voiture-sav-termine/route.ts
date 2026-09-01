@@ -6,6 +6,7 @@ import {
   fetchVoitureSavIdsByStatut,
   withVoitureSavStatut,
 } from "@/lib/sav/voitureSavStatutSql";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export async function GET() {
         prisma.voitureSAV.findMany({
           where,
           include: voitureInclude,
-          omit: { statut: true },
+          omit: { statut: true, StatutGarantie: true },
           orderBy: { updatedAt: "desc" },
         }),
       );
@@ -73,13 +74,14 @@ export async function GET() {
         prisma.voitureSAV.findMany({
           where,
           include: voitureInclude,
-          omit: { chassisNumber: true, statut: true },
+          omit: { chassisNumber: true, statut: true, StatutGarantie: true },
           orderBy: { updatedAt: "desc" },
         }),
       );
     }
 
     voitures = await withVoitureSavStatut(voitures);
+    voitures = await withVoitureSavStatutGarantie(voitures);
 
     const photosByVoiture = await fetchTesteFinalPhotosByVoiture(
       voitures.map((v) => v.id),

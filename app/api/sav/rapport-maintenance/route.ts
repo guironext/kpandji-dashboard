@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { StatutVoitureSAV } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,15 @@ const voitureInclude = {
 /** Véhicules SAV terminés avec données pour rapport + rapports complémentaires. */
 export async function GET() {
   try {
-    const voitures = await executeWithRetry(() =>
-      prisma.voitureSAV.findMany({
-        where: { statut: StatutVoitureSAV.TERMINE },
-        orderBy: { updatedAt: "desc" },
-        include: voitureInclude,
-      }),
+    const voitures = await withVoitureSavStatutGarantie(
+      await executeWithRetry(() =>
+        prisma.voitureSAV.findMany({
+          where: { statut: StatutVoitureSAV.TERMINE },
+          orderBy: { updatedAt: "desc" },
+          include: voitureInclude,
+          omit: { StatutGarantie: true },
+        }),
+      )
     );
 
     return NextResponse.json({ success: true, data: voitures });

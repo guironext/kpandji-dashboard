@@ -101,6 +101,7 @@ const GARANTIE_BADGE_CLASS: Record<string, string> = {
   FIN_INTERVENTION_GARANTIESAV_EN_COURS: "bg-pink-50 text-pink-900 ring-pink-200",
   GARANTIESAV_EN_COURS: "bg-rose-50 text-rose-900 ring-rose-200",
   GARANTIESAV_TERMINE: "bg-fuchsia-50 text-fuchsia-900 ring-fuchsia-200",
+  PAS_DE_GARANTIE: "bg-slate-100 text-slate-600 ring-slate-200",
 };
 
 function formatDate(d: string | Date) {

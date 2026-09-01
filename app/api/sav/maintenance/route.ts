@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
+import { withNestedVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
           select: {
             voitureSAV: {
               select: {
-                StatutGarantie: true,
+                id: true,
                 GarantieSAV: {
                   select: {
                     nom_garantie: true,
@@ -83,16 +84,17 @@ export async function POST(request: NextRequest) {
         }),
       ]);
       if (rep) {
-        const details = rep.DetailDiagnostic.filter(
+        const [hydratedRep] = await withNestedVoitureSavStatutGarantie([rep]);
+        const details = hydratedRep.DetailDiagnostic.filter(
           (d) => d.catergorieDiagnosticId === catergorieDiagnosticId
         );
         if (
           details.length > 0 &&
           details.every((d) =>
             isGarantieOffertDetailLocked(
-              rep.voitureSAV.StatutGarantie,
+              hydratedRep.voitureSAV.StatutGarantie,
               d,
-              rep.voitureSAV.GarantieSAV,
+              hydratedRep.voitureSAV.GarantieSAV,
               catalogGaranties
             )
           )

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,8 +27,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Loader2, Car } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, Loader2, Car, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ClientSAV {
   id: string;
@@ -36,6 +38,19 @@ interface ClientSAV {
   prenom: string;
   contact: string;
 }
+
+interface VoitureSavGarantie {
+  id: string;
+  chassisNumber?: string | null;
+  garantieSAVbadge?: boolean;
+}
+
+type StatutGarantieSAV =
+  | "EN_COURS"
+  | "FIN_INTERVENTION_GARANTIESAV_EN_COURS"
+  | "GARANTIESAV_EN_COURS"
+  | "GARANTIESAV_TERMINE"
+  | "PAS_DE_GARANTIE";
 
 interface VoitureSAV {
   id: string;
@@ -45,8 +60,12 @@ interface VoitureSAV {
   couleur: string;
   nbr_portes: string;
   immatriculation: string;
+  chassisNumber?: string | null;
   clientSAVId: string;
   ClientSAV?: ClientSAV;
+  VoitureSavGarantie?: VoitureSavGarantie | null;
+  sousGarantie?: boolean;
+  StatutGarantie?: StatutGarantieSAV | string | null;
   createdAt: string;
 }
 
@@ -57,6 +76,7 @@ const emptyForm = {
   couleur: "",
   nbr_portes: "",
   immatriculation: "",
+  chassisNumber: "",
   clientSAVId: "",
 };
 
@@ -72,6 +92,54 @@ const TRANSMISSIONS = [
   { value: "MANUEL", label: "Manuel" },
 ];
 
+function chassisKey(value: string | null | undefined) {
+  return value?.trim().toLowerCase() || "";
+}
+
+function hasGarantie(v: VoitureSAV) {
+  if (v.StatutGarantie === "PAS_DE_GARANTIE") return false;
+  if (typeof v.sousGarantie === "boolean") return v.sousGarantie;
+  return Boolean(v.VoitureSavGarantie && v.VoitureSavGarantie.garantieSAVbadge !== false);
+}
+
+function statutGarantieFromChassisMatch(matched: VoitureSavGarantie | null): StatutGarantieSAV {
+  return matched ? "EN_COURS" : "PAS_DE_GARANTIE";
+}
+
+function GarantieBadge({
+  covered,
+  compact = false,
+}: {
+  covered: boolean;
+  compact?: boolean;
+}) {
+  if (covered) {
+    return (
+      <Badge
+        className={cn(
+          "shrink-0 rounded-full bg-rose-50 font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50",
+          compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+        )}
+      >
+        <ShieldCheck className={cn("mr-1", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+        Garantie
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge
+      className={cn(
+        "max-w-[11.5rem] shrink-0 whitespace-normal rounded-full bg-slate-100 text-left font-semibold leading-tight text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+        compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+      )}
+    >
+      <ShieldAlert className={cn("mr-1 shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+      Pas de garantie sur cette voiture
+    </Badge>
+  );
+}
+
 async function fetchVoitures() {
   const res = await fetch("/api/sav/voiture-sav");
   return res.json();
@@ -79,6 +147,11 @@ async function fetchVoitures() {
 
 async function fetchClients() {
   const res = await fetch("/api/sav/client-sav");
+  return res.json();
+}
+
+async function fetchGaranties() {
+  const res = await fetch("/api/sav/voiture-sav-garantie");
   return res.json();
 }
 
@@ -114,6 +187,7 @@ async function deleteVoitureSAV(id: string) {
 export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean }) {
   const [voitures, setVoitures] = useState<VoitureSAV[]>([]);
   const [clients, setClients] = useState<ClientSAV[]>([]);
+  const [garanties, setGaranties] = useState<VoitureSavGarantie[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -126,13 +200,15 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
   const loadData = async () => {
     setLoading(true);
     try {
-      const [voitRes, clientRes] = await Promise.all([
+      const [voitRes, clientRes, garantieRes] = await Promise.all([
         fetchVoitures(),
         fetchClients(),
+        fetchGaranties(),
       ]);
       if (voitRes.success && voitRes.data) setVoitures(voitRes.data);
       else toast.error(voitRes.error || "Erreur chargement véhicules");
       if (clientRes.success && clientRes.data) setClients(clientRes.data);
+      if (garantieRes.success && garantieRes.data) setGaranties(garantieRes.data);
     } catch (error) {
       console.error("Error fetching:", error);
       toast.error("Erreur lors du chargement");
@@ -144,6 +220,16 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
   useEffect(() => {
     loadData();
   }, []);
+
+  const matchedGarantie = useMemo(() => {
+    const key = chassisKey(formData.chassisNumber);
+    if (!key) return null;
+    return (
+      garanties.find(
+        (g) => chassisKey(g.chassisNumber) === key && g.garantieSAVbadge !== false
+      ) ?? null
+    );
+  }, [formData.chassisNumber, garanties]);
 
   const handleOpenAdd = () => {
     setFormData(emptyForm);
@@ -159,6 +245,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
       couleur: v.couleur,
       nbr_portes: v.nbr_portes,
       immatriculation: v.immatriculation,
+      chassisNumber: v.chassisNumber || "",
       clientSAVId: v.clientSAVId,
     });
     setEditDialogOpen(true);
@@ -177,6 +264,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
       !formData.couleur.trim() ||
       !formData.nbr_portes.trim() ||
       !formData.immatriculation.trim() ||
+      !formData.chassisNumber.trim() ||
       !formData.clientSAVId
     ) {
       toast.error("Tous les champs obligatoires doivent être renseignés");
@@ -184,9 +272,16 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
     }
     setIsSubmitting(true);
     try {
-      const result = await createVoitureSAV(formData);
+      const result = await createVoitureSAV({
+        ...formData,
+        StatutGarantie: statutGarantieFromChassisMatch(matchedGarantie),
+      });
       if (result.success) {
-        toast.success("Véhicule ajouté avec succès");
+        toast.success(
+          result.data?.StatutGarantie === "PAS_DE_GARANTIE" || !result.data?.sousGarantie
+            ? "Véhicule ajouté — pas de garantie sur cette voiture"
+            : "Véhicule ajouté — châssis sous garantie"
+        );
         setAddDialogOpen(false);
         loadData();
       } else toast.error(result.error || "Erreur lors de l'ajout");
@@ -206,6 +301,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
       !formData.couleur.trim() ||
       !formData.nbr_portes.trim() ||
       !formData.immatriculation.trim() ||
+      !formData.chassisNumber.trim() ||
       !formData.clientSAVId
     ) {
       toast.error("Tous les champs obligatoires doivent être renseignés");
@@ -213,9 +309,16 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
     }
     setIsSubmitting(true);
     try {
-      const result = await updateVoitureSAV(editingVoiture.id, formData);
+      const result = await updateVoitureSAV(editingVoiture.id, {
+        ...formData,
+        ...(matchedGarantie ? {} : { StatutGarantie: "PAS_DE_GARANTIE" as const }),
+      });
       if (result.success) {
-        toast.success("Véhicule modifié avec succès");
+        toast.success(
+          result.data?.StatutGarantie === "PAS_DE_GARANTIE" || !result.data?.sousGarantie
+            ? "Véhicule modifié — pas de garantie sur cette voiture"
+            : "Véhicule modifié — châssis sous garantie"
+        );
         setEditDialogOpen(false);
         setEditingVoiture(null);
         loadData();
@@ -244,6 +347,42 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
 
   const renderForm = (prefix: string) => (
     <div className="space-y-5">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={`${prefix}-chassisNumber`}>Numéro de châssis *</Label>
+          {formData.chassisNumber.trim() ? (
+            <GarantieBadge covered={Boolean(matchedGarantie)} compact />
+          ) : null}
+        </div>
+        <Input
+          id={`${prefix}-chassisNumber`}
+          value={formData.chassisNumber}
+          onChange={(e) =>
+            setFormData((p) => ({ ...p, chassisNumber: e.target.value.toUpperCase() }))
+          }
+          placeholder="VF3XXXXXXXXXXXXXX"
+          className="rounded-lg font-mono uppercase tracking-wide"
+          required
+          autoComplete="off"
+        />
+        {formData.chassisNumber.trim() ? (
+          matchedGarantie ? (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-rose-700">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Ce châssis est enregistré sous garantie
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Pas de garantie sur cette voiture
+            </p>
+          )
+        ) : (
+          <p className="text-xs text-slate-500">
+            Le n° de châssis détermine automatiquement le badge Garantie.
+          </p>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-model`}>Modèle *</Label>
@@ -412,6 +551,12 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
                     <p className="mt-0.5 font-mono text-sm text-slate-600">
                       {v.immatriculation || "—"}
                     </p>
+                    <p className="mt-1 font-mono text-xs text-slate-500">
+                      {v.chassisNumber || "Sans n° de châssis"}
+                    </p>
+                    <div className="mt-2">
+                      <GarantieBadge covered={hasGarantie(v)} compact />
+                    </div>
                     <p className="mt-1 truncate text-xs text-slate-500">
                       {[
                         MOTORISATIONS.find((m) => m.value === v.motorisation)?.label ?? v.motorisation,
@@ -450,6 +595,8 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
                 <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/80 border-b-2 border-slate-200 hover:bg-slate-50">
                   <TableHead className="font-semibold text-slate-700 py-4">Modèle</TableHead>
                   <TableHead className="font-semibold text-slate-700 py-4">Immatriculation</TableHead>
+                  <TableHead className="font-semibold text-slate-700 py-4 hidden md:table-cell">Châssis</TableHead>
+                  <TableHead className="font-semibold text-slate-700 py-4">Garantie</TableHead>
                   <TableHead className="font-semibold text-slate-700 py-4 hidden md:table-cell">Motorisation</TableHead>
                   <TableHead className="font-semibold text-slate-700 py-4 hidden md:table-cell">Transmission</TableHead>
                   <TableHead className="font-semibold text-slate-700 py-4 hidden lg:table-cell">Client</TableHead>
@@ -466,6 +613,12 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
                   >
                     <TableCell className="font-medium text-slate-900 py-3">{v.model}</TableCell>
                     <TableCell className="text-slate-700 py-3">{v.immatriculation}</TableCell>
+                    <TableCell className="font-mono text-slate-600 py-3 hidden md:table-cell">
+                      {v.chassisNumber || "—"}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <GarantieBadge covered={hasGarantie(v)} compact />
+                    </TableCell>
                     <TableCell className="text-slate-600 py-3 hidden md:table-cell">
                       {MOTORISATIONS.find((m) => m.value === v.motorisation)?.label ?? v.motorisation}
                     </TableCell>

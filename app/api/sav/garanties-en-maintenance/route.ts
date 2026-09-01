@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { StatutGarantie } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
 import { voitureSavFactureSelect } from "@/lib/sav/voitureSavStatutSql";
+import { withNestedVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ const QUEUE_STATUTS: StatutGarantie[] = [
  */
 export async function GET() {
   try {
-    const garanties = await executeWithRetry(() =>
-      prisma.garantieSAV.findMany({
+    const garanties = await withNestedVoitureSavStatutGarantie(
+      await executeWithRetry(() =>
+        prisma.garantieSAV.findMany({
         where: {
           statut: { in: QUEUE_STATUTS },
           voitureSAVId: { not: null },
@@ -28,7 +30,6 @@ export async function GET() {
           voitureSAV: {
             select: {
               ...voitureSavFactureSelect,
-              StatutGarantie: true,
               GarantieSAV: {
                 select: {
                   nom_garantie: true,
@@ -58,6 +59,7 @@ export async function GET() {
           },
         },
       }),
+      )
     );
 
     const data = garanties

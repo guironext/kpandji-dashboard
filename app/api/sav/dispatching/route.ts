@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { setVoitureSavStatutSql } from "@/lib/sav/voitureSavStatutSql";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +57,10 @@ export async function GET() {
           },
         },
       },
+      omit: { StatutGarantie: true },
       orderBy: { updatedAt: "desc" },
     });
+    const voituresHydrated = await withVoitureSavStatutGarantie(voitures);
 
     const groupes = await prisma.groupePersonnelSAV.findMany({
       orderBy: { nom: "asc" },
@@ -70,7 +73,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ success: true, data: { voitures, groupes } });
+    return NextResponse.json({ success: true, data: { voitures: voituresHydrated, groupes } });
   } catch (error) {
     console.error("API dispatching GET error:", error);
     return NextResponse.json(
@@ -121,6 +124,7 @@ export async function POST(request: Request) {
           },
         },
       },
+      omit: { StatutGarantie: true },
     });
 
     if (!voiture) {

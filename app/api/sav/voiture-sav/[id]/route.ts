@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { StatutReparation, type Prisma, type StatutGarantieSAV } from "@prisma/client";
+import { StatutReparation, type Prisma } from "@prisma/client";
 import {
   setVoitureSavStatutSql,
   withVoitureSavStatut,
@@ -9,6 +9,11 @@ import {
   isDeplacementSAV,
   setVoitureSavDeplacementSql,
 } from "@/lib/sav/voitureSavDeplacementSql";
+import {
+  isStatutGarantieSAV,
+  setVoitureSavStatutGarantieSql,
+  withVoitureSavStatutGarantie,
+} from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +37,6 @@ const STATUTS_VOITURE_SAV: string[] = [
   "TESTE_FINAL",
   "TERMINE",
   "ANNULE",
-];
-
-const STATUTS_GARANTIE_SAV: StatutGarantieSAV[] = [
-  "EN_COURS",
-  "FIN_INTERVENTION_GARANTIESAV_EN_COURS",
-  "GARANTIESAV_EN_COURS",
-  "GARANTIESAV_TERMINE",
 ];
 
 function isPrismaP2032(error: unknown): boolean {
@@ -76,13 +74,15 @@ async function findVoitureSavById(
   const omit = {
     ...(typeof args.omit === "object" && args.omit ? args.omit : {}),
     statut: true as const,
+    StatutGarantie: true as const,
   };
   const query = { ...args, omit };
   try {
     const row = await prisma.voitureSAV.findUnique(query);
     if (!row) return null;
     const [withStatut] = await withVoitureSavStatut([row]);
-    return withStatut;
+    const [withGarantie] = await withVoitureSavStatutGarantie([withStatut]);
+    return withGarantie;
   } catch (error) {
     if (!isPrismaP2032(error)) throw error;
     const row = await prisma.voitureSAV.findUnique({
@@ -91,7 +91,8 @@ async function findVoitureSavById(
     });
     if (!row) return null;
     const [withStatut] = await withVoitureSavStatut([row]);
-    return withStatut;
+    const [withGarantie] = await withVoitureSavStatutGarantie([withStatut]);
+    return withGarantie;
   }
 }
 
@@ -181,7 +182,7 @@ export async function PATCH(
 
     if (
       StatutGarantie !== undefined &&
-      !STATUTS_GARANTIE_SAV.includes(StatutGarantie as StatutGarantieSAV)
+      (typeof StatutGarantie !== "string" || !isStatutGarantieSAV(StatutGarantie))
     ) {
       return NextResponse.json(
         { success: false, error: "Statut garantie invalide" },
@@ -206,14 +207,22 @@ export async function PATCH(
     if (couleur !== undefined) updateVoitureSAV.couleur = couleur;
     if (nbr_portes !== undefined) updateVoitureSAV.nbr_portes = nbr_portes;
     if (immatriculation !== undefined) updateVoitureSAV.immatriculation = immatriculation;
+    let nextStatutGarantie: string | undefined;
     if (chassisNumberRaw !== undefined) {
       const chassisNumber = normalizeChassis(chassisNumberRaw) ?? null;
       updateVoitureSAV.chassisNumber = chassisNumber;
       const garantie = await findGarantieByChassis(chassisNumber);
       updateVoitureSAV.voitureSavGarantieId = garantie?.id ?? null;
+      if (StatutGarantie === undefined) {
+        if (!garantie) {
+          nextStatutGarantie = "PAS_DE_GARANTIE";
+        } else if (voitureSAV.StatutGarantie === "PAS_DE_GARANTIE") {
+          nextStatutGarantie = "EN_COURS";
+        }
+      }
     }
     if (clientSAVId !== undefined) updateVoitureSAV.clientSAVId = clientSAVId;
-    if (StatutGarantie !== undefined) updateVoitureSAV.StatutGarantie = StatutGarantie;
+    if (typeof StatutGarantie === "string") nextStatutGarantie = StatutGarantie;
 
     const updateVoiture: Record<string, unknown> = {};
     if (nbr_portes !== undefined) updateVoiture.nbr_portes = nbr_portes;
@@ -242,6 +251,9 @@ export async function PATCH(
     }
     if (typeof deplacementSAV === "string") {
       await setVoitureSavDeplacementSql(id, deplacementSAV);
+    }
+    if (typeof nextStatutGarantie === "string") {
+      await setVoitureSavStatutGarantieSql(id, nextStatutGarantie);
     }
 
     const voitureUpdates: Prisma.VoitureSAVUpdateInput = updateVoitureSAV;

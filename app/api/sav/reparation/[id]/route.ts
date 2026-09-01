@@ -8,6 +8,7 @@ import {
   StatutVoitureSAV,
 } from "@prisma/client";
 import { setVoitureSavStatutSql } from "@/lib/sav/voitureSavStatutSql";
+import { withNestedVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export async function GET(
         },
         voitureSAV: {
           select: {
-            StatutGarantie: true,
+            id: true,
             GarantieSAV: {
               select: {
                 nom_garantie: true,
@@ -62,7 +63,8 @@ export async function GET(
         { status: 404 }
       );
     }
-    return NextResponse.json({ success: true, data: rep });
+    const [hydrated] = await withNestedVoitureSavStatutGarantie([rep]);
+    return NextResponse.json({ success: true, data: hydrated });
   } catch (error) {
     console.error("API reparation GET error:", error);
     return NextResponse.json(
@@ -109,7 +111,7 @@ export async function PATCH(
     }
     const repId = id.trim();
 
-    const snapshot = await prisma.reparation.findUnique({
+    const snapshotRow = await prisma.reparation.findUnique({
       where: { id: repId },
       select: {
         id: true,
@@ -128,7 +130,7 @@ export async function PATCH(
         },
         voitureSAV: {
           select: {
-            StatutGarantie: true,
+            id: true,
             GarantieSAV: {
               select: {
                 nom_garantie: true,
@@ -140,12 +142,13 @@ export async function PATCH(
         },
       },
     });
-    if (!snapshot) {
+    if (!snapshotRow) {
       return NextResponse.json(
         { success: false, error: "Réparation introuvable" },
         { status: 404 }
       );
     }
+    const [snapshot] = await withNestedVoitureSavStatutGarantie([snapshotRow]);
 
     // Fin de maintenance → TESTE (prêt pour le test final)
     if (raw === StatutReparation.TESTE) {

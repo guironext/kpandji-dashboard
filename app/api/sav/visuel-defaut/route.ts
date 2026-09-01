@@ -94,6 +94,7 @@ export async function POST(request: Request) {
 
     const voiture = await prisma.voitureSAV.findUnique({
       where: { id: voitureSAVId },
+      select: { id: true },
     });
     if (!voiture) {
       return NextResponse.json(

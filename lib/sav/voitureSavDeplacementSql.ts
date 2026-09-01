@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { executeWithRetry, prisma } from "@/lib/prisma";
 
 export const DEPLACEMENTS_SAV = [
   "ARRIVEE",
@@ -65,11 +65,13 @@ export async function fetchVoitureSavIdsByDeplacement(
 ): Promise<string[]> {
   if (!isDeplacementSAV(deplacement)) return [];
   const query = () =>
-    prisma.$queryRaw<Array<{ id: string }>>(
-      Prisma.sql`
-        SELECT id FROM "VoitureSAV"
-        WHERE "deplacementSAV"::text = ${deplacement}
-      `
+    executeWithRetry(() =>
+      prisma.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`
+          SELECT id FROM "VoitureSAV"
+          WHERE "deplacementSAV"::text = ${deplacement}
+        `
+      )
     );
   try {
     return (await query()).map((row) => row.id);
@@ -87,12 +89,14 @@ export async function fetchVoitureSavDeplacements(
   const map = new Map<string, string>();
   if (ids.length === 0) return map;
   const query = () =>
-    prisma.$queryRaw<Array<{ id: string; deplacementSAV: string | null }>>(
-      Prisma.sql`
-        SELECT id, "deplacementSAV"::text AS "deplacementSAV"
-        FROM "VoitureSAV"
-        WHERE id IN (${Prisma.join(ids)})
-      `
+    executeWithRetry(() =>
+      prisma.$queryRaw<Array<{ id: string; deplacementSAV: string | null }>>(
+        Prisma.sql`
+          SELECT id, "deplacementSAV"::text AS "deplacementSAV"
+          FROM "VoitureSAV"
+          WHERE id IN (${Prisma.join(ids)})
+        `
+      )
     );
   try {
     const rows = await query();

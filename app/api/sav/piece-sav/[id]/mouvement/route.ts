@@ -7,6 +7,7 @@ import {
   pieceSAVUpdateReparationSortieRaw,
 } from "@/lib/pieceSavMouvementSql";
 import { isGarantieOffertDetailLocked } from "@/lib/sav/garantieOffertMatch";
+import { fetchVoitureSavStatutsGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -198,7 +199,7 @@ export async function POST(
       prisma.voitureSAV.findUnique({
         where: { id: voitureSAVId },
         select: {
-          StatutGarantie: true,
+          id: true,
           GarantieSAV: {
             select: {
               nom_garantie: true,
@@ -216,10 +217,14 @@ export async function POST(
         },
       }),
     ]);
+    const statutGarantie = voitureGarantie
+      ? (await fetchVoitureSavStatutsGarantie([voitureSAVId])).get(voitureSAVId) ??
+        ""
+      : "";
     if (
       voitureGarantie &&
       isGarantieOffertDetailLocked(
-        voitureGarantie.StatutGarantie,
+        statutGarantie,
         detail,
         voitureGarantie.GarantieSAV,
         catalogGaranties

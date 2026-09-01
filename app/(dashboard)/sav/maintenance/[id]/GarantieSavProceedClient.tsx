@@ -45,7 +45,8 @@ type StatutGarantieSAV =
   | "EN_COURS"
   | "FIN_INTERVENTION_GARANTIESAV_EN_COURS"
   | "GARANTIESAV_EN_COURS"
-  | "GARANTIESAV_TERMINE";
+  | "GARANTIESAV_TERMINE"
+  | "PAS_DE_GARANTIE";
 
 type DetailDiagnostic = {
   id: string;
@@ -122,6 +123,7 @@ const STATUT_GARANTIE_LABELS: Record<StatutGarantieSAV, string> = {
   FIN_INTERVENTION_GARANTIESAV_EN_COURS: "Fin intervention garantie",
   GARANTIESAV_EN_COURS: "Garantie SAV en cours",
   GARANTIESAV_TERMINE: "Garantie terminée",
+  PAS_DE_GARANTIE: "Pas de garantie sur cette voiture",
 };
 
 function normalizeLibelle(value: string) {

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowRightLeft,
   Boxes,
   Home,
   PackagePlus,
@@ -14,7 +13,6 @@ import {
   UserCog,
   CarFront,
   CircleCheck,
-  BadgePercent,
   BarChart3,
   Settings,
 } from "lucide-react";
@@ -59,20 +57,7 @@ const navItems = [
     href: "/sav/diagnostique-arrivee",
     category: "operations",
   },
-  {
-    id: 6,
-    icon: ArrowRightLeft,
-    label: "Dispatching",
-    href: "/sav/dispatching",
-    category: "operations",
-  },
-  {
-    id: 7,
-    icon: BadgePercent,
-    label: "Offre spéciale",
-    href: "/sav/offre-speciale",
-    category: "operations",
-  },
+
   {
     id: 8,
     icon: CarFront,

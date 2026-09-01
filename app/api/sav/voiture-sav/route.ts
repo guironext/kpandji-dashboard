@@ -9,6 +9,11 @@ import {
   isDeplacementSAV,
   withVoitureSavDeplacement,
 } from "@/lib/sav/voitureSavDeplacementSql";
+import {
+  setVoitureSavStatutGarantieSql,
+  withVoitureSavStatutGarantie,
+  type StatutGarantieSAVValue,
+} from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +50,20 @@ async function findGarantieByChassis(
 
 function chassisKey(value: string | null | undefined) {
   return value?.trim().toLowerCase() || "";
+}
+
+function rowChassisNumber(v: object): string | null {
+  if (!("chassisNumber" in v)) return null;
+  const value = (v as { chassisNumber?: string | null }).chassisNumber;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+}
+
+function statutGarantieFromChassisMatch(
+  garantie: VoitureSavGarantie | null
+): StatutGarantieSAVValue {
+  return garantie ? "EN_COURS" : "PAS_DE_GARANTIE";
 }
 
 function withGarantieMatch<T extends {
@@ -166,7 +185,7 @@ export async function GET(request: Request) {
         prisma.voitureSAV.findMany({
           where,
           include,
-          omit: { statut: true },
+          omit: { statut: true, StatutGarantie: true },
           orderBy: { createdAt: "desc" },
         })
       );
@@ -182,16 +201,44 @@ export async function GET(request: Request) {
         prisma.voitureSAV.findMany({
           where,
           include,
-          omit: { chassisNumber: true, statut: true },
+          omit: { chassisNumber: true, statut: true, StatutGarantie: true },
           orderBy: { createdAt: "desc" },
         })
       );
     }
-    voitures = await withVoitureSavStatut(voitures);
-    voitures = await withVoitureSavDeplacement(voitures);
-    const garanties = await executeWithRetry(() =>
-      prisma.voitureSavGarantie.findMany()
-    );
+    if (statutParam) {
+      voitures = voitures.map((row) => ({ ...row, statut: statutParam }));
+    } else {
+      voitures = await withVoitureSavStatut(voitures);
+    }
+    voitures = await withVoitureSavStatutGarantie(voitures);
+    if (deplacementParam && isDeplacementSAV(deplacementParam)) {
+      voitures = voitures.map((row) => ({
+        ...row,
+        deplacementSAV: deplacementParam,
+      }));
+    } else {
+      voitures = await withVoitureSavDeplacement(voitures);
+    }
+    const missingChassis = [
+      ...new Set(
+        voitures
+          .filter((v) => !v.VoitureSavGarantie && rowChassisNumber(v))
+          .map((v) => rowChassisNumber(v) as string)
+      ),
+    ];
+    const garanties =
+      missingChassis.length === 0
+        ? []
+        : await executeWithRetry(() =>
+            prisma.voitureSavGarantie.findMany({
+              where: {
+                OR: missingChassis.map((chassisNumber) => ({
+                  chassisNumber: { equals: chassisNumber, mode: "insensitive" },
+                })),
+              },
+            })
+          );
     const interventionsByVoiture = new Map<
       string,
       Awaited<ReturnType<typeof listInterventionsOffertByVoitureIdsRaw>>
@@ -213,10 +260,7 @@ export async function GET(request: Request) {
         withGarantieMatch(
           {
             ...v,
-            chassisNumber:
-              "chassisNumber" in v
-                ? (v as { chassisNumber?: string | null }).chassisNumber
-                : null,
+            chassisNumber: rowChassisNumber(v),
             ...(includeInterventions
               ? {
                   InterventionDiagnosticOffert:
@@ -282,6 +326,7 @@ export async function POST(request: Request) {
     const voitureId = randomUUID();
     const now = new Date();
     const garantie = await findGarantieByChassis(chassisNumber);
+    const StatutGarantie = statutGarantieFromChassisMatch(garantie);
 
     const [voiture, voitureSAV] = await prisma.$transaction([
       prisma.voiture.create({
@@ -315,12 +360,15 @@ export async function POST(request: Request) {
       }),
     ]);
 
+    await setVoitureSavStatutGarantieSql(voitureSAV.id, StatutGarantie);
+
     return NextResponse.json({
       success: true,
       data: {
         ...voitureSAV,
         Voiture: voiture,
         VoitureSavGarantie: garantie ?? voitureSAV.VoitureSavGarantie,
+        StatutGarantie,
         sousGarantie: Boolean(garantie && garantie.garantieSAVbadge !== false),
       },
     });

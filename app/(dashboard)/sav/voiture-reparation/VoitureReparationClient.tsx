@@ -154,6 +154,7 @@ function clientLabel(voiture: VoitureSAVRow): string {
 }
 
 function hasGarantie(v: VoitureSAVRow) {
+  if (v.StatutGarantie === "PAS_DE_GARANTIE") return false;
   if (typeof v.sousGarantie === "boolean") return v.sousGarantie;
   return Boolean(v.VoitureSavGarantie && v.VoitureSavGarantie.garantieSAVbadge !== false);
 }

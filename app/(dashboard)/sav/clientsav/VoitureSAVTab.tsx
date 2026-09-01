@@ -70,6 +70,13 @@ interface VoitureSavGarantie {
   garantieSAVbadge?: boolean;
 }
 
+type StatutGarantieSAV =
+  | "EN_COURS"
+  | "FIN_INTERVENTION_GARANTIESAV_EN_COURS"
+  | "GARANTIESAV_EN_COURS"
+  | "GARANTIESAV_TERMINE"
+  | "PAS_DE_GARANTIE";
+
 interface VoitureSAV {
   id: string;
   model: string;
@@ -83,6 +90,7 @@ interface VoitureSAV {
   ClientSAV?: ClientSAV;
   VoitureSavGarantie?: VoitureSavGarantie | null;
   sousGarantie?: boolean;
+  StatutGarantie?: StatutGarantieSAV | string | null;
   statut: StatutVoitureSAV;
   createdAt: string;
 }
@@ -155,12 +163,51 @@ const STATUT_BADGE_CLASS: Record<StatutVoitureSAV, string> = {
 };
 
 function hasGarantie(v: VoitureSAV) {
+  if (v.StatutGarantie === "PAS_DE_GARANTIE") return false;
   if (typeof v.sousGarantie === "boolean") return v.sousGarantie;
   return Boolean(v.VoitureSavGarantie && v.VoitureSavGarantie.garantieSAVbadge !== false);
 }
 
+function statutGarantieFromChassisMatch(matched: VoitureSavGarantie | null): StatutGarantieSAV {
+  return matched ? "EN_COURS" : "PAS_DE_GARANTIE";
+}
+
 function chassisKey(value: string | null | undefined) {
   return value?.trim().toLowerCase() || "";
+}
+
+function GarantieBadge({
+  covered,
+  compact = false,
+}: {
+  covered: boolean;
+  compact?: boolean;
+}) {
+  if (covered) {
+    return (
+      <Badge
+        className={cn(
+          "shrink-0 rounded-full bg-rose-50 font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50",
+          compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+        )}
+      >
+        <ShieldCheck className={cn("mr-1", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+        Garantie
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge
+      className={cn(
+        "max-w-[11.5rem] shrink-0 whitespace-normal rounded-full bg-slate-100 text-left font-semibold leading-tight text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+        compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+      )}
+    >
+      <ShieldAlert className={cn("mr-1 shrink-0", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+      Pas de garantie sur cette voiture
+    </Badge>
+  );
 }
 
 function ChoiceChip({
@@ -363,12 +410,15 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
     }
     setIsSubmitting(true);
     try {
-      const result = await createVoitureSAV(formData);
+      const result = await createVoitureSAV({
+        ...formData,
+        StatutGarantie: statutGarantieFromChassisMatch(matchedGarantie),
+      });
       if (result.success) {
         toast.success(
-          result.data?.sousGarantie
-            ? "Véhicule ajouté — châssis sous garantie"
-            : "Véhicule ajouté avec succès"
+          result.data?.StatutGarantie === "PAS_DE_GARANTIE" || !result.data?.sousGarantie
+            ? "Véhicule ajouté — pas de garantie sur cette voiture"
+            : "Véhicule ajouté — châssis sous garantie"
         );
         setAddDialogOpen(false);
         loadData();
@@ -397,12 +447,17 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
     }
     setIsSubmitting(true);
     try {
-      const result = await updateVoitureSAV(editingVoiture.id, formData);
+      const result = await updateVoitureSAV(editingVoiture.id, {
+        ...formData,
+        ...(matchedGarantie
+          ? {}
+          : { StatutGarantie: "PAS_DE_GARANTIE" as const }),
+      });
       if (result.success) {
         toast.success(
-          result.data?.sousGarantie
-            ? "Véhicule modifié — châssis sous garantie"
-            : "Véhicule modifié avec succès"
+          result.data?.StatutGarantie === "PAS_DE_GARANTIE" || !result.data?.sousGarantie
+            ? "Véhicule modifié — pas de garantie sur cette voiture"
+            : "Véhicule modifié — châssis sous garantie"
         );
         setEditDialogOpen(false);
         setEditingVoiture(null);
@@ -447,11 +502,8 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
               {formData.chassisNumber.trim() || "N° de châssis"}
             </p>
           </div>
-          {matchedGarantie ? (
-            <Badge className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50">
-              <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-              Garantie
-            </Badge>
+          {formData.chassisNumber.trim() ? (
+            <GarantieBadge covered={Boolean(matchedGarantie)} />
           ) : null}
         </div>
         {(formData.motorisation || formData.transmission || selectedClient) && (
@@ -510,9 +562,9 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
                 Ce châssis est enregistré sous garantie
               </p>
             ) : (
-              <p className="flex items-center gap-1.5 text-xs text-slate-500">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
                 <ShieldAlert className="h-3.5 w-3.5" />
-                Aucune garantie trouvée pour ce châssis
+                Pas de garantie sur cette voiture
               </p>
             )
           ) : (
@@ -664,7 +716,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
           className="h-12 w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 sm:ml-auto sm:h-11 sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Ajouter Voiture SAV
+          
         </Button>
       </div>
 
@@ -685,7 +737,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
             </p>
             <Button onClick={handleOpenAdd} size="lg" className="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700">
               <Plus className="mr-2 h-4 w-4" />
-              Ajouter Voiture SAV
+              
             </Button>
           </div>
         ) : (
@@ -749,12 +801,7 @@ export default function VoitureSAVTab({ embedded = false }: { embedded?: boolean
                             >
                               {statutLabel(v.statut)}
                             </Badge>
-                            {sousGarantie && (
-                              <Badge className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50">
-                                <ShieldCheck className="mr-1 h-3 w-3" />
-                                Garantie
-                              </Badge>
-                            )}
+                            <GarantieBadge covered={sousGarantie} compact />
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-2 px-4 py-3.5">

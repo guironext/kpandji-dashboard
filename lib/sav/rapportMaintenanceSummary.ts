@@ -75,6 +75,7 @@ const GARANTIE_STATUT_LABELS: Record<string, string> = {
   FIN_INTERVENTION_GARANTIESAV_EN_COURS: "Fin d'intervention en cours",
   GARANTIESAV_EN_COURS: "Garantie SAV en cours",
   GARANTIESAV_TERMINE: "Garantie terminée",
+  PAS_DE_GARANTIE: "Pas de garantie sur cette voiture",
 };
 
 export function garantieStatutLabel(value: string | null | undefined): string {

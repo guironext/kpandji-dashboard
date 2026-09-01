@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { executeWithRetry, prisma } from "@/lib/prisma";
 
 /** Nested voiture fields for facture/proforma — omit `statut` (Prisma enum mapping). */
 export const voitureSavFactureSelect = {
@@ -24,12 +24,14 @@ export async function fetchVoitureSavStatuts(
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (ids.length === 0) return map;
-  const rows = await prisma.$queryRaw<Array<{ id: string; statut: string }>>(
-    Prisma.sql`
-      SELECT id, statut::text AS statut
-      FROM "VoitureSAV"
-      WHERE id IN (${Prisma.join(ids)})
-    `
+  const rows = await executeWithRetry(() =>
+    prisma.$queryRaw<Array<{ id: string; statut: string }>>(
+      Prisma.sql`
+        SELECT id, statut::text AS statut
+        FROM "VoitureSAV"
+        WHERE id IN (${Prisma.join(ids)})
+      `
+    )
   );
   for (const row of rows) map.set(row.id, row.statut);
   return map;
@@ -38,11 +40,13 @@ export async function fetchVoitureSavStatuts(
 export async function fetchVoitureSavIdsByStatut(
   statut: string
 ): Promise<string[]> {
-  const rows = await prisma.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`
-      SELECT id FROM "VoitureSAV"
-      WHERE statut::text = ${statut}
-    `
+  const rows = await executeWithRetry(() =>
+    prisma.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`
+        SELECT id FROM "VoitureSAV"
+        WHERE statut::text = ${statut}
+      `
+    )
   );
   return rows.map((row) => row.id);
 }

@@ -6,6 +6,7 @@ import {
   fetchVoitureSavStatuts,
   setVoitureSavStatutSql,
 } from "@/lib/sav/voitureSavStatutSql";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,8 @@ export async function GET() {
     const voitures =
       eligibleIds.length === 0
         ? []
-        : await prisma.voitureSAV.findMany({
+        : await withVoitureSavStatutGarantie(
+            await prisma.voitureSAV.findMany({
             where: { id: { in: eligibleIds } },
             include: {
               ClientSAV: true,
@@ -53,8 +55,10 @@ export async function GET() {
                 include: { DetailDiagnostic: true },
               },
             },
+            omit: { StatutGarantie: true },
             orderBy: { updatedAt: "desc" },
-          });
+          })
+          );
 
     return NextResponse.json({
       success: true,
@@ -250,6 +254,7 @@ export async function PATCH(request: Request) {
         include: {
           GarantieSAV: { orderBy: { createdAt: "desc" } },
         },
+        omit: { StatutGarantie: true },
       });
       if (!voiture) {
         return NextResponse.json(

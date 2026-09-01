@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { StatutReparation } from "@prisma/client";
 import { executeWithRetry, prisma } from "@/lib/prisma";
 import { voitureSavFactureSelect } from "@/lib/sav/voitureSavStatutSql";
+import { withNestedVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,8 @@ const QUEUE_STATUTS: StatutReparation[] = [
 const reparationInclude = {
   voitureSAV: {
     select: {
-      ...voitureSavFactureSelect,
-      StatutGarantie: true,
-      GarantieSAV: {
+              ...voitureSavFactureSelect,
+              GarantieSAV: {
         select: {
           nom_garantie: true,
           statut: true,
@@ -67,15 +67,17 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("statut"),
       voitureSAVId ? QUEUE_STATUTS : [StatutReparation.EN_MAINTENANCE]
     );
-    const reparations = await executeWithRetry(() =>
-      prisma.reparation.findMany({
-        where: {
-          ...(voitureSAVId ? { voitureSAVId } : {}),
-          statut: statuts.length === 1 ? statuts[0] : { in: statuts },
-        },
-        orderBy: { updatedAt: "desc" },
-        include: reparationInclude,
-      }),
+    const reparations = await withNestedVoitureSavStatutGarantie(
+      await executeWithRetry(() =>
+        prisma.reparation.findMany({
+          where: {
+            ...(voitureSAVId ? { voitureSAVId } : {}),
+            statut: statuts.length === 1 ? statuts[0] : { in: statuts },
+          },
+          orderBy: { updatedAt: "desc" },
+          include: reparationInclude,
+        }),
+      )
     );
 
     return NextResponse.json({ success: true, data: reparations });

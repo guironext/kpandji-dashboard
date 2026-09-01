@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 /** Bump when schema fields/models change so the global singleton reloads after `prisma generate`. */
-const PRISMA_SCHEMA_REVISION = 12;
+const PRISMA_SCHEMA_REVISION = 16;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -21,14 +21,14 @@ function configureDatabaseUrl(): void {
   try {
     const url = new URL(raw);
     const isDev = process.env.NODE_ENV !== "production";
-    // In dev, Next/Turbopack can trigger many concurrent queries (RSC + API + prefetch),
-    // which can easily exhaust a small pool and surface as P2024 / "Failed to fetch".
-    // Neon pooler: keep Prisma's client pool small — PgBouncer handles multiplexing.
+    // In dev, Next/Turbopack can trigger many concurrent queries (RSC + API + prefetch).
+    // Neon pooler multiplexes, but Prisma still needs enough client-side slots for
+    // overlapping API routes (maintenance queues fire several voiture-sav GETs).
     const usesNeonPooler =
       url.hostname.includes("neon.tech") && url.hostname.includes("pooler");
     url.searchParams.set(
       "connection_limit",
-      usesNeonPooler ? (isDev ? "10" : "5") : isDev ? "10" : "5",
+      usesNeonPooler ? (isDev ? "20" : "5") : isDev ? "20" : "10",
     );
     if (!url.searchParams.has("pool_timeout")) {
       url.searchParams.set("pool_timeout", isDev ? "60" : "20");
@@ -64,6 +64,11 @@ function createPrismaClient(): PrismaClient {
           ? ["error", "warn"]
           : [] // Suppress E57P01 connection noise; PRISMA_LOG=1 to debug
         : ["error"],
+    // Neon round-trips often exceed Prisma's 5s interactive-tx default (P2028).
+    transactionOptions: {
+      maxWait: 10_000,
+      timeout: 20_000,
+    },
   });
 }
 
@@ -138,11 +143,6 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
   },
 });
 
-async function ensurePrismaConnected(): Promise<void> {
-  const client = resolvePrismaClient();
-  await client.$connect();
-}
-
 // Helper function to execute queries with retry logic
 export async function executeWithRetry<T>(
   query: () => Promise<T>,
@@ -153,7 +153,6 @@ export async function executeWithRetry<T>(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await ensurePrismaConnected();
       return await query();
     } catch (error: unknown) {
       lastError = error;
@@ -169,11 +168,14 @@ export async function executeWithRetry<T>(
         typeof error === "object" && error !== null && "code" in error
           ? (error as { code?: string }).code
           : undefined;
+      const isPoolTimeout =
+        prismaCode === "P2024" ||
+        errorMessage.includes("Timed out fetching a new connection");
       const isConnectionError =
+        isPoolTimeout ||
         prismaCode === "P1001" ||
         prismaCode === "P1017" ||
         prismaCode === "P1008" ||
-        prismaCode === "P2024" ||
         errorMessage.includes("Engine is not yet connected") ||
         errorMessage.includes("Response from the Engine was empty") ||
         (error instanceof Error &&
@@ -196,7 +198,8 @@ export async function executeWithRetry<T>(
             errorString.includes("Engine is not yet connected") ||
             errorString.includes("Response from the Engine was empty")));
 
-      if (isConnectionError && attempt < maxRetries) {
+      const retryBudget = isPoolTimeout ? Math.min(maxRetries, 3) : maxRetries;
+      if (isConnectionError && attempt < retryBudget) {
         if (
           errorMessage.includes("Engine is not yet connected") ||
           errorMessage.includes("Response from the Engine was empty") ||
@@ -204,15 +207,15 @@ export async function executeWithRetry<T>(
         ) {
           invalidatePrismaClient();
         }
-        // Use longer delays for P1001 (Neon cold start) and P2024 (pool recovery)
+        // P2024: wait for in-flight queries to release slots (do not $connect()).
         const waitMs =
           prismaCode === "P1001"
             ? 8000 * attempt
-            : prismaCode === "P2024"
-              ? 2000 * attempt
+            : isPoolTimeout
+              ? 4000 * attempt
               : delay * attempt;
         console.warn(
-          `Database connection error (attempt ${attempt}/${maxRetries}), retrying in ${waitMs / 1000}s...`,
+          `Database connection error (attempt ${attempt}/${retryBudget}), retrying in ${waitMs / 1000}s...`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;

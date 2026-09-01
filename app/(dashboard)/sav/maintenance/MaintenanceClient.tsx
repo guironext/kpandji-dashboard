@@ -30,6 +30,7 @@ import {
   ListChecks,
   Clock,
   ShieldCheck,
+  ShieldAlert,
   Palette,
   Gift,
   Phone,
@@ -136,7 +137,8 @@ type StatutGarantieSAV =
   | "EN_COURS"
   | "FIN_INTERVENTION_GARANTIESAV_EN_COURS"
   | "GARANTIESAV_EN_COURS"
-  | "GARANTIESAV_TERMINE";
+  | "GARANTIESAV_TERMINE"
+  | "PAS_DE_GARANTIE";
 
 type AttenteDetailDiagnostic = {
   id: string;
@@ -166,16 +168,25 @@ type AttenteDiagnosticArrivee = {
   DetailDiagnostic?: AttenteDetailDiagnostic[];
 };
 
+type VoitureSavGarantieMatch = {
+  id?: string;
+  chassisNumber?: string | null;
+  garantieSAVbadge?: boolean | null;
+};
+
 type VoitureAttente = {
   id: string;
   model: string;
   immatriculation: string;
+  chassisNumber?: string | null;
   couleur: string;
   motorisation?: string | null;
   transmission?: string | null;
   statut: string;
   deplacementSAV?: string | null;
   StatutGarantie?: StatutGarantieSAV | string | null;
+  sousGarantie?: boolean;
+  VoitureSavGarantie?: VoitureSavGarantieMatch | null;
   ClientSAV?: { nom?: string; prenom?: string; contact?: string } | null;
   diagnosticArrivee?: AttenteDiagnosticArrivee[];
   GarantieSAV?: AttenteGarantieOffert[];
@@ -187,6 +198,7 @@ const STATUT_GARANTIE_LABELS: Record<StatutGarantieSAV, string> = {
   FIN_INTERVENTION_GARANTIESAV_EN_COURS: "Fin intervention garantie",
   GARANTIESAV_EN_COURS: "Garantie SAV en cours",
   GARANTIESAV_TERMINE: "Garantie terminée",
+  PAS_DE_GARANTIE: "Pas de garantie sur cette voiture",
 };
 
 const STATUT_GARANTIE_BADGE_CLASS: Record<StatutGarantieSAV, string> = {
@@ -197,6 +209,8 @@ const STATUT_GARANTIE_BADGE_CLASS: Record<StatutGarantieSAV, string> = {
     "border-rose-200 bg-rose-100 font-medium text-rose-900 hover:bg-rose-100",
   GARANTIESAV_TERMINE:
     "border-fuchsia-200 bg-fuchsia-100 font-medium text-fuchsia-900 hover:bg-fuchsia-100",
+  PAS_DE_GARANTIE:
+    "border-slate-200 bg-slate-100 font-medium text-slate-600 hover:bg-slate-100",
 };
 
 /** Type guard: true when `value` is a known SAV warranty status. */
@@ -215,6 +229,21 @@ export function statutGarantieLabel(value: string | null | undefined): string {
 export function statutGarantieBadgeClass(value: string | null | undefined): string {
   if (value && isStatutGarantieSAV(value)) return STATUT_GARANTIE_BADGE_CLASS[value];
   return STATUT_GARANTIE_BADGE_CLASS.EN_COURS;
+}
+
+function chassisKey(value: string | null | undefined) {
+  return value?.trim().toLowerCase() || "";
+}
+
+/** True when this SAV vehicle’s chassis is listed in VoitureSavGarantie. */
+function hasVoitureSavGarantieByChassis(v: VoitureAttente): boolean {
+  if (typeof v.sousGarantie === "boolean") return v.sousGarantie;
+  const key = chassisKey(v.chassisNumber);
+  const matched = v.VoitureSavGarantie ?? null;
+  if (!matched) return false;
+  const matchedKey = chassisKey(matched.chassisNumber);
+  if (key && matchedKey && key !== matchedKey) return false;
+  return matched.garantieSAVbadge !== false;
 }
 
 /** Full client name for a vehicle in the waiting/sortie queues. */
@@ -501,6 +530,23 @@ export function PlateBadge({
 }
 
 /** Queue card for a waiting / warranty / sortie vehicle (identity, diagnostic, gift quotas). */
+function ChassisGarantieBadge({ v }: { v: VoitureAttente }) {
+  if (hasVoitureSavGarantieByChassis(v)) {
+    return (
+      <Badge className="max-w-full gap-1 truncate border-rose-200 bg-rose-100 font-medium text-rose-900 hover:bg-rose-100">
+        <ShieldCheck className="h-3 w-3 shrink-0" />
+        <span className="truncate">Garantie en cours</span>
+      </Badge>
+    );
+  }
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 text-xs font-medium text-slate-500">
+      <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+      <span>Pas de garantie sur cette voiture</span>
+    </span>
+  );
+}
+
 function VoitureSavQueueCard({
   v,
   catalog,
@@ -573,19 +619,9 @@ function VoitureSavQueueCard({
                 <span className="truncate">{v.ClientSAV.contact}</span>
               </p>
             ) : null}
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Badge className={statutClassName}>{statutLabel}</Badge>
-              <Badge
-                className={cn(
-                  "max-w-full gap-1 truncate",
-                  statutGarantieBadgeClass(v.StatutGarantie)
-                )}
-              >
-                <ShieldCheck className="h-3 w-3 shrink-0" />
-                <span className="truncate">
-                  {statutGarantieLabel(v.StatutGarantie)}
-                </span>
-              </Badge>
+              <ChassisGarantieBadge v={v} />
             </div>
           </div>
         </div>
@@ -980,6 +1016,26 @@ export async function fetchQueue(
     throw new Error(json.error || "Chargement impossible");
   }
   return (json.data ?? []) as ReparationMaintenance[];
+}
+
+/** Run async work with a cap on in-flight tasks (avoids Prisma pool exhaustion). */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (next < items.length) {
+        const index = next++;
+        results[index] = await mapper(items[index]);
+      }
+    })
+  );
+  return results;
 }
 
 /** Tag each dossier with `kind` (reparation vs garantie) when the API omitted it. */
@@ -1782,30 +1838,39 @@ export default function MaintenanceClient({
         maintRows,
         garantieRows,
         catalogRes,
-      ] =
-        await Promise.all([
-          fetch(
-            "/api/sav/voiture-sav?statut=EN_MAINTENANCE&includeDiagnostic=1&includeGarantie=1"
-          ).then((r) => r.json()),
-          fetch(
-            "/api/sav/voiture-sav?statut=EN_MAINTENANCE_EN_ATTENTE&includeDiagnostic=1&includeGarantie=1"
-          ).then((r) => r.json()),
-          fetch(
-            "/api/sav/voiture-sav?statut=EN_MAINTENANCE_EN_COURS&includeDiagnostic=1&includeGarantie=1"
-          ).then((r) => r.json()),
-          fetch(
-            "/api/sav/voiture-sav?statut=EN_TRAITEMENT_EN_COURS&includeDiagnostic=1&includeGarantie=1&includeInterventions=1"
-          ).then((r) => r.json()),
-          fetch(
-            "/api/sav/voiture-sav?statut=FIN_INTERVENTION_GARANTIESAV_EN_COURS&includeDiagnostic=1&includeGarantie=1&includeInterventions=1"
-          ).then((r) => r.json()),
-          fetch(
-            "/api/sav/voiture-sav?deplacement=SORTIE_MAINTENANCE&includeDiagnostic=1&includeGarantie=1"
-          ).then((r) => r.json()),
-          fetchQueue("/api/sav/reparations-en-maintenance"),
-          fetchQueue("/api/sav/garanties-en-maintenance"),
-          fetch("/api/sav/garantie-sav").then((r) => r.json()),
-        ]);
+      ] = await mapWithConcurrency(
+        [
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?statut=EN_MAINTENANCE&includeDiagnostic=1&includeGarantie=1"
+            ).then((r) => r.json()),
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?statut=EN_MAINTENANCE_EN_ATTENTE&includeDiagnostic=1&includeGarantie=1"
+            ).then((r) => r.json()),
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?statut=EN_MAINTENANCE_EN_COURS&includeDiagnostic=1&includeGarantie=1"
+            ).then((r) => r.json()),
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?statut=EN_TRAITEMENT_EN_COURS&includeDiagnostic=1&includeGarantie=1&includeInterventions=1"
+            ).then((r) => r.json()),
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?statut=FIN_INTERVENTION_GARANTIESAV_EN_COURS&includeDiagnostic=1&includeGarantie=1&includeInterventions=1"
+            ).then((r) => r.json()),
+          () =>
+            fetch(
+              "/api/sav/voiture-sav?deplacement=SORTIE_MAINTENANCE&includeDiagnostic=1&includeGarantie=1"
+            ).then((r) => r.json()),
+          () => fetchQueue("/api/sav/reparations-en-maintenance"),
+          () => fetchQueue("/api/sav/garanties-en-maintenance"),
+          () => fetch("/api/sav/garantie-sav").then((r) => r.json()),
+        ],
+        3,
+        (run) => run()
+      );
       if (!attenteRes.success) {
         throw new Error(attenteRes.error || "Chargement des véhicules impossible");
       }
@@ -2032,7 +2097,10 @@ export default function MaintenanceClient({
 
   /** Initial load of queues and dossiers. */
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 50);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   /** Keep the selected dossier in sync when the current tab’s list changes. */
@@ -2729,7 +2797,11 @@ export default function MaintenanceClient({
             />
           ) : (
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-              {attenteVoitures.map((v) => (
+              {attenteVoitures.map((v) => {
+                const hasChassisGarantie = hasVoitureSavGarantieByChassis(v);
+                const hideProfiter =
+                  v.StatutGarantie === "GARANTIESAV_TERMINE";
+                return (
                 <VoitureSavQueueCard
                   key={v.id}
                   v={v}
@@ -2741,22 +2813,29 @@ export default function MaintenanceClient({
                     <div
                       className={cn(
                         "grid gap-2",
-                        v.StatutGarantie === "GARANTIESAV_TERMINE"
+                        hideProfiter
                           ? "grid-cols-1"
                           : "grid-cols-1 sm:grid-cols-2"
                       )}
                     >
-                      {v.StatutGarantie === "GARANTIESAV_TERMINE" ? null : (
+                      {hideProfiter ? null : (
                         <Button
                           type="button"
-                          disabled={Boolean(attenteActionKey)}
+                          disabled={
+                            Boolean(attenteActionKey) || !hasChassisGarantie
+                          }
+                          title={
+                            hasChassisGarantie
+                              ? undefined
+                              : "Pas de garantie sur cette voiture"
+                          }
                           onClick={() =>
                             void handleAttenteStatut(
                               v.id,
                               "EN_TRAITEMENT_EN_COURS"
                             )
                           }
-                          className="h-11 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                          className="h-11 gap-2 bg-emerald-600 text-white hover:bg-emerald-700 disabled:pointer-events-none disabled:opacity-50"
                         >
                           {attenteActionKey ===
                           `${v.id}:EN_TRAITEMENT_EN_COURS` ? (
@@ -2789,7 +2868,8 @@ export default function MaintenanceClient({
                     </div>
                   }
                 />
-              ))}
+                );
+              })}
             </div>
           )
         ) : queueTab === "garantie" ? (

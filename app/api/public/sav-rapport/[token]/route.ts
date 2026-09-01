@@ -3,6 +3,7 @@ import { executeWithRetry, prisma } from "@/lib/prisma";
 import { fetchTesteFinalPhotosByVoiture } from "@/lib/sav/fetchTesteFinalPhotos";
 import { verifySavRapportToken } from "@/lib/sav/savRapportShareToken";
 import { withVoitureSavStatut } from "@/lib/sav/voitureSavStatutSql";
+import { withVoitureSavStatutGarantie } from "@/lib/sav/voitureSavStatutGarantieSql";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export async function GET(
         prisma.voitureSAV.findUnique({
           where: { id: voitureSAVId },
           include: voitureInclude,
-          omit: { statut: true },
+          omit: { statut: true, StatutGarantie: true },
         }),
       );
     } catch (error) {
@@ -67,7 +68,7 @@ export async function GET(
         prisma.voitureSAV.findUnique({
           where: { id: voitureSAVId },
           include: voitureInclude,
-          omit: { chassisNumber: true, statut: true },
+          omit: { chassisNumber: true, statut: true, StatutGarantie: true },
         }),
       );
     }
@@ -80,6 +81,7 @@ export async function GET(
     }
 
     const [withStatut] = await withVoitureSavStatut([row]);
+    const [withGarantie] = await withVoitureSavStatutGarantie([withStatut]);
     if (withStatut.statut !== "TERMINE") {
       return NextResponse.json(
         { success: false, error: "Rapport non disponible" },
@@ -115,7 +117,7 @@ export async function GET(
         transmission: withStatut.transmission,
         nbr_portes: withStatut.nbr_portes,
         statut: withStatut.statut,
-        StatutGarantie: withStatut.StatutGarantie,
+        StatutGarantie: withGarantie.StatutGarantie,
         sousGarantie: Boolean(garantie && garantie.garantieSAVbadge !== false),
         createdAt: withStatut.createdAt,
         updatedAt: withStatut.updatedAt,
