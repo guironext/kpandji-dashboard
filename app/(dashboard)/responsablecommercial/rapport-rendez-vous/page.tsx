@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  getRapportRendezVousByObjectifPeriodAndCommercial,
-  type RapportRendezVousByPeriodAndCommercialData,
-} from "@/lib/actions/rapport-rendez-vous-analytics";
+import { getRapportRendezVousByCommercialUsers } from "@/lib/actions/rendezvous";
 import {
   Card,
   CardContent,
@@ -11,222 +8,308 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { RapportAccordion } from "@/components/RapportAccordion";
-import { ExportReportsWrapper } from "@/components/ExportReportsWrapper";
-import {
-  FileText,
   Calendar,
+  User,
+  FileText,
+  CheckCircle2,
+  TrendingUp,
   AlertCircle,
-  Users,
+  UserCircle,
+  ClipboardList,
+  Sparkles,
+  BarChart3,
+  Target,
+  Star,
   Activity,
 } from "lucide-react";
+import { RapportAccordion } from "@/components/RapportAccordion";
+import { ExportReportsWrapper } from "@/components/ExportReportsWrapper";
+import type { ReportForExcel, ReportsByUserForExcel } from "@/lib/exportRapportExcel";
 
-export default async function RapportRendezVousPage() {
-  const result = await getRapportRendezVousByObjectifPeriodAndCommercial();
+export default async function RapportRendezVousResponsablePage() {
+  const result = await getRapportRendezVousByCommercialUsers();
 
   if (!result.success || !result.data) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <Card className="border-red-200 bg-red-50/80 backdrop-blur-sm shadow-lg">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-red-700">Erreur</CardTitle>
-                  <CardDescription className="text-red-600">
-                    {result.error || "Impossible de charger les rapports de rendez-vous"}
-                  </CardDescription>
-                </div>
+        <Card className="border-red-200 bg-red-50/80 backdrop-blur-sm shadow-lg max-w-2xl mx-auto">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
-            </CardHeader>
-          </Card>
-        </div>
+              <div>
+                <CardTitle className="text-red-700">Erreur</CardTitle>
+                <CardDescription className="text-red-600">
+                  {result.error ||
+                    "Impossible de charger les rapports de rendez-vous"}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
-  const { periods } = result.data;
-  const totalReports = periods.reduce(
-    (sum, p) => sum + p.commercials.reduce((s, c) => s + c.totalReports, 0),
-    0
+  const { totalReports, totalCommercials, reportsByUser: rawGroups } =
+    result.data;
+
+  const reportsByUser: ReportsByUserForExcel[] = rawGroups.map((group) => ({
+    conseiller_commercial: group.conseiller_commercial,
+    totalReports: group.totalReports,
+    reports: group.reports.map(
+      (r): ReportForExcel => ({
+        id: r.id,
+        date_rendez_vous: r.date_rendez_vous,
+        heure_rendez_vous: r.heure_rendez_vous,
+        duree_rendez_vous: r.duree_rendez_vous,
+        nom_prenom_client: r.nom_prenom_client,
+        telephone_client: r.telephone_client,
+        email_client: r.email_client,
+        type_client: r.type_client,
+        lieu_rendez_vous: r.lieu_rendez_vous,
+        lieu_autre: r.lieu_autre,
+        profession_societe: r.profession_societe,
+        degre_interet: r.degre_interet,
+        motivations_achat: r.motivations_achat,
+        points_positifs: r.points_positifs,
+        objections_freins: r.objections_freins,
+        commentaire_global: r.commentaire_global,
+        decision_attendue: r.decision_attendue,
+        Com_Pres: r.Com_Pres,
+        Com_Drive: r.Com_Drive,
+        Com_Achat: r.Com_Achat,
+        Com_Livre: r.Com_Livre,
+        Com_APV: r.Com_APV,
+        Com_Office: r.Com_Office,
+        Com_Close: r.Com_Close,
+        objet_autre: r.objet_autre,
+        modeles_discutes: r.modeles_discutes,
+        devis_offre_remise: r.devis_offre_remise,
+        propositions_faites: r.propositions_faites,
+        reference_offre: r.reference_offre,
+        financement_propose: r.financement_propose,
+        assurance_entretien: r.assurance_entretien,
+        reprise_ancien_vehicule: r.reprise_ancien_vehicule,
+        suivi_actions: r.suivi_actions,
+        actions_suivi: r.actions_suivi,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        voiture: r.voiture
+          ? {
+              id: r.voiture.id,
+              couleur: r.voiture.couleur ?? "",
+              motorisation: String(r.voiture.motorisation ?? ""),
+              transmission: String(r.voiture.transmission ?? ""),
+              voitureModel: r.voiture.voitureModel ?? undefined,
+            }
+          : null,
+      })
+    ),
+  }));
+
+  const avgReportsPerUser =
+    totalCommercials > 0 ? (totalReports / totalCommercials).toFixed(1) : "0";
+
+  const interestLevels = reportsByUser.flatMap((u) =>
+    u.reports.map((r) => r.degre_interet)
   );
-  const totalCommercials = new Set(
-    periods.flatMap((p) => p.commercials.map((c) => c.conseiller_commercial))
-  ).size;
+  const highInterest = interestLevels.filter(
+    (i) =>
+      i?.toLowerCase().includes("élevé") || i?.toLowerCase().includes("fort")
+  ).length;
+  const mediumInterest = interestLevels.filter((i) =>
+    i?.toLowerCase().includes("moyen")
+  ).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative p-6 space-y-8 max-w-[1800px] mx-auto">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl blur-lg opacity-50" />
-              <div className="relative p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl">
-                <FileText className="h-10 w-10 text-white" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                 Rapports de Rendez-vous
               </h1>
-              <p className="text-muted-foreground mt-2 text-lg font-medium">
-                Par période objectif et par commercial
+              <p className="text-muted-foreground mt-1 text-lg">
+                Tous les rapports créés par les commerciaux
               </p>
             </div>
           </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="group border-0 shadow-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white overflow-hidden relative hover:scale-105 transition-all duration-300">
-            <div className="absolute top-0 right-0 opacity-20 group-hover:opacity-30 transition-opacity">
-              <FileText className="h-40 w-40 -mr-10 -mt-10" />
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 opacity-10">
+              <FileText className="h-32 w-32 -mr-8 -mt-8" />
             </div>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-              <CardTitle className="text-sm font-semibold text-blue-50 uppercase tracking-wide">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium text-blue-50">
                 Total Rapports
               </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <FileText className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-5xl font-bold mb-2">{totalReports}</div>
-              <div className="flex items-center gap-2 text-blue-100 text-sm">
-                <Activity className="h-4 w-4" />
-                <span>Tous les rapports</span>
-              </div>
+              <div className="text-3xl font-bold">{totalReports}</div>
+              <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                Rapports des commerciaux
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="group border-0 shadow-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 text-white overflow-hidden relative hover:scale-105 transition-all duration-300">
-            <div className="absolute top-0 right-0 opacity-20 group-hover:opacity-30 transition-opacity">
-              <Calendar className="h-40 w-40 -mr-10 -mt-10" />
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 opacity-10">
+              <UserCircle className="h-32 w-32 -mr-8 -mt-8" />
             </div>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-              <CardTitle className="text-sm font-semibold text-indigo-50 uppercase tracking-wide">
-                Périodes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-5xl font-bold mb-2">{periods.length}</div>
-              <div className="flex items-center gap-2 text-indigo-100 text-sm">
-                <Calendar className="h-4 w-4" />
-                <span>Périodes objectif</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="group border-0 shadow-xl bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 text-white overflow-hidden relative hover:scale-105 transition-all duration-300">
-            <div className="absolute top-0 right-0 opacity-20 group-hover:opacity-30 transition-opacity">
-              <Users className="h-40 w-40 -mr-10 -mt-10" />
-            </div>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
-              <CardTitle className="text-sm font-semibold text-emerald-50 uppercase tracking-wide">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium text-indigo-50">
                 Commerciaux
               </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <User className="h-4 w-4" />
+              </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-5xl font-bold mb-2">{totalCommercials}</div>
-              <div className="flex items-center gap-2 text-emerald-100 text-sm">
-                <Users className="h-4 w-4" />
-                <span>Conseillers actifs</span>
+              <div className="text-3xl font-bold">{totalCommercials}</div>
+              <p className="text-xs text-indigo-100 mt-1 flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                Utilisateurs avec des rapports
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-green-600 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 opacity-10">
+              <TrendingUp className="h-32 w-32 -mr-8 -mt-8" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium text-emerald-50">
+                Moyenne
+              </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <BarChart3 className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-bold">{avgReportsPerUser}</div>
+              <p className="text-xs text-emerald-100 mt-1 flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                Rapports par commercial
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 opacity-10">
+              <Target className="h-32 w-32 -mr-8 -mt-8" />
+            </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium text-amber-50">
+                Intérêt Élevé
+              </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Star className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <div className="text-3xl font-bold">{highInterest}</div>
+              <p className="text-xs text-amber-100 mt-1 flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                Prospects chauds
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Intérêt Élevé</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {highInterest}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-100 rounded-xl">
+                  <ClipboardList className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Intérêt Moyen</p>
+                  <p className="text-2xl font-bold text-amber-600">
+                    {mediumInterest}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <Calendar className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Autres</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {totalReports - highInterest - mediumInterest}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 border-b border-slate-200">
-            <div className="space-y-1">
-              <CardTitle className="text-3xl flex items-center gap-3 font-bold">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
-                  <FileText className="h-6 w-6 text-white" />
-                </div>
-                Rapports par période et par commercial
-              </CardTitle>
-              <CardDescription className="text-base mt-2">
-                Consultez les rapports de rendez-vous regroupés par période objectif puis par conseiller commercial
-              </CardDescription>
+        <Card className="border-0 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Sparkles className="h-6 w-6 text-blue-600" />
+                  Rapports par commercial
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Liste de tous les rapports créés par les utilisateurs au rôle
+                  commercial
+                </CardDescription>
+              </div>
+              <ExportReportsWrapper reportsByUser={reportsByUser} />
             </div>
           </CardHeader>
-          <CardContent className="p-8">
-            {periods.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="inline-flex p-6 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full mb-6">
-                  <FileText className="h-16 w-16 text-slate-400" />
+          <CardContent className="p-6">
+            {reportsByUser.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="inline-flex p-4 bg-slate-100 rounded-full mb-4">
+                  <FileText className="h-12 w-12 text-slate-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-700 mb-3">
+                <h3 className="text-xl font-semibold text-slate-700 mb-2">
                   Aucun rapport trouvé
                 </h3>
-                <p className="text-muted-foreground max-w-md mx-auto text-lg">
-                  Il n&apos;y a aucun rapport de rendez-vous pour le moment.
-                  Les rapports apparaîtront ici une fois créés par les conseillers commerciaux.
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Aucun rapport de rendez-vous n&apos;a encore été créé par les
+                  commerciaux.
                 </p>
               </div>
             ) : (
-              <Accordion type="single" collapsible className="space-y-4">
-                {periods.map((period: RapportRendezVousByPeriodAndCommercialData) => {
-                  const periodReportsCount = period.commercials.reduce(
-                    (s, c) => s + c.totalReports,
-                    0
-                  );
-                  return (
-                    <AccordionItem
-                      key={period.periodId}
-                      value={period.periodId}
-                      className="border rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow bg-white"
-                    >
-                      <AccordionTrigger className="hover:no-underline px-6 py-4 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-md">
-                              <Calendar className="h-5 w-5 text-white" />
-                            </div>
-                            <div className="text-left">
-                              <span className="font-semibold text-lg text-slate-800">
-                                {period.periodLabel}
-                              </span>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {period.commercials.length} commercial(aux) · {periodReportsCount} rapport(s)
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="px-6 pb-6 pt-2 border-t">
-                          {period.commercials.length === 0 ? (
-                            <p className="text-muted-foreground py-4 text-center">
-                              Aucun rapport pour cette période
-                            </p>
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="flex justify-end mb-4">
-                                <ExportReportsWrapper
-                                  reportsByUser={period.commercials}
-                                />
-                              </div>
-                              <RapportAccordion
-                                reportsByUser={period.commercials}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
+              <RapportAccordion reportsByUser={reportsByUser} />
             )}
           </CardContent>
         </Card>

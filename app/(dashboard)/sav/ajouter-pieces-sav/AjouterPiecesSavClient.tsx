@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -31,18 +30,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Camera,
+  Car,
+  Check,
+  ImageIcon,
   Loader2,
   PackagePlus,
   Package,
   Boxes,
   Hash,
+  Pencil,
+  Eye,
   Search,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import CameraCapture, {
+  requestCarCamera,
+} from "@/app/(dashboard)/sav/diagnostique-arrivee/CameraCapture";
 
 export type PieceSAVRow = {
   id: string;
@@ -51,6 +60,9 @@ export type PieceSAVRow = {
   marque_piece: string | null;
   part_code: string | null;
   description: string | null;
+  image: string | null;
+  emplacement: string | null;
+  origine: string | null;
   prix_achat: number | null;
   prix_vente: number | null;
   quantite_entree: number;
@@ -61,6 +73,8 @@ const priceFmt = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 2,
 });
 
+const MODEL_SEP = " · ";
+
 function normalize(s: string) {
   return s
     .normalize("NFD")
@@ -68,15 +82,368 @@ function normalize(s: string) {
     .toLowerCase();
 }
 
+function parseModelVoiture(value: string | null | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(/\s*[·|,;]\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function serializeModelVoiture(models: string[]): string {
+  return models.join(MODEL_SEP);
+}
+
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+      <div className="text-sm font-medium text-slate-900">{children}</div>
+    </div>
+  );
+}
+
+function emptyDash(value: React.ReactNode) {
+  if (value == null || value === "") {
+    return <span className="font-normal text-slate-400">—</span>;
+  }
+  return value;
+}
+
+const ORIGINE_OPTIONS = ["Achat local", "Usine"] as const;
+
+const fieldClass =
+  "h-11 rounded-xl border-slate-200 bg-white shadow-sm focus-visible:border-emerald-400 focus-visible:ring-emerald-500/20";
+
+function stopCameraTracks(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+function PieceImageField({
+  id,
+  file,
+  preview,
+  inputKey,
+  onFile,
+  onClear,
+}: {
+  id: string;
+  file: File | null;
+  preview: string | null;
+  inputKey: number;
+  onFile: (file: File | null) => void;
+  onClear: () => void;
+}) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [startingCamera, setStartingCamera] = useState(false);
+
+  const replaceCameraStream = (stream: MediaStream | null) => {
+    if (cameraStreamRef.current && cameraStreamRef.current !== stream) {
+      stopCameraTracks(cameraStreamRef.current);
+    }
+    cameraStreamRef.current = stream;
+    setCameraStream(stream);
+  };
+
+  const closeLiveCamera = () => {
+    setCameraOpen(false);
+    replaceCameraStream(null);
+  };
+
+  const openLiveCamera = async () => {
+    setStartingCamera(true);
+    try {
+      const stream = await requestCarCamera("environment");
+      replaceCameraStream(stream);
+      setCameraOpen(true);
+    } catch {
+      toast.error(
+        "Impossible d'accéder à la caméra. Ouverture de l'appareil photo."
+      );
+      cameraInputRef.current?.click();
+    } finally {
+      setStartingCamera(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCameraTracks(cameraStreamRef.current);
+      cameraStreamRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    setCameraOpen(false);
+    if (cameraStreamRef.current) {
+      stopCameraTracks(cameraStreamRef.current);
+      cameraStreamRef.current = null;
+      setCameraStream(null);
+    }
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  }, [inputKey]);
+
+  return (
+    <div className="grid gap-2">
+      <Label className="text-slate-700">Photo</Label>
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={(e) => {
+          onFile(e.target.files?.[0] ?? null);
+          closeLiveCamera();
+        }}
+      />
+
+      {cameraOpen && cameraStream ? (
+        <CameraCapture
+          initialStream={cameraStream}
+          fileNamePrefix="piece-sav"
+          onCapture={(captured) => {
+            onFile(captured);
+            closeLiveCamera();
+          }}
+          onCancel={closeLiveCamera}
+          onStreamChange={replaceCameraStream}
+          onNativeFallback={() => {
+            closeLiveCamera();
+            cameraInputRef.current?.click();
+          }}
+        />
+      ) : preview ? (
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt="Aperçu de la pièce"
+            className="h-40 w-full object-contain"
+          />
+          <div className="absolute right-2 top-2 flex gap-1.5">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-8 rounded-full bg-white/90 px-3 text-xs font-semibold shadow-md hover:bg-white"
+              disabled={startingCamera}
+              onClick={() => void openLiveCamera()}
+            >
+              {startingCamera ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Camera className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Reprendre
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full bg-white/90 shadow-sm"
+              onClick={onClear}
+              aria-label="Retirer la photo"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          {file ? (
+            <p className="truncate border-t border-slate-100 px-3 py-2 text-xs text-slate-600">
+              {file.name}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <button
+          type="button"
+          id={id}
+          disabled={startingCamera}
+          onClick={() => void openLiveCamera()}
+          className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 p-6 transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-[0.99] disabled:opacity-70"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">
+            {startingCamera ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Camera className="h-5 w-5" />
+            )}
+          </div>
+          <span className="text-sm font-semibold text-emerald-950">
+            {startingCamera ? "Ouverture…" : "Prendre une photo"}
+          </span>
+          <span className="text-xs text-emerald-700">
+            Utiliser la caméra de cet appareil
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ModelesVoitureField({
+  models,
+  selected,
+  onChange,
+}: {
+  models: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = normalize(query.trim());
+    if (!q) return models;
+    return models.filter((m) => normalize(m).includes(q));
+  }, [models, query]);
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((m) => selected.includes(m));
+
+  function toggle(model: string) {
+    onChange(
+      selected.includes(model)
+        ? selected.filter((m) => m !== model)
+        : [...selected, model]
+    );
+  }
+
+  function toggleAllFiltered() {
+    if (allFilteredSelected) {
+      const drop = new Set(filtered);
+      onChange(selected.filter((m) => !drop.has(m)));
+    } else {
+      onChange(Array.from(new Set([...selected, ...filtered])));
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-slate-700">
+          Modèle voiture
+          <span className="ml-1.5 font-normal text-slate-400">
+            (plusieurs possibles)
+          </span>
+        </Label>
+        {filtered.length > 0 ? (
+          <button
+            type="button"
+            onClick={toggleAllFiltered}
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+          >
+            {allFilteredSelected ? "Tout désélectionner" : "Tout sélectionner"}
+          </button>
+        ) : null}
+      </div>
+
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((model) => (
+            <Badge
+              key={model}
+              className="gap-1 rounded-full border-0 bg-emerald-100 px-2.5 py-1 font-medium text-emerald-900 hover:bg-emerald-100"
+            >
+              {model}
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-emerald-200"
+                onClick={() => toggle(model)}
+                aria-label={`Retirer ${model}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="relative border-b border-slate-100">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un modèle…"
+            className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+          />
+        </div>
+        <div className="max-h-44 space-y-1 overflow-y-auto p-2">
+          {models.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-slate-500">
+              Aucun modèle enregistré.
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-slate-500">
+              Aucun modèle ne correspond.
+            </p>
+          ) : (
+            filtered.map((model) => {
+              const checked = selected.includes(model);
+              return (
+                <button
+                  key={model}
+                  type="button"
+                  onClick={() => toggle(model)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
+                    checked
+                      ? "bg-emerald-50 ring-1 ring-emerald-200"
+                      : "hover:bg-slate-50"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                      checked
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-slate-300 bg-white"
+                    )}
+                  >
+                    {checked ? <Check className="h-3.5 w-3.5" /> : null}
+                  </span>
+                  <Car
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      checked ? "text-emerald-700" : "text-slate-400"
+                    )}
+                  />
+                  <span className="truncate text-sm font-medium text-slate-800">
+                    {model}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AjouterPiecesSavClient({
   initialPieces,
+  voitureModels,
 }: {
   initialPieces: PieceSAVRow[];
+  voitureModels: string[];
 }) {
   const router = useRouter();
   const [pieces, setPieces] = useState(initialPieces);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -84,17 +451,29 @@ export default function AjouterPiecesSavClient({
   const [search, setSearch] = useState("");
 
   const [nom, setNom] = useState("");
-  const [modelVoiture, setModelVoiture] = useState("");
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [marquePiece, setMarquePiece] = useState("");
   const [partCode, setPartCode] = useState("");
+  const [emplacement, setEmplacement] = useState("");
+  const [origine, setOrigine] = useState("");
   const [description, setDescription] = useState("");
   const [prixAchat, setPrixAchat] = useState("");
   const [prixVente, setPrixVente] = useState("");
   const [quantiteEntree, setQuantiteEntree] = useState("0");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
 
   useEffect(() => {
     setPieces(initialPieces);
   }, [initialPieces]);
+
+  useEffect(() => {
+    if (!imageFile) return;
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
 
   const stats = useMemo(() => {
     const n = pieces.length;
@@ -111,6 +490,8 @@ export default function AjouterPiecesSavClient({
         p.model_voiture,
         p.marque_piece,
         p.part_code,
+        p.emplacement,
+        p.origine,
         p.description,
       ]
         .filter(Boolean)
@@ -121,13 +502,18 @@ export default function AjouterPiecesSavClient({
 
   function resetForm() {
     setNom("");
-    setModelVoiture("");
+    setSelectedModels([]);
     setMarquePiece("");
     setPartCode("");
+    setEmplacement("");
+    setOrigine("");
     setDescription("");
     setPrixAchat("");
     setPrixVente("");
     setQuantiteEntree("0");
+    setImageFile(null);
+    setImagePreview(null);
+    setImageInputKey((k) => k + 1);
   }
 
   function resetEditForm() {
@@ -135,16 +521,26 @@ export default function AjouterPiecesSavClient({
     resetForm();
   }
 
+  function openView(p: PieceSAVRow) {
+    setActive(p);
+    setViewOpen(true);
+  }
+
   function openEdit(p: PieceSAVRow) {
     setActive(p);
     setNom(p.nom);
-    setModelVoiture(p.model_voiture ?? "");
+    setSelectedModels(parseModelVoiture(p.model_voiture));
     setMarquePiece(p.marque_piece ?? "");
     setPartCode(p.part_code ?? "");
+    setEmplacement(p.emplacement ?? "");
+    setOrigine(p.origine ?? "");
     setDescription(p.description ?? "");
     setPrixAchat(p.prix_achat != null ? String(p.prix_achat) : "");
     setPrixVente(p.prix_vente != null ? String(p.prix_vente) : "");
     setQuantiteEntree(String(p.quantite_entree));
+    setImageFile(null);
+    setImagePreview(p.image ?? null);
+    setImageInputKey((k) => k + 1);
     setEditOpen(true);
   }
 
@@ -166,19 +562,22 @@ export default function AjouterPiecesSavClient({
     }
     setSubmitting(true);
     try {
+      const fd = new FormData();
+      fd.append("nom", nom.trim());
+      fd.append("model_voiture", serializeModelVoiture(selectedModels));
+      fd.append("marque_piece", marquePiece.trim());
+      fd.append("part_code", partCode.trim());
+      fd.append("emplacement", emplacement.trim());
+      fd.append("origine", origine);
+      fd.append("description", description.trim());
+      fd.append("prix_achat", prixAchat.trim());
+      fd.append("prix_vente", prixVente.trim());
+      fd.append("quantite_entree", String(qe));
+      if (imageFile) fd.append("image", imageFile);
+
       const res = await fetch("/api/sav/piece-sav", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          model_voiture: modelVoiture.trim() || undefined,
-          marque_piece: marquePiece.trim() || undefined,
-          part_code: partCode.trim() || undefined,
-          description: description.trim() || undefined,
-          prix_achat: prixAchat.trim() || undefined,
-          prix_vente: prixVente.trim() || undefined,
-          quantite_entree: qe,
-        }),
+        body: fd,
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -209,19 +608,22 @@ export default function AjouterPiecesSavClient({
     }
     setSubmitting(true);
     try {
+      const fd = new FormData();
+      fd.append("nom", nom.trim());
+      fd.append("model_voiture", serializeModelVoiture(selectedModels));
+      fd.append("marque_piece", marquePiece.trim());
+      fd.append("part_code", partCode.trim());
+      fd.append("emplacement", emplacement.trim());
+      fd.append("origine", origine);
+      fd.append("description", description.trim());
+      fd.append("prix_achat", prixAchat.trim());
+      fd.append("prix_vente", prixVente.trim());
+      fd.append("quantite_entree", String(qe));
+      if (imageFile) fd.append("image", imageFile);
+
       const res = await fetch(`/api/sav/piece-sav/${active.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: nom.trim(),
-          model_voiture: modelVoiture.trim() || null,
-          marque_piece: marquePiece.trim() || null,
-          part_code: partCode.trim() || null,
-          description: description.trim() || null,
-          prix_achat: prixAchat.trim() || null,
-          prix_vente: prixVente.trim() || null,
-          quantite_entree: qe,
-        }),
+        body: fd,
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -259,6 +661,179 @@ export default function AjouterPiecesSavClient({
       setDeleting(false);
     }
   }
+
+  const renderFormFields = () => (
+    <div className="space-y-5">
+      <div className="grid gap-5 md:grid-cols-[minmax(0,240px)_1fr] md:items-start">
+        <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-b from-emerald-50/90 to-white p-3 shadow-sm">
+          <PieceImageField
+            id={editOpen ? "edit-image" : "image"}
+            file={imageFile}
+            preview={imagePreview}
+            inputKey={imageInputKey}
+            onFile={setImageFile}
+            onClear={() => {
+              setImageFile(null);
+              setImagePreview(editOpen ? active?.image ?? null : null);
+              setImageInputKey((k) => k + 1);
+            }}
+          />
+        </div>
+        <div className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="piece-nom" className="text-slate-700">
+              Nom <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="piece-nom"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              required
+              placeholder="Ex. Filtre à huile"
+              className={fieldClass}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="piece-marque" className="text-slate-700">
+                Marque pièce
+              </Label>
+              <Input
+                id="piece-marque"
+                value={marquePiece}
+                onChange={(e) => setMarquePiece(e.target.value)}
+                placeholder="Optionnel"
+                className={fieldClass}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="piece-code" className="text-slate-700">
+                Part code
+              </Label>
+              <Input
+                id="piece-code"
+                value={partCode}
+                onChange={(e) => setPartCode(e.target.value)}
+                placeholder="Référence constructeur"
+                className={cn(fieldClass, "font-mono text-sm")}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ModelesVoitureField
+        models={voitureModels}
+        selected={selectedModels}
+        onChange={setSelectedModels}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="piece-emplacement" className="text-slate-700">
+            Emplacement
+          </Label>
+          <Input
+            id="piece-emplacement"
+            value={emplacement}
+            onChange={(e) => setEmplacement(e.target.value)}
+            placeholder="Ex. Étagère A3, atelier"
+            className={fieldClass}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-700">Origine</Label>
+          <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {ORIGINE_OPTIONS.map((option) => {
+              const active = origine === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setOrigine(active ? "" : option)}
+                  className={cn(
+                    "h-9 rounded-lg text-sm font-medium transition-all",
+                    active
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Stock &amp; prix
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid gap-2">
+            <Label htmlFor="piece-qe" className="text-slate-700">
+              Quantité entrée <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="piece-qe"
+              type="number"
+              min={0}
+              step={1}
+              value={quantiteEntree}
+              onChange={(e) => setQuantiteEntree(e.target.value)}
+              required
+              className={fieldClass}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="piece-achat" className="text-slate-700">
+              Prix d&apos;achat
+            </Label>
+            <Input
+              id="piece-achat"
+              type="number"
+              min={0}
+              step="0.01"
+              value={prixAchat}
+              onChange={(e) => setPrixAchat(e.target.value)}
+              placeholder="0"
+              className={fieldClass}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="piece-vente" className="text-slate-700">
+              Prix de vente
+            </Label>
+            <Input
+              id="piece-vente"
+              type="number"
+              min={0}
+              step="0.01"
+              value={prixVente}
+              onChange={(e) => setPrixVente(e.target.value)}
+              placeholder="0"
+              className={fieldClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="piece-desc" className="text-slate-700">
+          Description
+        </Label>
+        <Textarea
+          id="piece-desc"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          placeholder="Notes, condition…"
+          className="min-h-[88px] resize-none rounded-xl border-slate-200 bg-white shadow-sm focus-visible:border-emerald-400 focus-visible:ring-emerald-500/20"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-[calc(100vh-5rem)] pb-10">
@@ -375,7 +950,7 @@ export default function AjouterPiecesSavClient({
                   Inventaire
                 </CardTitle>
                 <CardDescription className="mt-1.5 text-slate-600">
-                  Filtrez par nom, référence, marque ou modèle.
+                  Filtrez par nom, modèle ou emplacement.
                 </CardDescription>
               </div>
               <div className="relative w-full sm:max-w-xs">
@@ -395,29 +970,23 @@ export default function AjouterPiecesSavClient({
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-100 bg-slate-50/90 hover:bg-slate-50/90">
-                    <TableHead className="whitespace-nowrap font-semibold text-slate-700">
-                      Modèle
+                    <TableHead className="w-[72px] font-semibold text-slate-700">
+                      Image
                     </TableHead>
                     <TableHead className="whitespace-nowrap font-semibold text-slate-700">
-                      Marque pièce
+                      Modèle
                     </TableHead>
                     <TableHead className="min-w-[120px] font-semibold text-slate-700">
                       Nom
                     </TableHead>
                     <TableHead className="whitespace-nowrap font-semibold text-slate-700">
-                      Réf.
+                      Emplacement
                     </TableHead>
                     <TableHead className="whitespace-nowrap text-right font-semibold text-slate-700">
                       Qté
                     </TableHead>
                     <TableHead className="whitespace-nowrap text-right font-semibold text-slate-700">
-                      P. achat
-                    </TableHead>
-                    <TableHead className="whitespace-nowrap text-right font-semibold text-slate-700">
                       P. vente
-                    </TableHead>
-                    <TableHead className="min-w-[200px] font-semibold text-slate-700">
-                      Description
                     </TableHead>
                     <TableHead className="min-w-[120px] text-center font-semibold text-slate-700">
                       Action
@@ -427,7 +996,7 @@ export default function AjouterPiecesSavClient({
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-40 p-0">
+                      <TableCell colSpan={7} className="h-40 p-0">
                         <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
                           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 ring-1 ring-slate-200/80">
                             <Package className="h-8 w-8 text-slate-400" />
@@ -466,19 +1035,33 @@ export default function AjouterPiecesSavClient({
                           "hover:bg-emerald-50/50"
                         )}
                       >
-                        <TableCell className="font-medium text-slate-800">
-                          {p.model_voiture ?? (
-                            <span className="text-slate-400">—</span>
+                        <TableCell>
+                          {p.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.image}
+                              alt={p.nom}
+                              className="h-11 w-11 rounded-lg object-cover ring-1 ring-slate-200"
+                            />
+                          ) : (
+                            <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                              <ImageIcon className="h-4 w-4" />
+                            </span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          {p.marque_piece ? (
-                            <Badge
-                              variant="secondary"
-                              className="font-normal text-slate-700"
-                            >
-                              {p.marque_piece}
-                            </Badge>
+                        <TableCell className="max-w-[220px]">
+                          {parseModelVoiture(p.model_voiture).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {parseModelVoiture(p.model_voiture).map((m) => (
+                                <Badge
+                                  key={m}
+                                  variant="secondary"
+                                  className="rounded-full font-normal text-slate-700"
+                                >
+                                  {m}
+                                </Badge>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
@@ -486,12 +1069,8 @@ export default function AjouterPiecesSavClient({
                         <TableCell className="font-medium text-slate-900">
                           {p.nom}
                         </TableCell>
-                        <TableCell>
-                          {p.part_code ? (
-                            <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700">
-                              {p.part_code}
-                            </code>
-                          ) : (
+                        <TableCell className="text-slate-700">
+                          {p.emplacement ?? (
                             <span className="text-slate-400">—</span>
                           )}
                         </TableCell>
@@ -501,24 +1080,22 @@ export default function AjouterPiecesSavClient({
                           </span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums text-slate-700">
-                          {p.prix_achat != null
-                            ? priceFmt.format(p.prix_achat)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-slate-700">
                           {p.prix_vente != null
                             ? priceFmt.format(p.prix_vente)
                             : "—"}
                         </TableCell>
-                        <TableCell className="max-w-[280px] text-sm text-slate-600">
-                          <span className="line-clamp-2">
-                            {p.description ?? (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </span>
-                        </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+                              aria-label={`Voir ${p.nom}`}
+                              onClick={() => openView(p)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             <Button
                               type="button"
                               variant="outline"
@@ -551,162 +1128,197 @@ export default function AjouterPiecesSavClient({
       </div>
 
       <Dialog
+        open={viewOpen}
+        onOpenChange={(o) => {
+          setViewOpen(o);
+          if (!o && !editOpen && !deleteOpen) setActive(null);
+        }}
+      >
+        <DialogContent
+          className={cn(
+            "flex max-h-[min(94vh,880px)] flex-col gap-0 overflow-hidden rounded-[28px] border-0 p-0 sm:max-w-2xl",
+            "shadow-[0_24px_80px_-12px_rgba(6,78,59,0.35)]",
+            "[&_[data-slot=dialog-close]]:right-5 [&_[data-slot=dialog-close]]:top-5",
+            "[&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/10",
+            "[&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:text-white",
+            "[&_[data-slot=dialog-close]]:hover:bg-white/20 [&_[data-slot=dialog-close]]:hover:text-white"
+          )}
+        >
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 px-6 py-6 text-white">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl" />
+            <DialogHeader className="relative space-y-1 text-left">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <Eye className="h-5 w-5 text-emerald-200" />
+              </div>
+              <DialogTitle className="text-xl font-semibold tracking-tight text-white">
+                {active?.nom ?? "Détail de la pièce"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-emerald-100/80">
+                Fiche complète de la pièce sélectionnée.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {active ? (
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 px-6 py-5">
+              <div className="grid gap-5 md:grid-cols-[220px_1fr] md:items-start">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {active.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={active.image}
+                      alt={active.nom}
+                      className="aspect-square w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-square items-center justify-center bg-slate-100 text-slate-400">
+                      <ImageIcon className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <DetailField label="Nom">{active.nom}</DetailField>
+                  <DetailField label="Marque pièce">
+                    {emptyDash(active.marque_piece)}
+                  </DetailField>
+                  <DetailField label="Part code">
+                    {active.part_code ? (
+                      <code className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-800">
+                        {active.part_code}
+                      </code>
+                    ) : (
+                      emptyDash(null)
+                    )}
+                  </DetailField>
+                  <DetailField label="Emplacement">
+                    {emptyDash(active.emplacement)}
+                  </DetailField>
+                  <DetailField label="Origine">
+                    {active.origine ? (
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "font-normal",
+                          active.origine === "Usine"
+                            ? "bg-sky-50 text-sky-800"
+                            : "bg-amber-50 text-amber-800"
+                        )}
+                      >
+                        {active.origine}
+                      </Badge>
+                    ) : (
+                      emptyDash(null)
+                    )}
+                  </DetailField>
+                  <DetailField label="Quantité entrée">
+                    <span className="tabular-nums">{active.quantite_entree}</span>
+                  </DetailField>
+                  <DetailField label="Prix d'achat">
+                    {active.prix_achat != null
+                      ? priceFmt.format(active.prix_achat)
+                      : emptyDash(null)}
+                  </DetailField>
+                  <DetailField label="Prix de vente">
+                    {active.prix_vente != null
+                      ? priceFmt.format(active.prix_vente)
+                      : emptyDash(null)}
+                  </DetailField>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <DetailField label="Modèles voiture">
+                  {parseModelVoiture(active.model_voiture).length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {parseModelVoiture(active.model_voiture).map((m) => (
+                        <Badge
+                          key={m}
+                          variant="secondary"
+                          className="rounded-full font-normal text-slate-700"
+                        >
+                          {m}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    emptyDash(null)
+                  )}
+                </DetailField>
+                <DetailField label="Description">
+                  <p className="whitespace-pre-wrap font-normal leading-relaxed text-slate-700">
+                    {active.description?.trim() ? active.description : "—"}
+                  </p>
+                </DetailField>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="gap-2 border-t border-slate-100 bg-white px-6 py-4 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl sm:w-auto"
+              onClick={() => setViewOpen(false)}
+            >
+              Fermer
+            </Button>
+            {active ? (
+              <Button
+                type="button"
+                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md hover:from-emerald-500 hover:to-teal-500 sm:w-auto"
+                onClick={() => {
+                  setViewOpen(false);
+                  openEdit(active);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Modifier
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={editOpen}
         onOpenChange={(o) => {
           setEditOpen(o);
           if (!o) resetEditForm();
         }}
       >
-        <DialogContent className="max-h-[min(90vh,720px)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 sm:max-w-lg">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/40 px-6 py-5">
-            <DialogHeader className="space-y-1 text-left">
-              <DialogTitle className="text-xl font-semibold text-slate-900">
+        <DialogContent
+          className={cn(
+            "flex max-h-[min(94vh,920px)] flex-col gap-0 overflow-hidden rounded-[28px] border-0 p-0 sm:max-w-2xl",
+            "shadow-[0_24px_80px_-12px_rgba(6,78,59,0.35)]",
+            "[&_[data-slot=dialog-close]]:right-5 [&_[data-slot=dialog-close]]:top-5",
+            "[&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/10",
+            "[&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:text-white",
+            "[&_[data-slot=dialog-close]]:hover:bg-white/20 [&_[data-slot=dialog-close]]:hover:text-white"
+          )}
+        >
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 px-6 py-6 text-white">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl" />
+            <DialogHeader className="relative space-y-1 text-left">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <Pencil className="h-5 w-5 text-emerald-200" />
+              </div>
+              <DialogTitle className="text-xl font-semibold tracking-tight text-white">
                 Modifier la pièce
               </DialogTitle>
-              <DialogDescription className="text-slate-600">
-                Mettez à jour l&apos;identification, le stock et les prix.
+              <DialogDescription className="text-sm text-emerald-100/80">
+                Mettez à jour l&apos;identification, les modèles, le stock et la photo.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <form onSubmit={handleEditSubmit} className="px-6 py-5">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Identification
-                </p>
-                <div className="grid gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-nom" className="text-slate-700">
-                      Nom <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="edit-nom"
-                      value={nom}
-                      onChange={(e) => setNom(e.target.value)}
-                      required
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor="edit-model_voiture"
-                        className="text-slate-700"
-                      >
-                        Modèle voiture
-                      </Label>
-                      <Input
-                        id="edit-model_voiture"
-                        value={modelVoiture}
-                        onChange={(e) => setModelVoiture(e.target.value)}
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor="edit-marque_piece"
-                        className="text-slate-700"
-                      >
-                        Marque pièce
-                      </Label>
-                      <Input
-                        id="edit-marque_piece"
-                        value={marquePiece}
-                        onChange={(e) => setMarquePiece(e.target.value)}
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-part_code" className="text-slate-700">
-                      Part code
-                    </Label>
-                    <Input
-                      id="edit-part_code"
-                      value={partCode}
-                      onChange={(e) => setPartCode(e.target.value)}
-                      className="h-11 rounded-xl border-slate-200 font-mono text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Stock &amp; prix
-                </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-qe" className="text-slate-700">
-                      Quantité entrée <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="edit-qe"
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={quantiteEntree}
-                      onChange={(e) => setQuantiteEntree(e.target.value)}
-                      required
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-prix_achat" className="text-slate-700">
-                      Prix d&apos;achat
-                    </Label>
-                    <Input
-                      id="edit-prix_achat"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={prixAchat}
-                      onChange={(e) => setPrixAchat(e.target.value)}
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-prix_vente" className="text-slate-700">
-                    Prix de vente
-                  </Label>
-                  <Input
-                    id="edit-prix_vente"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={prixVente}
-                    onChange={(e) => setPrixVente(e.target.value)}
-                    className="h-11 rounded-xl border-slate-200"
-                  />
-                </div>
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Détails
-                </p>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-desc" className="text-slate-700">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="edit-desc"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    className="min-h-[88px] resize-none rounded-xl border-slate-200"
-                  />
-                </div>
-              </div>
+          <form
+            onSubmit={handleEditSubmit}
+            className="flex min-h-0 flex-1 flex-col bg-slate-50/40"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              {editOpen ? renderFormFields() : null}
             </div>
-
-            <DialogFooter className="mt-8 flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-0 pb-0 pt-5 sm:flex-row sm:justify-end">
+            <DialogFooter className="gap-2 border-t border-slate-100 bg-white px-6 py-4 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
@@ -783,158 +1395,46 @@ export default function AjouterPiecesSavClient({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[min(90vh,720px)] gap-0 overflow-y-auto rounded-3xl border-slate-200/80 p-0 sm:max-w-lg">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/40 px-6 py-5">
-            <DialogHeader className="space-y-1 text-left">
-              <DialogTitle className="text-xl font-semibold text-slate-900">
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) resetForm();
+        }}
+      >
+        <DialogContent
+          className={cn(
+            "flex max-h-[min(94vh,920px)] flex-col gap-0 overflow-hidden rounded-[28px] border-0 p-0 sm:max-w-2xl",
+            "shadow-[0_24px_80px_-12px_rgba(6,78,59,0.35)]",
+            "[&_[data-slot=dialog-close]]:right-5 [&_[data-slot=dialog-close]]:top-5",
+            "[&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/10",
+            "[&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:text-white",
+            "[&_[data-slot=dialog-close]]:hover:bg-white/20 [&_[data-slot=dialog-close]]:hover:text-white"
+          )}
+        >
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 px-6 py-6 text-white">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl" />
+            <DialogHeader className="relative space-y-1 text-left">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <PackagePlus className="h-5 w-5 text-emerald-200" />
+              </div>
+              <DialogTitle className="text-xl font-semibold tracking-tight text-white">
                 Nouvelle pièce
               </DialogTitle>
-              <DialogDescription className="text-slate-600">
-                Renseignez l’identification, le stock et les prix.
+              <DialogDescription className="text-sm text-emerald-100/80">
+                Identification, modèles compatibles, stock et photo de la pièce.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-5">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Identification
-                </p>
-                <div className="grid gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="nom" className="text-slate-700">
-                      Nom <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="nom"
-                      value={nom}
-                      onChange={(e) => setNom(e.target.value)}
-                      required
-                      placeholder="Ex. Filtre à huile"
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="model_voiture" className="text-slate-700">
-                        Modèle voiture
-                      </Label>
-                      <Input
-                        id="model_voiture"
-                        value={modelVoiture}
-                        onChange={(e) => setModelVoiture(e.target.value)}
-                        placeholder="Optionnel"
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="marque_piece" className="text-slate-700">
-                        Marque pièce
-                      </Label>
-                      <Input
-                        id="marque_piece"
-                        value={marquePiece}
-                        onChange={(e) => setMarquePiece(e.target.value)}
-                        placeholder="Optionnel"
-                        className="h-11 rounded-xl border-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="part_code" className="text-slate-700">
-                      Part code
-                    </Label>
-                    <Input
-                      id="part_code"
-                      value={partCode}
-                      onChange={(e) => setPartCode(e.target.value)}
-                      placeholder="Référence constructeur"
-                      className="h-11 rounded-xl border-slate-200 font-mono text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Stock &amp; prix
-                </p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="qe" className="text-slate-700">
-                      Quantité entrée <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="qe"
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={quantiteEntree}
-                      onChange={(e) => setQuantiteEntree(e.target.value)}
-                      required
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="prix_achat" className="text-slate-700">
-                      Prix d&apos;achat
-                    </Label>
-                    <Input
-                      id="prix_achat"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={prixAchat}
-                      onChange={(e) => setPrixAchat(e.target.value)}
-                      placeholder="0"
-                      className="h-11 rounded-xl border-slate-200"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="prix_vente" className="text-slate-700">
-                    Prix de vente
-                  </Label>
-                  <Input
-                    id="prix_vente"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={prixVente}
-                    onChange={(e) => setPrixVente(e.target.value)}
-                    placeholder="0"
-                    className="h-11 rounded-xl border-slate-200"
-                  />
-                </div>
-              </div>
-
-              <Separator className="bg-slate-100" />
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Détails
-                </p>
-                <div className="grid gap-2">
-                  <Label htmlFor="desc" className="text-slate-700">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="desc"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    placeholder="Notes, condition, emplacement…"
-                    className="min-h-[88px] resize-none rounded-xl border-slate-200"
-                  />
-                </div>
-              </div>
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-1 flex-col bg-slate-50/40"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              {dialogOpen ? renderFormFields() : null}
             </div>
-
-            <DialogFooter className="mt-8 flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-0 pb-0 pt-5 sm:flex-row sm:justify-end">
+            <DialogFooter className="gap-2 border-t border-slate-100 bg-white px-6 py-4 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"

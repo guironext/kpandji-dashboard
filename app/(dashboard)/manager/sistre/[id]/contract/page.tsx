@@ -5,6 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { getSistreInvoice, type SistreInvoice } from "@/lib/actions/sistre";
+import {
+  buildSistreContractWordBlob,
+  getSistreContractWordFileName,
+} from "@/lib/export-sistre-contract-word";
+import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft } from "lucide-react";
 
@@ -16,6 +21,7 @@ export default function SalesContractPage() {
   const [invoice, setInvoice] = useState<SistreInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -239,172 +245,216 @@ export default function SalesContractPage() {
   <title>Sales Contract - Print</title>
   <style>
     @page {
-      size: A4;
-      margin: 2cm;
+      size: A4 portrait;
+      margin: 8mm 10mm 12mm 10mm;
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
-    body {
+
+    html, body {
       font-family: 'Times New Roman', serif;
-      font-size: 11pt;
-      line-height: 1.6;
+      font-size: 10pt;
+      line-height: 1.32;
       color: #000;
-      background: #fff;
+      background: #e5e5e5;
       counter-reset: page;
     }
-    
+
     .page {
-      width: 21cm;
-      min-height: 29.7cm;
-      padding: 1.5cm;
-      margin: 0 auto;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 8mm 10mm 14mm;
+      margin: 8mm auto;
       background: white;
       page-break-after: always;
+      break-after: page;
       position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 8px rgba(0,0,0,0.12);
       counter-increment: page;
     }
 
-    .header-title-sistre {
-     display: flex-end;
-     text-align: right;
-     font-style: italic;
-      width: 100%;
-      font-size: 18pt;
-      font-weight: bold;
-      margin-bottom: 0.5cm;
-      text-transform: uppercase;
-      border-bottom: 2px solid #000;
-      
-    }
-    
     .page:last-child {
       page-break-after: auto;
+      break-after: auto;
     }
-    
+
+    .header-title-sistre {
+      text-align: right;
+      font-style: italic;
+      width: 100%;
+      font-size: 12pt;
+      font-weight: bold;
+      margin-bottom: 3mm;
+      padding-bottom: 1.5mm;
+      text-transform: uppercase;
+      border-bottom: 1.5pt solid #000;
+    }
+
     .page-number {
       position: absolute;
-      bottom: 1cm;
-      right: 2cm;
-      font-size: 10pt;
+      bottom: 5mm;
+      right: 10mm;
+      font-size: 8pt;
       color: #666;
     }
-    
+
     .page-number::after {
       content: "Page " counter(page);
     }
-    
+
     h1 {
       text-align: center;
-      font-size: 18pt; 
+      font-size: 14pt;
       font-weight: bold;
-      margin-bottom: 0.5cm;
+      margin-bottom: 3.5mm;
       text-transform: uppercase;
     }
-    
+
     .header-info {
       display: flex;
       justify-content: space-between;
-      font-size: 10pt;
-      margin-bottom: 0.5cm;
+      font-size: 9.5pt;
+      margin-bottom: 3.5mm;
     }
-    
+
     .parties {
       display: flex;
       width: 100%;
       justify-content: space-between;
-      margin-bottom: 1cm;
-      font-size: 10pt;
+      gap: 8mm;
+      margin-bottom: 3.5mm;
+      font-size: 9.5pt;
     }
-    
-   
-    
+
+    .party {
+      width: 48%;
+    }
+
+    .party p {
+      margin-bottom: 0.8mm;
+    }
+
     .party-title {
       font-weight: bold;
-     
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 0.5cm 0;
-      font-size: 10pt;
+      margin: 2mm 0 3mm;
+      font-size: 9pt;
     }
-    
+
     table th,
     table td {
       border: 1px solid #000;
-      padding: 0.3cm;
+      padding: 1.4mm 2mm;
       text-align: left;
     }
-    
+
     table th {
       background-color: #f0f0f0;
       font-weight: bold;
       text-align: center;
     }
-    
+
     table td.text-right {
       text-align: right;
     }
-    
+
     table td.text-center {
       text-align: center;
     }
-    
+
     .section {
-      margin-bottom: 0.8cm;
-      font-size: 10pt;
+      margin-bottom: 3mm;
+      font-size: 9.5pt;
     }
-    
+
     .section-title {
       font-weight: bold;
-      margin-bottom: 0.3cm;
+      margin-bottom: 1.2mm;
     }
-    
+
     .section-content {
-      margin-left: 0.5cm;
+      margin-left: 4mm;
+      text-align: justify;
     }
-    
+
     .section-content p {
-      margin-bottom: 0.3cm;
+      margin-bottom: 1.5mm;
     }
-    
+
+    .intro {
+      margin-bottom: 3mm;
+      font-size: 9.5pt;
+      text-align: justify;
+    }
+
     .signatures {
       display: flex;
       justify-content: space-between;
-      margin-top: 2cm;
-      margin-bottom: 2cm;
+      gap: 8mm;
+      margin-top: 6mm;
+      margin-bottom: 4mm;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
-    
+
     .signature-block {
       width: 48%;
+      font-size: 9.5pt;
     }
-    
+
     .signature-block p {
-      margin-bottom: 0.3cm;
+      margin-bottom: 1.5mm;
     }
-    
+
     .signature-line {
       border-top: 1px solid #000;
-      width: 8cm;
-      margin-top: 1cm;
-      margin-bottom: 0.3cm;
+      width: 70mm;
+      margin-top: 4mm;
+      margin-bottom: 1.5mm;
     }
-    
+
+    .stamp-row {
+      display: flex;
+      gap: 6mm;
+      align-items: center;
+      margin-bottom: 2mm;
+    }
+
+    .stamp-row img {
+      max-width: 22mm;
+      max-height: 22mm;
+      object-fit: contain;
+    }
+
     @media print {
-      body {
+      html, body {
+        width: 210mm;
         background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
-      
+
       .page {
         box-shadow: none;
         margin: 0;
+        width: auto;
+        min-height: 0;
+        padding: 0 0 10mm;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
     }
   </style>
@@ -439,7 +489,7 @@ export default function SalesContractPage() {
       </div>
     </div>
     
-    <p style="margin-bottom: 0.8cm;">
+    <p class="intro">
       The undersigned Seller and Buyer have agreed to close the following
       transactions according to the terms and conditions set forth as below:
     </p>
@@ -449,7 +499,7 @@ export default function SalesContractPage() {
       <table>
         <thead>
           <tr>
-            <th>N°</th>
+            <th>No.</th>
             <th>Description</th>
             <th>Qty</th>
             <th>U/Price</th>
@@ -486,7 +536,7 @@ export default function SalesContractPage() {
           </tr>
         </tbody>
       </table>
-      <p style="margin-top: 0.5cm;">
+      <p style="margin-top: 2mm;">
         TOTAL FOB Qingdao, China : USD $${formatCurrency(
           totalAmount
         )} (SAY US DOLLAR ${totalInWords.toUpperCase()} ONLY)
@@ -562,7 +612,7 @@ export default function SalesContractPage() {
       <p class="section-content">
         10.4.The Seller shall present the following documents with three sets of copies to the Buyer：
       </p>
-      <p class="section-content" style="margin-left: 1cm;">
+      <p class="section-content" style="margin-left: 8mm;">
         - Full set of clean on Board Ocean Bills of Lading.<br>
         - Original Commercial Invoice<br>
         - Original Packing List
@@ -586,28 +636,23 @@ export default function SalesContractPage() {
     <div class="section">
       <p class="section-title">12. PORT OF SHIPMENT : Any port, P.R.China</p>
     </div>
-
+    <div class="section">
+      <p class="section-title">13. PORT OF DESTINATION : Abidjan PORT, Cote d'Ivoire</p>
+    </div>
+    <div class="section">
+      <p class="section-title">14. PARTIAL SHIPMENT : Allowed</p>
+    </div>
+    <div class="section">
+      <p class="section-title">15. TRANSSHIPMENT : Allowed</p>
+    </div>
 
     <div class="page-number"></div>
   </div>
   
   <div class="page">
-    
   <div class="header-title-sistre"> 
     SISTRE GLOBAL SOURCING PTE LTD
-  </div>  
-    
-    <div class="section">
-      <p class="section-title">13. PORT OF DESTINATION : Abidjan PORT, Cote D'lvoire</p>
-    </div>
-    
-    <div class="section">
-      <p class="section-title">14. PARTIAL SHIPMENT : Allowed</p>
-    </div>
-    
-    <div class="section">
-      <p class="section-title">15. TRANSSHIPMENT : Allowed</p>
-    </div>
+  </div>
     <div class="section">
       <p class="section-title">16. INSPECTION :</p>
       <p class="section-content">
@@ -657,7 +702,7 @@ export default function SalesContractPage() {
         18.1 The Seller shall only accept claims from the Buyer in accordance with this sales contract and shall not accept claims from any third parties and/or vehicle users; pursuant to this sales contract, claimable amount by the Buyer from the Seller shall not exceed the non-conformity quality of commodity parts and spare parts total value supplied by The Seller; The Seller shall not be liable for the Buyer's investment funds, equipment, personnel direct and/or indirect losses and the Buyer's expected losses on vehicle assembling and selling during the performance of this Sales Contract.
       </p>
       <p class="section-content">
-        18.2 The Buyer warrants that it has complete and comprehensive understandings and has behaved and/or carried out its operations in strict accordance with the laws and regulations in Cote D'Ivoire. Before selling, the Buyer shall establish its own whole vehicle quality standard, whole vehicle inspection and acceptance standards and assemble vehicles according to such standards and make necessary and enough adaptability tests to make sure that the assembled vehicles meet the requirements of the local laws, regulations and quality standard. The quality of the vehicles assembled by the Buyer and the quality defects of the commodity parts caused in welding and assembling should be bear by the Buyer.
+        18.2 The Buyer warrants that it has complete and comprehensive understandings and has behaved and/or carried out its operations in strict accordance with the laws and regulations in Cote d'Ivoire. Before selling, the Buyer shall establish its own whole vehicle quality standard, whole vehicle inspection and acceptance standards and assemble vehicles according to such standards and make necessary and enough adaptability tests to make sure that the assembled vehicles meet the requirements of the local laws, regulations and quality standard. The quality of the vehicles assembled by the Buyer and the quality defects of the commodity parts caused in welding and assembling should be bear by the Buyer.
       </p>
     </div>
     
@@ -700,13 +745,6 @@ export default function SalesContractPage() {
       </p>
     </div>
     
-    <div class="page-number"></div>
-  </div>
-  
-  <div class="page">
-    <div class="header-title-sistre"> 
-    SISTRE GLOBAL SOURCING PTE LTD
-  </div>   
     <div class="section">
       <p class="section-title">23. ARBITRATE CLAUSE :</p>
       <p class="section-content">
@@ -756,14 +794,14 @@ export default function SalesContractPage() {
         <p><strong>SELLER:</strong></p>
         <p><strong>SISTRE GLOBAL SOURCING PTE LTD</strong></p>
         <p>Name of the authorized representative:</p>
-        <p style="margin-bottom: 0.5cm;">YONG WEI FONG</p>
-        <div style="display: flex; gap: 1cm; margin-bottom: 0.5cm;">
-          <img src="${baseUrl}/sistre2.png" alt="Seller signature" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
-          <img src="${baseUrl}/sistre3.png" alt="Seller signature" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
+        <p style="margin-bottom: 2mm;">YONG WEI FONG</p>
+        <div class="stamp-row">
+          <img src="${baseUrl}/sistre2.png" alt="Seller signature" />
+          <img src="${baseUrl}/sistre3.png" alt="Seller signature" />
         </div>
         <div class="signature-line"></div>
         <p>Seal and signature:</p>
-        <p style="margin-top: 0.5cm;">Date: ${formatDateShort(
+        <p style="margin-top: 3mm;">Date: ${formatDateShort(
           invoice.invoiceDate
         )}</p>
       </div>
@@ -772,13 +810,13 @@ export default function SalesContractPage() {
         <p><strong>BUYER:</strong></p>
         <p><strong>KPANDJI AUTOMOBILES</strong></p>
         <p>Name of the authorized representative:</p>
-        <p style="margin-bottom: 1.4cm;">KOUAME NDA NGORAN BERNARD</p>
-        <div style="display: flex; gap: 1cm; margin-bottom: 0.5cm;">
-          <img src="${baseUrl}/sistre4.png" alt="Buyer signature" style="max-width: 100px; max-height: 100px; object-fit: contain;" />
+        <p style="margin-bottom: 8mm;">KOUAME NDA NGORAN BERNARD</p>
+        <div class="stamp-row">
+          <img src="${baseUrl}/sistre4.png" alt="Buyer signature" />
         </div>
         <div class="signature-line"></div>
         <p>Seal and signature:</p>
-        <p style="margin-top: 1.5cm;">Date: ${formatDateShort(
+        <p style="margin-top: 3mm;">Date: ${formatDateShort(
           invoice.invoiceDate
         )}</p>
       </div>
@@ -800,6 +838,27 @@ export default function SalesContractPage() {
     }, 250);
   };
 
+  const handleExportToWord = async () => {
+    try {
+      setExporting(true);
+      const blob = await buildSistreContractWordBlob({
+        invoice,
+        contractNumber,
+        formattedDate: formatDate(invoice.invoiceDate),
+        formattedDateShort: formatDateShort(invoice.invoiceDate),
+        totalAmountFormatted: formatCurrency(totalAmount),
+        totalInWords,
+      });
+      saveAs(blob, getSistreContractWordFileName(contractNumber));
+      toast.success("Contract exported to Word");
+    } catch (exportError) {
+      console.error("Export to Word error:", exportError);
+      toast.error("Failed to export contract to Word");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col w-full bg-gray-50 p-8">
@@ -817,6 +876,20 @@ export default function SalesContractPage() {
             className="ml-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-md"
           >
             Print Contract
+          </Button>
+          <Button
+            onClick={handleExportToWord}
+            disabled={exporting}
+            className="ml-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-md"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              "Export To Word"
+            )}
           </Button>
         </div>
 
@@ -874,7 +947,7 @@ export default function SalesContractPage() {
             <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 p-2 text-left">N°</th>
+                  <th className="border border-gray-300 p-2 text-left">No.</th>
                   <th className="border border-gray-300 p-2 text-left">
                     Description
                   </th>
@@ -1064,7 +1137,7 @@ export default function SalesContractPage() {
           {/* Section 13 */}
           <div className="mb-4 text-sm">
             <p className="font-semibold mb-2">
-              13. PORT OF DESTINATION : Abidjan PORT, Cote D&apos;lvoire
+              13. PORT OF DESTINATION : Abidjan PORT, Cote d&apos;Ivoire
             </p>
           </div>
 
@@ -1193,7 +1266,7 @@ export default function SalesContractPage() {
             <p className="ml-4 mt-2">
               18.2 The Buyer warrants that it has complete and comprehensive
               understandings and has behaved and/or carried out its operations
-              in strict accordance with the laws and regulations in Cote D&apos;Ivoire.
+              in strict accordance with the laws and regulations in Cote d&apos;Ivoire.
               Before selling, the Buyer shall establish its own whole vehicle
               quality standard, whole vehicle inspection and acceptance
               standards and assemble vehicles according to such standards and

@@ -4,12 +4,18 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { getSistreInvoice, type SistreInvoice } from "@/lib/actions/sistre";
+import {
+  buildSistreInvoiceWordBlob,
+  getSistreInvoiceWordFileName,
+} from "@/lib/export-sistre-invoice-word";
+import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import {
   Loader2,
   ArrowLeft,
   Printer,
   FileText,
+  FileDown,
   Receipt,
   AlertCircle,
 } from "lucide-react";
@@ -35,6 +41,7 @@ export default function SistreInvoiceDetailPage() {
   const [invoice, setInvoice] = useState<SistreInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -46,14 +53,14 @@ export default function SistreInvoiceDetailPage() {
           setInvoice(result.data);
           setError(null);
         } else {
-          setError(result.error || "Erreur lors du chargement du reçu");
-          toast.error(result.error || "Erreur lors du chargement du reçu");
+          setError(result.error || "Error loading the invoice");
+          toast.error(result.error || "Error loading the invoice");
         }
       } catch (error) {
         const errorMessage =
           error instanceof Error
             ? error.message
-            : "Une erreur est survenue lors du chargement";
+            : "An error occurred while loading";
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
@@ -64,13 +71,13 @@ export default function SistreInvoiceDetailPage() {
     if (invoiceId) {
       fetchInvoice();
     } else {
-      toast.error("ID de reçu manquant");
+      toast.error("Invoice ID is missing");
       router.push("/manager/sistre");
     }
   }, [invoiceId, router]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -168,14 +175,14 @@ export default function SistreInvoiceDetailPage() {
 
   const handlePrint = () => {
     if (!invoice) {
-      toast.error("Aucun reçu à imprimer");
+      toast.error("No invoice to print");
       return;
     }
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       toast.error(
-        "Impossible d'ouvrir la fenêtre d'impression. Veuillez autoriser les pop-ups."
+        "Unable to open the print window. Please allow pop-ups."
       );
       return;
     }
@@ -208,7 +215,7 @@ export default function SistreInvoiceDetailPage() {
             .join("")
         : `
         <tr>
-          <td colspan="5" style="padding: 32px; text-align: center; color: #000;">Aucun article trouvé</td>
+          <td colspan="5" style="padding: 32px; text-align: center; color: #000;">No items found</td>
         </tr>
       `;
 
@@ -481,11 +488,11 @@ export default function SistreInvoiceDetailPage() {
           <table>
             <thead>
               <tr>
-                <th>N°</th>
+                <th>No.</th>
                 <th>Description</th>
-                <th class="text-center">Quantité</th>
-                <th class="text-right">Prix Unitaire</th>
-                <th class="text-right">Montant</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -508,7 +515,7 @@ export default function SistreInvoiceDetailPage() {
             <div class="total-fob-text">
               TOTAL FOB SHANGHAI, China : USD $${formatCurrency(
                 invoice.total
-              )} (SAY US DALLAR ${numberToEnglish(
+              )} (SAY US DOLLAR ${numberToEnglish(
       Math.floor(invoice.total)
     )} ONLY)
             </div>
@@ -578,13 +585,36 @@ export default function SistreInvoiceDetailPage() {
     };
   };
 
+  const handleExportToWord = async () => {
+    if (!invoice) {
+      toast.error("No invoice to export");
+      return;
+    }
+
+    try {
+      setExporting(true);
+      const blob = await buildSistreInvoiceWordBlob({
+        invoice,
+        formattedDate: formatDate(invoice.invoiceDate),
+        totalInWords: numberToEnglish(Math.floor(invoice.total)),
+      });
+      saveAs(blob, getSistreInvoiceWordFileName(invoice.invoiceNumber));
+      toast.success("Invoice exported to Word");
+    } catch (exportError) {
+      console.error("Export to Word error:", exportError);
+      toast.error("Failed to export invoice to Word");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6">
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-amber-200/60 bg-white/80 px-10 py-12 shadow-lg backdrop-blur-sm">
           <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
           <p className="text-sm font-medium text-slate-600">
-            Chargement du reçu...
+            Loading invoice...
           </p>
         </div>
       </div>
@@ -601,7 +631,7 @@ export default function SistreInvoiceDetailPage() {
             className="border-amber-300 text-slate-800 hover:bg-amber-50"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour
+            Back
           </Button>
           <Card className="border-red-200/80 shadow-xl">
             <CardContent className="flex flex-col items-center gap-4 p-8 text-center sm:p-12">
@@ -609,7 +639,7 @@ export default function SistreInvoiceDetailPage() {
                 <AlertCircle className="h-8 w-8 text-red-500" />
               </div>
               <p className="text-xl font-semibold text-slate-900">
-                Reçu introuvable
+                Invoice not found
               </p>
               {error && (
                 <p className="max-w-md text-sm text-red-600">{error}</p>
@@ -641,7 +671,7 @@ export default function SistreInvoiceDetailPage() {
             className="shrink-0 border-amber-300 text-slate-800 hover:bg-amber-50 sm:size-default"
           >
             <ArrowLeft className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Retour</span>
+            <span className="hidden sm:inline">Back</span>
           </Button>
 
           <div className="flex min-w-0 flex-1 flex-col items-center gap-1 sm:items-start">
@@ -662,7 +692,23 @@ export default function SistreInvoiceDetailPage() {
             className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 font-semibold text-white shadow-md hover:from-amber-600 hover:to-orange-600 sm:size-default"
           >
             <Printer className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Imprimer</span>
+            <span className="hidden sm:inline">Print</span>
+          </Button>
+
+          <Button
+            onClick={handleExportToWord}
+            disabled={exporting}
+            size="sm"
+            className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 font-semibold text-white shadow-md hover:from-amber-600 hover:to-orange-600 sm:size-default"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+            ) : (
+              <FileDown className="h-4 w-4 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">
+              {exporting ? "Exporting..." : "Export to Word"}
+            </span>
           </Button>
         </div>
       </div>
@@ -750,7 +796,7 @@ export default function SistreInvoiceDetailPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                         <div>
                           <span className="font-semibold text-slate-800">
-                            QuantitÃ©
+                            Quantity
                           </span>
                           <p className="mt-0.5 font-bold text-black">
                             {item.quantity}
@@ -758,7 +804,7 @@ export default function SistreInvoiceDetailPage() {
                         </div>
                         <div className="text-right">
                           <span className="font-semibold text-slate-800">
-                            Prix unitaire
+                            Unit Price
                           </span>
                           <p className="mt-0.5 font-medium text-black">
                             {formatCurrency(item.unitPrice)}
@@ -769,7 +815,7 @@ export default function SistreInvoiceDetailPage() {
                   ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
-                    Aucun article trouvÃ©
+                    No items found
                   </div>
                 )}
               </div>
@@ -779,19 +825,19 @@ export default function SistreInvoiceDetailPage() {
                   <TableHeader>
                     <TableRow className="border-b-2 border-amber-200/60 bg-gradient-to-r from-gray-50 via-amber-50/60 to-orange-50/40">
                       <TableHead className="py-3 text-xs font-extrabold uppercase tracking-wide">
-                        NÂ°
+                        No.
                       </TableHead>
                       <TableHead className="py-3 text-xs font-extrabold uppercase tracking-wide">
                         Description
                       </TableHead>
                       <TableHead className="py-3 text-center text-xs font-extrabold uppercase tracking-wide">
-                        QuantitÃ©
+                        Quantity
                       </TableHead>
                       <TableHead className="py-3 text-right text-xs font-extrabold uppercase tracking-wide">
-                        Prix Unitaire
+                        Unit Price
                       </TableHead>
                       <TableHead className="py-3 text-right text-xs font-extrabold uppercase tracking-wide">
-                        Montant
+                        Amount
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -825,7 +871,7 @@ export default function SistreInvoiceDetailPage() {
                           colSpan={5}
                           className="py-10 text-center text-slate-500"
                         >
-                          Aucun article trouvÃ©
+                          No items found
                         </TableCell>
                       </TableRow>
                     )}
@@ -848,7 +894,7 @@ export default function SistreInvoiceDetailPage() {
             <div className="mt-4 border-y border-black py-3 sm:py-4">
               <p className="text-xs font-semibold leading-relaxed sm:text-sm">
                 TOTAL FOB SHANGHAI, China : USD $
-                {formatCurrency(invoice.total)} (SAY US DALLAR{" "}
+                {formatCurrency(invoice.total)} (SAY US DOLLAR{" "}
                 {numberToEnglish(Math.floor(invoice.total))} ONLY)
               </p>
             </div>
@@ -857,7 +903,7 @@ export default function SistreInvoiceDetailPage() {
               <p className="w-fit border-b border-black pb-1 text-sm font-semibold capitalize">
                 * Terms and Conditions apply: 100% TT
               </p>
-              <p>a) Place of delivery: Port Abidjan, CÃ´te d&apos;Ivoire</p>
+              <p>a) Place of delivery: Port Abidjan, Cote d&apos;Ivoire</p>
               <p>
                 b) Time of delivery: Shipment within 30 days after receipt the
                 total payment.

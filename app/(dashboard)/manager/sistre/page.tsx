@@ -38,20 +38,20 @@ import {
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("fr-FR", {
+  new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 
 const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("fr-FR", {
+  new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
 
 const formatTime = (dateString: string) =>
-  new Date(dateString).toLocaleTimeString("fr-FR", {
+  new Date(dateString).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -159,19 +159,19 @@ function InvoiceCard({
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
             <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-              Articles
+              Items
             </p>
             <p className="text-sm font-semibold text-slate-800">
-              {invoice.lineItems.length} ligne
+              {invoice.lineItems.length} line
               {invoice.lineItems.length > 1 ? "s" : ""}
             </p>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
             <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-              Quantité
+              Quantity
             </p>
             <p className="text-sm font-semibold text-slate-800">
-              {totalQuantity} unité{totalQuantity > 1 ? "s" : ""}
+              {totalQuantity} unit{totalQuantity > 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -190,8 +190,7 @@ function InvoiceCard({
             ))}
             {invoice.lineItems.length > 2 && (
               <p className="pl-7 text-xs text-slate-400">
-                +{invoice.lineItems.length - 2} autre
-                {invoice.lineItems.length - 2 > 1 ? "s" : ""} article
+                +{invoice.lineItems.length - 2} more item
                 {invoice.lineItems.length - 2 > 1 ? "s" : ""}
               </p>
             )}
@@ -205,7 +204,7 @@ function InvoiceCard({
             size="sm"
           >
             <Receipt className="mr-1.5 h-4 w-4" />
-            Voir le reçu
+            View receipt
             <ChevronRight className="ml-auto h-4 w-4 opacity-70 sm:ml-1.5" />
           </Button>
           <Button
@@ -215,7 +214,7 @@ function InvoiceCard({
             size="sm"
           >
             <FileTextIcon className="mr-1.5 h-4 w-4" />
-            Contrat
+            Contract
           </Button>
         </div>
       </div>
@@ -284,10 +283,10 @@ const Page = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Reçus SISTRE
+              SISTRE Receipts
             </h1>
             <p className="mt-0.5 text-sm text-slate-500">
-              Gérez et consultez tous vos reçus SISTRE
+              Manage and view all your SISTRE receipts
             </p>
           </div>
         </div>
@@ -297,7 +296,7 @@ const Page = () => {
           size="lg"
         >
           <Sparkles className="mr-2 h-5 w-5" />
-          Créer un Nouveau Reçu
+          Create a New Receipt
         </Button>
       </div>
 
@@ -306,23 +305,23 @@ const Page = () => {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           <StatCard
             icon={Receipt}
-            label="Total reçus"
+            label="Total receipts"
             value={String(invoices.length)}
-            sub="Enregistrés dans le système"
+            sub="Saved in the system"
             accent="amber"
           />
           <StatCard
             icon={TrendingUp}
-            label="Montant cumulé"
+            label="Total amount"
             value={formatCurrency(stats.totalAmount)}
-            sub="Tous les reçus confondus"
+            sub="Across all receipts"
             accent="orange"
           />
           <StatCard
             icon={Package}
-            label="Lignes d'articles"
+            label="Line items"
             value={String(stats.totalItems)}
-            sub="Articles sur l'ensemble des reçus"
+            sub="Items across all receipts"
             accent="emerald"
           />
         </div>
@@ -338,12 +337,12 @@ const Page = () => {
               </div>
               <div>
                 <CardTitle className="text-lg text-slate-900">
-                  Liste des Reçus
+                  Receipts List
                 </CardTitle>
                 <CardDescription>
                   {!loading && !error
-                    ? `${filteredInvoices.length} reçu${filteredInvoices.length !== 1 ? "s" : ""}${searchTerm ? ` sur ${invoices.length}` : ""}`
-                    : "Chargement…"}
+                    ? `${filteredInvoices.length} receipt${filteredInvoices.length !== 1 ? "s" : ""}${searchTerm ? ` of ${invoices.length}` : ""}`
+                    : "Loading…"}
                 </CardDescription>
               </div>
             </div>
@@ -352,7 +351,7 @@ const Page = () => {
               <div className="relative w-full lg:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Rechercher par numéro ou article…"
+                  placeholder="Search by number or item…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="border-slate-200 bg-white pl-10 pr-10 focus-visible:ring-amber-500"
@@ -362,7 +361,7 @@ const Page = () => {
                     type="button"
                     onClick={() => setSearchTerm("")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                    aria-label="Effacer la recherche"
+                    aria-label="Clear search"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -376,7 +375,7 @@ const Page = () => {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 sm:py-20">
               <Loader2 className="mb-4 h-10 w-10 animate-spin text-amber-500 sm:h-12 sm:w-12" />
-              <p className="text-base text-slate-500">Chargement des reçus…</p>
+              <p className="text-base text-slate-500">Loading receipts…</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-red-100 bg-red-50/50 px-6 py-16 text-center">
@@ -385,7 +384,7 @@ const Page = () => {
               </div>
               <p className="text-lg font-semibold text-red-700">{error}</p>
               <p className="mt-1 text-sm text-red-500/80">
-                Veuillez réessayer plus tard
+                Please try again later
               </p>
             </div>
           ) : filteredInvoices.length === 0 ? (
@@ -396,17 +395,17 @@ const Page = () => {
                     <Search className="h-7 w-7 text-amber-600" />
                   </div>
                   <p className="text-lg font-semibold text-slate-800">
-                    Aucun résultat trouvé
+                    No results found
                   </p>
                   <p className="mt-1 max-w-sm text-sm text-slate-500">
-                    Aucun reçu ne correspond à « {searchTerm} »
+                    No receipt matches &ldquo;{searchTerm}&rdquo;
                   </p>
                   <Button
                     onClick={() => setSearchTerm("")}
                     variant="outline"
                     className="mt-5"
                   >
-                    Réinitialiser la recherche
+                    Reset search
                   </Button>
                 </>
               ) : (
@@ -415,17 +414,17 @@ const Page = () => {
                     <FileText className="h-8 w-8 text-amber-600" />
                   </div>
                   <p className="text-lg font-semibold text-slate-800">
-                    Aucun reçu créé
+                    No receipts created
                   </p>
                   <p className="mt-1 max-w-md text-sm text-slate-500">
-                    Commencez par créer votre premier reçu SISTRE
+                    Start by creating your first SISTRE receipt
                   </p>
                   <Button
                     onClick={() => router.push("/manager/sistre/creer-invoice")}
                     className="mt-5 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                   >
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Créer le Premier Reçu
+                    Create the First Receipt
                   </Button>
                 </>
               )}
@@ -454,16 +453,16 @@ const Page = () => {
                   <TableHeader>
                     <TableRow className="border-b border-amber-100/80 bg-gradient-to-r from-slate-50 via-amber-50/40 to-orange-50/30 hover:bg-transparent">
                       <TableHead className="py-4 pl-2 font-semibold text-slate-700">
-                        Numéro
+                        Number
                       </TableHead>
                       <TableHead className="py-4 font-semibold text-slate-700">
-                        Articles
+                        Items
                       </TableHead>
                       <TableHead className="py-4 text-center font-semibold text-slate-700">
-                        Qté
+                        Qty
                       </TableHead>
                       <TableHead className="py-4 text-right font-semibold text-slate-700">
-                        Montant
+                        Amount
                       </TableHead>
                       <TableHead className="py-4 font-semibold text-slate-700">
                         Date
@@ -506,7 +505,7 @@ const Page = () => {
                               ))}
                               {invoice.lineItems.length > 2 && (
                                 <span className="text-xs text-slate-400">
-                                  +{invoice.lineItems.length - 2} autre(s)
+                                  +{invoice.lineItems.length - 2} more
                                 </span>
                               )}
                             </div>
@@ -545,7 +544,7 @@ const Page = () => {
                                 className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
                               >
                                 <Receipt className="mr-1.5 h-3.5 w-3.5" />
-                                Reçu
+                                Receipt
                               </Button>
                               <Button
                                 onClick={() =>
@@ -558,7 +557,7 @@ const Page = () => {
                                 className="border-orange-200 text-orange-700 hover:bg-orange-50"
                               >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
-                                Contrat
+                                Contract
                               </Button>
                             </div>
                           </TableCell>

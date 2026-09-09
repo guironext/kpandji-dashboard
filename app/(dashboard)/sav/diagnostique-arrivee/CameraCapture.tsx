@@ -26,12 +26,14 @@ export default function CameraCapture({
   onCancel,
   onStreamChange,
   onNativeFallback,
+  fileNamePrefix = "defaut-vehicule",
 }: {
   initialStream: MediaStream;
   onCapture: (file: File) => void;
   onCancel: () => void;
   onStreamChange?: (stream: MediaStream) => void;
   onNativeFallback?: () => void;
+  fileNamePrefix?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export default function CameraCapture({
         );
       });
 
-      const file = new File([blob], `defaut-vehicule-${Date.now()}.jpg`, {
+      const file = new File([blob], `${fileNamePrefix}-${Date.now()}.jpg`, {
         type: "image/jpeg",
       });
       onCapture(file);

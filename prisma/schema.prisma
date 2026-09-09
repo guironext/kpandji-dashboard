@@ -52,16 +52,25 @@ model User {
   JournalPublication                 JournalPublication[]
   DossierContentieux                 DossierContentieux[]
   ProjetPonctuel                     ProjetPonctuel[]
-  ProjetPonctuelResponsable         ProjetPonctuelResponsable[]
+  ProjetPonctuelResponsable          ProjetPonctuelResponsable[]
   ProjetPonctuelActivite             ProjetPonctuelActivite[]
   ProjetPonctuelDocument             ProjetPonctuelDocument[]
   ProjetPonctuelActiviteMessage      ProjetPonctuelActiviteMessage[]
-  ResponsableProjetRoutine          ResponsableProjetRoutine[]
-  ResponsableTacheResponsable       ResponsableTacheResponsable[]
-  TacheActiviteProjetRoutineCreated TacheActiviteProjetRoutine[] @relation("TacheCreatedBy")
+  ResponsableProjetRoutine           ResponsableProjetRoutine[]
+  ResponsableTacheResponsable        ResponsableTacheResponsable[]
+  TacheActiviteProjetRoutineCreated  TacheActiviteProjetRoutine[]        @relation("TacheCreatedBy")
   JournalProspect                    JournalProspect[]
   CartographieCompte                 CartographieCompte[]
   Portefeuille                       Portefeuille[]
+  FinanceProjetCreated               FinanceProjet[]                     @relation("FinanceProjetCreatedBy")
+  FinanceProjetResponsable           FinanceProjetResponsable[]
+  FinancePlanActionResponsable       FinancePlanAction[]                 @relation("FinancePlanActionResponsable")
+  FinancePlanActionActeur            FinancePlanActionActeur[]
+  FinancePlanActionTacheResponsable  FinancePlanActionTache[]            @relation("FinancePlanActionTacheResponsable")
+  FinanceProjetRapport               FinanceProjetRapport[]
+  FinanceBudgetCreated               FinanceBudget[]                     @relation("FinanceBudgetCreatedBy")
+  FinanceDepenseCreated              FinanceDepense[]                    @relation("FinanceDepenseCreatedBy")
+  FinanceDepenseValidated            FinanceDepense[]                    @relation("FinanceDepenseValidatedBy")
 }
 
 model Message {
@@ -76,27 +85,28 @@ model Message {
 }
 
 model Client {
-  id                String              @id @default(uuid())
-  nom               String
-  email             String?
-  telephone         String
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  userId            String
-  commercial        String?
-  entreprise        String?
-  localisation      String?
-  secteur_activite  String?
-  status_client     StatusClient        @default(PROSPECT)
-  premiere_commande Boolean             @default(false)
-  User              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Commande          Commande[]
-  Facture           Facture[]
-  Paiement          Paiement[]
-  RapportRendezVous RapportRendezVous[]
-  rendezVous        RendezVous[]
-  Tableau_chute     Tableau_chute[]
-  Voiture           Voiture[]
+  id                    String                  @id @default(uuid())
+  nom                   String
+  email                 String?
+  telephone             String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  userId                String
+  commercial            String?
+  entreprise            String?
+  localisation          String?
+  secteur_activite      String?
+  status_client         StatusClient            @default(PROSPECT)
+  premiere_commande     Boolean                 @default(false)
+  User                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Commande              Commande[]
+  Facture               Facture[]
+  Paiement              Paiement[]
+  RapportRendezVous     RapportRendezVous[]
+  rendezVous            RendezVous[]
+  Tableau_chute         Tableau_chute[]
+  Voiture               Voiture[]
+  FinanceProjetProspect FinanceProjetProspect[]
 }
 
 model RendezVous {
@@ -283,27 +293,29 @@ model AppelOffre {
 }
 
 model Information_Appel_Offre {
-  id             String     @id @default(uuid())
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                   String     @id @default(uuid())
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   nomStrctureEmettrice String
-  domaineActivite String
-  telephone String
-  email String
-  numeroAppelOffre String
-  appel_offreId  String
-  AppelOffre     AppelOffre @relation(fields: [appel_offreId], references: [id], onDelete: Cascade)
-  listeDocuments Document[]
+  domaineActivite      String
+  telephone            String
+  email                String
+  numeroAppelOffre     String
+  appel_offreId        String
+  AppelOffre           AppelOffre @relation(fields: [appel_offreId], references: [id], onDelete: Cascade)
+  listeDocuments       Document[]
 }
+
 model Document {
-  id             String     @id @default(uuid())
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  nomDocument String
-  urlDocument String
+  id                        String                  @id @default(uuid())
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  nomDocument               String
+  urlDocument               String
   information_appel_offreId String
-  Information_Appel_Offre Information_Appel_Offre @relation(fields: [information_appel_offreId], references: [id], onDelete: Cascade)
+  Information_Appel_Offre   Information_Appel_Offre @relation(fields: [information_appel_offreId], references: [id], onDelete: Cascade)
 }
+
 model Evolution_Appel_Offre {
   id             String     @id @default(uuid())
   createdAt      DateTime   @default(now())
@@ -317,7 +329,7 @@ model Evolution_Appel_Offre {
 }
 
 model Client_entreprise {
-  id                           String              @id
+  id                           String                  @id
   nom_entreprise               String
   sigle                        String?
   email                        String?
@@ -330,13 +342,13 @@ model Client_entreprise {
   secteur_activite             String?
   flotte_vehicules             Boolean?
   flotte_vehicules_description String?
-  status_client                StatusClient        @default(PROSPECT)
-  createdAt                    DateTime            @default(now())
+  status_client                StatusClient            @default(PROSPECT)
+  createdAt                    DateTime                @default(now())
   updatedAt                    DateTime
   commercial                   String?
   userId                       String
-  premiere_commande            Boolean             @default(false)
-  User                         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  premiere_commande            Boolean                 @default(false)
+  User                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   Commande                     Commande[]
   Facture                      Facture[]
   Paiement                     Paiement[]
@@ -344,6 +356,7 @@ model Client_entreprise {
   RendezVous                   RendezVous[]
   Tableau_chute                Tableau_chute[]
   Voiture                      Voiture[]
+  FinanceProjetProspect        FinanceProjetProspect[]
 }
 
 model Commande {
@@ -850,6 +863,7 @@ model RapportRendezVous {
   telephone_client          String
   email_client              String?
   profession_societe        String?
+  tailleParcEquipements     String?
   type_client               String
   Com_Pres                  Boolean                     @default(false)
   Com_Drive                 Boolean                     @default(false)
@@ -859,8 +873,10 @@ model RapportRendezVous {
   Com_Office                Boolean                     @default(false)
   Com_Close                 Boolean                     @default(false)
   objet_autre               String?
-  modeles_discutes          Json?
+  typeContact               String?
+  modeles_discutes          String?
   motivations_achat         String?
+  besoinIdentifie           String?
   points_positifs           String?
   objections_freins         String?
   degre_interet             String?
@@ -868,11 +884,12 @@ model RapportRendezVous {
   devis_offre_remise        Boolean                     @default(false)
   propositions_faites       String?
   reference_offre           String?
+  etapeDesEchanges          String?
   financement_propose       String?
   assurance_entretien       Boolean                     @default(false)
   reprise_ancien_vehicule   Boolean                     @default(false)
   suivi_actions             String?
-  actions_suivi             Json?
+  actions_suivi             String?
   commentaire_global        String?
   voitureId                 String?
   rendezVousId              String
@@ -885,6 +902,8 @@ model RapportRendezVous {
   Tableau_chute             Tableau_chute[]
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
 }
+
+
 
 model RapportTeste {
   id        String   @id
@@ -953,9 +972,8 @@ enum StatutEtapeJournalProspect {
   SANS_SUITE
 }
 
-
 model CartographieCompte {
-  id                         String                              @id @default(uuid())
+  id                         String                               @id @default(uuid())
   zone                       String?
   secteur                    String?
   raisonSociale              String
@@ -967,12 +985,12 @@ model CartographieCompte {
   marquesModelesPredominants String?
   contratMaintenance         ContratMaintenanceCartographieCompte
   offreKpandjiPrioritaire    OffreKpandjiCartographieCompte
-  statutProspection          StatutProspectionCartographieCompte @default(A_APPROCHER)
+  statutProspection          StatutProspectionCartographieCompte  @default(A_APPROCHER)
   datePrevueApproche         DateTime?
-  createdAt                  DateTime                            @default(now())
-  updatedAt                  DateTime                            @updatedAt
+  createdAt                  DateTime                             @default(now())
+  updatedAt                  DateTime                             @updatedAt
   userId                     String
-  User                       User                                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User                       User                                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([statutProspection])
@@ -981,24 +999,24 @@ model CartographieCompte {
 }
 
 model Portefeuille {
-  id                          String                         @id @default(uuid())
-  provenanceContact           ProvenanceContactPortefeuille
-  nomEntreprise               String
-  interlocuteurCle            String?
-  telephone                   String?
-  email                       String?
-  ageParcActuel               String?
-  marquesModelesActuels       String?
-  opportuniteVente            OpportuniteVentePortefeuille
-  opportuniteEntretienGarage  Boolean                        @default(false)
-  statutPriseContact          StatutPriseContactPortefeuille @default(NON_CONTACTE)
-  dateDernierEchange          DateTime?
-  resultat                    String?
-  prochaineEtape              String?
-  createdAt                   DateTime                       @default(now())
-  updatedAt                   DateTime                       @updatedAt
-  userId                      String
-  User                        User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                         String                         @id @default(uuid())
+  provenanceContact          ProvenanceContactPortefeuille
+  nomEntreprise              String
+  interlocuteurCle           String?
+  telephone                  String?
+  email                      String?
+  ageParcActuel              String?
+  marquesModelesActuels      String?
+  opportuniteVente           OpportuniteVentePortefeuille
+  opportuniteEntretienGarage Boolean                        @default(false)
+  statutPriseContact         StatutPriseContactPortefeuille @default(NON_CONTACTE)
+  dateDernierEchange         DateTime?
+  resultat                   String?
+  prochaineEtape             String?
+  createdAt                  DateTime                       @default(now())
+  updatedAt                  DateTime                       @updatedAt
+  userId                     String
+  User                       User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([statutPriseContact])
@@ -1301,19 +1319,20 @@ model Voiture {
 }
 
 model VoitureModel {
-  id                String              @id
-  model             String
-  fiche_technique   String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  description       String?
-  image             String?
-  couleur           String?
-  Commande          Commande[]
-  CommandeEnAttente CommandeEnAttente[]
-  FactureLigne      FactureLigne[]
-  StockDisponible   StockDisponible[]
-  Voiture           Voiture[]
+  id                       String                     @id
+  model                    String
+  fiche_technique          String?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  description              String?
+  image                    String?
+  couleur                  String?
+  Commande                 Commande[]
+  CommandeEnAttente        CommandeEnAttente[]
+  FactureLigne             FactureLigne[]
+  StockDisponible          StockDisponible[]
+  Voiture                  Voiture[]
+  FinanceProjetModeleCible FinanceProjetModeleCible[]
 }
 
 ///departement communication
@@ -1422,10 +1441,10 @@ model CommunicationBudgetItem {
 }
 
 model ObjectifPrincipaux {
-  id          String  @id @default(uuid())
-  titre       String
-  description String?
-  status ObjectifPrincipauxStatus @default(ACTIVE)
+  id                            String                       @id @default(uuid())
+  titre                         String
+  description                   String?
+  status                        ObjectifPrincipauxStatus     @default(ACTIVE)
   createdAt                     DateTime                     @default(now())
   updatedAt                     DateTime                     @updatedAt
   userId                        String
@@ -1448,7 +1467,7 @@ model RubriqueObjectifGlobal {
   updatedAt                         DateTime                            @updatedAt
   CycleObjectifGlobalRubrique       CycleObjectifGlobalRubrique[]
   PublicationObjectifGlobalRubrique PublicationObjectifGlobalRubrique[]
-  status                            RubriqueObjectifGlobalStatus          @default(ACTIVE)
+  status                            RubriqueObjectifGlobalStatus        @default(ACTIVE)
   userId                            String?
   User                              User?                               @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
@@ -1508,15 +1527,15 @@ enum PublicationObjectifGlobalRubriqueStatus {
 }
 
 model JournalPublication {
-  id                                 String                            @id @default(uuid())
-  createdAt                          DateTime                          @default(now())
-  updatedAt                          DateTime                          @updatedAt
-  titreJournal                       String
-  descriptionJournal                 String?
-  publicationId                      String
-  PublicationObjectifGlobalRubrique  PublicationObjectifGlobalRubrique @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  userId                             String
-  User                               User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                                String                            @id @default(uuid())
+  createdAt                         DateTime                          @default(now())
+  updatedAt                         DateTime                          @updatedAt
+  titreJournal                      String
+  descriptionJournal                String?
+  publicationId                     String
+  PublicationObjectifGlobalRubrique PublicationObjectifGlobalRubrique @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  userId                            String
+  User                              User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([publicationId])
   @@index([userId])
@@ -1772,43 +1791,43 @@ model ClientSAV {
 }
 
 model VoitureSAV {
-  id                String              @id @default(uuid())
-  model             String
-  motorisation      Motorisation
-  transmission      Transmission
-  couleur           String
-  nbr_portes        String
-  immatriculation   String?
-  chassisNumber     String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  statut            StatutVoitureSAV    @default(ARRIVE)
-  voitureId         String
-  Voiture           Voiture             @relation(fields: [voitureId], references: [id], onDelete: Cascade)
-  diagnosticArrivee       DiagnosticArrivee[]
-  Reparation              Reparation[]
-  GarantieSAV             GarantieSAV[]
-  StatutGarantie          StatutGarantieSAV @default(EN_COURS)
-  deplacementSAV          DeplacementSAV  @default(ARRIVEE)           
-  VisuelDefaut            VisuelDefaut[]
-  RapportMaintenanceSAV   RapportMaintenanceSAV[]
-  CheckListsSAV           CheckListsSAV[]
-  voitureSavGarantieId    String?
-  VoitureSavGarantie      VoitureSavGarantie? @relation(fields: [voitureSavGarantieId], references: [id], onDelete: SetNull)
-  clientSAVId             String
-  ClientSAV               ClientSAV           @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
-  diagnosticOffert        DiagnosticOffert[]
+  id                           String                         @id @default(uuid())
+  model                        String
+  motorisation                 Motorisation
+  transmission                 Transmission
+  couleur                      String
+  nbr_portes                   String
+  immatriculation              String?
+  chassisNumber                String?
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  statut                       StatutVoitureSAV               @default(ARRIVE)
+  voitureId                    String
+  Voiture                      Voiture                        @relation(fields: [voitureId], references: [id], onDelete: Cascade)
+  diagnosticArrivee            DiagnosticArrivee[]
+  Reparation                   Reparation[]
+  GarantieSAV                  GarantieSAV[]
+  StatutGarantie               StatutGarantieSAV              @default(EN_COURS)
+  deplacementSAV               DeplacementSAV                 @default(ARRIVEE)
+  VisuelDefaut                 VisuelDefaut[]
+  RapportMaintenanceSAV        RapportMaintenanceSAV[]
+  CheckListsSAV                CheckListsSAV[]
+  voitureSavGarantieId         String?
+  VoitureSavGarantie           VoitureSavGarantie?            @relation(fields: [voitureSavGarantieId], references: [id], onDelete: SetNull)
+  clientSAVId                  String
+  ClientSAV                    ClientSAV                      @relation(fields: [clientSAVId], references: [id], onDelete: Cascade)
+  diagnosticOffert             DiagnosticOffert[]
   InterventionDiagnosticOffert InterventionDiagnosticOffert[]
 }
 
 model VoitureSavGarantie {
-  id              String       @id @default(uuid())
-  marqueVoiture   String       @default("KPANDJI")
-  modelVoiture    String
-  chassisNumber   String?
-  immatriculation String
-  garantieSAVbadge Boolean @default(true)
-  VoitureSAV      VoitureSAV[]
+  id               String       @id @default(uuid())
+  marqueVoiture    String       @default("KPANDJI")
+  modelVoiture     String
+  chassisNumber    String?
+  immatriculation  String
+  garantieSAVbadge Boolean      @default(true)
+  VoitureSAV       VoitureSAV[]
 }
 
 enum DeplacementSAV {
@@ -1822,8 +1841,6 @@ enum DeplacementSAV {
   RAPPORT_FINAL
   RETOUR_EN_SAV
 }
-
-
 
 enum StatutGarantieSAV {
   EN_COURS
@@ -1849,24 +1866,24 @@ enum StatutRapportMaintenanceSAV {
 /// (diagnostic à l'arrivée, défauts visuels, réparations, pièces, maintenance).
 
 model RapportMaintenanceSAV {
-  id           String                      @id @default(uuid())
-  titre        String
+  id                String                      @id @default(uuid())
+  titre             String
   /// Synthèse auto-générée à partir des activités du dossier VoitureSAV.
-  contenuAuto  String?                     @db.Text
+  contenuAuto       String?                     @db.Text
   /// Notes complémentaires rédigées manuellement.
-  contenu      String?                     @db.Text
-  observations String?                     @db.Text
-  type         TypeRapportMaintenanceSAV   @default(COMPLET)
-  statut       StatutRapportMaintenanceSAV @default(BROUILLON)
+  contenu           String?                     @db.Text
+  observations      String?                     @db.Text
+  type              TypeRapportMaintenanceSAV   @default(COMPLET)
+  statut            StatutRapportMaintenanceSAV @default(BROUILLON)
   /// Instantané JSON des activités au moment de la génération
   /// (IDs diagnosticArrivee, reparation, visuelDefaut, factures…).
   snapshotActivites Json?
-  voitureSAVId String
-  voitureSAV   VoitureSAV                  @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
-  redacteurId  String?
-  redacteur    User?                       @relation(fields: [redacteurId], references: [id], onDelete: SetNull)
-  createdAt    DateTime                    @default(now())
-  updatedAt    DateTime                    @updatedAt
+  voitureSAVId      String
+  voitureSAV        VoitureSAV                  @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  redacteurId       String?
+  redacteur         User?                       @relation(fields: [redacteurId], references: [id], onDelete: SetNull)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@index([voitureSAVId])
   @@index([statut])
@@ -1890,14 +1907,14 @@ enum StatutVoitureSAV {
 }
 
 model VisuelDefaut {
-  id                String              @id @default(uuid())
-  nom               String
-  description       String?
-  image             String?
-  voitureSAVId       String
-  voitureSAV         VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id           String     @id @default(uuid())
+  nom          String
+  description  String?
+  image        String?
+  voitureSAVId String
+  voitureSAV   VoitureSAV @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model CatergorieDiagnostic {
@@ -1912,21 +1929,21 @@ model CatergorieDiagnostic {
 }
 
 model DetailDiagnostic {
-  id                     String               @id @default(uuid())
-  nom                    String
-  description            String?
-  prix_unitaire          Decimal?             @default(0) @db.Decimal(18, 2)
-  diagnosticArriveeId    String?
-  diagnosticArrivee      DiagnosticArrivee?   @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
-  reparationId           String?
-  reparation             Reparation?          @relation(fields: [reparationId], references: [id], onDelete: Cascade)
-  garantieSAVId          String?
-  garantieSAV            GarantieSAV?         @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  catergorieDiagnosticId String
-  catergorieDiagnostic   CatergorieDiagnostic @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
-  PieceSAV               PieceSAV[]
+  id                           String                         @id @default(uuid())
+  nom                          String
+  description                  String?
+  prix_unitaire                Decimal?                       @default(0) @db.Decimal(18, 2)
+  diagnosticArriveeId          String?
+  diagnosticArrivee            DiagnosticArrivee?             @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
+  reparationId                 String?
+  reparation                   Reparation?                    @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  garantieSAVId                String?
+  garantieSAV                  GarantieSAV?                   @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  catergorieDiagnosticId       String
+  catergorieDiagnostic         CatergorieDiagnostic           @relation(fields: [catergorieDiagnosticId], references: [id], onDelete: Cascade)
+  PieceSAV                     PieceSAV[]
   InterventionDiagnosticOffert InterventionDiagnosticOffert[]
 }
 
@@ -1944,18 +1961,18 @@ model DiagnosticArrivee {
 }
 
 model DiagnosticOffert {
-  id                               String                         @id @default(uuid())
-  libelle                          String
-  date_activation                  DateTime
-  date_fin                         DateTime
-  voitureSAVId                     String?
-  voitureSAV                       VoitureSAV?                    @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
-  diagnosticArriveeId              String?
-  diagnosticArrivee                DiagnosticArrivee?             @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
-  interventionDiagnosticOffertId   String?
-  interventionDiagnosticOffert     InterventionDiagnosticOffert?  @relation(fields: [interventionDiagnosticOffertId], references: [id], onDelete: Cascade)
-  createdAt                        DateTime                       @default(now())
-  updatedAt                        DateTime                       @updatedAt
+  id                             String                        @id @default(uuid())
+  libelle                        String
+  date_activation                DateTime
+  date_fin                       DateTime
+  voitureSAVId                   String?
+  voitureSAV                     VoitureSAV?                   @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  diagnosticArriveeId            String?
+  diagnosticArrivee              DiagnosticArrivee?            @relation(fields: [diagnosticArriveeId], references: [id], onDelete: Cascade)
+  interventionDiagnosticOffertId String?
+  interventionDiagnosticOffert   InterventionDiagnosticOffert? @relation(fields: [interventionDiagnosticOffertId], references: [id], onDelete: Cascade)
+  createdAt                      DateTime                      @default(now())
+  updatedAt                      DateTime                      @updatedAt
 }
 
 model InterventionDiagnosticOffert {
@@ -1985,6 +2002,9 @@ model PieceSAV {
   marque_piece      String?
   part_code         String?
   description       String?
+  image             String?
+  emplacement       String?
+  origine           String?
   prix_achat        Decimal? @default(0)
   prix_vente        Decimal? @default(0)
   quantite_sortie   Int      @default(0)
@@ -1992,8 +2012,8 @@ model PieceSAV {
   quantite_restante Int      @default(0)
   quantite_initiale Int      @default(0)
 
-  reparationId String?
-  reparation   Reparation? @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  reparationId  String?
+  reparation    Reparation?  @relation(fields: [reparationId], references: [id], onDelete: Cascade)
   garantieSAVId String?
   garantieSAV   GarantieSAV? @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
 
@@ -2023,15 +2043,15 @@ model Reparation {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
-  voitureSAVId       String
-  voitureSAV         VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
-  statut             StatutReparation     @default(EN_TRAITEMENT)
-  DetailDiagnostic   DetailDiagnostic[]
-  PieceSAV           PieceSAV[]
-  FactureProformaSAV FactureProformaSAV[]
-  Maintenance        Maintenance[]
+  voitureSAVId         String
+  voitureSAV           VoitureSAV           @relation(fields: [voitureSAVId], references: [id], onDelete: Cascade)
+  statut               StatutReparation     @default(EN_TRAITEMENT)
+  DetailDiagnostic     DetailDiagnostic[]
+  PieceSAV             PieceSAV[]
+  FactureProformaSAV   FactureProformaSAV[]
+  Maintenance          Maintenance[]
   groupePersonnelSAVId String?
-  groupePersonnelSAV   GroupePersonnelSAV? @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
+  groupePersonnelSAV   GroupePersonnelSAV?  @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
 }
 
 enum StatutReparation {
@@ -2052,18 +2072,18 @@ model GarantieSAV {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
-  voitureSAVId       String?
-  voitureSAV         VoitureSAV?          @relation(fields: [voitureSAVId], references: [id], onDelete: SetNull)
-  statut             StatutGarantie     @default(EN_TRAITEMENT)
-  DetailDiagnostic   DetailDiagnostic[]
-  PieceSAV           PieceSAV[]
-  FactureProformaSAV FactureProformaSAV[]
-  Maintenance        Maintenance[]
+  voitureSAVId         String?
+  voitureSAV           VoitureSAV?          @relation(fields: [voitureSAVId], references: [id], onDelete: SetNull)
+  statut               StatutGarantie       @default(EN_TRAITEMENT)
+  DetailDiagnostic     DetailDiagnostic[]
+  PieceSAV             PieceSAV[]
+  FactureProformaSAV   FactureProformaSAV[]
+  Maintenance          Maintenance[]
   groupePersonnelSAVId String?
-  groupePersonnelSAV   GroupePersonnelSAV? @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
+  groupePersonnelSAV   GroupePersonnelSAV?  @relation(fields: [groupePersonnelSAVId], references: [id], onDelete: SetNull)
 }
 
-enum StatutGarantie{
+enum StatutGarantie {
   EN_ATTENTE
   EN_TRAITEMENT
   TESTE
@@ -2071,9 +2091,6 @@ enum StatutGarantie{
   ANNULE
   EN_MAINTENANCE
 }
-
-
-
 
 model Maintenance {
   id                     String                @id @default(uuid())
@@ -2091,7 +2108,6 @@ model Maintenance {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   statut                 StatutMaintenance     @default(EN_ATTENTE)
-  
 }
 
 enum StatutMaintenance {
@@ -2109,17 +2125,17 @@ model FactureProformaSAV {
   statut_facture StatusFacture @default(EN_ATTENTE)
   remise         Decimal       @default(0) @db.Decimal(18, 2)
 
-  montant_net_ht Decimal     @db.Decimal(18, 2)
-  tva            Decimal?    @db.Decimal(18, 2)
-  montant_tva    Decimal     @default(0) @db.Decimal(18, 2)
-  total_ttc      Decimal     @default(0) @db.Decimal(18, 2)
-  avance_payee   Decimal     @default(0) @db.Decimal(18, 2)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  montant_net_ht Decimal      @db.Decimal(18, 2)
+  tva            Decimal?     @db.Decimal(18, 2)
+  montant_tva    Decimal      @default(0) @db.Decimal(18, 2)
+  total_ttc      Decimal      @default(0) @db.Decimal(18, 2)
+  avance_payee   Decimal      @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   reparationId   String
-  reparation     Reparation  @relation(fields: [reparationId], references: [id], onDelete: Cascade)
+  reparation     Reparation   @relation(fields: [reparationId], references: [id], onDelete: Cascade)
   maintenanceId  String
-  maintenance    Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  maintenance    Maintenance  @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
   garantieSAVId  String?
   garantieSAV    GarantieSAV? @relation(fields: [garantieSAVId], references: [id], onDelete: Cascade)
 }
@@ -2137,15 +2153,15 @@ model PersonnelSAV {
 }
 
 model GroupePersonnelSAV {
-  id            String         @id @default(uuid())
-  nom           String
-  chefGroupeId  String?        @unique
-  chefGroupe    PersonnelSAV?  @relation("PersonnelGroupeChef", fields: [chefGroupeId], references: [id], onDelete: SetNull)
-  personnelSAVs PersonnelSAV[] @relation("PersonnelGroupeMembres")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  reparations   Reparation[]
-  garanties     GarantieSAV[]
+  id                           String                         @id @default(uuid())
+  nom                          String
+  chefGroupeId                 String?                        @unique
+  chefGroupe                   PersonnelSAV?                  @relation("PersonnelGroupeChef", fields: [chefGroupeId], references: [id], onDelete: SetNull)
+  personnelSAVs                PersonnelSAV[]                 @relation("PersonnelGroupeMembres")
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  reparations                  Reparation[]
+  garanties                    GarantieSAV[]
   InterventionDiagnosticOffert InterventionDiagnosticOffert[]
 }
 
@@ -2167,56 +2183,56 @@ enum TypeCheckListSAV {
 /// Check-list de réception et de contrôle du véhicule (SAV).
 
 model CheckListsSAV {
-  id     String               @id @default(uuid())
-  titre  String               @default("Check-list de réception et de contrôle du véhicule")
-  statut StatutCheckListSAV   @default(EN_ATTENTE)
-  type TypeCheckListSAV   @default(RECEPTION)
+  id     String             @id @default(uuid())
+  titre  String             @default("Check-list de réception et de contrôle du véhicule")
+  statut StatutCheckListSAV @default(EN_ATTENTE)
+  type   TypeCheckListSAV   @default(RECEPTION)
 
   // 1. Informations générales
-  date                   DateTime @default(now())
-  numeroOrdreReparation  String?
-  nomClient              String?
-  telephone              String?
-  marque                 String?
-  modele                 String?
-  immatriculation        String?
-  numeroChassis          String?
-  kilometrage            Int?
-  niveauCarburant        String?
+  date                  DateTime @default(now())
+  numeroOrdreReparation String?
+  nomClient             String?
+  telephone             String?
+  marque                String?
+  modele                String?
+  immatriculation       String?
+  numeroChassis         String?
+  kilometrage           Int?
+  niveauCarburant       String?
 
   // 2. État extérieur
-  pareBrise                Boolean @default(false)
-  vitresLaterales          Boolean @default(false)
-  lunetteArriere           Boolean @default(false)
-  capot                    Boolean @default(false)
-  pareChocsAvant           Boolean @default(false)
-  pareChocsArriere         Boolean @default(false)
-  ailesAvant               Boolean @default(false)
-  ailesArriere             Boolean @default(false)
-  portes                   Boolean @default(false)
-  toit                     Boolean @default(false)
-  coffre                   Boolean @default(false)
-  retroviseurs             Boolean @default(false)
-  essuieGlaces             Boolean @default(false)
-  eclairageAvantArriere    Boolean @default(false)
-  plaquesImmatriculation   Boolean @default(false)
+  pareBrise              Boolean @default(false)
+  vitresLaterales        Boolean @default(false)
+  lunetteArriere         Boolean @default(false)
+  capot                  Boolean @default(false)
+  pareChocsAvant         Boolean @default(false)
+  pareChocsArriere       Boolean @default(false)
+  ailesAvant             Boolean @default(false)
+  ailesArriere           Boolean @default(false)
+  portes                 Boolean @default(false)
+  toit                   Boolean @default(false)
+  coffre                 Boolean @default(false)
+  retroviseurs           Boolean @default(false)
+  essuieGlaces           Boolean @default(false)
+  eclairageAvantArriere  Boolean @default(false)
+  plaquesImmatriculation Boolean @default(false)
 
   // 3. Pneumatiques
-  pressionCorrecte      Boolean @default(false)
-  usureReguliere        Boolean @default(false)
-  roueSecoursPresente   Boolean @default(false)
-  cricPresent           Boolean @default(false)
-  cleRouePresente       Boolean @default(false)
+  pressionCorrecte    Boolean @default(false)
+  usureReguliere      Boolean @default(false)
+  roueSecoursPresente Boolean @default(false)
+  cricPresent         Boolean @default(false)
+  cleRouePresente     Boolean @default(false)
 
   // 4. Compartiment moteur
-  niveauHuileMoteur         Boolean @default(false)
-  liquideRefroidissement    Boolean @default(false)
-  liquideFrein              Boolean @default(false)
-  liquideDirectionAssistee  Boolean @default(false)
-  liquideLaveGlace          Boolean @default(false)
-  batterie                  Boolean @default(false)
-  courroies                 Boolean @default(false)
-  absenceFuite              Boolean @default(false)
+  niveauHuileMoteur        Boolean @default(false)
+  liquideRefroidissement   Boolean @default(false)
+  liquideFrein             Boolean @default(false)
+  liquideDirectionAssistee Boolean @default(false)
+  liquideLaveGlace         Boolean @default(false)
+  batterie                 Boolean @default(false)
+  courroies                Boolean @default(false)
+  absenceFuite             Boolean @default(false)
 
   // 5. Habitacle
   tableauBord            Boolean @default(false)
@@ -2240,21 +2256,21 @@ model CheckListsSAV {
   feuxAntibrouillard Boolean @default(false)
 
   // 7. Contrôle mécanique
-  controleMoteur       Boolean @default(false)
-  controleEmbrayage    Boolean @default(false)
+  controleMoteur        Boolean @default(false)
+  controleEmbrayage     Boolean @default(false)
   controleBoiteVitesses Boolean @default(false)
-  controleDirection    Boolean @default(false)
-  controleSuspension   Boolean @default(false)
-  controleFreinage     Boolean @default(false)
-  controleTransmission Boolean @default(false)
+  controleDirection     Boolean @default(false)
+  controleSuspension    Boolean @default(false)
+  controleFreinage      Boolean @default(false)
+  controleTransmission  Boolean @default(false)
 
   // 8. Essai routier
-  demarrageNormal        Boolean @default(false)
-  accelerationCorrecte   Boolean @default(false)
-  freinageEfficace       Boolean @default(false)
-  directionStable        Boolean @default(false)
-  absenceVibrations      Boolean @default(false)
-  absenceBruitAnormal    Boolean @default(false)
+  demarrageNormal      Boolean @default(false)
+  accelerationCorrecte Boolean @default(false)
+  freinageEfficace     Boolean @default(false)
+  directionStable      Boolean @default(false)
+  absenceVibrations    Boolean @default(false)
+  absenceBruitAnormal  Boolean @default(false)
 
   // 9. Accessoires remis par le client
   cle1                  Boolean @default(false)
@@ -2457,89 +2473,88 @@ model Documentation {
   updatedAt DateTime          @updatedAt
 }
 
-
 model DossierContentieux {
-  id String @id @default(uuid())
-  numeroDossier String @unique
-  typeDossier TypeDossierContentieux
-  statutDossier StatutDossierContentieux
-  description String
-  objet String
-  dateOuverture DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partiesPrenantes PartiesPrenantes[]
-  gestionAudiences GestionAudiences[]
-  documentsContentieux DocumentsContentieux[]
+  id                           String                         @id @default(uuid())
+  numeroDossier                String                         @unique
+  typeDossier                  TypeDossierContentieux
+  statutDossier                StatutDossierContentieux
+  description                  String
+  objet                        String
+  dateOuverture                DateTime
+  dateCloture                  DateTime?
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  userId                       String
+  user                         User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partiesPrenantes             PartiesPrenantes[]
+  gestionAudiences             GestionAudiences[]
+  documentsContentieux         DocumentsContentieux[]
   gestionDesDecisionsDeJustice GestionDesDecisionsDeJustice[]
 }
 
 model PartiesPrenantes {
-  id String @id @default(uuid())
-  nom String
-  prenom String
-  email String?
-  telephone String?
-  typePartie TypePartie
+  id                   String             @id @default(uuid())
+  nom                  String
+  prenom               String
+  email                String?
+  telephone            String?
+  typePartie           TypePartie
   dossierContentieuxId String
-  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  dossierContentieux   DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
 
 model DocumentsContentieux {
-  id String @id @default(uuid())
-  nom String
-  typeDocument TypeDocumentContentieux
+  id                   String                  @id @default(uuid())
+  nom                  String
+  typeDocument         TypeDocumentContentieux
   dossierContentieuxId String
-  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
-  nomFichier String
-  dateUpload DateTime
-  url String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  dossierContentieux   DossierContentieux      @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  nomFichier           String
+  dateUpload           DateTime
+  url                  String
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 }
 
 model GestionAudiences {
-  id String @id @default(uuid())
-  dateAudience DateTime
-  heureAudience String
-  rjAudience String
-  statutAudience StatutAudience
-  salleAudience String
-  tribunalAudience String
-  resultatAudience String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String             @id @default(uuid())
+  dateAudience         DateTime
+  heureAudience        String
+  rjAudience           String
+  statutAudience       StatutAudience
+  salleAudience        String
+  tribunalAudience     String
+  resultatAudience     String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   dossierContentieuxId String
-  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  dossierContentieux   DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
 }
 
 model GestionDesDecisionsDeJustice {
-  id String @id @default(uuid())
-  dateDecision DateTime
-  heureDecision String
-  lieuDecision String
-  statutDecision StatutDecisionDeJustice
+  id                   String                  @id @default(uuid())
+  dateDecision         DateTime
+  heureDecision        String
+  lieuDecision         String
+  statutDecision       StatutDecisionDeJustice
   dossierContentieuxId String
-  dossierContentieux DossierContentieux @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  dossierContentieux   DossierContentieux      @relation(fields: [dossierContentieuxId], references: [id], onDelete: Cascade)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 }
 
 model ContratsEtPartenariats {
-  id String @id @default(uuid())
-  titre String
-  typeContrat TypeContrat
-  description String
-  nomFichier String?
-  url String?
-  dateUpload DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String                 @id @default(uuid())
+  titre                String
+  typeContrat          TypeContrat
+  description          String
+  nomFichier           String?
+  url                  String?
+  dateUpload           DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   partenaireSignataire PartenaireSignataire[]
 }
 
@@ -2555,142 +2570,139 @@ enum TypeContrat {
   CONTRAT_DE_LOCATION_VENTE_MISE_EN_LOCATION_VENTE
 }
 
-model PartenaireSignataire{
-  id String @id @default(uuid())
-  nom String
-  prenom String
-  email String?
-  telephone String?
-  fonction String?
-  entreprise String?
-  adresse String?
-  ville String?
-  codePostal String?
-  pays String?
-  dateSignature DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model PartenaireSignataire {
+  id                      String                 @id @default(uuid())
+  nom                     String
+  prenom                  String
+  email                   String?
+  telephone               String?
+  fonction                String?
+  entreprise              String?
+  adresse                 String?
+  ville                   String?
+  codePostal              String?
+  pays                    String?
+  dateSignature           DateTime
+  dateCloture             DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
   contratEtPartenariatsId String
-  contratEtPartenariats ContratsEtPartenariats @relation(fields: [contratEtPartenariatsId], references: [id], onDelete: Cascade)
+  contratEtPartenariats   ContratsEtPartenariats @relation(fields: [contratEtPartenariatsId], references: [id], onDelete: Cascade)
 }
 
-
 model DossierVeilleJuridique {
-  id String @id @default(uuid())
-  titre String
-  description String
+  id            String                   @id @default(uuid())
+  titre         String
+  description   String
   dateOuverture DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  typeDossier NonConformiteJuridique[]
-  nouvellesLoi NouvelleLoi[]
+  dateCloture   DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  typeDossier   NonConformiteJuridique[]
+  nouvellesLoi  NouvelleLoi[]
 }
 
 model NonConformiteJuridique {
-  id String @id @default(uuid())
-  titre String
-  description String
-  typeNonConformite String
-  statutNonConformite String
-  dateOuverture DateTime
-  dateCloture DateTime?
+  id                       String                 @id @default(uuid())
+  titre                    String
+  description              String
+  typeNonConformite        String
+  statutNonConformite      String
+  dateOuverture            DateTime
+  dateCloture              DateTime?
   dossierVeilleJuridiqueId String
-  dossierVeilleJuridique DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ecartJuridique EcartJuridique[]
-  risqueJuridique RisqueJuridique[]
-  actionCorrective ActionCorrective[]
-  formation Formation[]
+  dossierVeilleJuridique   DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  ecartJuridique           EcartJuridique[]
+  risqueJuridique          RisqueJuridique[]
+  actionCorrective         ActionCorrective[]
+  formation                Formation[]
 }
 
 model EcartJuridique {
-  id String @id @default(uuid())
-  obligationJuridique String
-  situationObservee String
-  descriptionEcart String?
-  dateDetection DateTime?
-  serviceConcerne String?
+  id                       String                 @id @default(uuid())
+  obligationJuridique      String
+  situationObservee        String
+  descriptionEcart         String?
+  dateDetection            DateTime?
+  serviceConcerne          String?
   nonConformiteJuridiqueId String
-  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  risqueJuridique RisqueJuridique?
-  nouvelleLoi NouvelleLoi[]
-  actionCorrective ActionCorrective[]
-
+  nonConformiteJuridique   NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  risqueJuridique          RisqueJuridique?
+  nouvelleLoi              NouvelleLoi[]
+  actionCorrective         ActionCorrective[]
 }
 
 model RisqueJuridique {
-  id String @id @default(uuid())
-  descriptionRisque String
-  probabilite String?
-  impact String?
-  niveauRisque String?
-  mesurePreventive String?
+  id                       String                 @id @default(uuid())
+  descriptionRisque        String
+  probabilite              String?
+  impact                   String?
+  niveauRisque             String?
+  mesurePreventive         String?
   nonConformiteJuridiqueId String
-  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
-  ecartJuridiqueId String? @unique
-  ecartJuridique EcartJuridique? @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  nouvelleLoi NouvelleLoi[]
-  actionCorrective ActionCorrective[]
-
+  nonConformiteJuridique   NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  ecartJuridiqueId         String?                @unique
+  ecartJuridique           EcartJuridique?        @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  nouvelleLoi              NouvelleLoi[]
+  actionCorrective         ActionCorrective[]
 }
 
 model NouvelleLoi {
-  id String @id @default(uuid())
-  titre String
-  chapitre String
-  article String
-  paragraphe String?
-  dateOuverture DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ecartJuridiqueId String
-  ecartJuridique EcartJuridique @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
-  risqueJuridiqueId String?
-  risqueJuridique RisqueJuridique? @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
+  id                       String                 @id @default(uuid())
+  titre                    String
+  chapitre                 String
+  article                  String
+  paragraphe               String?
+  dateOuverture            DateTime
+  dateCloture              DateTime?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  ecartJuridiqueId         String
+  ecartJuridique           EcartJuridique         @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
+  risqueJuridiqueId        String?
+  risqueJuridique          RisqueJuridique?       @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
   dossierVeilleJuridiqueId String
-  dossierVeilleJuridique DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
-  actionCorrective ActionCorrective[]
+  dossierVeilleJuridique   DossierVeilleJuridique @relation(fields: [dossierVeilleJuridiqueId], references: [id], onDelete: Cascade)
+  actionCorrective         ActionCorrective[]
 }
 
 model ActionCorrective {
-  id String @id @default(uuid())
-  titre String
-  description String
-  actionCorrective String
-  dateDebut DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  nouvelleLoiId String
-  nouvelleLoi NouvelleLoi @relation(fields: [nouvelleLoiId], references: [id], onDelete: Cascade)
-  ecartJuridiqueId String
-  ecartJuridique EcartJuridique @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
-  risqueJuridiqueId String?
-  risqueJuridique RisqueJuridique? @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
+  id                       String                 @id @default(uuid())
+  titre                    String
+  description              String
+  actionCorrective         String
+  dateDebut                DateTime
+  dateCloture              DateTime?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  nouvelleLoiId            String
+  nouvelleLoi              NouvelleLoi            @relation(fields: [nouvelleLoiId], references: [id], onDelete: Cascade)
+  ecartJuridiqueId         String
+  ecartJuridique           EcartJuridique         @relation(fields: [ecartJuridiqueId], references: [id], onDelete: Cascade)
+  risqueJuridiqueId        String?
+  risqueJuridique          RisqueJuridique?       @relation(fields: [risqueJuridiqueId], references: [id], onDelete: Cascade)
   nonConformiteJuridiqueId String
-  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  nonConformiteJuridique   NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
 }
 
 model Formation {
-  id String @id @default(uuid())
-  titre String
-  description String
-  cible String
-  typeFormation String?
-  dateDebut DateTime
-  dateCloture DateTime?
+  id                       String                 @id @default(uuid())
+  titre                    String
+  description              String
+  cible                    String
+  typeFormation            String?
+  dateDebut                DateTime
+  dateCloture              DateTime?
   nonConformiteJuridiqueId String
-  nonConformiteJuridique NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  nonConformiteJuridique   NonConformiteJuridique @relation(fields: [nonConformiteJuridiqueId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 }
 
 enum TypeDocumentProjetPonctuel {
@@ -2709,48 +2721,48 @@ enum StatutProjetPonctuel {
 }
 
 model ProjetPonctuel {
-  id String @id @default(uuid())
-  titre String
-  description String
-  dateDebut DateTime
-  dateCloture DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String                      @id @default(uuid())
+  titre                  String
+  description            String
+  dateDebut              DateTime
+  dateCloture            DateTime?
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  userId                 String
+  user                   User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   responsableResponsable ProjetPonctuelResponsable[]
-  statutProjet StatutProjetPonctuel
-  activite ProjetPonctuelActivite[]
+  statutProjet           StatutProjetPonctuel
+  activite               ProjetPonctuelActivite[]
 }
 
 model ProjetPonctuelActivite {
-  id String @id @default(uuid())
-  titre String
-  description String
-  dateDebut DateTime
-  dateCloture DateTime?
-  statutActivite StatutProjetPonctuelActivite @default(NOUVEAU)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projetPonctuelId String
-  projetPonctuel ProjetPonctuel @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
+  id                     String                          @id @default(uuid())
+  titre                  String
+  description            String
+  dateDebut              DateTime
+  dateCloture            DateTime?
+  statutActivite         StatutProjetPonctuelActivite    @default(NOUVEAU)
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
+  userId                 String
+  user                   User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projetPonctuelId       String
+  projetPonctuel         ProjetPonctuel                  @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
   responsableResponsable ProjetPonctuelResponsable[]
-  document ProjetPonctuelDocument[]
-  message ProjetPonctuelActiviteMessage[]
+  document               ProjetPonctuelDocument[]
+  message                ProjetPonctuelActiviteMessage[]
 }
 
 model ProjetPonctuelResponsable {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projetPonctuelId String
-  projetPonctuel ProjetPonctuel @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
+  id                       String                 @id @default(uuid())
+  userId                   String
+  user                     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projetPonctuelId         String
+  projetPonctuel           ProjetPonctuel         @relation(fields: [projetPonctuelId], references: [id], onDelete: Cascade)
   projetPonctuelActiviteId String
-  projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  projetPonctuelActivite   ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 }
 
 enum StatutProjetPonctuelActivite {
@@ -2765,16 +2777,16 @@ enum StatutProjetPonctuelActivite {
   ANNULE
 }
 
-model ProjetPonctuelActiviteMessage{
-  id String @id @default(uuid())
-  message String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  typeMessage TypeMessageProjetPonctuelActivite
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ProjetPonctuelActiviteMessage {
+  id                       String                            @id @default(uuid())
+  message                  String
+  createdAt                DateTime                          @default(now())
+  updatedAt                DateTime                          @updatedAt
+  typeMessage              TypeMessageProjetPonctuelActivite
+  userId                   String
+  user                     User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
   projetPonctuelActiviteId String
-  projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
+  projetPonctuelActivite   ProjetPonctuelActivite            @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
 }
 
 enum TypeMessageProjetPonctuelActivite {
@@ -2786,132 +2798,132 @@ enum TypeMessageProjetPonctuelActivite {
 }
 
 model ProjetPonctuelDocument {
-  id String @id @default(uuid())
-  nom String
-  typeDocument TypeDocumentProjetPonctuel
-  url String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String                     @id @default(uuid())
+  nom                      String
+  typeDocument             TypeDocumentProjetPonctuel
+  url                      String
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  userId                   String
+  user                     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   projetPonctuelActiviteId String
-  projetPonctuelActivite ProjetPonctuelActivite @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
+  projetPonctuelActivite   ProjetPonctuelActivite     @relation(fields: [projetPonctuelActiviteId], references: [id], onDelete: Cascade)
 }
 
-model ResponsableProjetRoutine{
+model ResponsableProjetRoutine {
   id String @id @default(uuid())
-  
+
   userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   responsableProjetRoutineMessage TacheActiviteProjetRoutineMessage[]
 
   roleMissionProjetRoutineId String
-  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
+  roleMissionProjetRoutine   RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
 
   tacheActiviteProjetRoutineId String?
-  tacheActiviteProjetRoutine TacheActiviteProjetRoutine? @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+  tacheActiviteProjetRoutine   TacheActiviteProjetRoutine? @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
 
   activiteProjetRoutineId String?
-  activiteProjetRoutine ActiviteProjetRoutine? @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
+  activiteProjetRoutine   ActiviteProjetRoutine? @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model RoleMissionProjetRoutine{
-  id String @id @default(uuid())
-  libelle String
+model RoleMissionProjetRoutine {
+  id          String  @id @default(uuid())
+  libelle     String
   description String?
 
   responsableProjetRoutine ResponsableProjetRoutine[]
 
   activiteProjetRoutine ActiviteProjetRoutine[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                              DateTime                                 @default(now())
+  updatedAt                              DateTime                                 @updatedAt
   indicateurObjectifMensuelProjetRoutine IndicateurObjectifMensuelProjetRoutine[]
 }
 
-model IndicateurObjectifMensuelProjetRoutine{
-  id String @id @default(uuid())
-  libelle String
-  description String?
-  objectifMensuel String
-  nombreObjectifsMensuels Int
-  nombreObjectifsMensuelsAtteints Int
+model IndicateurObjectifMensuelProjetRoutine {
+  id                                 String                   @id @default(uuid())
+  libelle                            String
+  description                        String?
+  objectifMensuel                    String
+  nombreObjectifsMensuels            Int
+  nombreObjectifsMensuelsAtteints    Int
   nombreObjectifsMensuelsNonAtteints Int
-  roleMissionProjetRoutineId String
-  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
+  roleMissionProjetRoutineId         String
+  roleMissionProjetRoutine           RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
 }
 
-model ActiviteProjetRoutine{
-  id String @id @default(uuid())
-  libelle String
-  description String?
-  dateDebut DateTime
-  dateCloture DateTime?
-  mois String?
-  statutActivite StatutActiviteProjetRoutine @default(NOUVEAU)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model ActiviteProjetRoutine {
+  id                         String                       @id @default(uuid())
+  libelle                    String
+  description                String?
+  dateDebut                  DateTime
+  dateCloture                DateTime?
+  mois                       String?
+  statutActivite             StatutActiviteProjetRoutine  @default(NOUVEAU)
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
   roleMissionProjetRoutineId String
-  roleMissionProjetRoutine RoleMissionProjetRoutine @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
+  roleMissionProjetRoutine   RoleMissionProjetRoutine     @relation(fields: [roleMissionProjetRoutineId], references: [id], onDelete: Cascade)
   tacheActiviteProjetRoutine TacheActiviteProjetRoutine[]
-  responsableProjetRoutine ResponsableProjetRoutine[]
+  responsableProjetRoutine   ResponsableProjetRoutine[]
 }
 
-model TacheActiviteProjetRoutine{
-  id String @id @default(uuid())
-  libelle String
+model TacheActiviteProjetRoutine {
+  id          String                           @id @default(uuid())
+  libelle     String
   description String?
-  dateDebut DateTime
+  dateDebut   DateTime
   dateCloture DateTime?
   statutTache StatutTacheActiviteProjetRoutine @default(NOUVEAU)
 
   responsableTacheResponsable ResponsableTacheResponsable[]
 
   createdByUserId String?
-  createdBy User? @relation("TacheCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy       User?   @relation("TacheCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
-  activiteProjetRoutineId String
-  activiteProjetRoutine ActiviteProjetRoutine @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
+  activiteProjetRoutineId  String
+  activiteProjetRoutine    ActiviteProjetRoutine                @relation(fields: [activiteProjetRoutineId], references: [id], onDelete: Cascade)
   responsableProjetRoutine ResponsableProjetRoutine[]
-  message TacheActiviteProjetRoutineMessage[]
-  document TacheActiviteProjetRoutineDocument[] @relation("TacheDocuments")
+  message                  TacheActiviteProjetRoutineMessage[]
+  document                 TacheActiviteProjetRoutineDocument[] @relation("TacheDocuments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model TacheActiviteProjetRoutineMessage{
-  id String @id @default(uuid())
-  message String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model TacheActiviteProjetRoutineMessage {
+  id          String                                @id @default(uuid())
+  message     String
+  createdAt   DateTime                              @default(now())
+  updatedAt   DateTime                              @updatedAt
   typeMessage TypeMessageTacheActiviteProjetRoutine
 
   responsableProjetRoutineId String
-  responsableProjetRoutine ResponsableProjetRoutine @relation(fields: [responsableProjetRoutineId], references: [id], onDelete: Cascade)
+  responsableProjetRoutine   ResponsableProjetRoutine @relation(fields: [responsableProjetRoutineId], references: [id], onDelete: Cascade)
 
   tacheActiviteProjetRoutineId String
-  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
-  document TacheActiviteProjetRoutineDocument[] @relation("MessageDocuments")
+  tacheActiviteProjetRoutine   TacheActiviteProjetRoutine           @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+  document                     TacheActiviteProjetRoutineDocument[] @relation("MessageDocuments")
 }
 
-model TacheActiviteProjetRoutineDocument{
-  id String @id @default(uuid())
-  nom String
-  typeDocument TypeDocumentTacheActiviteProjetRoutine
-  url String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  responsableTacheResponsableId String
-  responsableTacheResponsable ResponsableTacheResponsable @relation(fields: [responsableTacheResponsableId], references: [id], onDelete: Cascade)
-  tacheActiviteProjetRoutineId String
-  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation("TacheDocuments", fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_tache_fkey")
+model TacheActiviteProjetRoutineDocument {
+  id                                  String                                 @id @default(uuid())
+  nom                                 String
+  typeDocument                        TypeDocumentTacheActiviteProjetRoutine
+  url                                 String
+  createdAt                           DateTime                               @default(now())
+  updatedAt                           DateTime                               @updatedAt
+  responsableTacheResponsableId       String
+  responsableTacheResponsable         ResponsableTacheResponsable            @relation(fields: [responsableTacheResponsableId], references: [id], onDelete: Cascade)
+  tacheActiviteProjetRoutineId        String
+  tacheActiviteProjetRoutine          TacheActiviteProjetRoutine             @relation("TacheDocuments", fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_tache_fkey")
   tacheActiviteProjetRoutineMessageId String?
-  tacheActiviteProjetRoutineMessage TacheActiviteProjetRoutineMessage? @relation("MessageDocuments", fields: [tacheActiviteProjetRoutineMessageId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_message_fkey")
+  tacheActiviteProjetRoutineMessage   TacheActiviteProjetRoutineMessage?     @relation("MessageDocuments", fields: [tacheActiviteProjetRoutineMessageId], references: [id], onDelete: Cascade, map: "TacheRoutineDocument_message_fkey")
 }
 
 enum TypeDocumentTacheActiviteProjetRoutine {
@@ -2923,6 +2935,7 @@ enum TypeDocumentTacheActiviteProjetRoutine {
   AUDIO
   AUTRE
 }
+
 enum TypeMessageTacheActiviteProjetRoutine {
   EN_ATTENTE
   LU
@@ -2932,14 +2945,14 @@ enum TypeMessageTacheActiviteProjetRoutine {
 }
 
 model ResponsableTacheResponsable {
-  id String @id @default(uuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String                               @id @default(uuid())
+  userId                       String
+  user                         User                                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   tacheActiviteProjetRoutineId String
-  tacheActiviteProjetRoutine TacheActiviteProjetRoutine @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
-  document TacheActiviteProjetRoutineDocument[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  tacheActiviteProjetRoutine   TacheActiviteProjetRoutine           @relation(fields: [tacheActiviteProjetRoutineId], references: [id], onDelete: Cascade)
+  document                     TacheActiviteProjetRoutineDocument[]
+  createdAt                    DateTime                             @default(now())
+  updatedAt                    DateTime                             @updatedAt
 }
 
 enum StatutTacheActiviteProjetRoutine {
@@ -2966,9 +2979,6 @@ enum StatutActiviteProjetRoutine {
   ANNULE
 }
 
-
-
-
 enum StatutDecisionDeJustice {
   EN_ATTENTE
   PARTIELLEMENT_EXECUTE
@@ -2986,8 +2996,6 @@ enum StatutDecisionDeJustice {
   TERMINEE
   ANNULE
 }
-
-
 
 enum StatutAudience {
   RECLAMATION
@@ -3007,7 +3015,6 @@ enum StatutAudience {
 }
 
 enum TypeDocumentContentieux {
-
   CONTRATS
   FACTURES
   COURRIERS
@@ -3130,7 +3137,6 @@ enum UserRole {
   MARKETING
   DEVELOPPEUR
   DESIGNER
-  
 }
 
 enum ChassisFlag {
@@ -3318,4 +3324,256 @@ enum TypeCommandeNom {
   ENTREPRISE_CLIENTE
   INSTITUTION
   LETTRE_DE_COMMANDE_VALANT_MARCHE
+}
+
+/// département finance — projets commerciaux
+enum StatutFinanceProjet {
+  BROUILLON
+  EN_COURS
+  EN_PAUSE
+  VALIDE
+  TERMINE
+  ANNULE
+}
+
+model FinanceProjet {
+  id                    String                     @id @default(uuid())
+  nom                   String
+  description           String?
+  objectifVolumeAffaire Decimal?                   @db.Decimal(15, 2)
+  dateDebut             DateTime
+  dateFin               DateTime?
+  statut                StatutFinanceProjet        @default(BROUILLON)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  createdById           String
+  createdBy             User                       @relation("FinanceProjetCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  modelesCibles         FinanceProjetModeleCible[]
+  prospects             FinanceProjetProspect[]
+  objectifs             FinanceProjetObjectif[]
+  responsables          FinanceProjetResponsable[]
+  plansActions          FinancePlanAction[]
+  rapports              FinanceProjetRapport[]
+  budgets               FinanceBudget[]
+  depenses              FinanceDepense[]
+
+  @@index([createdById])
+  @@index([statut])
+  @@index([dateDebut])
+}
+
+model FinanceProjetModeleCible {
+  id             String        @id @default(uuid())
+  projetId       String
+  voitureModelId String
+  createdAt      DateTime      @default(now())
+  projet         FinanceProjet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  voitureModel   VoitureModel  @relation(fields: [voitureModelId], references: [id], onDelete: Cascade)
+
+  @@unique([projetId, voitureModelId])
+  @@index([projetId])
+  @@index([voitureModelId])
+}
+
+model FinanceProjetProspect {
+  id                 String             @id @default(uuid())
+  projetId           String
+  clientId           String?
+  clientEntrepriseId String?
+  createdAt          DateTime           @default(now())
+  projet             FinanceProjet      @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  client             Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientEntreprise   Client_entreprise? @relation(fields: [clientEntrepriseId], references: [id], onDelete: Cascade)
+
+  @@index([projetId])
+  @@index([clientId])
+  @@index([clientEntrepriseId])
+}
+
+model FinanceProjetObjectif {
+  id          String        @id @default(uuid())
+  projetId    String
+  titre       String
+  description String?
+  ordre       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  projet      FinanceProjet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@index([projetId])
+}
+
+model FinanceProjetResponsable {
+  id        String        @id @default(uuid())
+  projetId  String
+  userId    String
+  createdAt DateTime      @default(now())
+  projet    FinanceProjet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projetId, userId])
+  @@index([projetId])
+  @@index([userId])
+}
+
+model FinancePlanAction {
+  id             String                    @id @default(uuid())
+  projetId       String
+  titre          String
+  dateDebut      DateTime
+  dateFin        DateTime?
+  etapeEnCours   PlanActionTaskStage       @default(EN_ATTENTE_DEBUT)
+  resteAExecuter String?
+  responsableId  String
+  ordre          Int                       @default(0)
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  projet         FinanceProjet             @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  responsable    User                      @relation("FinancePlanActionResponsable", fields: [responsableId], references: [id], onDelete: Cascade)
+  taches         FinancePlanActionTache[]
+  acteurs        FinancePlanActionActeur[]
+
+  @@index([projetId])
+  @@index([responsableId])
+  @@index([etapeEnCours])
+}
+
+model FinancePlanActionTache {
+  id             String              @id @default(uuid())
+  planActionId   String
+  titre          String
+  description    String?
+  dateDebut      DateTime?
+  dateFin        DateTime?
+  etape          PlanActionTaskStage @default(EN_ATTENTE_DEBUT)
+  resteAExecuter String?
+  responsableId  String?
+  ordre          Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  planAction     FinancePlanAction   @relation(fields: [planActionId], references: [id], onDelete: Cascade)
+  responsable    User?               @relation("FinancePlanActionTacheResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@index([planActionId])
+  @@index([responsableId])
+}
+
+model FinancePlanActionActeur {
+  id           String            @id @default(uuid())
+  planActionId String
+  userId       String
+  createdAt    DateTime          @default(now())
+  planAction   FinancePlanAction @relation(fields: [planActionId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planActionId, userId])
+  @@index([planActionId])
+  @@index([userId])
+}
+
+
+
+model FinanceProjetRapport {
+  id         String        @id @default(uuid())
+  projetId   String
+  titre      String
+  contenu    String?
+  synthese   String?
+  avancement Float?
+  userId     String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  projet     FinanceProjet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  auteur     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projetId])
+  @@index([userId])
+}
+
+/// département finance — budgets et dépenses
+enum StatutFinanceBudget {
+  BROUILLON
+  VALIDE
+  CLOTURE
+  ANNULE
+}
+
+enum StatutFinanceDepense {
+  BROUILLON
+  SOUMISE
+  VALIDEE
+  PAYEE
+  REJETEE
+  ANNULEE
+}
+
+model FinanceBudget {
+  id           String              @id @default(uuid())
+  nom          String
+  description  String?
+  exercice     Int
+  dateDebut    DateTime
+  dateFin      DateTime?
+  montantPrevu Decimal             @db.Decimal(15, 2)
+  statut       StatutFinanceBudget @default(BROUILLON)
+  projetId     String?
+  createdById  String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  projet       FinanceProjet?      @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  createdBy    User                @relation("FinanceBudgetCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  lignes       FinanceBudgetLigne[]
+  depenses     FinanceDepense[]
+
+  @@index([createdById])
+  @@index([projetId])
+  @@index([statut])
+  @@index([exercice])
+}
+
+model FinanceBudgetLigne {
+  id            String           @id @default(uuid())
+  budgetId      String
+  designation   String
+  categorie     String?
+  montantAlloue Decimal          @db.Decimal(15, 2)
+  ordre         Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  budget        FinanceBudget    @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  depenses      FinanceDepense[]
+
+  @@index([budgetId])
+}
+
+model FinanceDepense {
+  id              String               @id @default(uuid())
+  budgetId        String?
+  ligneId         String?
+  projetId        String?
+  designation     String
+  description     String?
+  categorie       String?
+  montant         Decimal              @db.Decimal(15, 2)
+  dateDepense     DateTime
+  reference       String?
+  justificatifUrl String?
+  statut          StatutFinanceDepense @default(BROUILLON)
+  createdById     String
+  validatedById   String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  budget          FinanceBudget?       @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  ligne           FinanceBudgetLigne?  @relation(fields: [ligneId], references: [id], onDelete: SetNull)
+  projet          FinanceProjet?       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  createdBy       User                 @relation("FinanceDepenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  validatedBy     User?                @relation("FinanceDepenseValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
+
+  @@index([budgetId])
+  @@index([ligneId])
+  @@index([projetId])
+  @@index([createdById])
+  @@index([validatedById])
+  @@index([statut])
+  @@index([dateDepense])
 }

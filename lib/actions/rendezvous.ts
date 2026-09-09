@@ -4,6 +4,16 @@ import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
+function toStoredString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 export async function createRendezVous(data: {
   date: Date;
   statut?: "EN_ATTENTE" | "CONFIRME" | "DEPLACE" | "EFFECTUE" | "ANNULE";
@@ -436,6 +446,7 @@ export async function createRapportRendezVous(
 
     revalidatePath("/commercial/programme");
     revalidatePath("/commercial/rapport-rendez-vous");
+    revalidatePath("/responsablecommercial/rapport-rendez-vous");
     return { success: true, data: rapports };
   } catch (error) {
     console.error("Error creating rapport rendez-vous:", error);
@@ -466,7 +477,7 @@ export async function createRapportRendezVousComplet(data: {
   Com_Office: boolean;
   Com_Close: boolean;
   objet_autre?: string;
-  modeles_discutes: Prisma.InputJsonValue[];
+  modeles_discutes?: unknown;
   motivations_achat?: string;
   points_positifs?: string;
   objections_freins?: string;
@@ -479,7 +490,7 @@ export async function createRapportRendezVousComplet(data: {
   assurance_entretien: boolean;
   reprise_ancien_vehicule: boolean;
   suivi_actions?: string;
-  actions_suivi: Prisma.InputJsonValue[];
+  actions_suivi?: unknown;
   commentaire_global?: string;
 }) {
   try {
@@ -517,7 +528,7 @@ export async function createRapportRendezVousComplet(data: {
         Com_Office: data.Com_Office ?? false,
         Com_Close: data.Com_Close ?? false,
         objet_autre: data.objet_autre,
-        modeles_discutes: data.modeles_discutes,
+        modeles_discutes: toStoredString(data.modeles_discutes),
         motivations_achat: data.motivations_achat,
         points_positifs: data.points_positifs,
         objections_freins: data.objections_freins,
@@ -530,13 +541,14 @@ export async function createRapportRendezVousComplet(data: {
         assurance_entretien: data.assurance_entretien ?? false,
         reprise_ancien_vehicule: data.reprise_ancien_vehicule ?? false,
         suivi_actions: data.suivi_actions,
-        actions_suivi: data.actions_suivi,
+        actions_suivi: toStoredString(data.actions_suivi),
         commentaire_global: data.commentaire_global,
         updatedAt: new Date(),
       },
     });
 
     revalidatePath("/commercial/rapport-rendez-vous");
+    revalidatePath("/responsablecommercial/rapport-rendez-vous");
     return { success: true, data: rapport };
   } catch (error) {
     console.error("Error creating complete rapport rendez-vous:", error);
@@ -649,7 +661,7 @@ export async function updateRapportRendezVousComplet(
     Com_Office?: boolean;
     Com_Close?: boolean;
     objet_autre?: string;
-    modeles_discutes?: Prisma.InputJsonValue[];
+    modeles_discutes?: unknown;
     motivations_achat?: string;
     points_positifs?: string;
     objections_freins?: string;
@@ -662,7 +674,7 @@ export async function updateRapportRendezVousComplet(
     assurance_entretien?: boolean;
     reprise_ancien_vehicule?: boolean;
     suivi_actions?: string;
-    actions_suivi?: Prisma.InputJsonValue[];
+    actions_suivi?: unknown;
     commentaire_global?: string;
   },
 ) {
@@ -708,7 +720,7 @@ export async function updateRapportRendezVousComplet(
     if (data.objet_autre !== undefined)
       updateData.objet_autre = data.objet_autre;
     if (data.modeles_discutes !== undefined)
-      updateData.modeles_discutes = data.modeles_discutes;
+      updateData.modeles_discutes = toStoredString(data.modeles_discutes);
     if (data.motivations_achat !== undefined)
       updateData.motivations_achat = data.motivations_achat;
     if (data.points_positifs !== undefined)
@@ -734,7 +746,7 @@ export async function updateRapportRendezVousComplet(
     if (data.suivi_actions !== undefined)
       updateData.suivi_actions = data.suivi_actions;
     if (data.actions_suivi !== undefined)
-      updateData.actions_suivi = data.actions_suivi;
+      updateData.actions_suivi = toStoredString(data.actions_suivi);
     if (data.commentaire_global !== undefined)
       updateData.commentaire_global = data.commentaire_global;
 
@@ -747,6 +759,7 @@ export async function updateRapportRendezVousComplet(
 
     revalidatePath("/commercial/suivi-rendez-vous");
     revalidatePath("/commercial/rapport-rendez-vous");
+    revalidatePath("/responsablecommercial/rapport-rendez-vous");
     return { success: true, data: rapport };
   } catch (error) {
     console.error("Error updating complete rapport rendez-vous:", error);
@@ -855,5 +868,275 @@ export async function getAllRapportRendezVous() {
     }
 
     return { success: false, error: "Impossible de charger les rapports de rendez-vous." };
+  }
+}
+
+/**
+ * All appointment reports created for clients owned by users with role COMMERCIAL.
+ * Grouped by the commercial user.
+ */
+export async function getRapportRendezVousByCommercialUsers() {
+  try {
+    const rapports = await prisma.rapportRendezVous.findMany({
+      where: {
+        OR: [
+          { Client: { User: { role: "COMMERCIAL" } } },
+          { Client_entreprise: { User: { role: "COMMERCIAL" } } },
+        ],
+      },
+      include: {
+        Client: {
+          include: {
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
+        Client_entreprise: {
+          include: {
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
+        RendezVous: {
+          select: {
+            id: true,
+            date: true,
+            statut: true,
+          },
+        },
+        Voiture: {
+          select: {
+            id: true,
+            couleur: true,
+            motorisation: true,
+            transmission: true,
+            VoitureModel: {
+              select: { model: true },
+            },
+          },
+        },
+      },
+      orderBy: {
+        date_rendez_vous: "desc",
+      },
+    });
+
+    type CommercialUser = {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+
+    type SerializedRapport = {
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      date_rendez_vous: Date;
+      heure_rendez_vous: string;
+      lieu_rendez_vous: string;
+      lieu_autre: string | null;
+      conseiller_commercial: string;
+      duree_rendez_vous: string;
+      nom_prenom_client: string;
+      telephone_client: string;
+      email_client: string | null;
+      profession_societe: string | null;
+      type_client: string;
+      Com_Pres: boolean;
+      Com_Drive: boolean;
+      Com_Achat: boolean;
+      Com_Livre: boolean;
+      Com_APV: boolean;
+      Com_Office: boolean;
+      Com_Close: boolean;
+      objet_autre: string | null;
+      modeles_discutes: unknown;
+      motivations_achat: string | null;
+      points_positifs: string | null;
+      objections_freins: string | null;
+      degre_interet: string | null;
+      decision_attendue: string | null;
+      devis_offre_remise: boolean;
+      propositions_faites: string | null;
+      reference_offre: string | null;
+      financement_propose: string | null;
+      assurance_entretien: boolean;
+      reprise_ancien_vehicule: boolean;
+      suivi_actions: string | null;
+      actions_suivi: unknown;
+      commentaire_global: string | null;
+      commercialUser: CommercialUser | null;
+      client: unknown;
+      clientEntreprise: unknown;
+      rendezVous: unknown;
+      voiture: {
+        id: string;
+        couleur?: string | null;
+        motorisation?: string | null;
+        transmission?: string | null;
+        voitureModel?: { model: string } | null;
+      } | null;
+    };
+
+    const serializedRapports: SerializedRapport[] = rapports.map((r) => {
+      const commercialUser =
+        r.Client?.User?.role === "COMMERCIAL"
+          ? r.Client.User
+          : r.Client_entreprise?.User?.role === "COMMERCIAL"
+            ? r.Client_entreprise.User
+            : null;
+
+      return {
+        id: r.id,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        date_rendez_vous: r.date_rendez_vous,
+        heure_rendez_vous: r.heure_rendez_vous,
+        lieu_rendez_vous: r.lieu_rendez_vous,
+        lieu_autre: r.lieu_autre,
+        conseiller_commercial: r.conseiller_commercial,
+        duree_rendez_vous: r.duree_rendez_vous,
+        nom_prenom_client: r.nom_prenom_client,
+        telephone_client: r.telephone_client,
+        email_client: r.email_client,
+        profession_societe: r.profession_societe,
+        type_client: r.type_client,
+        Com_Pres: r.Com_Pres,
+        Com_Drive: r.Com_Drive,
+        Com_Achat: r.Com_Achat,
+        Com_Livre: r.Com_Livre,
+        Com_APV: r.Com_APV,
+        Com_Office: r.Com_Office,
+        Com_Close: r.Com_Close,
+        objet_autre: r.objet_autre,
+        modeles_discutes: r.modeles_discutes,
+        motivations_achat: r.motivations_achat,
+        points_positifs: r.points_positifs,
+        objections_freins: r.objections_freins,
+        degre_interet: r.degre_interet,
+        decision_attendue: r.decision_attendue,
+        devis_offre_remise: r.devis_offre_remise,
+        propositions_faites: r.propositions_faites,
+        reference_offre: r.reference_offre,
+        financement_propose: r.financement_propose,
+        assurance_entretien: r.assurance_entretien,
+        reprise_ancien_vehicule: r.reprise_ancien_vehicule,
+        suivi_actions: r.suivi_actions,
+        actions_suivi: r.actions_suivi,
+        commentaire_global: r.commentaire_global,
+        commercialUser,
+        client: r.Client
+          ? {
+              ...r.Client,
+              user: r.Client.User,
+            }
+          : null,
+        clientEntreprise: r.Client_entreprise
+          ? {
+              ...r.Client_entreprise,
+              user: r.Client_entreprise.User,
+            }
+          : null,
+        rendezVous: r.RendezVous,
+        voiture: r.Voiture
+          ? {
+              id: r.Voiture.id,
+              couleur: r.Voiture.couleur,
+              motorisation: r.Voiture.motorisation,
+              transmission: r.Voiture.transmission,
+              voitureModel: r.Voiture.VoitureModel,
+            }
+          : null,
+      };
+    });
+
+    const grouped = new Map<
+      string,
+      {
+        conseiller_commercial: string;
+        totalReports: number;
+        reports: SerializedRapport[];
+      }
+    >();
+
+    for (const rapport of serializedRapports) {
+      const user = rapport.commercialUser;
+      const groupKey = user
+        ? user.id
+        : rapport.conseiller_commercial || "non-assigne";
+      const displayName = user
+        ? `${user.firstName} ${user.lastName}`.trim()
+        : rapport.conseiller_commercial || "Non assigné";
+
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, {
+          conseiller_commercial: displayName,
+          totalReports: 0,
+          reports: [],
+        });
+      }
+
+      grouped.get(groupKey)!.reports.push(rapport);
+    }
+
+    const reportsByUser = Array.from(grouped.values())
+      .map((group) => ({
+        ...group,
+        totalReports: group.reports.length,
+        reports: group.reports.sort(
+          (a, b) =>
+            new Date(b.date_rendez_vous).getTime() -
+            new Date(a.date_rendez_vous).getTime()
+        ),
+      }))
+      .sort((a, b) =>
+        a.conseiller_commercial.localeCompare(b.conseiller_commercial, "fr")
+      );
+
+    return {
+      success: true,
+      data: {
+        totalReports: serializedRapports.length,
+        totalCommercials: reportsByUser.length,
+        reportsByUser,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    console.error("Error fetching commercial rapport rendez-vous:", error);
+
+    if (
+      message.includes("Can't reach database server") ||
+      message.includes("connection") ||
+      message.includes("ECONNREFUSED") ||
+      message.includes("ETIMEDOUT") ||
+      message.includes("connect")
+    ) {
+      return {
+        success: false,
+        error:
+          "La base de données est temporairement indisponible. Vérifiez votre connexion ou réessayez dans quelques instants.",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Impossible de charger les rapports de rendez-vous des commerciaux.",
+    };
   }
 }

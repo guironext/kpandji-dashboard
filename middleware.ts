@@ -68,6 +68,7 @@ const isLogistiqueRoute = createRouteMatcher([
 	"/logistique/(.*)",
 ]);
 const isFinanceRoute = createRouteMatcher(["/finance", "/finance/(.*)"]);
+
 const isDirecteurGeneralRoute = createRouteMatcher([
 	"/directeurgeneral",
 	"/directeurgeneral/(.*)",

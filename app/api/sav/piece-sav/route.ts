@@ -1,7 +1,73 @@
 import { NextResponse } from "next/server";
 import { executeWithRetry, prisma } from "@/lib/prisma";
+import { uploadPieceSavImage } from "@/lib/sav/uploadPieceSavImage";
 
 export const dynamic = "force-dynamic";
+
+type PieceFields = {
+  nom: unknown;
+  model_voiture: unknown;
+  marque_piece: unknown;
+  part_code: unknown;
+  description: unknown;
+  emplacement: unknown;
+  origine: unknown;
+  prix_achat: unknown;
+  prix_vente: unknown;
+  quantite_entree: unknown;
+  imageFile: File | null;
+};
+
+const ORIGINE_VALUES = ["Achat local", "Usine"] as const;
+
+function parseOrigine(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const t = value.trim();
+  return ORIGINE_VALUES.includes(t as (typeof ORIGINE_VALUES)[number])
+    ? t
+    : null;
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function readPiecePayload(request: Request): Promise<PieceFields> {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const image = formData.get("image");
+    return {
+      nom: formData.get("nom"),
+      model_voiture: formData.get("model_voiture"),
+      marque_piece: formData.get("marque_piece"),
+      part_code: formData.get("part_code"),
+      description: formData.get("description"),
+      emplacement: formData.get("emplacement"),
+      origine: formData.get("origine"),
+      prix_achat: formData.get("prix_achat"),
+      prix_vente: formData.get("prix_vente"),
+      quantite_entree: formData.get("quantite_entree"),
+      imageFile: image instanceof File && image.size > 0 ? image : null,
+    };
+  }
+
+  const body = await request.json();
+  return {
+    nom: body.nom,
+    model_voiture: body.model_voiture,
+    marque_piece: body.marque_piece,
+    part_code: body.part_code,
+    description: body.description,
+    emplacement: body.emplacement,
+    origine: body.origine,
+    prix_achat: body.prix_achat,
+    prix_vente: body.prix_vente,
+    quantite_entree: body.quantite_entree,
+    imageFile: null,
+  };
+}
 
 export async function GET() {
   try {
@@ -14,6 +80,7 @@ export async function GET() {
           model_voiture: true,
           marque_piece: true,
           part_code: true,
+          image: true,
           quantite_restante: true,
           quantite_sortie: true,
           interventionDiagnosticOffertId: true,
@@ -36,17 +103,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
     const {
       nom,
       model_voiture,
       marque_piece,
       part_code,
       description,
+      emplacement,
+      origine,
       prix_achat,
       prix_vente,
       quantite_entree,
-    } = body;
+      imageFile,
+    } = await readPiecePayload(request);
 
     if (typeof nom !== "string" || !nom.trim()) {
       return NextResponse.json(
@@ -73,6 +142,8 @@ export async function POST(request: Request) {
       qe = n;
     }
 
+    const imagePath = imageFile ? await uploadPieceSavImage(imageFile) : null;
+
     const piece = await executeWithRetry(() =>
       prisma.pieceSAV.create({
         data: {
@@ -91,10 +162,10 @@ export async function POST(request: Request) {
             typeof part_code === "string" && part_code.trim()
               ? part_code.trim()
               : null,
-          description:
-            typeof description === "string" && description.trim()
-              ? description.trim()
-              : null,
+          description: optionalText(description),
+          emplacement: optionalText(emplacement),
+          origine: parseOrigine(origine) ?? null,
+          image: imagePath,
           prix_achat:
             prix_achat != null && prix_achat !== ""
               ? String(prix_achat)
