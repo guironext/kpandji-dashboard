@@ -145,6 +145,111 @@ export async function deleteFournisseurCommandeLocal(id: string) {
   }
 }
 
+function parseLocalDate(value?: string | null): Date | null {
+  if (!value?.trim()) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (match) {
+    const date = new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3])
+    );
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const fallback = new Date(value);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function serializeCommandeLocal(commande: {
+  id: string;
+  article: string;
+  description: string;
+  quantity: number;
+  price: unknown;
+  total: unknown;
+  date_livraison: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: commande.id,
+    article: commande.article,
+    description: commande.description,
+    quantity: commande.quantity,
+    price: Number(commande.price),
+    total: Number(commande.total),
+    date_livraison: commande.date_livraison.toISOString(),
+    createdAt: commande.createdAt.toISOString(),
+    updatedAt: commande.updatedAt.toISOString(),
+  };
+}
+
+export async function createCommandeLocal(data: {
+  article: string;
+  description: string;
+  quantity: number;
+  price: number;
+  date_livraison: string;
+}) {
+  try {
+    const article = data.article?.trim() ?? "";
+    const description = data.description?.trim() ?? "";
+    const quantity = Number(data.quantity);
+    const price = Number(data.price);
+    const dateLivraison = parseLocalDate(data.date_livraison);
+
+    if (!article) {
+      return { success: false, error: "L'article est requis" };
+    }
+    if (!description) {
+      return { success: false, error: "La description est requise" };
+    }
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return {
+        success: false,
+        error: "La quantité doit être un entier positif",
+      };
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      return { success: false, error: "Le prix unitaire est invalide" };
+    }
+    if (!dateLivraison || Number.isNaN(dateLivraison.getTime())) {
+      return { success: false, error: "La date de livraison est requise" };
+    }
+
+    const total = Math.round(quantity * price * 100) / 100;
+    const now = new Date();
+
+    const commandeLocal = await prisma.commandeLocal.create({
+      data: {
+        id: crypto.randomUUID(),
+        article,
+        description,
+        quantity,
+        price,
+        total,
+        date_livraison: dateLivraison,
+        updatedAt: now,
+      },
+    });
+
+    revalidatePath("/sav/achat-local");
+    revalidatePath("/comptable/commandes-locaux");
+
+    return {
+      success: true,
+      data: serializeCommandeLocal(commandeLocal),
+    };
+  } catch (error: unknown) {
+    console.error("Error creating commande local:", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Erreur lors de la création de l'achat local";
+    return { success: false, error: errorMessage };
+  }
+}
+
 export async function getAllCommandeLocaux() {
   try {
     const commandeLocaux = await prisma.commandeLocal.findMany({

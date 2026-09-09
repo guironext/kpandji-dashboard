@@ -1,6 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "../prisma";
+
+function emptyToNull(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
 
 export async function createFournisseur(data: {
   nom: string;
@@ -13,25 +19,34 @@ export async function createFournisseur(data: {
   type_Activite?: string;
 }) {
   try {
+    const nom = data.nom?.trim();
+    if (!nom) {
+      return { success: false, error: "Le nom du fournisseur est requis." };
+    }
+
     const fournisseur = await prisma.fournisseur.create({
       data: {
         id: crypto.randomUUID(),
-        nom: data.nom,
-        email: data.email,
-        telephone: data.telephone,
-        adresse: data.adresse,
-        ville: data.ville,
-        code_postal: data.code_postal,
-        pays: data.pays,
-        type_Activite: data.type_Activite,
+        nom,
+        email: emptyToNull(data.email),
+        telephone: emptyToNull(data.telephone),
+        adresse: emptyToNull(data.adresse),
+        ville: emptyToNull(data.ville),
+        code_postal: emptyToNull(data.code_postal),
+        pays: emptyToNull(data.pays),
+        type_Activite: emptyToNull(data.type_Activite),
         updatedAt: new Date(),
       },
     });
-    
+
+    revalidatePath("/sav/fournisseurs");
     return { success: true, data: serializeFournisseur(fournisseur) };
   } catch (error) {
     console.error("Error creating fournisseur:", error);
-    return { success: false, error: "Failed to create fournisseur" };
+    return {
+      success: false,
+      error: "Erreur lors de la création du fournisseur.",
+    };
   }
 }
 
