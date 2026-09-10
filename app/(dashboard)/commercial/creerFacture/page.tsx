@@ -32,6 +32,8 @@ type VoitureModel = {
   fiche_technique?: string | null;
 };
 
+type FactureStatus = "PROFORMA" | "EN_ATTENTE" | "FACTURE" | "PAYEE" | "ANNULEE";
+
 type FactureData = {
   clientId: string;
   date_facture: string;
@@ -41,7 +43,7 @@ type FactureData = {
   remise: number;
   tva: number;
   avance_payee: number;
-  status_facture: "PROFORMA" | "EN_ATTENTE" | "PAYEE" | "ANNULEE";
+  status_facture: FactureStatus;
   voiture?: {
     voitureModelId?: string;
     couleur?: string;
@@ -140,7 +142,7 @@ function CreerFacturePageContent() {
     remise: 0,
     tva: 18,
     avance_payee: 0,
-    status_facture: "PROFORMA" as "PROFORMA" | "EN_ATTENTE" | "PAYEE" | "ANNULEE",
+    status_facture: "PROFORMA" as FactureStatus,
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -190,6 +192,16 @@ function CreerFacturePageContent() {
     fetchData();
   }, [clerkId]);
 
+  function toDateInputValue(value: string | Date | undefined) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   // Load facture data when in edit mode
   useEffect(() => {
     const loadFacture = async () => {
@@ -201,7 +213,10 @@ function CreerFacturePageContent() {
         const result = await res.json();
         if (result.success && result.data) {
           const facture = result.data as unknown as FactureData & {
-            clientEntrepriseId?: string;
+            clientId?: string | null;
+            clientEntrepriseId?: string | null;
+            client?: { id: string; nom: string } | null;
+            clientEntreprise?: { id: string; nom_entreprise: string } | null;
             lignes?: Array<{
               id: string;
               voitureModelId: string;
@@ -211,31 +226,55 @@ function CreerFacturePageContent() {
               transmission?: string;
               motorisation?: string;
             }>;
+            accessoires?: Array<{
+              id: string;
+              nom: string;
+              description?: string | null;
+              prix?: number | null;
+              quantity?: number | null;
+            }>;
           };
-          
-          // Add a small delay to ensure clients and models are loaded first
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Determine client type based on which ID is present
+
           const clientId = facture.clientId || "";
           const clientEntrepriseId = facture.clientEntrepriseId || "";
           const clientType = clientId ? "client" : (clientEntrepriseId ? "client_entreprise" : "");
+
+          if (facture.client) {
+            setClients((prev) =>
+              prev.some((c) => c.id === facture.client!.id)
+                ? prev
+                : [...prev, { id: facture.client!.id, nom: facture.client!.nom, type: "client" }]
+            );
+          }
+          if (facture.clientEntreprise) {
+            setClients((prev) =>
+              prev.some((c) => c.id === facture.clientEntreprise!.id)
+                ? prev
+                : [
+                    ...prev,
+                    {
+                      id: facture.clientEntreprise!.id,
+                      nom_entreprise: facture.clientEntreprise!.nom_entreprise,
+                      type: "client_entreprise",
+                    },
+                  ]
+            );
+          }
           
           setFormData({
             clientId: clientId || clientEntrepriseId,
             clientType: clientType as "client" | "client_entreprise",
-            date_facture: facture.date_facture ? new Date(facture.date_facture).toISOString().split("T")[0] : "",
-            date_echeance: facture.date_echeance ? new Date(facture.date_echeance).toISOString().split("T")[0] : "",
-            remise: facture.remise || 0,
-            tva: facture.tva || 18,
-            avance_payee: facture.avance_payee || 0,
+            date_facture: toDateInputValue(facture.date_facture),
+            date_echeance: toDateInputValue(facture.date_echeance),
+            remise: Number(facture.remise) || 0,
+            tva: Number(facture.tva) || 18,
+            avance_payee: Number(facture.avance_payee) || 0,
             status_facture: facture.status_facture || "PROFORMA",
           });
 
-          // Load existing lines or fallback to old single item
           if (facture.lignes && facture.lignes.length > 0) {
-            setLineItems(facture.lignes.map(ligne => ({
-              id: crypto.randomUUID(),
+            setLineItems(facture.lignes.map((ligne) => ({
+              id: ligne.id || crypto.randomUUID(),
               voitureModelId: ligne.voitureModelId,
               couleur: ligne.couleur,
               nbr_voiture: ligne.nbr_voiture,
@@ -244,7 +283,6 @@ function CreerFacturePageContent() {
               motorisation: ligne.motorisation || "",
             })));
           } else {
-            // Fallback for old factures without lignes
             setLineItems([{
               id: crypto.randomUUID(),
               voitureModelId: facture.voiture?.voitureModelId || "",
@@ -254,6 +292,20 @@ function CreerFacturePageContent() {
               transmission: "",
               motorisation: "",
             }]);
+          }
+
+          if (facture.accessoires && facture.accessoires.length > 0) {
+            setAccessoryItems(
+              facture.accessoires.map((acc) => ({
+                id: acc.id || crypto.randomUUID(),
+                nom: acc.nom || "",
+                description: acc.description || "",
+                prix_unitaire: Number(acc.prix) || 0,
+                quantity: Number(acc.quantity) || 1,
+              })),
+            );
+          } else {
+            setAccessoryItems([]);
           }
         } else {
           toast.error("Facture introuvable");
@@ -272,8 +324,8 @@ function CreerFacturePageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isEditMode && !dbUserId) {
-      toast.error("Vous devez être connecté");
+    if (!dbUserId) {
+      toast.error("Vous devez être connecté pour enregistrer la facture");
       return;
     }
   
@@ -287,7 +339,6 @@ function CreerFacturePageContent() {
       return;
     }
 
-    // Validate line items
     const validItems = lineItems.filter(item => 
       item.voitureModelId && item.couleur && item.prix_unitaire > 0
     );
@@ -296,47 +347,56 @@ function CreerFacturePageContent() {
       toast.error("Veuillez ajouter au moins un article valide");
       return;
     }
+
+    const validAccessories = accessoryItems.filter(item => 
+      item.nom && item.prix_unitaire > 0 && item.quantity > 0
+    );
   
     setLoading(true);
     try {
       if (isEditMode && factureId) {
-        // Update existing facture (only first item for now)
-        const firstItem = validItems[0];
-
         const res = await fetch(`/api/facture/${factureId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...(formData.clientType === "client" ? { clientId: formData.clientId } : {}),
-            nbr_voiture_commande: firstItem.nbr_voiture,
-            prix_unitaire: firstItem.prix_unitaire,
+            ...(formData.clientType === "client_entreprise"
+              ? { clientEntrepriseId: formData.clientId, clientId: null }
+              : { clientId: formData.clientId, clientEntrepriseId: null }),
+            date_facture: formData.date_facture,
+            date_echeance: formData.date_echeance,
             remise: formData.remise,
             tva: formData.tva,
             avance_payee: formData.avance_payee,
-            date_facture: formData.date_facture,
-            date_echeance: formData.date_echeance,
+            status_facture: formData.status_facture,
+            lignes: validItems.map((item) => ({
+              voitureModelId: item.voitureModelId,
+              couleur: item.couleur,
+              nbr_voiture: item.nbr_voiture,
+              prix_unitaire: item.prix_unitaire,
+              transmission: item.transmission,
+              motorisation: item.motorisation,
+            })),
+            accessoires:
+              validAccessories.length > 0
+                ? validAccessories.map((item) => ({
+                    nom: item.nom,
+                    description: item.description,
+                    prix_unitaire: item.prix_unitaire,
+                    quantity: item.quantity,
+                  }))
+                : [],
           }),
         });
         const result = await res.json();
         
         if (result.success) {
-          if (validItems.length > 1) {
-            toast.info("Note: Seul le premier article a été sauvegardé (support multi-articles en développement)");
-          } else {
-            toast.success("Facture modifiée avec succès");
-          }
+          toast.success("Facture modifiée avec succès");
           router.push("/commercial/proformas");
         } else {
           console.error("Error details:", result.error);
           toast.error(result.error || "Erreur lors de la modification");
         }
       } else {
-        // Validate and filter accessory items
-        const validAccessories = accessoryItems.filter(item => 
-          item.nom && item.prix_unitaire > 0 && item.quantity > 0
-        );
-
-        // Create one facture with multiple line items
         const res = await fetch("/api/facture", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -929,11 +989,11 @@ function CreerFacturePageContent() {
             <Button
               type="submit"
               className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold"
-              disabled={loading}
+              disabled={loading || !dbUserId}
             >
               {loading 
                 ? (isEditMode ? "Modification..." : "Création...") 
-                : (isEditMode ? "Modifier la Facture Proforma" : "Créer la Facture Proforma")
+                : (isEditMode ? "Enregistrer les modifications" : "Créer la Facture Proforma")
               }
             </Button>
           </div>

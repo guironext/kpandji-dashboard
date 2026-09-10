@@ -31,7 +31,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Edit2, Palette } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit2, FileDown, Palette } from "lucide-react";
+import { saveAs } from "file-saver";
+import {
+	buildProformaWordBlob,
+	getProformaWordFileName,
+	type ProformaWordLine,
+	type ProformaWordTotal,
+} from "@/lib/export-proforma-word";
 import {
 	getFacturesByUser,
 	deleteFacture,
@@ -409,6 +416,7 @@ export default function Page() {
 	const [colorModalCurrentCouleur, setColorModalCurrentCouleur] =
 		useState<string>("");
 	const [savingCouleur, setSavingCouleur] = useState(false);
+	const [exportingWord, setExportingWord] = useState(false);
 	const paginationScrollRef = useRef<HTMLDivElement>(null);
 
 	const convertAmount = (amountCfa: number): number => {
@@ -1430,6 +1438,21 @@ export default function Page() {
 		}
 	}, [currentPage]);
 
+	const handleEdit = () => {
+		const currentFacture = currentData[0];
+		if (!clerkId) {
+			toast.error("Vous devez être connecté pour modifier une facture");
+			return;
+		}
+		if (!currentFacture?.id) {
+			toast.error("Aucune facture sélectionnée");
+			return;
+		}
+		router.push(
+			`/commercial/creerFacture?id=${encodeURIComponent(currentFacture.id)}&mode=edit`,
+		);
+	};
+
 	const handleDelete = async () => {
 		const currentFacture = currentData[0];
 		if (!currentFacture || !clerkId) return;
@@ -1478,6 +1501,180 @@ export default function Page() {
 				"Aucune signature trouvée. Veuillez d'abord créer votre signature.",
 			);
 			router.push("./signature");
+		}
+	};
+
+	const handleExportToWord = async () => {
+		const facture = currentData[0];
+		if (!facture) {
+			toast.error("Aucune facture à exporter");
+			return;
+		}
+
+		setExportingWord(true);
+		try {
+			const lignes =
+				facture.lignes && facture.lignes.length > 0
+					? facture.lignes
+					: [
+							{
+								id: "1",
+								voitureModelId: "",
+								couleur: "",
+								nbr_voiture: facture.nbr_voiture_commande,
+								prix_unitaire: facture.prix_unitaire,
+								montant_ligne: facture.montant_ht,
+								transmission: "",
+								motorisation: "",
+								voitureModel: facture.voiture?.voitureModel || null,
+							},
+						];
+
+			const lines: ProformaWordLine[] = lignes.map((ligne, index) => {
+				const vehicleModel = getLigneVehicleModel(ligne);
+				const extras = [
+					ligne.couleur ? `Couleur: ${ligne.couleur}` : "",
+					ligne.transmission ? `Transmission: ${ligne.transmission}` : "",
+					ligne.motorisation ? `Motorisation: ${ligne.motorisation}` : "",
+				]
+					.filter(Boolean)
+					.join(" · ");
+				return {
+					index: index + 1,
+					title: vehicleModel?.model || "Véhicule",
+					description: vehicleModel?.description || undefined,
+					extras: extras || undefined,
+					quantity: String(ligne.nbr_voiture),
+					unitPrice: formatAmount(Number(ligne.prix_unitaire)),
+					total: formatAmount(Number(ligne.montant_ligne)),
+				};
+			});
+
+			if (facture.accessoires && facture.accessoires.length > 0) {
+				facture.accessoires.forEach((accessoire) => {
+					const unit = getAccessoirePrice(
+						accessoire.nom,
+						accessoire.prix,
+						accessoires,
+					);
+					const qty = accessoire.quantity || 1;
+					lines.push({
+						index: lines.length + 1,
+						title: accessoire.nom,
+						description: accessoire.description || undefined,
+						quantity: String(qty),
+						unitPrice: formatAmount(unit),
+						total: formatAmount(unit * qty),
+					});
+				});
+			} else if (facture.accessoire_nom) {
+				const qty = facture.accessoire_nbr || 1;
+				const total = facture.accessoire_prix || 0;
+				lines.push({
+					index: lines.length + 1,
+					title: facture.accessoire_nom,
+					description: facture.accessoire_description || undefined,
+					quantity: String(qty),
+					unitPrice: formatAmount(qty ? total / qty : total),
+					total: formatAmount(total),
+				});
+			}
+
+			const totals: ProformaWordTotal[] = [
+				{
+					label: "Total HT",
+					value: formatAmount(facture.total_ht),
+					bold: true,
+					fill: "ECFDF5",
+				},
+			];
+			if (facture.remise !== 0) {
+				totals.push({
+					label: `Remise (${facture.remise}%)`,
+					value: formatAmount(facture.montant_remise),
+					fill: "FFFFFF",
+				});
+				totals.push({
+					label: "Montant Net HT",
+					value: formatAmount(facture.montant_net_ht),
+					fill: "ECFDF5",
+				});
+			}
+			totals.push({
+				label: `TVA (${facture.tva}%)`,
+				value: formatAmount(facture.montant_tva),
+				fill: "FFFFFF",
+			});
+			totals.push({
+				label: "Total TTC",
+				value: formatAmount(getEffectiveTotalTtc(facture)),
+				bold: true,
+				fill: "ECFDF5",
+			});
+			if (facture.avance_payee) {
+				totals.push({
+					label: "Avance payée",
+					value: formatAmount(facture.avance_payee),
+					fill: "FFFFFF",
+				});
+				totals.push({
+					label: "Reste à payer",
+					value: formatAmount(facture.reste_payer),
+					bold: true,
+					fill: "FFF7ED",
+				});
+			}
+
+			const amountInWords =
+				editedAmountTexts[facture.id] ||
+				numberToFrench(
+					Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)),
+				);
+
+			const blob = await buildProformaWordBlob({
+				status: facture.status_facture,
+				numero: facture.id.slice(-7),
+				dateFacture: new Date(facture.date_facture).toLocaleDateString("fr-FR"),
+				dateEcheance: new Date(facture.date_echeance).toLocaleDateString(
+					"fr-FR",
+				),
+				createdBy: [facture.user?.firstName, facture.user?.lastName]
+					.filter(Boolean)
+					.join(" "),
+				createdByEmail: facture.user?.email || "",
+				createdByPhone: facture.user?.telephone || "",
+				clientName:
+					facture.client?.nom ||
+					facture.clientEntreprise?.nom_entreprise ||
+					"",
+				clientEntreprise: facture.client?.entreprise || undefined,
+				clientPhone:
+					facture.client?.telephone ||
+					facture.clientEntreprise?.telephone ||
+					"",
+				clientLocalisation:
+					facture.client?.localisation ||
+					facture.clientEntreprise?.localisation ||
+					"",
+				currencyLabel: getCurrencyLabel(),
+				lines,
+				totals,
+				amountInWords,
+				notes: notesProforma[facture.id] ?? facture.notes_proforma ?? "",
+				includeConditions: !conditionsTextHidden,
+				signatureSrc: showSignature ? signatureImage : null,
+			});
+
+			saveAs(
+				blob,
+				getProformaWordFileName(facture.id.slice(-7), facture.status_facture),
+			);
+			toast.success("Facture exportée en Word (.docx)");
+		} catch (error) {
+			console.error("Export Word error:", error);
+			toast.error("Erreur lors de l'exportation Word");
+		} finally {
+			setExportingWord(false);
 		}
 	};
 
@@ -1696,14 +1893,8 @@ export default function Page() {
 							</Button>
 
 							<Button
-								onClick={() => {
-									const currentFacture = currentData[0];
-									if (currentFacture)
-										router.push(
-											`./creerFacture?id=${currentFacture.id}&mode=edit`,
-										);
-								}}
-								disabled={currentData.length === 0}
+								onClick={handleEdit}
+								disabled={currentData.length === 0 || !clerkId}
 								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
 								MODIFIER
 							</Button>
@@ -1718,6 +1909,13 @@ export default function Page() {
 								disabled={currentData.length === 0}
 								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
 								{showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
+							</Button>
+							<Button
+								onClick={handleExportToWord}
+								disabled={currentData.length === 0 || exportingWord}
+								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
+								<FileDown className="mr-2 h-4 w-4" />
+								{exportingWord ? "Export..." : "Exporter en Word"}
 							</Button>
 						</div>
 						<Button

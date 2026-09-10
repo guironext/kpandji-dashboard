@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFactureById, updateFacture } from "@/lib/actions/facture";
+import {
+  getFactureById,
+  updateFacture,
+  updateFactureWithMultipleLines,
+} from "@/lib/actions/facture";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +38,43 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    const date_facture = body.date_facture
+      ? new Date(body.date_facture)
+      : undefined;
+    const date_echeance = body.date_echeance
+      ? new Date(body.date_echeance)
+      : undefined;
+
+    if (Array.isArray(body.lignes) && body.lignes.length > 0) {
+      if (!date_facture || Number.isNaN(date_facture.getTime())) {
+        return NextResponse.json(
+          { success: false, error: "Date de facture invalide" },
+          { status: 400 },
+        );
+      }
+      if (!date_echeance || Number.isNaN(date_echeance.getTime())) {
+        return NextResponse.json(
+          { success: false, error: "Date d'échéance invalide" },
+          { status: 400 },
+        );
+      }
+
+      const result = await updateFactureWithMultipleLines(id, {
+        clientId: body.clientId ?? null,
+        clientEntrepriseId: body.clientEntrepriseId ?? null,
+        date_facture,
+        date_echeance,
+        remise: body.remise ?? 0,
+        tva: body.tva ?? 18,
+        avance_payee: body.avance_payee ?? 0,
+        status_facture: body.status_facture,
+        lignes: body.lignes,
+        accessoires: body.accessoires,
+      });
+
+      return NextResponse.json(result);
+    }
+
     const result = await updateFacture(id, {
       clientId: body.clientId,
       nbr_voiture_commande: body.nbr_voiture_commande,
@@ -41,12 +82,8 @@ export async function PATCH(
       remise: body.remise,
       tva: body.tva,
       avance_payee: body.avance_payee,
-      date_facture: body.date_facture
-        ? new Date(body.date_facture)
-        : undefined,
-      date_echeance: body.date_echeance
-        ? new Date(body.date_echeance)
-        : undefined,
+      date_facture,
+      date_echeance,
     });
 
     return NextResponse.json(result);

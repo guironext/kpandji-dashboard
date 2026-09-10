@@ -1185,6 +1185,192 @@ export async function deleteFacture(factureId: string) {
   }
 }
 
+export async function updateFactureWithMultipleLines(
+  factureId: string,
+  data: {
+    clientId?: string | null;
+    clientEntrepriseId?: string | null;
+    date_facture: Date;
+    date_echeance: Date;
+    remise: number;
+    tva: number;
+    avance_payee?: number;
+    status_facture?: "EN_ATTENTE" | "PROFORMA" | "FACTURE" | "PAYEE" | "ANNULEE";
+    lignes: Array<{
+      voitureModelId: string;
+      couleur: string;
+      nbr_voiture: number;
+      prix_unitaire: number;
+      transmission?: string;
+      motorisation?: string;
+    }>;
+    accessoires?: Array<{
+      nom: string;
+      description: string;
+      prix_unitaire: number;
+      quantity: number;
+    }>;
+  },
+) {
+  try {
+    if (!data.lignes?.length) {
+      return { success: false, error: "Au moins une ligne est requise" };
+    }
+
+    const currentFacture = await prisma.facture.findUnique({
+      where: { id: factureId },
+      select: { id: true, voitureId: true, clientId: true },
+    });
+    if (!currentFacture) {
+      return { success: false, error: "Facture introuvable" };
+    }
+
+    const montant_ht_articles = data.lignes.reduce(
+      (sum, ligne) => sum + ligne.prix_unitaire * ligne.nbr_voiture,
+      0,
+    );
+    const montant_ht_accessoires = (data.accessoires || []).reduce(
+      (sum, acc) => sum + acc.prix_unitaire * acc.quantity,
+      0,
+    );
+    const montant_ht = montant_ht_articles + montant_ht_accessoires;
+    const montant_remise = (montant_ht * data.remise) / 100;
+    const montant_net_ht = montant_ht - montant_remise;
+    const montant_tva = (montant_net_ht * data.tva) / 100;
+    const total_ttc = montant_net_ht + montant_tva;
+    const avance_payee = data.avance_payee || 0;
+    const reste_payer = total_ttc - avance_payee;
+    const firstLine = data.lignes[0];
+
+    const accessoire_total_nbr = (data.accessoires || []).reduce(
+      (sum, acc) => sum + acc.quantity,
+      0,
+    );
+    const accessoire_nom_list = (data.accessoires || [])
+      .map((acc) => `${acc.nom} (x${acc.quantity})`)
+      .join(", ");
+    const accessoire_description_list = (data.accessoires || [])
+      .map((acc) => acc.description)
+      .filter((desc) => desc)
+      .join("; ");
+
+    const catalogAccessoires = await prisma.accessoire.findMany({
+      where: {
+        factureId: null,
+        voitureId: null,
+        commandeId: null,
+      },
+      select: { id: true, nom: true, image: true },
+    });
+
+    const nextClientId = data.clientId || null;
+    const nextClientEntrepriseId = data.clientEntrepriseId || null;
+
+    if (
+      nextClientId &&
+      nextClientId !== currentFacture.clientId &&
+      currentFacture.voitureId
+    ) {
+      await prisma.voiture.update({
+        where: { id: currentFacture.voitureId },
+        data: { clientId: nextClientId },
+      });
+    }
+
+    const facture = await prisma.$transaction(async (tx) => {
+      await tx.factureLigne.deleteMany({ where: { factureId } });
+      await tx.accessoire.deleteMany({ where: { factureId } });
+
+      return tx.facture.update({
+        where: { id: factureId },
+        data: {
+          clientId: nextClientId,
+          clientEntrepriseId: nextClientEntrepriseId,
+          date_facture: data.date_facture,
+          date_echeance: data.date_echeance,
+          ...(data.status_facture ? { status_facture: data.status_facture } : {}),
+          nbr_voiture_commande: firstLine.nbr_voiture,
+          prix_unitaire: new Decimal(firstLine.prix_unitaire),
+          remise: new Decimal(data.remise),
+          tva: new Decimal(data.tva),
+          avance_payee: new Decimal(avance_payee),
+          montant_ht: new Decimal(montant_ht),
+          total_ht: new Decimal(montant_ht),
+          montant_remise: new Decimal(montant_remise),
+          montant_net_ht: new Decimal(montant_net_ht),
+          montant_tva: new Decimal(montant_tva),
+          total_ttc: new Decimal(total_ttc),
+          reste_payer: new Decimal(reste_payer),
+          accessoire_nom: accessoire_nom_list || null,
+          accessoire_description: accessoire_description_list || null,
+          accessoire_prix:
+            montant_ht_accessoires > 0
+              ? new Decimal((data.accessoires || [])[0].prix_unitaire)
+              : null,
+          accessoire_nbr: accessoire_total_nbr > 0 ? accessoire_total_nbr : null,
+          accessoire_subtotal:
+            montant_ht_accessoires > 0
+              ? new Decimal(montant_ht_accessoires)
+              : null,
+          updatedAt: new Date(),
+          FactureLigne: {
+            create: data.lignes.map((ligne) => ({
+              id: crypto.randomUUID(),
+              voitureModelId: ligne.voitureModelId,
+              couleur: ligne.couleur,
+              nbr_voiture: ligne.nbr_voiture,
+              prix_unitaire: new Decimal(ligne.prix_unitaire),
+              montant_ligne: new Decimal(
+                ligne.prix_unitaire * ligne.nbr_voiture,
+              ),
+              transmission: ligne.transmission || null,
+              motorisation: ligne.motorisation || null,
+              updatedAt: new Date(),
+            })),
+          },
+          Accessoire: {
+            create: (data.accessoires || []).map((acc) => {
+              const matchingAccessoire = catalogAccessoires.find(
+                (a) => a.nom === acc.nom,
+              );
+              return {
+                id: crypto.randomUUID(),
+                nom: acc.nom,
+                description: acc.description || null,
+                prix: acc.prix_unitaire
+                  ? new Decimal(acc.prix_unitaire)
+                  : null,
+                quantity: acc.quantity || 1,
+                image: matchingAccessoire?.image || null,
+                updatedAt: new Date(),
+              };
+            }),
+          },
+        },
+        include: {
+          FactureLigne: { include: { VoitureModel: true } },
+          Accessoire: true,
+          Client: true,
+          Client_entreprise: true,
+          User: true,
+          Voiture: { include: { VoitureModel: true } },
+        },
+      });
+    });
+
+    revalidatePath("/commercial/factures");
+    revalidatePath("/commercial/proformas");
+    return { success: true, data: serializeFacture(facture) };
+  } catch (error) {
+    console.error("Error updating facture with multiple lines:", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Erreur lors de la modification de la facture";
+    return { success: false, error: errorMessage };
+  }
+}
+
 export async function updateFacture(
   factureId: string,
   data: {
