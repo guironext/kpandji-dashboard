@@ -31,11 +31,10 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { createEmployee, updateEmployee } from '@/lib/actions/employee';
+import { createEmployee, updateEmployee, uploadEmployeeImage } from '@/lib/actions/employee';
 import { toast } from 'sonner';
 import { Loader2, User, Plus, Upload, X, UserCircle, Phone, AlertCircle, ImageIcon } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
-import { put } from '@vercel/blob';
 import Image from 'next/image';
 
 const employeeSchema = z.object({
@@ -186,24 +185,13 @@ export function EmployeeFormDialog({ onSuccess, editingEmployee, triggerLabel = 
     try {
       let imageUrl: string | null = data.image ?? null;
 
-      // Upload image if selected
       if (selectedFile) {
-        if (!process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN) {
-          toast.error('Configuration manquante: BLOB_READ_WRITE_TOKEN non configuré. L\'image ne sera pas uploadée.');
-          imageUrl = null; // Proceed without image
-        } else {
-          try {
-            const blob = await put(`employee-${Date.now()}-${selectedFile.name}`, selectedFile, {
-              access: 'public',
-              token: process.env.NEXT_PUBLIC_BLOB_READ_WRITE_TOKEN,
-            });
-            imageUrl = blob.url;
-          } catch (uploadError) {
-            console.error('Error uploading image:', uploadError);
-            toast.error('Erreur lors de l\'upload de l\'image');
-            return;
-          }
+        const uploaded = await uploadEmployeeImage(selectedFile);
+        if (!uploaded.success || !uploaded.url) {
+          toast.error(uploaded.error || "Erreur lors de l'upload de l'image");
+          return;
         }
+        imageUrl = uploaded.url;
       }
 
       // Pass date as ISO string for reliable server action serialization

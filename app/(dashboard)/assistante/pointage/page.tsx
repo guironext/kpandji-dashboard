@@ -37,8 +37,8 @@ export default function PointagePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [loading, setLoading] = useState(false);
 
-  const loadPointages = useCallback(async (date: Date) => {
-    setLoading(true);
+  const loadPointages = useCallback(async (date: Date, silent = false) => {
+    if (!silent) setLoading(true);
     const result = await getPointagesByDate(date);
     setLoading(false);
     if (result.success && result.data) {
@@ -58,14 +58,28 @@ export default function PointagePage() {
     loadPointages(selectedDate);
   }, [selectedDate, loadPointages]);
 
+  const showPointage = (row: PointageRow) => {
+    setPointages((current) => [row, ...current.filter((item) => item.id !== row.id)]);
+    document.getElementById("pointages-du-jour")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleScanEntree = async (data: string) => {
     setShowScanner(null);
     const result = await recordPointage(data);
-    if (result.success) {
+    if (result.success && result.data) {
+      const heureEntree = new Date(result.data.heure_entree);
+      showPointage({
+        id: result.data.id,
+        nom: result.data.nom,
+        prenoms: result.data.prenoms,
+        numro_matricule: result.data.numro_matricule,
+        heure_entree: heureEntree,
+        heure_sortie: new Date(result.data.heure_sortie),
+      });
       toast.success(
-        `Entrée enregistrée: ${result.data?.nom} ${result.data?.prenoms} à ${result.data?.heure_entree ? format(new Date(result.data.heure_entree), "HH:mm:ss", { locale: fr }) : ""}`
+        `Entrée enregistrée: ${result.data.nom} ${result.data.prenoms} à ${format(heureEntree, "HH:mm:ss", { locale: fr })}`
       );
-      loadPointages(selectedDate);
+      loadPointages(selectedDate, true);
     } else {
       toast.error(result.error || "Erreur lors de l'enregistrement");
     }
@@ -74,11 +88,25 @@ export default function PointagePage() {
   const handleScanSortie = async (data: string) => {
     setShowScanner(null);
     const result = await recordPointageSortie(data);
-    if (result.success) {
+    if (result.success && result.data) {
+      const heureSortie = new Date(result.data.heure_sortie);
+      setPointages((current) => {
+        const existing = current.find((item) => item.id === result.data?.id);
+        const row: PointageRow = {
+          id: result.data.id,
+          nom: result.data.nom,
+          prenoms: result.data.prenoms,
+          numro_matricule: result.data.numro_matricule,
+          heure_entree: existing?.heure_entree ?? new Date(result.data.heure_entree),
+          heure_sortie: heureSortie,
+        };
+        return [row, ...current.filter((item) => item.id !== row.id)];
+      });
+      document.getElementById("pointages-du-jour")?.scrollIntoView({ behavior: "smooth", block: "start" });
       toast.success(
-        `Sortie enregistrée: ${result.data?.nom} ${result.data?.prenoms} à ${result.data?.heure_sortie ? format(new Date(result.data.heure_sortie), "HH:mm:ss", { locale: fr }) : ""}`
+        `Sortie enregistrée: ${result.data.nom} ${result.data.prenoms} à ${format(heureSortie, "HH:mm:ss", { locale: fr })}`
       );
-      loadPointages(selectedDate);
+      loadPointages(selectedDate, true);
     } else {
       toast.error(result.error || "Erreur lors de l'enregistrement");
     }
@@ -172,7 +200,7 @@ export default function PointagePage() {
         )}
 
         {/* Stats & Table */}
-        <Card className="border shadow-md bg-white/80 backdrop-blur-sm">
+        <Card id="pointages-du-jour" className="border shadow-md bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>

@@ -3,6 +3,57 @@
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { getOrCreateUser } from "./user";
+import { mkdir, writeFile } from "fs/promises";
+import { join } from "path";
+import { put } from "@vercel/blob";
+
+const MAX_EMPLOYEE_IMAGE_SIZE = 5 * 1024 * 1024;
+
+export async function uploadEmployeeImage(
+  file: File,
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    if (!file?.size) {
+      return { success: false, error: "Aucun fichier sélectionné." };
+    }
+    if (!file.type.startsWith("image/")) {
+      return { success: false, error: "Le fichier doit être une image." };
+    }
+    if (file.size > MAX_EMPLOYEE_IMAGE_SIZE) {
+      return { success: false, error: "L'image ne doit pas dépasser 5 Mo." };
+    }
+
+    const timestamp = Date.now();
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const useBlob =
+      Boolean(blobToken) && process.env.NODE_ENV === "production";
+
+    if (useBlob) {
+      const blob = await put(
+        `employees/${timestamp}_${sanitizedName}`,
+        file,
+        { access: "public", token: blobToken },
+      );
+      return { success: true, url: blob.url };
+    }
+
+    const dir = join(process.cwd(), "public", "externes", "employees");
+    await mkdir(dir, { recursive: true });
+    const filename = `${timestamp}_${sanitizedName}`;
+    await writeFile(join(dir, filename), Buffer.from(await file.arrayBuffer()));
+    return { success: true, url: `/externes/employees/${filename}` };
+  } catch (error) {
+    console.error("Error uploading employee image:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'upload de l'image.",
+    };
+  }
+}
 
 export async function createEmployee(data: {
   nom: string;

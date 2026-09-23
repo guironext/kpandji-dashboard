@@ -3,24 +3,89 @@
 import { prisma } from "../prisma";
 import { revalidatePath } from "next/cache";
 
+function scannedCode(raw: string) {
+  return raw.trim().replace(/[^\x20-\x7E]/g, "");
+}
+
+/** Codes to try against Employee.numro_matricule, including QR values like http://A0008M25. */
+function scanTokens(raw: string) {
+  const cleaned = scannedCode(raw).toLowerCase();
+  if (!cleaned) return [];
+  const withoutProtocol = cleaned.replace(/^https?:\/\//, "");
+  const tail = withoutProtocol.split("/").filter(Boolean).pop() ?? withoutProtocol;
+  const embedded =
+    tail.match(/[a-z]{0,6}\d{3,8}[a-z]\d{2}/)?.[0] ??
+    tail.match(/[a-z]{1,6}\d{4,8}/)?.[0];
+  return [...new Set([withoutProtocol, tail, embedded].filter((token): token is string => !!token && token.length >= 4))];
+}
+
+async function findEmployeeByScan(raw: string) {
+  const cleaned = scannedCode(raw);
+  if (!cleaned) return null;
+
+  const uuid = cleaned.match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  )?.[0];
+  if (uuid) {
+    const byId = await prisma.employee.findUnique({
+      where: { id: uuid },
+      select: { id: true, nom: true, prenoms: true, numro_matricule: true },
+    });
+    if (byId) return byId;
+  }
+
+  const tokens = scanTokens(cleaned);
+  if (tokens.length === 0) return null;
+
+  const employees = await prisma.employee.findMany({
+    where: { numro_matricule: { not: null } },
+    select: { id: true, nom: true, prenoms: true, numro_matricule: true, status: true },
+  });
+
+  const ranked = employees
+    .map((employee) => {
+      const key = employee.numro_matricule?.trim().toLowerCase() ?? "";
+      let score = 0;
+      for (const token of tokens) {
+        if (key === token) score = Math.max(score, 100);
+        else if (key.endsWith(token) || token.endsWith(key)) score = Math.max(score, 80);
+        else if (key.includes(token) || token.includes(key)) score = Math.max(score, 60);
+      }
+      if (employee.status === "ACTIVE") score += 1;
+      return { employee, score };
+    })
+    .filter((item) => item.score >= 60)
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0]?.employee;
+  if (!best) return null;
+  return {
+    id: best.id,
+    nom: best.nom,
+    prenoms: best.prenoms,
+    numro_matricule: best.numro_matricule,
+  };
+}
+
 /**
  * Records a clock-in (pointage) when a QR code containing employee numro_matricule is scanned.
  * Finds employee by numro_matricule, then saves nom, prenoms, and scan time to Pointage.
  */
 export async function recordPointage(matricule: string) {
   try {
-    const trimmedMatricule = matricule.trim();
+    const trimmedMatricule = scannedCode(matricule);
     if (!trimmedMatricule) {
       return { success: false, error: "Code matricule vide." };
     }
 
-    const employee = await prisma.employee.findFirst({
-      where: { numro_matricule: trimmedMatricule },
-      select: { id: true, nom: true, prenoms: true },
-    });
+    const employee = await findEmployeeByScan(trimmedMatricule);
 
     if (!employee) {
-      return { success: false, error: "Employé non trouvé. Vérifiez le code matricule." };
+      console.warn("Pointage: aucun employé pour le code scanné:", JSON.stringify(trimmedMatricule));
+      return {
+        success: false,
+        error: `Employé non trouvé pour « ${trimmedMatricule.slice(0, 80)} ». Vérifiez le matricule.`,
+      };
     }
 
     const now = new Date();
@@ -35,12 +100,16 @@ export async function recordPointage(matricule: string) {
     });
 
     revalidatePath("/rh/pointage");
+    revalidatePath("/assistante/pointage");
     return {
       success: true,
       data: {
+        id: pointage.id,
         nom: employee.nom,
         prenoms: employee.prenoms,
+        numro_matricule: employee.numro_matricule,
         heure_entree: pointage.heure_entree,
+        heure_sortie: pointage.heure_sortie,
       },
     };
   } catch (error) {
@@ -58,18 +127,19 @@ export async function recordPointage(matricule: string) {
  */
 export async function recordPointageSortie(matricule: string) {
   try {
-    const trimmedMatricule = matricule.trim();
+    const trimmedMatricule = scannedCode(matricule);
     if (!trimmedMatricule) {
       return { success: false, error: "Code matricule vide." };
     }
 
-    const employee = await prisma.employee.findFirst({
-      where: { numro_matricule: trimmedMatricule },
-      select: { id: true, nom: true, prenoms: true },
-    });
+    const employee = await findEmployeeByScan(trimmedMatricule);
 
     if (!employee) {
-      return { success: false, error: "Employé non trouvé. Vérifiez le code matricule." };
+      console.warn("Pointage sortie: aucun employé pour le code scanné:", JSON.stringify(trimmedMatricule));
+      return {
+        success: false,
+        error: `Employé non trouvé pour « ${trimmedMatricule.slice(0, 80)} ». Vérifiez le matricule.`,
+      };
     }
 
     const now = new Date();
@@ -107,11 +177,15 @@ export async function recordPointageSortie(matricule: string) {
     });
 
     revalidatePath("/rh/pointage");
+    revalidatePath("/assistante/pointage");
     return {
       success: true,
       data: {
+        id: openPointage.id,
         nom: employee.nom,
         prenoms: employee.prenoms,
+        numro_matricule: employee.numro_matricule,
+        heure_entree: openPointage.heure_entree,
         heure_sortie: now,
       },
     };

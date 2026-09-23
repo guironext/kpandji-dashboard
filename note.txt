@@ -9,6 +9,11 @@ consider this
 =========================================================
 npm i prisma
 npx prisma init
+npm i @prisma/client
+npm i --save-dev prisma@latest                       │
+npm i @prisma/client@latest 
+
+
 =>schematfile
 |!!npx prisma dev
 ||| npx prisma migrate dev

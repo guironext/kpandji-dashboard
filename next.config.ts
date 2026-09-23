@@ -45,7 +45,8 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://js.clerk.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.clerk.accounts.dev https://*.clerk.com https://js.clerk.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://hcaptcha.com https://challenges.cloudflare.com",
+              "worker-src 'self' blob:",
               "style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.com https://www.google.com https://*.hcaptcha.com https://challenges.cloudflare.com",
               "img-src 'self' data: blob: https://*.clerk.accounts.dev https://*.clerk.com https://img.clerk.com https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com https://www.google.com https://www.gstatic.com https://*.hcaptcha.com https://challenges.cloudflare.com",
               "media-src 'self' blob:",
