@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -13,8 +13,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getFacturesByUser, deleteFacture } from "@/lib/actions/facture";
+import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { saveAs } from "file-saver";
+import {
+  buildProformaWordBlob,
+  getProformaWordFileName,
+  type ProformaWordLine,
+  type ProformaWordTotal,
+} from "@/lib/export-proforma-word";
+import {
+  getFacturesByUser,
+  deleteFacture,
+  requestFactureValidation,
+} from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getUserSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
@@ -75,6 +86,7 @@ type Facture = {
   date_facture: string;
   date_echeance: string;
   status_facture: string;
+  validationRespoCom: string;
   nbr_voiture_commande: number;
   prix_unitaire: number;
   montant_ht: number;
@@ -121,6 +133,7 @@ type Facture = {
     nbr_voiture: number;
     prix_unitaire: number;
     montant_ligne: number;
+    remise?: number;
     transmission?: string;
     motorisation?: string;
     voitureModel: {
@@ -155,8 +168,17 @@ function getAccessoireImage(
   return matched?.image || null;
 }
 
+function getLigneVehicleImage(ligne: {
+  voitureModel?: { image?: string | null } | null;
+  VoitureModel?: { image?: string | null } | null;
+}): string | null {
+  return ligne.voitureModel?.image || ligne.VoitureModel?.image || null;
+}
+
 export default function Page() {
   const router = useRouter();
+  const pathname = usePathname();
+  const onlyValidated = pathname === "/commercial/proformas-validees";
   const { userId: clerkId } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
@@ -164,6 +186,8 @@ export default function Page() {
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
+  const [submittingValidation, setSubmittingValidation] = useState<string | null>(null);
   const paginationScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -185,10 +209,13 @@ export default function Page() {
     fetchData();
   }, [clerkId]);
 
-  const totalPages = Math.ceil(factures.length / itemsPerPage);
+  const displayedFactures = onlyValidated
+    ? factures.filter((facture) => facture.validationRespoCom === "VALIDATED")
+    : factures;
+  const totalPages = Math.ceil(displayedFactures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentData = factures.slice(startIndex, endIndex);
+  const currentData = displayedFactures.slice(startIndex, endIndex);
 
   const handlePrint = () => window.print();
   const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -257,6 +284,204 @@ export default function Page() {
     } else {
       toast.error("Aucune signature trouvée. Veuillez d'abord créer votre signature.");
       router.push("./signature");
+    }
+  };
+
+  const handleRequestValidation = async () => {
+    const facture = currentData[0];
+    if (!facture || !clerkId) return;
+    if (facture.validationRespoCom !== "CREER") return;
+
+    setSubmittingValidation(facture.id);
+    const result = await requestFactureValidation(facture.id);
+    setSubmittingValidation(null);
+
+    if (result.success) {
+      setFactures((prev) =>
+        prev.map((item) =>
+          item.id === facture.id
+            ? { ...item, validationRespoCom: "VALIDATION_COURS" }
+            : item,
+        ),
+      );
+      toast.success("Facture envoyée pour validation");
+    } else {
+      toast.error(result.error || "Erreur lors de la demande de validation");
+    }
+  };
+
+  const handleExportToWord = async () => {
+    const facture = currentData[0];
+    if (!facture) {
+      toast.error("Aucune facture à exporter");
+      return;
+    }
+
+    setExportingWord(true);
+    try {
+      const lignes =
+        facture.lignes && facture.lignes.length > 0
+          ? facture.lignes
+          : [
+              {
+                id: "1",
+                voitureModelId: "",
+                couleur: "",
+                nbr_voiture: facture.nbr_voiture_commande,
+                prix_unitaire: facture.prix_unitaire,
+                montant_ligne: facture.montant_ht,
+                transmission: "",
+                motorisation: "",
+                voitureModel: facture.voiture?.voitureModel || null,
+              },
+            ];
+
+      const lines: ProformaWordLine[] = lignes.map((ligne, index) => {
+        const extras = [
+          ligne.couleur ? `Couleur: ${ligne.couleur}` : "",
+          ligne.transmission ? `Transmission: ${ligne.transmission}` : "",
+          ligne.motorisation ? `Motorisation: ${ligne.motorisation}` : "",
+          "remise" in ligne && Number(ligne.remise) > 0
+            ? `Remise: ${Number(ligne.remise)} %`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return {
+          index: index + 1,
+          title: ligne.voitureModel?.model || "Véhicule",
+          description: ligne.voitureModel?.description || undefined,
+          extras: extras || undefined,
+          quantity: String(ligne.nbr_voiture),
+          unitPrice: formatNumberWithSpaces(Number(ligne.prix_unitaire)),
+          total: formatNumberWithSpaces(Number(ligne.montant_ligne)),
+          imageSrc: getLigneVehicleImage(ligne),
+        };
+      });
+
+      if (facture.accessoires && facture.accessoires.length > 0) {
+        facture.accessoires.forEach((accessoire) => {
+          const unit = Number(accessoire.prix) || 0;
+          const qty = accessoire.quantity || 1;
+          lines.push({
+            index: lines.length + 1,
+            title: accessoire.nom,
+            description: accessoire.description || undefined,
+            quantity: String(qty),
+            unitPrice: formatNumberWithSpaces(unit),
+            total: formatNumberWithSpaces(unit * qty),
+            imageSrc: accessoire.image || null,
+          });
+        });
+      } else if (facture.accessoire_nom) {
+        const qty = facture.accessoire_nbr || 1;
+        const total = facture.accessoire_prix || 0;
+        lines.push({
+          index: lines.length + 1,
+          title: facture.accessoire_nom,
+          description: facture.accessoire_description || undefined,
+          quantity: String(qty),
+          unitPrice: formatNumberWithSpaces(qty ? total / qty : total),
+          total: formatNumberWithSpaces(total),
+          imageSrc: getAccessoireImage(facture.accessoire_nom, accessoires),
+        });
+      }
+
+      const totals: ProformaWordTotal[] = [
+        {
+          label: "Total HT",
+          value: formatNumberWithSpaces(facture.total_ht),
+          bold: true,
+          fill: "ECFDF5",
+        },
+      ];
+      if (facture.remise !== 0) {
+        totals.push({
+          label: `Remise (${facture.remise}%)`,
+          value: formatNumberWithSpaces(facture.montant_remise),
+          fill: "FFFFFF",
+        });
+        totals.push({
+          label: "Montant Net HT",
+          value: formatNumberWithSpaces(facture.montant_net_ht),
+          fill: "ECFDF5",
+        });
+      }
+      totals.push({
+        label: `TVA (${facture.tva}%)`,
+        value: formatNumberWithSpaces(facture.montant_tva),
+        fill: "FFFFFF",
+      });
+      totals.push({
+        label: "Total TTC",
+        value: formatNumberWithSpaces(facture.total_ttc),
+        bold: true,
+        fill: "ECFDF5",
+      });
+      if (facture.avance_payee) {
+        totals.push({
+          label: "Avance payée",
+          value: formatNumberWithSpaces(facture.avance_payee),
+          fill: "FFFFFF",
+        });
+        totals.push({
+          label: "Reste à payer",
+          value: formatNumberWithSpaces(facture.reste_payer),
+          bold: true,
+          fill: "FFF7ED",
+        });
+      }
+
+      let imageStats = { embedded: 0, requested: 0 };
+      const blob = await buildProformaWordBlob({
+        status: facture.status_facture,
+        numero: facture.id.slice(-7),
+        dateFacture: new Date(facture.date_facture).toLocaleDateString("fr-FR"),
+        dateEcheance: new Date(facture.date_echeance).toLocaleDateString("fr-FR"),
+        createdBy: [facture.user?.firstName, facture.user?.lastName]
+          .filter(Boolean)
+          .join(" "),
+        createdByEmail: facture.user?.email || "",
+        createdByPhone: facture.user?.telephone || "",
+        clientName:
+          facture.client?.nom || facture.clientEntreprise?.nom_entreprise || "",
+        clientEntreprise: facture.client?.entreprise || undefined,
+        clientPhone:
+          facture.client?.telephone || facture.clientEntreprise?.telephone || "",
+        clientLocalisation:
+          facture.client?.localisation ||
+          facture.clientEntreprise?.localisation ||
+          "",
+        currencyLabel: "FCFA",
+        lines,
+        totals,
+        amountInWords: numberToFrench(Math.floor(facture.total_ttc || 0)),
+        notes: "",
+        includeConditions: true,
+        signatureSrc: showSignature ? signatureImage : null,
+        onLineImages: (embedded, requested) => {
+          imageStats = { embedded, requested };
+        },
+      });
+
+      saveAs(
+        blob,
+        getProformaWordFileName(facture.id.slice(-7), facture.status_facture),
+      );
+      if (imageStats.embedded < imageStats.requested) {
+        toast.warning(
+          `Facture exportée, mais ${imageStats.requested - imageStats.embedded} image(s) sur ${imageStats.requested} n'ont pas pu être intégrées (voir la console du navigateur)`,
+        );
+      } else {
+        toast.success(
+          `Facture exportée en Word (.docx)${imageStats.requested > 0 ? ` — ${imageStats.embedded} image(s) intégrée(s)` : ""}`,
+        );
+      }
+    } catch (error) {
+      console.error("Export Word error:", error);
+      toast.error("Erreur lors de l'exportation Word");
+    } finally {
+      setExportingWord(false);
     }
   };
 
@@ -572,7 +797,7 @@ export default function Page() {
       
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
         <div className="bg-white rounded-lg shadow-2xl p-8">
-          <div className="flex w-full justify-between mb-6 print-hide">
+          <div className="flex items-center w-full justify-between mb-6 print-hide">
             <div className="flex gap-4">
               <Button onClick={() => router.push("./creerFacture")} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold shadow-lg">
                 CREER PROFORMA
@@ -586,9 +811,36 @@ export default function Page() {
               <Button onClick={handleDelete} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
                 SUPPRIMER
               </Button>
-              <Button onClick={handleSignature} disabled={currentData.length === 0} className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
-                {showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
-              </Button>
+              
+
+            </div>
+            <div className="flex items-center w-full justify-between">
+            <Button
+								onClick={onlyValidated ? undefined : handleRequestValidation}
+								disabled={
+									onlyValidated ||
+									currentData.length === 0 ||
+									currentData[0]?.validationRespoCom !== "CREER" ||
+									submittingValidation === currentData[0]?.id
+								}
+								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
+								{onlyValidated
+									? "PROFORMA VALIDEE"
+									: submittingValidation === currentData[0]?.id
+									? "ENVOI..."
+									: currentData[0]?.validationRespoCom === "VALIDATION_COURS"
+										? "VALIDATION EN COURS"
+										: currentData[0]?.validationRespoCom === "VALIDATED"
+											? "VALIDEE"
+											: "FAIRE VALIDER"}
+							</Button>
+            <Button
+								onClick={handleExportToWord}
+								disabled={currentData.length === 0 || exportingWord}
+								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
+								<FileDown className="mr-2 h-4 w-4" />
+								{exportingWord ? "Export..." : "Exporter en Word"}
+							</Button>
             </div>
           </div>
 
