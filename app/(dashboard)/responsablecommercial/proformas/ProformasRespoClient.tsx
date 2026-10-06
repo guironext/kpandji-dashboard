@@ -32,9 +32,42 @@ const numberToFrench = (num: number): string => {
   if (num === null || num === undefined || isNaN(num) || !isFinite(num)) {
     return "zéro";
   }
-  const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
-  const teens = ["dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"];
-  const tens = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"];
+  const units = [
+    "",
+    "un",
+    "deux",
+    "trois",
+    "quatre",
+    "cinq",
+    "six",
+    "sept",
+    "huit",
+    "neuf",
+  ];
+  const teens = [
+    "dix",
+    "onze",
+    "douze",
+    "treize",
+    "quatorze",
+    "quinze",
+    "seize",
+    "dix-sept",
+    "dix-huit",
+    "dix-neuf",
+  ];
+  const tens = [
+    "",
+    "",
+    "vingt",
+    "trente",
+    "quarante",
+    "cinquante",
+    "soixante",
+    "soixante-dix",
+    "quatre-vingt",
+    "quatre-vingt-dix",
+  ];
   if (num === 0) return "zéro";
   if (num < 10) return units[num];
   if (num < 20) return teens[num - 10];
@@ -47,21 +80,40 @@ const numberToFrench = (num: number): string => {
   if (num < 1000) {
     const hundred = Math.floor(num / 100);
     const rest = num % 100;
-    return (hundred > 1 ? units[hundred] + " " : "") + "cent" + (hundred > 1 && rest === 0 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+    return (
+      (hundred > 1 ? units[hundred] + " " : "") +
+      "cent" +
+      (hundred > 1 && rest === 0 ? "s" : "") +
+      (rest ? " " + numberToFrench(rest) : "")
+    );
   }
   if (num < 1000000) {
     const thousand = Math.floor(num / 1000);
     const rest = num % 1000;
-    return (thousand > 1 ? numberToFrench(thousand) + " " : "") + "mille" + (rest ? " " + numberToFrench(rest) : "");
+    return (
+      (thousand > 1 ? numberToFrench(thousand) + " " : "") +
+      "mille" +
+      (rest ? " " + numberToFrench(rest) : "")
+    );
   }
   if (num < 1000000000) {
     const million = Math.floor(num / 1000000);
     const rest = num % 1000000;
-    return numberToFrench(million) + " million" + (million > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+    return (
+      numberToFrench(million) +
+      " million" +
+      (million > 1 ? "s" : "") +
+      (rest ? " " + numberToFrench(rest) : "")
+    );
   }
   const milliard = Math.floor(num / 1000000000);
   const rest = num % 1000000000;
-  return numberToFrench(milliard) + " milliard" + (milliard > 1 ? "s" : "") + (rest ? " " + numberToFrench(rest) : "");
+  return (
+    numberToFrench(milliard) +
+    " milliard" +
+    (milliard > 1 ? "s" : "") +
+    (rest ? " " + numberToFrench(rest) : "")
+  );
 };
 
 const escapeHtml = (value?: string | null) => {
@@ -81,6 +133,7 @@ type Facture = {
   date_facture: string;
   date_echeance: string;
   status_facture: string;
+  validationRespoCom: string;
   nbr_voiture_commande: number;
   prix_unitaire: number;
   montant_ht: number;
@@ -100,9 +153,26 @@ type Facture = {
   accessoire_subtotal?: number | null;
   clientId?: string | null;
   clientEntrepriseId?: string | null;
-  client: { nom: string; telephone?: string; entreprise?: string; localisation?: string; commercial?: string } | null;
-  clientEntreprise: { nom_entreprise: string; telephone?: string; localisation?: string; commercial?: string } | null;
-  voiture: { voitureModel: { model: string; image?: string; description?: string } | null } | null;
+  client: {
+    nom: string;
+    telephone?: string;
+    entreprise?: string;
+    localisation?: string;
+    commercial?: string;
+  } | null;
+  clientEntreprise: {
+    nom_entreprise: string;
+    telephone?: string;
+    localisation?: string;
+    commercial?: string;
+  } | null;
+  voiture: {
+    voitureModel: {
+      model: string;
+      image?: string;
+      description?: string;
+    } | null;
+  } | null;
   lignes?: Array<{
     id: string;
     voitureModelId: string;
@@ -112,15 +182,32 @@ type Facture = {
     montant_ligne: number;
     transmission?: string;
     motorisation?: string;
-    voitureModel: { model: string; image?: string; description?: string } | null;
+    voitureModel: {
+      model: string;
+      image?: string;
+      description?: string;
+    } | null;
   }>;
-  accessoires?: Array<{ id: string; nom: string; description?: string; prix: number; quantity?: number; image?: string }>;
-  user: { id: string; firstName: string; lastName: string; email: string; telephone?: string } | null;
+  accessoires?: Array<{
+    id: string;
+    nom: string;
+    description?: string;
+    prix: number;
+    quantity?: number;
+    image?: string;
+  }>;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    telephone?: string;
+  } | null;
 };
 
 function getAccessoireImage(
   accessoireNom: string | null | undefined,
-  accessoiresList: Array<{ id: string; nom: string; image?: string | null }>
+  accessoiresList: Array<{ id: string; nom: string; image?: string | null }>,
 ) {
   if (!accessoireNom) return null;
   const name = accessoireNom.split(",")[0]?.split(" (x")[0]?.trim();
@@ -131,7 +218,7 @@ function getAccessoireImage(
 function getAccessoirePrice(
   accessoireNom: string,
   prix: number | null | undefined,
-  accessoiresList: Array<{ id: string; nom: string; prix?: number | null }>
+  accessoiresList: Array<{ id: string; nom: string; prix?: number | null }>,
 ): number {
   if (prix !== null && prix !== undefined && prix > 0) return prix;
   const matched = accessoiresList.find((acc) => acc.nom === accessoireNom);
@@ -146,13 +233,26 @@ type CommercialGroup = {
 
 export default function ProformasRespoClient() {
   const router = useRouter();
-  const [commercialGroups, setCommercialGroups] = useState<CommercialGroup[]>([]);
+  const [commercialGroups, setCommercialGroups] = useState<CommercialGroup[]>(
+    [],
+  );
   const [selectedCommercialId, setSelectedCommercialId] = useState<string>("");
-  const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; prix?: number | null; image?: string | null }>>([]);
+  const [accessoires, setAccessoires] = useState<
+    Array<{
+      id: string;
+      nom: string;
+      prix?: number | null;
+      image?: string | null;
+    }>
+  >([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
-  const [editedAmountTexts, setEditedAmountTexts] = useState<Record<string, string>>({});
-  const [editingAmountText, setEditingAmountText] = useState<string | null>(null);
+  const [editedAmountTexts, setEditedAmountTexts] = useState<
+    Record<string, string>
+  >({});
+  const [editingAmountText, setEditingAmountText] = useState<string | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const paginationScrollRef = useRef<HTMLDivElement>(null);
@@ -166,7 +266,9 @@ export default function ProformasRespoClient() {
       if (proformasResult.success && proformasResult.data) {
         const data = proformasResult.data as unknown as Facture[];
         const filtered = data.filter(
-          (f) => f.status_facture?.toUpperCase() === "PROFORMA"
+          (f) =>
+            f.status_facture?.toUpperCase() === "PROFORMA" &&
+            f.validationRespoCom === "VALIDATION_COURS",
         );
         const groupsMap = new Map<string, CommercialGroup>();
         filtered.forEach((f) => {
@@ -175,12 +277,16 @@ export default function ProformasRespoClient() {
             ? `${f.user.firstName} ${f.user.lastName}`.trim()
             : "Non attribué";
           if (!groupsMap.has(userId)) {
-            groupsMap.set(userId, { commercialId: userId, commercialName: userName, factures: [] });
+            groupsMap.set(userId, {
+              commercialId: userId,
+              commercialName: userName,
+              factures: [],
+            });
           }
           groupsMap.get(userId)!.factures.push(f);
         });
         const groups = Array.from(groupsMap.values()).sort((a, b) =>
-          a.commercialName.localeCompare(b.commercialName)
+          a.commercialName.localeCompare(b.commercialName),
         );
         setCommercialGroups(groups);
         if (groups.length > 0) {
@@ -189,19 +295,28 @@ export default function ProformasRespoClient() {
       }
       if (accessoiresResult.success && accessoiresResult.data) {
         setAccessoires(
-          accessoiresResult.data.map((acc: { id: string; nom: string; prix?: number | null; image?: string | null }) => ({
-            id: acc.id,
-            nom: acc.nom,
-            prix: acc.prix ?? null,
-            image: acc.image || null,
-          }))
+          accessoiresResult.data.map(
+            (acc: {
+              id: string;
+              nom: string;
+              prix?: number | null;
+              image?: string | null;
+            }) => ({
+              id: acc.id,
+              nom: acc.nom,
+              prix: acc.prix ?? null,
+              image: acc.image || null,
+            }),
+          ),
         );
       }
     };
     fetchData();
   }, []);
 
-  const selectedGroup = commercialGroups.find((g) => g.commercialId === selectedCommercialId);
+  const selectedGroup = commercialGroups.find(
+    (g) => g.commercialId === selectedCommercialId,
+  );
   const factures = selectedGroup?.factures ?? [];
   const totalPages = Math.ceil(factures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -214,9 +329,15 @@ export default function ProformasRespoClient() {
 
   useEffect(() => {
     if (paginationScrollRef.current) {
-      const pageElement = paginationScrollRef.current.querySelector(`[data-page="${currentPage}"]`) as HTMLElement;
+      const pageElement = paginationScrollRef.current.querySelector(
+        `[data-page="${currentPage}"]`,
+      ) as HTMLElement;
       if (pageElement) {
-        pageElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        pageElement.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
       }
     }
   }, [currentPage]);
@@ -229,7 +350,9 @@ export default function ProformasRespoClient() {
     }
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      toast.error("Impossible d'ouvrir la fenêtre d'impression. Veuillez autoriser les pop-ups.");
+      toast.error(
+        "Impossible d'ouvrir la fenêtre d'impression. Veuillez autoriser les pop-ups.",
+      );
       return;
     }
     const lignes =
@@ -251,7 +374,9 @@ export default function ProformasRespoClient() {
     const vehicleRows = lignes
       .map((ligne, index) => {
         const vehicleModelName = escapeHtml(ligne.voitureModel?.model || "N/A");
-        const vehicleDescription = escapeHtml(ligne.voitureModel?.description || "N/A");
+        const vehicleDescription = escapeHtml(
+          ligne.voitureModel?.description || "N/A",
+        );
         const vehicleImage = ligne.voitureModel?.image
           ? `<img src="${escapeAttr(ligne.voitureModel.image)}" alt="${vehicleModelName}" style="max-width: 110px; max-height: 90px; object-fit: contain;" />`
           : "N/A";
@@ -278,7 +403,11 @@ export default function ProformasRespoClient() {
     if (currentFacture.accessoires && currentFacture.accessoires.length > 0) {
       accessoryRows = currentFacture.accessoires
         .map((accessoire, accIndex) => {
-          const accessoirePrix = getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires);
+          const accessoirePrix = getAccessoirePrice(
+            accessoire.nom,
+            accessoire.prix,
+            accessoires,
+          );
           const accessoireName = escapeHtml(accessoire.nom);
           const accessoireDescription = escapeHtml(accessoire.description);
           const accessoryImage = accessoire.image
@@ -300,9 +429,14 @@ export default function ProformasRespoClient() {
         })
         .join("");
     } else if (currentFacture.accessoire_nom) {
-      const imagePath = getAccessoireImage(currentFacture.accessoire_nom, accessoires);
+      const imagePath = getAccessoireImage(
+        currentFacture.accessoire_nom,
+        accessoires,
+      );
       const accessoireNom = escapeHtml(currentFacture.accessoire_nom);
-      const accessoireDescription = escapeHtml(currentFacture.accessoire_description);
+      const accessoireDescription = escapeHtml(
+        currentFacture.accessoire_description,
+      );
       const accessoryImage = imagePath
         ? `<img src="${escapeAttr(imagePath)}" alt="${accessoireNom}" style="max-width: 100px; max-height: 80px; object-fit: contain;" />`
         : '<div style="font-size: 13px; color: #6b7280;">Pas d\'image</div>';
@@ -326,16 +460,42 @@ export default function ProformasRespoClient() {
         : "";
     const factureId = escapeHtml(currentFacture.id.slice(-7));
     const factureStatus = escapeHtml(currentFacture.status_facture);
-    const factureDate = escapeHtml(new Date(currentFacture.date_facture).toLocaleDateString());
-    const createdByName = escapeHtml(`${currentFacture.user?.firstName || ""} ${currentFacture.user?.lastName || ""}`.trim()) || "N/A";
+    const factureDate = escapeHtml(
+      new Date(currentFacture.date_facture).toLocaleDateString(),
+    );
+    const createdByName =
+      escapeHtml(
+        `${currentFacture.user?.firstName || ""} ${currentFacture.user?.lastName || ""}`.trim(),
+      ) || "N/A";
     const createdByEmail = escapeHtml(currentFacture.user?.email || "N/A");
-    const createdByTelephone = escapeHtml(currentFacture.user?.telephone || "N/A");
-    const clientName = escapeHtml(currentFacture.client?.nom || currentFacture.clientEntreprise?.nom_entreprise || "N/A");
-    const clientEntrepriseName = currentFacture.client?.entreprise ? escapeHtml(currentFacture.client.entreprise) : "";
-    const clientTelephone = escapeHtml(currentFacture.client?.telephone || currentFacture.clientEntreprise?.telephone || "N/A");
-    const clientLocalisation = escapeHtml(currentFacture.client?.localisation || currentFacture.clientEntreprise?.localisation || "N/A");
-    const dateEcheance = escapeHtml(new Date(currentFacture.date_echeance).toLocaleDateString());
-    const amountText = escapeHtml(editedAmountTexts?.[currentFacture.id] || numberToFrench(Math.floor(currentFacture.total_ttc || 0)));
+    const createdByTelephone = escapeHtml(
+      currentFacture.user?.telephone || "N/A",
+    );
+    const clientName = escapeHtml(
+      currentFacture.client?.nom ||
+        currentFacture.clientEntreprise?.nom_entreprise ||
+        "N/A",
+    );
+    const clientEntrepriseName = currentFacture.client?.entreprise
+      ? escapeHtml(currentFacture.client.entreprise)
+      : "";
+    const clientTelephone = escapeHtml(
+      currentFacture.client?.telephone ||
+        currentFacture.clientEntreprise?.telephone ||
+        "N/A",
+    );
+    const clientLocalisation = escapeHtml(
+      currentFacture.client?.localisation ||
+        currentFacture.clientEntreprise?.localisation ||
+        "N/A",
+    );
+    const dateEcheance = escapeHtml(
+      new Date(currentFacture.date_echeance).toLocaleDateString(),
+    );
+    const amountText = escapeHtml(
+      editedAmountTexts?.[currentFacture.id] ||
+        numberToFrench(Math.floor(currentFacture.total_ttc || 0)),
+    );
 
     const printContent = `
       <!DOCTYPE html>
@@ -411,35 +571,62 @@ export default function ProformasRespoClient() {
   const goToPrevPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const getVisiblePages = () => {
     const maxVisible = 9;
-    if (totalPages <= maxVisible) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (totalPages <= maxVisible)
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     const endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
-    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+    if (endPage - startPage < maxVisible - 1)
+      startPage = Math.max(1, endPage - maxVisible + 1);
+    return Array.from(
+      { length: endPage - startPage + 1 },
+      (_, i) => startPage + i,
+    );
   };
 
   const handleDelete = async () => {
     const currentFacture = currentData[0];
     if (!currentFacture) return;
-    if (confirm(`Êtes-vous sûr de vouloir supprimer cette facture (${currentFacture.id.slice(-7)}) ?`)) {
+    if (
+      confirm(
+        `Êtes-vous sûr de vouloir supprimer cette facture (${currentFacture.id.slice(-7)}) ?`,
+      )
+    ) {
       const result = await deleteFacture(currentFacture.id);
       if (result.success) {
         toast.success("Facture supprimée avec succès");
         const proformasResult = await getProformas();
         if (proformasResult.success && proformasResult.data) {
           const data = proformasResult.data as unknown as Facture[];
-          const filtered = data.filter((f) => f.status_facture?.toUpperCase() === "PROFORMA");
+          const filtered = data.filter(
+            (f) =>
+              f.status_facture?.toUpperCase() === "PROFORMA" &&
+              f.validationRespoCom === "VALIDATION_COURS",
+          );
           const groupsMap = new Map<string, CommercialGroup>();
           filtered.forEach((f) => {
             const userId = f.user?.id || "unknown";
-            const userName = f.user ? `${f.user.firstName} ${f.user.lastName}`.trim() : "Non attribué";
-            if (!groupsMap.has(userId)) groupsMap.set(userId, { commercialId: userId, commercialName: userName, factures: [] });
+            const userName = f.user
+              ? `${f.user.firstName} ${f.user.lastName}`.trim()
+              : "Non attribué";
+            if (!groupsMap.has(userId))
+              groupsMap.set(userId, {
+                commercialId: userId,
+                commercialName: userName,
+                factures: [],
+              });
             groupsMap.get(userId)!.factures.push(f);
           });
-          setCommercialGroups(Array.from(groupsMap.values()).sort((a, b) => a.commercialName.localeCompare(b.commercialName)));
-          const newFactures = groupsMap.get(selectedCommercialId)?.factures ?? [];
+          setCommercialGroups(
+            Array.from(groupsMap.values()).sort((a, b) =>
+              a.commercialName.localeCompare(b.commercialName),
+            ),
+          );
+          const newFactures =
+            groupsMap.get(selectedCommercialId)?.factures ?? [];
           if (currentPage > Math.ceil(newFactures.length / itemsPerPage)) {
-            setCurrentPage(Math.max(1, Math.ceil(newFactures.length / itemsPerPage)));
+            setCurrentPage(
+              Math.max(1, Math.ceil(newFactures.length / itemsPerPage)),
+            );
           }
         }
       } else {
@@ -459,7 +646,9 @@ export default function ProformasRespoClient() {
       setShowSignature(true);
       toast.success("Signature ajoutée au proforma");
     } else {
-      toast.error("Aucune signature trouvée. Veuillez d'abord créer votre signature.");
+      toast.error(
+        "Aucune signature trouvée. Veuillez d'abord créer votre signature.",
+      );
       router.push("/commercial/signature");
     }
   };
@@ -477,18 +666,24 @@ export default function ProformasRespoClient() {
   return (
     <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
       <div className="bg-white rounded-lg shadow-2xl p-2">
-        <div className="flex w-full justify-between items-center mb-6 print-hide flex-wrap gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex w-full justify-between items-center mb-6 print-hide flex-wrap px-4 gap-4">
+          <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-700">Commercial:</span>
-              <Select value={selectedCommercialId} onValueChange={setSelectedCommercialId}>
+              <span className="text-sm font-semibold text-gray-700">
+                Commercial:
+              </span>
+              <Select
+                value={selectedCommercialId}
+                onValueChange={setSelectedCommercialId}
+              >
                 <SelectTrigger className="w-[220px] bg-white border-2 border-amber-500">
                   <SelectValue placeholder="Sélectionner un commercial" />
                 </SelectTrigger>
                 <SelectContent>
                   {commercialGroups.map((g) => (
                     <SelectItem key={g.commercialId} value={g.commercialId}>
-                      {g.commercialName} ({g.factures.length} proforma{g.factures.length > 1 ? "s" : ""})
+                      {g.commercialName} ({g.factures.length} proforma
+                      {g.factures.length > 1 ? "s" : ""})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -504,7 +699,8 @@ export default function ProformasRespoClient() {
             <Button
               onClick={() => {
                 const f = currentData[0];
-                if (f) router.push(`/commercial/creerFacture?id=${f.id}&mode=edit`);
+                if (f)
+                  router.push(`/commercial/creerFacture?id=${f.id}&mode=edit`);
               }}
               disabled={currentData.length === 0}
               className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50"
@@ -526,16 +722,29 @@ export default function ProformasRespoClient() {
               {showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
             </Button>
           </div>
+          <div className="flex items-center justify-center gap-2">
+            <Button>Valider Proforma</Button>
+          </div>
         </div>
 
         <div id="printable-area">
           <div className="flex w-full justify-between border-b-4 border-amber-600 pb-4 mb-3">
             <div>
-              <Image src="/logo.png" alt="Logo" width={100} height={50} priority />
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={100}
+                height={50}
+                priority
+              />
             </div>
             <div className="flex flex-col justify-center -mb-14">
-              <h1 className="text-2xl font-bold text-black">KPANDJI AUTOMOBILES</h1>
-              <p className="text-sm text-black font-normal">Constructeur et Assembleur Automobile</p>
+              <h1 className="text-2xl font-bold text-black">
+                KPANDJI AUTOMOBILES
+              </h1>
+              <p className="text-sm text-black font-normal">
+                Constructeur et Assembleur Automobile
+              </p>
             </div>
           </div>
 
@@ -561,7 +770,9 @@ export default function ProformasRespoClient() {
                   </div>
                   <div className="flex text-xs text-black gap-x-2">
                     <p>Créé par:</p>
-                    <p>{facture.user?.firstName} {facture.user?.lastName}</p>
+                    <p>
+                      {facture.user?.firstName} {facture.user?.lastName}
+                    </p>
                   </div>
                   <div className="flex text-xs text-black gap-x-2">
                     <p>Contact:</p>
@@ -575,7 +786,10 @@ export default function ProformasRespoClient() {
                 <div className="text-black font-semibold text-2xl">
                   <div className="flex text-sm font-semibold gap-2">
                     <p>Client:</p>
-                    <p>{facture.client?.nom || facture.clientEntreprise?.nom_entreprise}</p>
+                    <p>
+                      {facture.client?.nom ||
+                        facture.clientEntreprise?.nom_entreprise}
+                    </p>
                   </div>
                   {facture.client?.entreprise && (
                     <div className="flex text-xs text-black gap-x-2">
@@ -585,11 +799,17 @@ export default function ProformasRespoClient() {
                   )}
                   <div className="flex text-xs text-black gap-x-2">
                     <p>Téléphone:</p>
-                    <p>{facture.client?.telephone || facture.clientEntreprise?.telephone}</p>
+                    <p>
+                      {facture.client?.telephone ||
+                        facture.clientEntreprise?.telephone}
+                    </p>
                   </div>
                   <div className="flex text-xs text-black gap-x-2">
                     <p>Localisation:</p>
-                    <p>{facture.client?.localisation || facture.clientEntreprise?.localisation}</p>
+                    <p>
+                      {facture.client?.localisation ||
+                        facture.clientEntreprise?.localisation}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -599,131 +819,326 @@ export default function ProformasRespoClient() {
                   <TableHeader>
                     <TableRow className="bg-green-50 border-b border-black">
                       <TableHead className="text-black font-bold">#</TableHead>
-                      <TableHead className="text-black font-bold">Véhicule</TableHead>
-                      <TableHead className="text-black font-bold">Description</TableHead>
-                      <TableHead className="text-black font-bold text-center">Quantité</TableHead>
-                      <TableHead className="text-black font-bold text-right">Prix Unitaire HT FCFA</TableHead>
-                      <TableHead className="text-right text-black font-bold">Total HT FCFA</TableHead>
+                      <TableHead className="text-black font-bold">
+                        Véhicule
+                      </TableHead>
+                      <TableHead className="w-[25%] whitespace-normal text-black font-bold">
+                        Description
+                      </TableHead>
+                      <TableHead className="text-black font-bold text-center">
+                        Quantité
+                      </TableHead>
+                      <TableHead className="text-black font-bold text-right">
+                        Prix Unitaire HT FCFA
+                      </TableHead>
+                      <TableHead className="text-right text-black font-bold">
+                        Total HT FCFA
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(facture.lignes && facture.lignes.length > 0 ? facture.lignes : [
-                      { id: "1", voitureModelId: "", couleur: "", nbr_voiture: facture.nbr_voiture_commande, prix_unitaire: facture.prix_unitaire, montant_ligne: facture.montant_ht, transmission: "", motorisation: "", voitureModel: facture.voiture?.voitureModel || null },
-                    ]).map((ligne, index) => (
-                      <TableRow key={`${facture.id}-${ligne.id}-${index}`} className="bg-white border-b border-orange-200">
-                        <TableCell className="text-black font-semibold">{index + 1}</TableCell>
+                    {(facture.lignes && facture.lignes.length > 0
+                      ? facture.lignes
+                      : [
+                          {
+                            id: "1",
+                            voitureModelId: "",
+                            couleur: "",
+                            nbr_voiture: facture.nbr_voiture_commande,
+                            prix_unitaire: facture.prix_unitaire,
+                            montant_ligne: facture.montant_ht,
+                            transmission: "",
+                            motorisation: "",
+                            voitureModel: facture.voiture?.voitureModel || null,
+                          },
+                        ]
+                    ).map((ligne, index) => (
+                      <TableRow
+                        key={`${facture.id}-${ligne.id}-${index}`}
+                        className="bg-white border-b border-orange-200"
+                      >
+                        <TableCell className="text-black font-semibold">
+                          {index + 1}
+                        </TableCell>
                         <TableCell className="text-black">
                           {ligne.voitureModel?.image ? (
-                            <Image src={ligne.voitureModel.image} alt={ligne.voitureModel.model || "Vehicle"} width={110} height={90} unoptimized className="object-contain" />
-                          ) : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                          {ligne.voitureModel?.model || "N/A"}
-                          <p className="text-[10px] font-normal text-black max-w-80">{ligne.voitureModel?.description || "N/A"}</p>
-                          {ligne.couleur && (
-                            <div className="flex gap-x-1">
-                              <p className="text-[10px] font-normal text-amber-700">Couleur: {ligne.couleur}</p>
-                              {ligne.transmission && <p className="text-[10px] font-normal text-amber-700">Transmission: {ligne.transmission}</p>}
-                              {ligne.motorisation && <p className="text-[10px] font-normal text-amber-700">Motorisation: {ligne.motorisation}</p>}
-                            </div>
+                            <Image
+                              src={ligne.voitureModel.image}
+                              alt={ligne.voitureModel.model || "Vehicle"}
+                              width={110}
+                              height={90}
+                              unoptimized
+                              className="object-contain"
+                            />
+                          ) : (
+                            "N/A"
                           )}
                         </TableCell>
-                        <TableCell className="text-black text-center text-sm">{ligne.nbr_voiture}</TableCell>
-                        <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(Number(ligne.prix_unitaire))}</TableCell>
-                        <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(Number(ligne.montant_ligne))}</TableCell>
+                        <TableCell className="w-[18%] whitespace-normal break-words text-black text-lg font-semibold">
+                          <div className="flex flex-col gap-y-1">
+                            {ligne.voitureModel?.model || "N/A"}
+                            <p className="text-[10px] font-normal text-black max-w-80">
+                              {ligne.voitureModel?.description || "N/A"}
+                            </p>
+                            {ligne.couleur && (
+                              <div className="flex gap-x-1">
+                                <p className="text-[10px] font-normal text-amber-700">
+                                  Couleur: {ligne.couleur}
+                                </p>
+                                {ligne.transmission && (
+                                  <p className="text-[10px] font-normal text-amber-700">
+                                    Transmission: {ligne.transmission}
+                                  </p>
+                                )}
+                                {ligne.motorisation && (
+                                  <p className="text-[10px] font-normal text-amber-700">
+                                    Motorisation: {ligne.motorisation}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-black text-center text-sm">
+                          {ligne.nbr_voiture}
+                        </TableCell>
+                        <TableCell className="text-right text-black text-sm">
+                          {formatNumberWithSpaces(Number(ligne.prix_unitaire))}
+                        </TableCell>
+                        <TableCell className="text-black text-right text-sm pr-6">
+                          {formatNumberWithSpaces(Number(ligne.montant_ligne))}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {facture.accessoires?.map((accessoire, accIndex) => (
-                      <TableRow key={`${facture.id}-acc-${accessoire.id}`} className="bg-white border-b border-orange-200">
-                        <TableCell className="text-black font-semibold">{(facture.lignes?.length || 0) + accIndex + 1}</TableCell>
+                      <TableRow
+                        key={`${facture.id}-acc-${accessoire.id}`}
+                        className="bg-white border-b border-orange-200"
+                      >
+                        <TableCell className="text-black font-semibold">
+                          {(facture.lignes?.length || 0) + accIndex + 1}
+                        </TableCell>
                         <TableCell className="text-black">
                           {accessoire.image ? (
-                            <Image src={accessoire.image} alt={accessoire.nom} width={100} height={80} unoptimized className="object-contain" />
+                            <Image
+                              src={accessoire.image}
+                              alt={accessoire.nom}
+                              width={100}
+                              height={80}
+                              unoptimized
+                              className="object-contain"
+                            />
                           ) : (
-                            <div className="text-xs text-black">Pas d&apos;image</div>
+                            <div className="text-xs text-black">
+                              Pas d&apos;image
+                            </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                          {accessoire.nom}
-                          {accessoire.description && <p className="text-[9px] font-normal text-black max-w-80">{accessoire.description}</p>}
+                        <TableCell className="w-[18%] whitespace-normal break-words text-black text-lg font-semibold">
+                          <div className="flex flex-col gap-y-1">
+                            {accessoire.nom}
+                            {accessoire.description && (
+                              <p className="text-[9px] font-normal text-black max-w-80">
+                                {accessoire.description}
+                              </p>
+                            )}
+                          </div>
                         </TableCell>
-                        <TableCell className="text-black text-center text-sm">{accessoire.quantity || 1}</TableCell>
-                        <TableCell className="text-right text-black text-sm">{formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires))}</TableCell>
-                        <TableCell className="text-black text-right text-sm pr-6">{formatNumberWithSpaces(getAccessoirePrice(accessoire.nom, accessoire.prix, accessoires) * (accessoire.quantity || 1))}</TableCell>
+                        <TableCell className="text-black text-center text-sm">
+                          {accessoire.quantity || 1}
+                        </TableCell>
+                        <TableCell className="text-right text-black text-sm">
+                          {formatNumberWithSpaces(
+                            getAccessoirePrice(
+                              accessoire.nom,
+                              accessoire.prix,
+                              accessoires,
+                            ),
+                          )}
+                        </TableCell>
+                        <TableCell className="text-black text-right text-sm pr-6">
+                          {formatNumberWithSpaces(
+                            getAccessoirePrice(
+                              accessoire.nom,
+                              accessoire.prix,
+                              accessoires,
+                            ) * (accessoire.quantity || 1),
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
-                    {facture.accessoire_nom && (!facture.accessoires || facture.accessoires.length === 0) && (
-                      <TableRow className="bg-white border-b border-orange-200">
-                        <TableCell className="text-black font-semibold">{(facture.lignes?.length || 0) + 1}</TableCell>
-                        <TableCell className="text-black">
-                          {(() => {
-                            const img = getAccessoireImage(facture.accessoire_nom, accessoires);
-                            return img ? <Image src={img} alt={facture.accessoire_nom || ""} width={100} height={80} unoptimized className="object-contain" /> : <div className="text-xs text-gray-500">Pas d&apos;image</div>;
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-black flex flex-col gap-y-1 text-lg font-semibold">
-                          {facture.accessoire_nom}
-                          {facture.accessoire_description && <p className="text-[7px] font-normal text-black max-w-80">{facture.accessoire_description}</p>}
-                        </TableCell>
-                        <TableCell className="text-black text-center text-sm">{facture.accessoire_nbr || 1}</TableCell>
-                        <TableCell className="text-right text-black text-sm">{((facture.accessoire_prix || 0) / (facture.accessoire_nbr || 1)).toLocaleString().replace(/,/g, " ")}</TableCell>
-                        <TableCell className="text-black text-right text-sm pr-6">{(facture.accessoire_prix || 0).toLocaleString().replace(/,/g, " ")}</TableCell>
-                      </TableRow>
-                    )}
+                    {facture.accessoire_nom &&
+                      (!facture.accessoires ||
+                        facture.accessoires.length === 0) && (
+                        <TableRow className="bg-white border-b border-orange-200">
+                          <TableCell className="text-black font-semibold">
+                            {(facture.lignes?.length || 0) + 1}
+                          </TableCell>
+                          <TableCell className="text-black">
+                            {(() => {
+                              const img = getAccessoireImage(
+                                facture.accessoire_nom,
+                                accessoires,
+                              );
+                              return img ? (
+                                <Image
+                                  src={img}
+                                  alt={facture.accessoire_nom || ""}
+                                  width={100}
+                                  height={80}
+                                  unoptimized
+                                  className="object-contain"
+                                />
+                              ) : (
+                                <div className="text-xs text-gray-500">
+                                  Pas d&apos;image
+                                </div>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="w-[18%] whitespace-normal break-words text-black text-lg font-semibold">
+                            <div className="flex flex-col gap-y-1">
+                              {facture.accessoire_nom}
+                              {facture.accessoire_description && (
+                                <p className="text-[7px] font-normal text-black max-w-80">
+                                  {facture.accessoire_description}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-black text-center text-sm">
+                            {facture.accessoire_nbr || 1}
+                          </TableCell>
+                          <TableCell className="text-right text-black text-sm">
+                            {(
+                              (facture.accessoire_prix || 0) /
+                              (facture.accessoire_nbr || 1)
+                            )
+                              .toLocaleString()
+                              .replace(/,/g, " ")}
+                          </TableCell>
+                          <TableCell className="text-black text-right text-sm pr-6">
+                            {(facture.accessoire_prix || 0)
+                              .toLocaleString()
+                              .replace(/,/g, " ")}
+                          </TableCell>
+                        </TableRow>
+                      )}
                   </TableBody>
                   <TableFooter className="text-sm border-t border-b border-black mt-4">
                     <TableRow className="bg-green-50">
                       <TableCell colSpan={4}></TableCell>
-                      <TableCell className="text-right text-black font-semibold">Total HT</TableCell>
-                      <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ht)}</TableCell>
+                      <TableCell className="text-right text-black font-semibold">
+                        Total HT
+                      </TableCell>
+                      <TableCell className="text-right font-medium pr-6 text-black">
+                        {formatNumberWithSpaces(facture.total_ht)}
+                      </TableCell>
                     </TableRow>
                     {facture.remise !== 0 && (
                       <>
                         <TableRow className="bg-white">
                           <TableCell colSpan={4}></TableCell>
-                          <TableCell className="text-right text-black">Remise ({facture.remise}%)</TableCell>
-                          <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_remise)}</TableCell>
+                          <TableCell className="text-right text-black">
+                            Remise ({facture.remise}%)
+                          </TableCell>
+                          <TableCell className="text-right font-medium pr-6 text-black">
+                            {formatNumberWithSpaces(facture.montant_remise)}
+                          </TableCell>
                         </TableRow>
                         <TableRow className="bg-green-50">
                           <TableCell colSpan={4}></TableCell>
-                          <TableCell className="text-right text-black">Montant Net HT</TableCell>
-                          <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_net_ht)}</TableCell>
+                          <TableCell className="text-right text-black">
+                            Montant Net HT
+                          </TableCell>
+                          <TableCell className="text-right font-medium pr-6 text-black">
+                            {formatNumberWithSpaces(facture.montant_net_ht)}
+                          </TableCell>
                         </TableRow>
                       </>
                     )}
                     <TableRow className="bg-white">
                       <TableCell colSpan={4}></TableCell>
-                      <TableCell className="text-right text-black">TVA({facture.tva}%)</TableCell>
-                      <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.montant_tva)}</TableCell>
+                      <TableCell className="text-right text-black">
+                        TVA({facture.tva}%)
+                      </TableCell>
+                      <TableCell className="text-right font-medium pr-6 text-black">
+                        {formatNumberWithSpaces(facture.montant_tva)}
+                      </TableCell>
                     </TableRow>
                     <TableRow className="text-sm bg-green-50">
                       <TableCell colSpan={4}></TableCell>
-                      <TableCell className="text-right text-black font-semibold uppercase">Total TTC</TableCell>
-                      <TableCell className="text-right font-medium pr-6 text-black">{formatNumberWithSpaces(facture.total_ttc)}</TableCell>
+                      <TableCell className="text-right text-black font-semibold uppercase">
+                        Total TTC
+                      </TableCell>
+                      <TableCell className="text-right font-medium pr-6 text-black">
+                        {formatNumberWithSpaces(facture.total_ttc)}
+                      </TableCell>
                     </TableRow>
                   </TableFooter>
                 </Table>
 
                 <div className="mt-4">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-normal text-black">Arrêter la présente facture à la somme de</p>
+                    <p className="text-sm font-normal text-black">
+                      Arrêter la présente facture à la somme de
+                    </p>
                     {editingAmountText === facture.id ? (
                       <div className="flex items-center gap-2 flex-1 min-w-[300px]">
                         <Input
-                          value={editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))}
-                          onChange={(e) => setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: e.target.value })}
+                          value={
+                            editedAmountTexts[facture.id] ||
+                            numberToFrench(Math.floor(facture.total_ttc || 0))
+                          }
+                          onChange={(e) =>
+                            setEditedAmountTexts({
+                              ...editedAmountTexts,
+                              [facture.id]: e.target.value,
+                            })
+                          }
                           className="flex-1 text-sm font-semibold"
                           placeholder="Saisir la somme en lettres"
                           autoFocus
                         />
-                        <Button size="sm" variant="outline" onClick={() => { setEditingAmountText(null); if (!editedAmountTexts[facture.id]) { const t = { ...editedAmountTexts }; delete t[facture.id]; setEditedAmountTexts(t); } }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingAmountText(null);
+                            if (!editedAmountTexts[facture.id]) {
+                              const t = { ...editedAmountTexts };
+                              delete t[facture.id];
+                              setEditedAmountTexts(t);
+                            }
+                          }}
+                        >
                           Valider
                         </Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">{editedAmountTexts[facture.id] || numberToFrench(Math.floor(facture.total_ttc || 0))} francs CFA</span>
-                        <Button size="sm" variant="ghost" onClick={() => { setEditingAmountText(facture.id); if (!editedAmountTexts[facture.id]) setEditedAmountTexts({ ...editedAmountTexts, [facture.id]: numberToFrench(Math.floor(facture.total_ttc || 0)) }); }} className="h-6 w-6 p-0">
+                        <span className="font-semibold">
+                          {editedAmountTexts[facture.id] ||
+                            numberToFrench(
+                              Math.floor(facture.total_ttc || 0),
+                            )}{" "}
+                          francs CFA
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingAmountText(facture.id);
+                            if (!editedAmountTexts[facture.id])
+                              setEditedAmountTexts({
+                                ...editedAmountTexts,
+                                [facture.id]: numberToFrench(
+                                  Math.floor(facture.total_ttc || 0),
+                                ),
+                              });
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
                           <Edit2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -734,20 +1149,35 @@ export default function ProformasRespoClient() {
                 <div className="flex w-full justify-between mt-5 px-8">
                   <div></div>
                   <div className="flex flex-col items-center gap-4">
-                    <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
+                    <div className="text-black font-bold text-sm uppercase">
+                      Direction Commerciale
+                    </div>
                     {showSignature && signatureImage && (
                       <div className="relative w-48 h-20 -mt-3">
-                        <Image src={signatureImage} alt="Signature" fill className="object-contain" unoptimized />
+                        <Image
+                          src={signatureImage}
+                          alt="Signature"
+                          fill
+                          className="object-contain"
+                          unoptimized
+                        />
                       </div>
                     )}
-                    {showSignature && !signatureImage && <div className="text-xs text-gray-500 italic">Signature en cours de chargement...</div>}
+                    {showSignature && !signatureImage && (
+                      <div className="text-xs text-gray-500 italic">
+                        Signature en cours de chargement...
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col w-full rounded-b-lg text-[9px] mt-6">
                 <p className="font-bold text-blue-600">Notes</p>
-                <p className="font-semibold">date d&apos;échéance: {new Date(facture.date_echeance).toLocaleDateString()}</p>
+                <p className="font-semibold">
+                  date d&apos;échéance:{" "}
+                  {new Date(facture.date_echeance).toLocaleDateString()}
+                </p>
               </div>
             </div>
           ))}
@@ -756,23 +1186,40 @@ export default function ProformasRespoClient() {
             <div className="flex flex-col w-full mb-2 rounded-b-lg text-[9px]">
               <p className="font-bold text-orange-600 mt-2">CONDITIONS:</p>
               <p className="text-black">60% d&apos;accompte à la commande</p>
-              <p className="text-black font-semibold">DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS</p>
+              <p className="text-black font-semibold">
+                DELAIS DE PRODUCTION ET DE LIVRAISON: 4 MOIS
+              </p>
               <p className="text-black">SOLDE avant livraison</p>
             </div>
             <div className="flex flex-col items-center w-full justify-center bg-green-50 rounded-b-lg text-[10px] border-t border-black text-black">
-              <p className="font-normal text-center">Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 / Tel : 00225 01 01 04 77 03</p>
-              <p className="font-normal text-center">Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC :2213233 – ECOBANK : CI059 01046 121659429001 46</p>
-              <p className="font-normal text-center">kpandjiautomobiles@gmail.com / www.kpandji.com</p>
+              <p className="font-normal text-center">
+                Abidjan, Cocody – Riviéra Palmerais – 06 BP 1255 Abidjan 06 /
+                Tel : 00225 01 01 04 77 03
+              </p>
+              <p className="font-normal text-center">
+                Email: info@kpandji.com RCCM : CI-ABJ-03-2022-B13-00710 / CC
+                :2213233 – ECOBANK : CI059 01046 121659429001 46
+              </p>
+              <p className="font-normal text-center">
+                kpandjiautomobiles@gmail.com / www.kpandji.com
+              </p>
             </div>
           </div>
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-6 print-hide">
-          <Button onClick={goToPrevPage} disabled={currentPage === 1} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
+          <Button
+            onClick={goToPrevPage}
+            disabled={currentPage === 1}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0"
+          >
             <ChevronLeft className="w-5 h-5 mr-2" />
             Page Précédente
           </Button>
-          <div ref={paginationScrollRef} className="overflow-x-auto max-w-md scrollbar-hide scroll-smooth">
+          <div
+            ref={paginationScrollRef}
+            className="overflow-x-auto max-w-md scrollbar-hide scroll-smooth"
+          >
             <div className="flex items-center gap-2 min-w-max px-2">
               {getVisiblePages().map((pageNum) => (
                 <div
@@ -781,7 +1228,10 @@ export default function ProformasRespoClient() {
                   onClick={() => setCurrentPage(pageNum)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setCurrentPage(pageNum); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ")
+                      setCurrentPage(pageNum);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer flex-shrink-0 ${currentPage === pageNum ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                 >
                   {pageNum}
@@ -789,7 +1239,11 @@ export default function ProformasRespoClient() {
               ))}
             </div>
           </div>
-          <Button onClick={goToNextPage} disabled={currentPage === totalPages} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0">
+          <Button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-bold flex-shrink-0"
+          >
             Page Suivante
             <ChevronRight className="w-5 h-5 ml-2" />
           </Button>

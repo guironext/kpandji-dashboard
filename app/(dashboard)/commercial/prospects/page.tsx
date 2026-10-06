@@ -227,7 +227,7 @@ const ProspectsPage = () => {
 	}, [isLoaded, user?.id]);
 
 	// Chart data: prospects (status_client === PROSPECT) by month and secteur_activite
-	const { chartDataByMonth, secteurColors, secteurs } = useMemo(() => {
+	const { chartDataByMonth, secteurColors,  secteurs } = useMemo(() => {
 		const allProspects: { createdAt: Date; secteur_activite?: string | null }[] = [
 			...clients
 				.filter((c) => c.status_client === "PROSPECT")

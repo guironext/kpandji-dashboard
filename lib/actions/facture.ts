@@ -3,6 +3,7 @@
 import { prisma, executeWithRetry } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { Decimal } from "@prisma/client/runtime/library";
+import { auth } from "@clerk/nextjs/server";
 
 // Deep-convert Prisma Decimal instances anywhere in the data tree to plain numbers
 function deepStripDecimals<T>(value: T): T {
@@ -66,6 +67,7 @@ function serializeFacture(facture: unknown) {
     date_facture: f.date_facture as Date,
     date_echeance: f.date_echeance as Date,
     status_facture: f.status_facture as string,
+    validationRespoCom: (f.validationRespoCom as string) || "CREER",
     nbr_voiture_commande: f.nbr_voiture_commande as number,
     accessoire_nom: f.accessoire_nom as string | null,
     accessoire_description: f.accessoire_description as string | null,
@@ -1488,6 +1490,52 @@ export async function updateProformaNotes(factureId: string, notes: string) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error updating proforma notes:", error);
     return { success: false, error: message };
+  }
+}
+
+export async function requestFactureValidation(factureId: string) {
+  try {
+    if (!factureId) {
+      return { success: false, error: "Facture invalide" };
+    }
+
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Vous devez être connecté" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+      select: { id: true },
+    });
+    if (!user) {
+      return { success: false, error: "Utilisateur introuvable" };
+    }
+
+    const facture = await prisma.facture.findFirst({
+      where: { id: factureId, userId: user.id },
+      select: { id: true, validationRespoCom: true },
+    });
+    if (!facture) {
+      return { success: false, error: "Facture introuvable" };
+    }
+    if (facture.validationRespoCom === "VALIDATION_COURS") {
+      return { success: true };
+    }
+    if (facture.validationRespoCom !== "CREER") {
+      return { success: false, error: "Cette facture a déjà été validée" };
+    }
+
+    await prisma.facture.update({
+      where: { id: facture.id },
+      data: { validationRespoCom: "VALIDATION_COURS" },
+    });
+
+    revalidatePath("/commercial/proformas");
+    return { success: true };
+  } catch (error) {
+    console.error("Error requesting facture validation:", error);
+    return { success: false, error: "Erreur lors de la demande de validation" };
   }
 }
 

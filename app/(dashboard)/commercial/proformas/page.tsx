@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
 	Table,
 	TableBody,
@@ -42,6 +42,7 @@ import {
 import {
 	getFacturesByUser,
 	deleteFacture,
+	requestFactureValidation,
 	updateProformaNotes,
 	updateProformaTotalTtc,
 	updateFactureLigneCouleur,
@@ -173,6 +174,7 @@ type Facture = {
 	date_facture: string;
 	date_echeance: string;
 	status_facture: string;
+	validationRespoCom: string;
 	nbr_voiture_commande: number;
 	prix_unitaire: number;
 	montant_ht: number;
@@ -360,6 +362,8 @@ function getAccessoirePrice(
 
 export default function Page() {
 	const router = useRouter();
+	const pathname = usePathname();
+	const onlyValidated = pathname === "/commercial/proformas-validees";
 	const { userId: clerkId } = useAuth();
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 1;
@@ -389,6 +393,7 @@ export default function Page() {
 		{},
 	);
 	const [savingTotalTtc, setSavingTotalTtc] = useState<string | null>(null);
+	const [submittingValidation, setSubmittingValidation] = useState<string | null>(null);
 	const [notesProforma, setNotesProforma] = useState<Record<string, string>>(
 		{},
 	);
@@ -622,10 +627,13 @@ export default function Page() {
 		toast.success(`Couleur « ${option.couleur} » sélectionnée`);
 	};
 
-	const totalPages = Math.ceil(factures.length / itemsPerPage);
+	const displayedFactures = onlyValidated
+		? factures.filter((facture) => facture.validationRespoCom === "VALIDATED")
+		: factures;
+	const totalPages = Math.ceil(displayedFactures.length / itemsPerPage);
 	const startIndex = (currentPage - 1) * itemsPerPage;
 	const endIndex = startIndex + itemsPerPage;
-	const currentData = factures.slice(startIndex, endIndex);
+	const currentData = displayedFactures.slice(startIndex, endIndex);
 
 	const handlePrint = () => {
 		const currentFacture = currentData[0];
@@ -1454,6 +1462,29 @@ export default function Page() {
 		);
 	};
 
+	const handleRequestValidation = async () => {
+		const facture = currentData[0];
+		if (!facture || !clerkId) return;
+		if (facture.validationRespoCom !== "CREER") return;
+
+		setSubmittingValidation(facture.id);
+		const result = await requestFactureValidation(facture.id);
+		setSubmittingValidation(null);
+
+		if (result.success) {
+			setFactures((prev) =>
+				prev.map((item) =>
+					item.id === facture.id
+						? { ...item, validationRespoCom: "VALIDATION_COURS" }
+						: item,
+				),
+			);
+			toast.success("Facture envoyée pour validation");
+		} else {
+			toast.error(result.error || "Erreur lors de la demande de validation");
+		}
+	};
+
 	const handleDelete = async () => {
 		const currentFacture = currentData[0];
 		if (!currentFacture || !clerkId) return;
@@ -1909,10 +1940,23 @@ export default function Page() {
 								SUPPRIMER
 							</Button>
 							<Button
-								onClick={handleSignature}
-								disabled={currentData.length === 0}
+								onClick={onlyValidated ? undefined : handleRequestValidation}
+								disabled={
+									onlyValidated ||
+									currentData.length === 0 ||
+									currentData[0]?.validationRespoCom !== "CREER" ||
+									submittingValidation === currentData[0]?.id
+								}
 								className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50">
-								{showSignature ? "RETIRER SIGNATURE" : "SIGNER"}
+								{onlyValidated
+									? "PROFORMA VALIDEE"
+									: submittingValidation === currentData[0]?.id
+									? "ENVOI..."
+									: currentData[0]?.validationRespoCom === "VALIDATION_COURS"
+										? "VALIDATION EN COURS"
+										: currentData[0]?.validationRespoCom === "VALIDATED"
+											? "VALIDEE"
+											: "FAIRE VALIDER"}
 							</Button>
 							<Button
 								onClick={handleExportToWord}

@@ -34,6 +34,7 @@ import {
 type NavCategory =
   | "main"
   | "facturation"
+  | "bonDeCaisse"
   | "commandes"
   | "locaux"
   | "partenaires"
@@ -49,18 +50,27 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "main-dashboard", icon: LayoutDashboard, label: "Dashboard", href: "/comptable", category: "main" },
+
   { id: "fac-bc", icon: FileText, label: "Bon de Commande", href: "/comptable/bon-de-commande", category: "facturation" },
   { id: "fac-suivi-bc", icon: ClipboardCheck, label: "Suivi Bon Commande", href: "/comptable/suivi-bon-commande", category: "facturation" },
   { id: "fac-bpa", icon: FileCheck2, label: "Bon Pour Accord", href: "/comptable/bon-pour-accord", category: "facturation" },
   { id: "fac-factures", icon: FileSpreadsheet, label: "Factures", href: "/comptable/facture", category: "facturation" },
   { id: "fac-paiement", icon: HandCoins, label: "Point Paiement", href: "/comptable/point-paiement", category: "facturation" },
+
+  { id: "fac-demande-de-decaissement", icon: HandCoins, label: "Demande Décaissement", href: "/comptable/demande-de-decaissement", category: "bonDeCaisse" },
+  { id: "fac-bon-de-decaisse", icon: HandCoins, label: "Bon de Décaissement", href: "/comptable/bon-de-decaissement", category: "bonDeCaisse" },
+
+
   { id: "cmd-commandes", icon: PackageCheck, label: "Commandes", href: "/comptable/commandes", category: "commandes" },
   { id: "cmd-suivi", icon: Landmark, label: "Suivi Commandes", href: "/comptable/suivi-commandes", category: "commandes" },
+
   { id: "loc-bc", icon: Truck, label: "Bon Commande Locaux", href: "/comptable/bon-commande-locaux", category: "locaux" },
   { id: "loc-cmd", icon: ShoppingCart, label: "Commandes Locaux", href: "/comptable/commandes-locaux", category: "locaux" },
   { id: "loc-fourn", icon: Wallet, label: "Fournisseurs Locaux", href: "/comptable/fournisseur-locaux", category: "locaux" },
+
   { id: "part-clients", icon: Users, label: "Clients", href: "/comptable/clients", category: "partenaires" },
   { id: "part-bl", icon: ScrollText, label: "Bon de Livraison", href: "/comptable/bon-de-livraison", category: "partenaires" },
+
   { id: "com-courrier", icon: Mail, label: "Numéro Courrier", href: "/comptable/numero-courrier", category: "communication" },
   { id: "com-messages", icon: MessageSquare, label: "Messages", href: "/comptable/messages", category: "communication" },
   { id: "com-doc", icon: BookOpen, label: "Documentation", href: "/comptable/documentation", category: "communication" },
@@ -81,6 +91,16 @@ const categoryConfig = {
     label: "Facturation",
     icon: Receipt,
     color: "from-teal-500 via-emerald-500 to-green-600",
+    bgColor: "bg-teal-500/15",
+    textColor: "text-teal-800",
+    chipGradient: "from-teal-500 to-emerald-600",
+    glow: "shadow-teal-500/35",
+    focusRing: "focus-visible:ring-teal-400",
+  },
+  bonDeCaisse: {
+    label: "Bon de Caisse",
+    icon: HandCoins,
+    color: "from-emerald-500 via-teal-500 to-green-600",
     bgColor: "bg-teal-500/15",
     textColor: "text-teal-800",
     chipGradient: "from-teal-500 to-emerald-600",
@@ -146,6 +166,7 @@ const SidebarComptable = ({ isOpen }: { isOpen: boolean }) => {
   const categoryOrder: NavCategory[] = [
     "main",
     "facturation",
+    "bonDeCaisse",
     "commandes",
     "locaux",
     "partenaires",

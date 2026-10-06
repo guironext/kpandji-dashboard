@@ -51,6 +51,7 @@ type NavCategory =
   | "operations"
   | "reports"
   | "facturation"
+  | "demandeDeDecaissement"
   | "communication"
   | "documentation";
 
@@ -92,11 +93,15 @@ const navItems: NavItem[] = [
 
   // Facturation
   { id: "fac-proformas", icon: FileText, label: "Proformas", href: "/commercial/proformas", category: "facturation" },
+  { id: "fac-proformas-validees", icon: FileText, label: "Proformas validées", href: "/commercial/proformas-validees", category: "facturation" },
   { id: "fac-proformas-multi", icon: FileSpreadsheet, label: "Proformas-multi", href: "/commercial/profoma-multi", category: "facturation" },
   { id: "fac-bon-commande", icon: Receipt, label: "Bon de Commande", href: "/commercial/bon-de-commande", category: "facturation" },
   { id: "fac-bon-accord", icon: FileCheck, label: "Bon pour accord", href: "/commercial/bon-pour-accord", category: "facturation" },
   { id: "fac-lettre-commande", icon: FileCheck, label: "Lettre Commande", href: "/commercial/lettre-commande", category: "facturation" },
   { id: "fac-appel-offre", icon: FileCheck, label: "Appel d'offre", href: "/commercial/appel-offre", category: "facturation" },
+
+  // Demande Décaissement
+  { id: "fac-demande-de-decaissement", icon: FileCheck, label: "Demande Décaissement", href: "/commercial/demande-de-decaissement", category: "demandeDeDecaissement" },
  
   // Documentation
   { id: "fac-signature", icon: FileSignature, label: "Signature", href: "/commercial/signature", category: "documentation" },
@@ -156,6 +161,16 @@ const categoryConfig = {
     glow: "shadow-fuchsia-500/35",
     focusRing: "focus-visible:ring-fuchsia-400",
   },
+  demandeDeDecaissement: {
+    label: "Demande Décaissement",
+    icon: FileCheck,
+    color: "from-emerald-500 via-teal-500 to-green-600",
+    bgColor: "bg-teal-500/15",
+    textColor: "text-teal-800",
+    chipGradient: "from-teal-500 to-emerald-600",
+    glow: "shadow-teal-500/35",
+    focusRing: "focus-visible:ring-teal-400",
+  },
   communication: {
     label: "Communication",
     icon: Radio,
@@ -209,6 +224,7 @@ const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {
     "operations",
     "reports",
     "facturation",
+    "demandeDeDecaissement",
     "communication",
     "documentation",
   ];

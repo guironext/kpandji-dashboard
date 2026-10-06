@@ -28,6 +28,7 @@ import {
   FileSignature,
   MessageSquare,
   CircleDollarSign,
+  HandCoins,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -94,6 +95,7 @@ const navCategories = [
       { id: 17, icon: <BarChart3 className={iconClass} />, label: "Tableau de Chute", href: "/responsablecommercial/tableau-chute" },
       { id: 18, icon: <TrendingUp className={iconClass} />, label: "Suivi Commandes", href: "/responsablecommercial/suivi-commandes" },
       { id: 19, icon: <Landmark className={iconClass} />, label: "Suivi Versement", href: "/responsablecommercial/versement" },
+      { id: 29, icon: <HandCoins className={iconClass} />, label: "Demande Décaissement", href: "/responsablecommercial/demande-de-decaissement" },
     ],
   },
   {
@@ -102,11 +104,12 @@ const navCategories = [
     color: "#ec4899",
     bg: "#ec48991a", // pink-500 @ 10% opacity
     items: [
-      { id: 20, icon: <FileText className={iconClass} />, label: "Proformas", href: "/responsablecommercial/proformas" },
-      { id: 21, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
-      { id: 22, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
-      { id: 23, icon: <ScrollText className={iconClass} />, label: "Lettre Commande", href: "/responsablecommercial/lettre-commande" },
-      { id: 24, icon: <FileSignature className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
+      { id: 20, icon: <FileText className={iconClass} />, label: "Proformas à Valider", href: "/responsablecommercial/proformas" },
+      { id: 21, icon: <FileText className={iconClass} />, label: "Proformas déjà Validé", href: "/responsablecommercial/proformas-deja-valide" },
+      { id: 22, icon: <Receipt className={iconClass} />, label: "Bon de Commande", href: "/responsablecommercial/bon-de-commande" },
+      { id: 23, icon: <FileCheck className={iconClass} />, label: "Bon pour Accord", href: "/responsablecommercial/bon-pour-accord" },
+      { id: 24, icon: <ScrollText className={iconClass} />, label: "Lettre Commande", href: "/responsablecommercial/lettre-commande" },
+      { id: 25, icon: <FileSignature className={iconClass} />, label: "Signature", href: "/responsablecommercial/signature" },
     ],
   },
   {
@@ -115,9 +118,9 @@ const navCategories = [
     color: "#8b5cf6",
     bg: "#8b5cf61a", // violet-500 @ 10% opacity
     items: [
-      { id: 25, icon: <MessageSquare className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
-      { id: 26, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
-      { id: 27, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/responsablecommercial/documentation" },
+      { id: 26, icon: <MessageSquare className={iconClass} />, label: "Messages", href: "/responsablecommercial/messages" },
+      { id: 27, icon: <Mail className={iconClass} />, label: "Numéro Courrier", href: "/responsablecommercial/numero-courrier" },
+      { id: 28, icon: <BookOpen className={iconClass} />, label: "Documentation", href: "/responsablecommercial/documentation" },
     ],
   },
 ];

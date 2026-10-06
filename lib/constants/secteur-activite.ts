@@ -18,7 +18,6 @@ const SECTEUR_ACTIVITE_OPTIONS_RAW = [
 	"Culture",
 	"Sport",
 	"Technologie",
-	"Autres",
 	"Mines & Énergie",
 	"Services & Finance",
 	"BTP & Infrastructures",
@@ -30,6 +29,10 @@ const SECTEUR_ACTIVITE_OPTIONS_RAW = [
 	"Grande Distribution",
 	"Commerce de Détail & E-commerce",
 	"Événementiel & Traiteurs",
+	"Pétrole & Gaz",
+	"Énergie",
+	"Autres",
+
 ] as const;
 
 export type SecteurActivite = (typeof SECTEUR_ACTIVITE_OPTIONS_RAW)[number];

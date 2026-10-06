@@ -467,6 +467,21 @@ model Correction {
   Tool              Tool[]
 }
 
+model Decaissement{
+  id                String              @id
+  demandeur         String
+  service           String?
+  departement       String
+  raison            String
+  montant           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  validationDepartement  Boolean        @default(false)
+  decaissementEffectues  Boolean?        @default(false)
+  montantDecaisse    String?
+
+}
+
 model CourrieAvantage {
   id               String    @id
   date_livraison   DateTime
@@ -640,6 +655,14 @@ model Facture {
   Voiture                Voiture?           @relation(fields: [voitureId], references: [id])
   FactureLigne           FactureLigne[]
   Paiement               Paiement[]
+  validationRespoCom     ValidationRespoCom             @default(CREER)
+}
+
+
+enum ValidationRespoCom {
+  CREER
+  VALIDATION_COURS
+  VALIDATED
 }
 
 model FactureLigne {

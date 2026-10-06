@@ -265,16 +265,15 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 const serverActionClerkHandler = clerkMiddleware(() => NextResponse.next(), CLERK_OPTIONS);
 
 export default async function middleware(req: NextRequest, event: NextFetchEvent) {
-	// Server actions: run Clerk (no redirects) so auth() works in server actions
-	if (req.headers.get("Next-Action")) {
-		return serverActionClerkHandler(req, event);
-	}
-	// Dev bypass: skip auth when Clerk fails to load (ad-blocker, etc.)
-	if (
+	const devBypass =
 		process.env.NODE_ENV === "development" &&
-		req.cookies.get("__clerk_dev_bypass")?.value === "1"
-	) {
-		return NextResponse.next();
+		req.cookies.get("__clerk_dev_bypass")?.value === "1";
+
+	// Server actions and the dev bypass must still run clerkMiddleware.
+	// Skipping it makes auth() throw "can't detect usage of clerkMiddleware()".
+	// The bypass only skips sign-in and role redirects.
+	if (req.headers.get("Next-Action") || devBypass) {
+		return serverActionClerkHandler(req, event);
 	}
 	return clerkHandler(req, event);
 }
