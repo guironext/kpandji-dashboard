@@ -1582,6 +1582,7 @@ export default function Page() {
 					quantity: String(ligne.nbr_voiture),
 					unitPrice: formatAmount(Number(ligne.prix_unitaire)),
 					total: formatAmount(Number(ligne.montant_ligne)),
+					imageSrc: getLigneVehicleImage(ligne),
 				};
 			});
 
@@ -1600,6 +1601,7 @@ export default function Page() {
 						quantity: String(qty),
 						unitPrice: formatAmount(unit),
 						total: formatAmount(unit * qty),
+						imageSrc: accessoire.image || null,
 					});
 				});
 			} else if (facture.accessoire_nom) {
@@ -1612,6 +1614,7 @@ export default function Page() {
 					quantity: String(qty),
 					unitPrice: formatAmount(qty ? total / qty : total),
 					total: formatAmount(total),
+					imageSrc: getAccessoireImage(facture.accessoire_nom, accessoires),
 				});
 			}
 
@@ -1666,6 +1669,7 @@ export default function Page() {
 					Math.floor(convertAmount(getEffectiveTotalTtc(facture) || 0)),
 				);
 
+			let imageStats = { embedded: 0, requested: 0 };
 			const blob = await buildProformaWordBlob({
 				status: facture.status_facture,
 				numero: facture.id.slice(-7),
@@ -1698,13 +1702,24 @@ export default function Page() {
 				notes: notesProforma[facture.id] ?? facture.notes_proforma ?? "",
 				includeConditions: !conditionsTextHidden,
 				signatureSrc: showSignature ? signatureImage : null,
+				onLineImages: (embedded, requested) => {
+					imageStats = { embedded, requested };
+				},
 			});
 
 			saveAs(
 				blob,
 				getProformaWordFileName(facture.id.slice(-7), facture.status_facture),
 			);
-			toast.success("Facture exportée en Word (.docx)");
+			if (imageStats.embedded < imageStats.requested) {
+				toast.warning(
+					`Facture exportée, mais ${imageStats.requested - imageStats.embedded} image(s) sur ${imageStats.requested} n'ont pas pu être intégrées (voir la console du navigateur)`,
+				);
+			} else {
+				toast.success(
+					`Facture exportée en Word (.docx)${imageStats.requested > 0 ? ` — ${imageStats.embedded} image(s) intégrée(s)` : ""}`,
+				);
+			}
 		} catch (error) {
 			console.error("Export Word error:", error);
 			toast.error("Erreur lors de l'exportation Word");

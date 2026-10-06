@@ -162,6 +162,209 @@ async function fetchImage(
   }
 }
 
+type PreparedImage = {
+  data: ArrayBuffer;
+  type: RasterImageType;
+  width: number;
+  height: number;
+};
+
+// Taille d'affichage max des images de ligne (véhicules / accessoires) dans le Word
+const LINE_IMAGE_MAX_W = 150;
+const LINE_IMAGE_MAX_H = 100;
+// Résolution de rendu (x3) pour une image nette sans alourdir le fichier
+const LINE_IMAGE_SCALE = 3;
+
+const LOG_PREFIX = "[Export Word]";
+
+function resolveImageUrl(src: string): string {
+  if (src.startsWith("http") || src.startsWith("data:") || src.startsWith("blob:")) {
+    return src;
+  }
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}${src.startsWith("/") ? src : `/${src}`}`;
+}
+
+// Type réel d'après les premiers octets (plus fiable que l'extension ou le content-type)
+function sniffImageType(bytes: ArrayBuffer): RasterImageType | null {
+  const b = new Uint8Array(bytes.slice(0, 4));
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "png";
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "jpg";
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "gif";
+  if (b[0] === 0x42 && b[1] === 0x4d) return "bmp";
+  return null;
+}
+
+function fitLineImage(width: number, height: number) {
+  if (!width || !height) return { width: LINE_IMAGE_MAX_W, height: LINE_IMAGE_MAX_H };
+  const ratio = Math.min(LINE_IMAGE_MAX_W / width, LINE_IMAGE_MAX_H / height, 1);
+  return {
+    width: Math.max(1, Math.round(width * ratio)),
+    height: Math.max(1, Math.round(height * ratio)),
+  };
+}
+
+// 1) Téléchargement des octets (fetch), avec repli sur l'optimiseur Next.js (même origine)
+async function fetchImageBytes(
+  src: string,
+): Promise<{ bytes: ArrayBuffer; mime: string } | null> {
+  const url = resolveImageUrl(src);
+  const candidates = [url];
+  if (
+    /^https?:\/\//.test(url) &&
+    typeof window !== "undefined" &&
+    !url.startsWith(window.location.origin)
+  ) {
+    candidates.push(
+      `${window.location.origin}/_next/image?url=${encodeURIComponent(url)}&w=640&q=80`,
+    );
+  }
+  for (const candidate of candidates) {
+    try {
+      const res = await fetch(candidate);
+      if (!res.ok) {
+        console.warn(`${LOG_PREFIX} téléchargement refusé (HTTP ${res.status})`, candidate);
+        continue;
+      }
+      const bytes = await res.arrayBuffer();
+      if (!bytes.byteLength) {
+        console.warn(`${LOG_PREFIX} image vide`, candidate);
+        continue;
+      }
+      return { bytes, mime: res.headers.get("content-type") || "" };
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} échec du téléchargement`, candidate, error);
+    }
+  }
+  return null;
+}
+
+function loadImageElement(url: string, crossOrigin: boolean): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (crossOrigin) img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`chargement <img> impossible: ${url}`));
+    img.src = url;
+  });
+}
+
+type Drawable = {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+  release: () => void;
+};
+
+// 2) Décodage des octets téléchargés (aucun risque de canvas « tainted » : données locales)
+async function decodeImageBytes(bytes: ArrayBuffer, mime: string): Promise<Drawable | null> {
+  const blob = new Blob([bytes], mime ? { type: mime } : undefined);
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        release: () => bitmap.close(),
+      };
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} createImageBitmap a échoué`, error);
+    }
+  }
+  // URL blob: = même origine, donc le canvas reste exploitable
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const img = await loadImageElement(objectUrl, false);
+    return {
+      source: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      release: () => URL.revokeObjectURL(objectUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    console.warn(`${LOG_PREFIX} décodage <img> a échoué`, error);
+    return null;
+  }
+}
+
+// 3) Redimensionnement via canvas (proportions conservées, rendu x3 pour la netteté)
+async function renderLineImage(
+  drawable: Drawable,
+  asJpeg: boolean,
+): Promise<PreparedImage | null> {
+  const { width, height } = fitLineImage(drawable.width, drawable.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.min(drawable.width, width * LINE_IMAGE_SCALE));
+  canvas.height = Math.max(1, Math.min(drawable.height, height * LINE_IMAGE_SCALE));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(drawable.source, 0, 0, canvas.width, canvas.height);
+  // toBlob lève une SecurityError si le canvas est « tainted » (géré par l'appelant)
+  const out = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, asJpeg ? "image/jpeg" : "image/png", 0.9),
+  );
+  if (!out || !out.size) return null;
+  return { data: await out.arrayBuffer(), type: asJpeg ? "jpg" : "png", width, height };
+}
+
+/**
+ * Prépare une image de ligne pour Word. Ne lève jamais d'erreur : en cas d'échec,
+ * un console.warn indique l'URL et l'étape, et la ligne est exportée sans image.
+ */
+async function fetchLineImage(src?: string | null): Promise<PreparedImage | null> {
+  if (!src) return null;
+  const url = resolveImageUrl(src);
+  const hasDom = typeof document !== "undefined";
+
+  const fetched = await fetchImageBytes(src);
+  if (fetched) {
+    const sniffed = sniffImageType(fetched.bytes);
+    let natural = { width: 0, height: 0 };
+    if (hasDom) {
+      const drawable = await decodeImageBytes(fetched.bytes, fetched.mime);
+      if (drawable) {
+        natural = { width: drawable.width, height: drawable.height };
+        try {
+          const rendered = await renderLineImage(drawable, sniffed === "jpg");
+          if (rendered) return rendered;
+          console.warn(`${LOG_PREFIX} redimensionnement sans résultat, image originale utilisée`, url);
+        } catch (error) {
+          console.warn(`${LOG_PREFIX} redimensionnement impossible, image originale utilisée`, url, error);
+        } finally {
+          drawable.release();
+        }
+      }
+    }
+    // Repli : octets d'origine (si Word sait les lire), aux bonnes proportions si connues
+    if (sniffed) {
+      return { data: fetched.bytes, type: sniffed, ...fitLineImage(natural.width, natural.height) };
+    }
+    console.warn(`${LOG_PREFIX} format non lisible par Word (${fetched.mime || "inconnu"})`, url);
+  }
+
+  // Dernier recours : <img crossOrigin="anonymous"> (canal img-src) puis canvas
+  if (hasDom && !url.startsWith("data:") && !url.startsWith("blob:")) {
+    try {
+      const img = await loadImageElement(url, true);
+      const rendered = await renderLineImage(
+        { source: img, width: img.naturalWidth, height: img.naturalHeight, release: () => {} },
+        /\.jpe?g(\?|$)/i.test(url),
+      );
+      if (rendered) {
+        console.info(`${LOG_PREFIX} image récupérée via <img crossOrigin>`, url);
+        return rendered;
+      }
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} repli <img crossOrigin> impossible`, url, error);
+    }
+  }
+
+  console.warn(`${LOG_PREFIX} image ignorée, la ligne sera exportée sans image`, url);
+  return null;
+}
+
 export type ProformaWordLine = {
   index: number;
   title: string;
@@ -170,6 +373,8 @@ export type ProformaWordLine = {
   quantity: string;
   unitPrice: string;
   total: string;
+  /** Image du modèle (ou de l'accessoire) affichée dans la cellule Description */
+  imageSrc?: string | null;
 };
 
 export type ProformaWordTotal = {
@@ -198,6 +403,8 @@ export type ProformaWordInput = {
   notes?: string;
   includeConditions: boolean;
   signatureSrc?: string | null;
+  /** Appelé avec le nombre d'images de ligne intégrées / demandées */
+  onLineImages?: (embedded: number, requested: number) => void;
 };
 
 export function getProformaWordFileName(numero: string, status: string) {
@@ -208,10 +415,23 @@ export function getProformaWordFileName(numero: string, status: string) {
 export async function buildProformaWordBlob(
   input: ProformaWordInput,
 ): Promise<Blob> {
-  const [logo, signature] = await Promise.all([
+  const requestedImages = input.lines.filter((line) => line.imageSrc).length;
+  console.info(
+    `${LOG_PREFIX} v3 — ${requestedImages} image(s) de ligne à intégrer`,
+    input.lines.map((line) => line.imageSrc || null),
+  );
+
+  const [logo, signature, lineImages] = await Promise.all([
     fetchImage("/logo.png"),
     fetchImage(input.signatureSrc),
+    Promise.all(input.lines.map((line) => fetchLineImage(line.imageSrc))),
   ]);
+
+  const embeddedImages = lineImages.filter(Boolean).length;
+  console.info(
+    `${LOG_PREFIX} images de ligne intégrées : ${embeddedImages}/${requestedImages}`,
+  );
+  input.onLineImages?.(embeddedImages, requestedImages);
 
   const header = new Table({
     width: { size: "100%", type: WidthType.PERCENTAGE },
@@ -347,6 +567,23 @@ export async function buildProformaWordBlob(
             shading: { fill: i % 2 === 0 ? "FFFFFF" : "FFFBEB" },
             margins: { top: 60, bottom: 60, left: 80, right: 80 },
             children: [
+              ...(lineImages[i]
+                ? [
+                    new Paragraph({
+                      spacing: { after: 40 },
+                      children: [
+                        new ImageRun({
+                          type: lineImages[i]!.type,
+                          data: lineImages[i]!.data,
+                          transformation: {
+                            width: lineImages[i]!.width,
+                            height: lineImages[i]!.height,
+                          },
+                        }),
+                      ],
+                    }),
+                  ]
+                : []),
               p(line.title || "—", { bold: true, size: SIZE_SM, after: 20 }),
               ...(line.description
                 ? [
