@@ -652,6 +652,7 @@ model FactureLigne {
   nbr_voiture    Int
   prix_unitaire  Decimal
   montant_ligne  Decimal
+  remise         Decimal      @default(0)
   motorisation   String?
   transmission   String?
   Facture        Facture      @relation(fields: [factureId], references: [id], onDelete: Cascade)

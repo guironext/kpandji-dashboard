@@ -221,6 +221,7 @@ type Facture = {
 		nbr_voiture: number;
 		prix_unitaire: number;
 		montant_ligne: number;
+		remise?: number;
 		transmission?: string;
 		motorisation?: string;
 		voitureModel: {
@@ -686,7 +687,7 @@ export default function Page() {
             ${colorInfo}
           </td>
           <td style="padding: 5px; text-align: center; font-size: 13px;">${ligne.nbr_voiture}</td>
-          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(Number(ligne.prix_unitaire))}</td>
+          <td style="padding: 5px; text-align: right; font-size: 13px;">${formatAmount(Number(ligne.prix_unitaire))}${"remise" in ligne && Number(ligne.remise) > 0 ? `<div style="font-size: 8px; color: #92400e;">Remise : ${Number(ligne.remise)} %</div>` : ""}</td>
           <td style="padding: 5px; text-align: right; font-size: 13px; white-space: nowrap;">${formatAmount(Number(ligne.montant_ligne))}</td>
         </tr>
       `;
@@ -1536,6 +1537,9 @@ export default function Page() {
 					ligne.couleur ? `Couleur: ${ligne.couleur}` : "",
 					ligne.transmission ? `Transmission: ${ligne.transmission}` : "",
 					ligne.motorisation ? `Motorisation: ${ligne.motorisation}` : "",
+					"remise" in ligne && Number(ligne.remise) > 0
+						? `Remise: ${Number(ligne.remise)} %`
+						: "",
 				]
 					.filter(Boolean)
 					.join(" · ");
@@ -2133,6 +2137,11 @@ export default function Page() {
 														</TableCell>
 														<TableCell className="text-right text-black text-sm no-wrap">
 															{formatAmount(Number(ligne.prix_unitaire))}
+															{"remise" in ligne && Number(ligne.remise) > 0 && (
+																<p className="text-[10px] font-normal text-amber-700">
+																	Remise : {Number(ligne.remise)} %
+																</p>
+															)}
 														</TableCell>
 														<TableCell className="text-black text-right text-sm pr-6 no-wrap">
 															{formatAmount(Number(ligne.montant_ligne))}

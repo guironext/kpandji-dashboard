@@ -59,7 +59,15 @@ type LineItem = {
   prix_unitaire: number;
   transmission: string;
   motorisation: string;
+  remise: number; // Remise par article (%)
 };
+
+// Clamp a percentage value to the 0..100 range
+const clampPercent = (value: number) => Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
+
+// Sous-total d'un article après remise par article
+const getLineItemSubtotal = (item: LineItem) =>
+  item.prix_unitaire * item.nbr_voiture * (1 - clampPercent(item.remise || 0) / 100);
 
 type AccessoryLineItem = {
   id: string;
@@ -146,13 +154,13 @@ function CreerFacturePageContent() {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), voitureModelId: "", couleur: "", nbr_voiture: 1, prix_unitaire: 0, transmission: "", motorisation: "" }
+    { id: crypto.randomUUID(), voitureModelId: "", couleur: "", nbr_voiture: 1, prix_unitaire: 0, transmission: "", motorisation: "", remise: 0 }
   ]);
 
   const [accessoryItems, setAccessoryItems] = useState<AccessoryLineItem[]>([]);
 
   // Calculated values
-  const montant_ht_articles = lineItems.reduce((sum, item) => sum + (item.prix_unitaire * item.nbr_voiture), 0);
+  const montant_ht_articles = lineItems.reduce((sum, item) => sum + getLineItemSubtotal(item), 0);
   const montant_ht_accessoires = accessoryItems.reduce((sum, item) => sum + (item.prix_unitaire * item.quantity), 0);
   const montant_ht = montant_ht_articles + montant_ht_accessoires;
   const montant_remise = (montant_ht * formData.remise) / 100;
@@ -225,6 +233,7 @@ function CreerFacturePageContent() {
               prix_unitaire: number;
               transmission?: string;
               motorisation?: string;
+              remise?: number | string | null;
             }>;
             accessoires?: Array<{
               id: string;
@@ -281,6 +290,7 @@ function CreerFacturePageContent() {
               prix_unitaire: Number(ligne.prix_unitaire) || 0,
               transmission: ligne.transmission || "",
               motorisation: ligne.motorisation || "",
+              remise: clampPercent(Number(ligne.remise) || 0),
             })));
           } else {
             setLineItems([{
@@ -291,6 +301,7 @@ function CreerFacturePageContent() {
               prix_unitaire: facture.prix_unitaire || 0,
               transmission: "",
               motorisation: "",
+              remise: 0,
             }]);
           }
 
@@ -375,6 +386,8 @@ function CreerFacturePageContent() {
               prix_unitaire: item.prix_unitaire,
               transmission: item.transmission,
               motorisation: item.motorisation,
+              // Remise par article (%) : ignorée par le serveur tant que FactureLigne n'a pas de colonne "remise"
+              remise: clampPercent(item.remise || 0),
             })),
             accessoires:
               validAccessories.length > 0
@@ -418,6 +431,8 @@ function CreerFacturePageContent() {
               prix_unitaire: item.prix_unitaire,
               transmission: item.transmission,
               motorisation: item.motorisation,
+              // Remise par article (%) : ignorée par le serveur tant que FactureLigne n'a pas de colonne "remise"
+              remise: clampPercent(item.remise || 0),
             })),
             accessoires:
               validAccessories.length > 0
@@ -501,7 +516,8 @@ function CreerFacturePageContent() {
                   nbr_voiture: 1, 
                   prix_unitaire: 0,
                   transmission: "",
-                  motorisation: ""
+                  motorisation: "",
+                  remise: 0
                 }])}
                 variant="outline"
                 className="border-amber-500 text-amber-700 hover:bg-amber-50"
@@ -628,6 +644,32 @@ function CreerFacturePageContent() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label className="text-sm text-amber-700 font-bold">Remise (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.remise}
+                        onChange={(e) => {
+                          const updated = [...lineItems];
+                          updated[index].remise = clampPercent(parseFloat(e.target.value) || 0);
+                          setLineItems(updated);
+                        }}
+                        className="border-amber-300"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm text-amber-700 font-bold">Sous-total</Label>
+                      <div className="flex h-9 items-center justify-end rounded-md border border-amber-300 bg-white px-3 font-bold text-amber-700">
+                        {formatNumberWithSpaces(getLineItemSubtotal(item))} FCFA
+                      </div>
+                    </div>
+                  </div>
+
                   {selectedModel && (
                     <div className="mt-3 p-3 bg-white rounded border border-amber-200">
                       <div className="flex gap-3 items-center">
@@ -649,7 +691,7 @@ function CreerFacturePageContent() {
                          <div className="text-right">
                            <p className="text-sm text-gray-600">Sous-total:</p>
                            <p className="font-bold text-amber-700">
-                             {formatNumberWithSpaces(item.prix_unitaire * item.nbr_voiture)} FCFA
+                             {formatNumberWithSpaces(getLineItemSubtotal(item))} FCFA
                            </p>
                          </div>
                       </div>

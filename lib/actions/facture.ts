@@ -30,6 +30,26 @@ function deepStripDecimals<T>(value: T): T {
 }
 
 // Helper function to convert Decimal fields to numbers
+// Remise par article (%) limitée à 0..100
+function clampLigneRemise(remise: unknown): number {
+  const value = Number(remise);
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+}
+
+// Montant d'une ligne après remise par article
+function computeMontantLigne(ligne: {
+  prix_unitaire: number;
+  nbr_voiture: number;
+  remise?: number;
+}): number {
+  return (
+    ligne.prix_unitaire *
+    ligne.nbr_voiture *
+    (1 - clampLigneRemise(ligne.remise ?? 0) / 100)
+  );
+}
+
 function serializeFacture(facture: unknown) {
   const f = facture as Record<string, unknown> & {
     FactureLigne?: unknown[];
@@ -97,6 +117,7 @@ function serializeFacture(facture: unknown) {
         ...ligne,
         prix_unitaire: ligne.prix_unitaire ? Number(ligne.prix_unitaire) : 0,
         montant_ligne: ligne.montant_ligne ? Number(ligne.montant_ligne) : 0,
+        remise: ligne.remise ? Number(ligne.remise) : 0,
         voitureModel: voitureModelRaw
           ? {
               id: voitureModelRaw.id,
@@ -870,6 +891,7 @@ export async function createFactureWithMultipleLines(data: {
     prix_unitaire: number;
     transmission?: string;
     motorisation?: string;
+    remise?: number;
   }>;
   accessoires?: Array<{
     nom: string;
@@ -881,7 +903,7 @@ export async function createFactureWithMultipleLines(data: {
   try {
     // Calculate totals from all lines
     const montant_ht_articles = data.lignes.reduce(
-      (sum, ligne) => sum + ligne.prix_unitaire * ligne.nbr_voiture,
+      (sum, ligne) => sum + computeMontantLigne(ligne),
       0,
     );
 
@@ -965,7 +987,8 @@ export async function createFactureWithMultipleLines(data: {
           couleur: ligne.couleur,
           nbr_voiture: ligne.nbr_voiture,
           prix_unitaire: new Decimal(ligne.prix_unitaire),
-          montant_ligne: new Decimal(ligne.prix_unitaire * ligne.nbr_voiture),
+          montant_ligne: new Decimal(computeMontantLigne(ligne)),
+          remise: new Decimal(clampLigneRemise(ligne.remise ?? 0)),
           transmission: ligne.transmission || null,
           motorisation: ligne.motorisation || null,
           updatedAt: new Date(),
@@ -1203,6 +1226,7 @@ export async function updateFactureWithMultipleLines(
       prix_unitaire: number;
       transmission?: string;
       motorisation?: string;
+      remise?: number;
     }>;
     accessoires?: Array<{
       nom: string;
@@ -1226,7 +1250,7 @@ export async function updateFactureWithMultipleLines(
     }
 
     const montant_ht_articles = data.lignes.reduce(
-      (sum, ligne) => sum + ligne.prix_unitaire * ligne.nbr_voiture,
+      (sum, ligne) => sum + computeMontantLigne(ligne),
       0,
     );
     const montant_ht_accessoires = (data.accessoires || []).reduce(
@@ -1320,9 +1344,8 @@ export async function updateFactureWithMultipleLines(
               couleur: ligne.couleur,
               nbr_voiture: ligne.nbr_voiture,
               prix_unitaire: new Decimal(ligne.prix_unitaire),
-              montant_ligne: new Decimal(
-                ligne.prix_unitaire * ligne.nbr_voiture,
-              ),
+              montant_ligne: new Decimal(computeMontantLigne(ligne)),
+              remise: new Decimal(clampLigneRemise(ligne.remise ?? 0)),
               transmission: ligne.transmission || null,
               motorisation: ligne.motorisation || null,
               updatedAt: new Date(),
@@ -1689,6 +1712,7 @@ export async function getClientsWithFacturesGroupedByYearMonth() {
           nbr_voiture: ligne.nbr_voiture,
           prix_unitaire: Number(ligne.prix_unitaire),
           montant_ligne: Number(ligne.montant_ligne),
+          remise: Number(ligne.remise ?? 0),
           transmission: ligne.transmission || null,
           motorisation: ligne.motorisation || null,
           voitureModel: ligne.VoitureModel
@@ -1825,6 +1849,7 @@ export async function getClientsAndEntreprisesWithFactures() {
           nbr_voiture: number;
           prix_unitaire: number;
           montant_ligne: number;
+          remise?: number;
           transmission?: string | null;
           motorisation?: string | null;
           voitureModel: {
@@ -1909,6 +1934,7 @@ export async function getClientsAndEntreprisesWithFactures() {
           nbr_voiture: ligne.nbr_voiture,
           prix_unitaire: Number(ligne.prix_unitaire),
           montant_ligne: Number(ligne.montant_ligne),
+          remise: Number(ligne.remise ?? 0),
           transmission: ligne.transmission || null,
           motorisation: ligne.motorisation || null,
           voitureModel: ligne.VoitureModel,
