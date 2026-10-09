@@ -227,3 +227,56 @@ export async function deleteSignature(): Promise<{
   }
 }
 
+/**
+ * Signature apposée automatiquement sur les proformas validés (validationRespoCom === "VALIDATED").
+ * La facture n'enregistre pas QUI l'a validée : on utilise la signature "Direction Commerciale",
+ * c.-à-d. celle du RESPONSABLE_COMMERCIAL (à défaut ADMIN) dont la signature est la plus récente.
+ * Même résultat quel que soit l'utilisateur qui consulte la page (commercial ou responsable).
+ */
+export async function getValidatedProformaSignature(): Promise<{
+  success: boolean;
+  data?: { image: string; signerName: string } | null;
+  message: string;
+}> {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return { success: false, message: "Utilisateur non authentifié" };
+    }
+
+    for (const role of ["RESPONSABLE_COMMERCIAL", "ADMIN"] as const) {
+      const signature = await prisma.signature.findFirst({
+        where: { User: { role } },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          image: true,
+          User: { select: { firstName: true, lastName: true } },
+        },
+      });
+      if (signature?.image) {
+        return {
+          success: true,
+          data: {
+            image: signature.image,
+            signerName: [signature.User?.firstName, signature.User?.lastName]
+              .filter(Boolean)
+              .join(" "),
+          },
+          message: "Signature de validation récupérée",
+        };
+      }
+    }
+
+    return {
+      success: true,
+      data: null,
+      message: "Aucune signature de responsable commercial trouvée",
+    };
+  } catch (error) {
+    console.error("Error fetching validated proforma signature:", error);
+    return {
+      success: false,
+      message: "Erreur lors de la récupération de la signature de validation",
+    };
+  }
+}

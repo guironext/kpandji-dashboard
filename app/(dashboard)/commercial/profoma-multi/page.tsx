@@ -27,7 +27,10 @@ import {
   requestFactureValidation,
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import { getUserSignature } from "@/lib/actions/signature";
+import {
+  getUserSignature,
+  getValidatedProformaSignature,
+} from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -186,6 +189,34 @@ export default function Page() {
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  // Signature automatique (Direction Commerciale) pour les proformas validés
+  const [validatedSignature, setValidatedSignature] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    getValidatedProformaSignature()
+      .then((result) => {
+        if (!cancelled && result.success && result.data?.image) {
+          setValidatedSignature(result.data.image);
+        }
+      })
+      .catch(() => {
+        // pas de signature automatique si l'appel échoue
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // Signature d'une facture : automatique si VALIDATED, sinon via le bouton SIGNER (inchangé)
+  const getFactureSignature = (
+    facture?: { validationRespoCom?: string | null } | null,
+  ): string | null =>
+    facture?.validationRespoCom === "VALIDATED" && validatedSignature
+      ? validatedSignature
+      : showSignature
+        ? signatureImage
+        : null;
   const [exportingWord, setExportingWord] = useState(false);
   const [submittingValidation, setSubmittingValidation] = useState<string | null>(null);
   const paginationScrollRef = useRef<HTMLDivElement>(null);
@@ -458,7 +489,7 @@ export default function Page() {
         amountInWords: numberToFrench(Math.floor(facture.total_ttc || 0)),
         notes: "",
         includeConditions: true,
-        signatureSrc: showSignature ? signatureImage : null,
+        signatureSrc: getFactureSignature(facture),
         onLineImages: (embedded, requested) => {
           imageStats = { embedded, requested };
         },
@@ -1136,10 +1167,10 @@ export default function Page() {
                     <div></div>
                     <div className="flex flex-col items-center gap-4">
                       <div className="text-black font-bold text-sm uppercase">Direction Commerciale</div>
-                      {showSignature && signatureImage && (
+                      {getFactureSignature(facture) && (
                         <div className="relative w-48 h-20 -mt-3">
                           <Image 
-                            src={signatureImage} 
+                            src={getFactureSignature(facture) as string}
                             alt="Signature" 
                             fill
                             className="object-contain"

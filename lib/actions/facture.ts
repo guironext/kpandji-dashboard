@@ -1539,6 +1539,61 @@ export async function requestFactureValidation(factureId: string) {
   }
 }
 
+/**
+ * Validation d'un proforma par le responsable commercial :
+ * passe validationRespoCom à VALIDATED (depuis CREER ou VALIDATION_COURS).
+ * Réservé aux rôles RESPONSABLE_COMMERCIAL / ADMIN.
+ */
+export async function validateFactureRespoCom(factureId: string) {
+  try {
+    if (!factureId) {
+      return { success: false, error: "Facture invalide" };
+    }
+
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return { success: false, error: "Vous devez être connecté" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+      select: { id: true, role: true },
+    });
+    if (!user) {
+      return { success: false, error: "Utilisateur introuvable" };
+    }
+    const allowedRoles = ["RESPONSABLE_COMMERCIAL", "ADMIN"];
+    if (!allowedRoles.includes(user.role)) {
+      return { success: false, error: "Non autorisé" };
+    }
+
+    const facture = await prisma.facture.findUnique({
+      where: { id: factureId },
+      select: { id: true, validationRespoCom: true },
+    });
+    if (!facture) {
+      return { success: false, error: "Facture introuvable" };
+    }
+    if (facture.validationRespoCom === "VALIDATED") {
+      return { success: true };
+    }
+
+    await prisma.facture.update({
+      where: { id: facture.id },
+      data: { validationRespoCom: "VALIDATED" },
+    });
+
+    revalidatePath("/responsablecommercial/proformas");
+    revalidatePath("/commercial/proformas");
+    revalidatePath("/commercial/proformas-validees");
+    revalidatePath("/commercial/profoma-multi");
+    return { success: true };
+  } catch (error) {
+    console.error("Error validating facture (respo commercial):", error);
+    return { success: false, error: "Erreur lors de la validation du proforma" };
+  }
+}
+
 export async function updateFactureLigneCouleur(
   ligneId: string,
   couleur: string,

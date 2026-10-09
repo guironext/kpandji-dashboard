@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   Table,
   TableBody,
@@ -22,9 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react";
-import { getProformas, deleteFacture } from "@/lib/actions/facture";
+import {
+  getProformas,
+  deleteFacture,
+  validateFactureRespoCom,
+} from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import { getUserSignature } from "@/lib/actions/signature";
+import {
+  getUserSignature,
+  getValidatedProformaSignature,
+} from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 
@@ -225,18 +233,42 @@ function getAccessoirePrice(
   return matched?.prix || 0;
 }
 
+const ALL_COMMERCIALS = "all";
+
 type CommercialGroup = {
   commercialId: string;
   commercialName: string;
   factures: Facture[];
 };
 
-export default function ProformasRespoClient() {
+type ProformasRespoMode = "pending" | "validated";
+
+export default function ProformasRespoClient({
+  mode = "pending",
+}: {
+  // "pending" : proformas en attente de validation (VALIDATION_COURS) — comportement par défaut
+  // "validated" : proformas déjà validés (VALIDATED), en lecture seule
+  mode?: ProformasRespoMode;
+} = {}) {
+  const isValidatedMode = mode === "validated";
+  const targetValidationStatus = isValidatedMode
+    ? "VALIDATED"
+    : "VALIDATION_COURS";
   const router = useRouter();
+  // Utilisateur connecté (le responsable qui consulte la page) — à ne pas confondre avec
+  // facture.user, qui est le commercial ayant créé le proforma.
+  const { user: clerkUser } = useUser();
+  const [dbCurrentUser, setDbCurrentUser] = useState<{
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  } | null>(null);
   const [commercialGroups, setCommercialGroups] = useState<CommercialGroup[]>(
     [],
   );
-  const [selectedCommercialId, setSelectedCommercialId] = useState<string>("");
+  // "Tous" par défaut : le responsable voit d'emblée tous les proformas en attente de validation
+  const [selectedCommercialId, setSelectedCommercialId] =
+    useState<string>(ALL_COMMERCIALS);
   const [accessoires, setAccessoires] = useState<
     Array<{
       id: string;
@@ -247,12 +279,41 @@ export default function ProformasRespoClient() {
   >([]);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSignature, setShowSignature] = useState(false);
+  // Signature automatique (Direction Commerciale) pour les proformas validés
+  const [validatedSignature, setValidatedSignature] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    getValidatedProformaSignature()
+      .then((result) => {
+        if (!cancelled && result.success && result.data?.image) {
+          setValidatedSignature(result.data.image);
+        }
+      })
+      .catch(() => {
+        // pas de signature automatique si l'appel échoue
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // Signature d'une facture : automatique si VALIDATED, sinon via le bouton SIGNER (inchangé)
+  const getFactureSignature = (
+    facture?: { validationRespoCom?: string | null } | null,
+  ): string | null =>
+    facture?.validationRespoCom === "VALIDATED" && validatedSignature
+      ? validatedSignature
+      : showSignature
+        ? signatureImage
+        : null;
   const [editedAmountTexts, setEditedAmountTexts] = useState<
     Record<string, string>
   >({});
   const [editingAmountText, setEditingAmountText] = useState<string | null>(
     null,
   );
+  const [validatingId, setValidatingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
   const paginationScrollRef = useRef<HTMLDivElement>(null);
@@ -268,7 +329,7 @@ export default function ProformasRespoClient() {
         const filtered = data.filter(
           (f) =>
             f.status_facture?.toUpperCase() === "PROFORMA" &&
-            f.validationRespoCom === "VALIDATION_COURS",
+            f.validationRespoCom === targetValidationStatus,
         );
         const groupsMap = new Map<string, CommercialGroup>();
         filtered.forEach((f) => {
@@ -312,12 +373,21 @@ export default function ProformasRespoClient() {
       }
     };
     fetchData();
-  }, []);
+  }, [targetValidationStatus]);
 
+  const isAllCommercials = selectedCommercialId === ALL_COMMERCIALS;
+  const allFactures = commercialGroups
+    .flatMap((g) => g.factures)
+    .sort(
+      (a, b) =>
+        new Date(b.date_facture).getTime() - new Date(a.date_facture).getTime(),
+    );
   const selectedGroup = commercialGroups.find(
     (g) => g.commercialId === selectedCommercialId,
   );
-  const factures = selectedGroup?.factures ?? [];
+  const factures = isAllCommercials
+    ? allFactures
+    : (selectedGroup?.factures ?? []);
   const totalPages = Math.ceil(factures.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -326,6 +396,42 @@ export default function ProformasRespoClient() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCommercialId]);
+
+  // Nom de l'utilisateur connecté depuis la base (getOrCreateUser via l'API, cache Clerk côté serveur).
+  // Clerk (useUser) sert de repli si l'API est lente ou en échec.
+  const clerkUserId = clerkUser?.id;
+  useEffect(() => {
+    if (!clerkUserId) return;
+    const controller = new AbortController();
+    fetch(`/api/user/${clerkUserId}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && (data.firstName || data.lastName)) {
+          setDbCurrentUser({
+            firstName: data.firstName ?? null,
+            lastName: data.lastName ?? null,
+            email: data.email ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        // repli silencieux sur les données Clerk
+      });
+    return () => controller.abort();
+  }, [clerkUserId]);
+
+  const user = {
+    firstName: dbCurrentUser?.firstName || clerkUser?.firstName || "",
+    lastName: dbCurrentUser?.lastName || clerkUser?.lastName || "",
+  };
+  const currentUserFallback =
+    dbCurrentUser?.email ||
+    clerkUser?.primaryEmailAddress?.emailAddress ||
+    "—";
+  const hasCurrentUserName = Boolean(user.firstName || user.lastName);
 
   useEffect(() => {
     if (paginationScrollRef.current) {
@@ -455,8 +561,8 @@ export default function ProformasRespoClient() {
       `;
     }
     const signatureHtml =
-      showSignature && signatureImage
-        ? `<img src="${escapeAttr(signatureImage)}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
+      getFactureSignature(currentFacture)
+        ? `<img src="${escapeAttr(getFactureSignature(currentFacture))}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
         : "";
     const factureId = escapeHtml(currentFacture.id.slice(-7));
     const factureStatus = escapeHtml(currentFacture.status_facture);
@@ -600,7 +706,7 @@ export default function ProformasRespoClient() {
           const filtered = data.filter(
             (f) =>
               f.status_facture?.toUpperCase() === "PROFORMA" &&
-              f.validationRespoCom === "VALIDATION_COURS",
+              f.validationRespoCom === targetValidationStatus,
           );
           const groupsMap = new Map<string, CommercialGroup>();
           filtered.forEach((f) => {
@@ -622,7 +728,9 @@ export default function ProformasRespoClient() {
             ),
           );
           const newFactures =
-            groupsMap.get(selectedCommercialId)?.factures ?? [];
+            selectedCommercialId === ALL_COMMERCIALS
+              ? filtered
+              : (groupsMap.get(selectedCommercialId)?.factures ?? []);
           if (currentPage > Math.ceil(newFactures.length / itemsPerPage)) {
             setCurrentPage(
               Math.max(1, Math.ceil(newFactures.length / itemsPerPage)),
@@ -653,11 +761,40 @@ export default function ProformasRespoClient() {
     }
   };
 
+  const handleValidate = async () => {
+    const facture = currentData[0];
+    if (!facture || facture.validationRespoCom === "VALIDATED") return;
+
+    setValidatingId(facture.id);
+    const result = await validateFactureRespoCom(facture.id);
+    setValidatingId(null);
+
+    if (result.success) {
+      // La facture reste affichée (bouton désactivé) jusqu'au prochain rechargement,
+      // où elle sortira de la liste des proformas en attente de validation.
+      setCommercialGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          factures: group.factures.map((f) =>
+            f.id === facture.id ? { ...f, validationRespoCom: "VALIDATED" } : f,
+          ),
+        })),
+      );
+      toast.success("Proforma validé");
+    } else {
+      toast.error(result.error || "Erreur lors de la validation du proforma");
+    }
+  };
+
   if (commercialGroups.length === 0) {
     return (
       <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6">
         <div className="bg-white rounded-lg shadow-2xl p-8 text-center">
-          <p className="text-gray-600">Aucun proforma trouvé.</p>
+          <p className="text-gray-600">
+            {isValidatedMode
+              ? "Aucun proforma validé trouvé."
+              : "Aucun proforma trouvé."}
+          </p>
         </div>
       </div>
     );
@@ -666,6 +803,11 @@ export default function ProformasRespoClient() {
   return (
     <div className="flex flex-col w-full bg-gradient-to-br from-amber-50 via-white to-orange-50">
       <div className="bg-white rounded-lg shadow-2xl p-2">
+        {isValidatedMode && (
+          <h2 className="text-xl font-bold text-gray-800 px-4 pt-2 mb-4 print-hide">
+            Proformas déjà validées
+          </h2>
+        )}
         <div className="flex w-full justify-between items-center mb-6 print-hide flex-wrap px-4 gap-4">
           <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-2">
@@ -680,6 +822,10 @@ export default function ProformasRespoClient() {
                   <SelectValue placeholder="Sélectionner un commercial" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={ALL_COMMERCIALS}>
+                    Tous ({allFactures.length} proforma
+                    {allFactures.length > 1 ? "s" : ""})
+                  </SelectItem>
                   {commercialGroups.map((g) => (
                     <SelectItem key={g.commercialId} value={g.commercialId}>
                       {g.commercialName} ({g.factures.length} proforma
@@ -688,6 +834,9 @@ export default function ProformasRespoClient() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="ml-2">
+               
+              </div>
             </div>
             <Button
               onClick={handlePrint}
@@ -696,6 +845,7 @@ export default function ProformasRespoClient() {
             >
               IMPRIMER
             </Button>
+            {!isValidatedMode && (
             <Button
               onClick={() => {
                 const f = currentData[0];
@@ -707,6 +857,8 @@ export default function ProformasRespoClient() {
             >
               MODIFIER
             </Button>
+            )}
+            {!isValidatedMode && (
             <Button
               onClick={handleDelete}
               disabled={currentData.length === 0}
@@ -714,6 +866,7 @@ export default function ProformasRespoClient() {
             >
               SUPPRIMER
             </Button>
+            )}
             <Button
               onClick={handleSignature}
               disabled={currentData.length === 0}
@@ -723,7 +876,22 @@ export default function ProformasRespoClient() {
             </Button>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <Button>Valider Proforma</Button>
+            <Button
+              onClick={handleValidate}
+              disabled={
+                isValidatedMode ||
+                currentData.length === 0 ||
+                currentData[0]?.validationRespoCom === "VALIDATED" ||
+                validatingId !== null
+              }
+              className="bg-black hover:bg-gray-800 text-amber-400 font-bold border-2 border-amber-500 shadow-lg disabled:opacity-50"
+            >
+              {validatingId !== null && validatingId === currentData[0]?.id
+                ? "VALIDATION..."
+                : currentData[0]?.validationRespoCom === "VALIDATED"
+                  ? "PROFORMA VALIDEE"
+                  : "Valider Proforma"}
+            </Button>
           </div>
         </div>
 
@@ -1152,10 +1320,10 @@ export default function ProformasRespoClient() {
                     <div className="text-black font-bold text-sm uppercase">
                       Direction Commerciale
                     </div>
-                    {showSignature && signatureImage && (
+                    {getFactureSignature(facture) && (
                       <div className="relative w-48 h-20 -mt-3">
                         <Image
-                          src={signatureImage}
+                          src={getFactureSignature(facture) as string}
                           alt="Signature"
                           fill
                           className="object-contain"

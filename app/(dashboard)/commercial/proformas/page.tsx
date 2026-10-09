@@ -49,7 +49,10 @@ import {
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getAllModele } from "@/lib/actions/modele";
-import { getUserSignature } from "@/lib/actions/signature";
+import {
+	getUserSignature,
+	getValidatedProformaSignature,
+} from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -378,6 +381,34 @@ export default function Page() {
 	>([]);
 	const [signatureImage, setSignatureImage] = useState<string | null>(null);
 	const [showSignature, setShowSignature] = useState(false);
+	// Signature automatique (Direction Commerciale) pour les proformas validés
+	const [validatedSignature, setValidatedSignature] = useState<string | null>(
+		null,
+	);
+	useEffect(() => {
+		let cancelled = false;
+		getValidatedProformaSignature()
+			.then((result) => {
+				if (!cancelled && result.success && result.data?.image) {
+					setValidatedSignature(result.data.image);
+				}
+			})
+			.catch(() => {
+				// pas de signature automatique si l'appel échoue
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+	// Signature d'une facture : automatique si VALIDATED, sinon via le bouton SIGNER (inchangé)
+	const getFactureSignature = (
+		facture?: { validationRespoCom?: string | null } | null,
+	): string | null =>
+		facture?.validationRespoCom === "VALIDATED" && validatedSignature
+			? validatedSignature
+			: showSignature
+				? signatureImage
+				: null;
 	const [conditionsTextHidden, setConditionsTextHidden] = useState(false);
 	const [editedAmountTexts, setEditedAmountTexts] = useState<
 		Record<string, string>
@@ -763,8 +794,8 @@ export default function Page() {
 
 		// Signature image
 		const signatureHtml =
-			showSignature && signatureImage
-				? `<img src="${escapeAttr(signatureImage)}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
+			getFactureSignature(currentFacture)
+				? `<img src="${escapeAttr(getFactureSignature(currentFacture))}" alt="Signature" style="width: 192px; height: 80px; object-fit: contain;" />`
 				: "";
 
 		const factureId = escapeHtml(currentFacture.id.slice(-7));
@@ -1701,7 +1732,7 @@ export default function Page() {
 				amountInWords,
 				notes: notesProforma[facture.id] ?? facture.notes_proforma ?? "",
 				includeConditions: !conditionsTextHidden,
-				signatureSrc: showSignature ? signatureImage : null,
+				signatureSrc: getFactureSignature(facture),
 				onLineImages: (embedded, requested) => {
 					imageStats = { embedded, requested };
 				},
@@ -2591,10 +2622,10 @@ export default function Page() {
 											<div className="text-black font-bold text-sm uppercase">
 												Direction Commerciale
 											</div>
-											{showSignature && signatureImage && (
+											{getFactureSignature(facture) && (
 												<div className="relative w-48 h-20 -mt-3">
 													<Image
-														src={signatureImage}
+														src={getFactureSignature(facture) as string}
 														alt="Signature"
 														fill
 														className="object-contain"

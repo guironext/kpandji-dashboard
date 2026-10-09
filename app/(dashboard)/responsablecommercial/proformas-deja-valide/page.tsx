@@ -1,11 +1,5 @@
-import React from 'react'
+import ProformasRespoClient from "../proformas/ProformasRespoClient";
 
-const page = () => {
-  return (
-    <div>
-      
-    </div>
-  )
+export default function Page() {
+  return <ProformasRespoClient mode="validated" />;
 }
-
-export default page
