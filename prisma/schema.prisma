@@ -19,6 +19,8 @@ model User {
   createdAt                          DateTime                            @default(now())
   updatedAt                          DateTime                            @updatedAt
   telephone                          String?
+  isActive                           Boolean                             @default(true)
+  disabledAt                         DateTime?
   CalendrierSortie                   CalendrierSortie[]
   Client                             Client[]
   Client_entreprise                  Client_entreprise[]
@@ -37,6 +39,7 @@ model User {
   Paiement                           Paiement[]
   ReservationVehicule                ReservationVehicule[]
   Signature                          Signature?
+  InvitationsSent                    Invitation[]                        @relation("InvitationsSent")
   Tableau_chute                      Tableau_chute[]
   Tableau_chute_rendez_vous          Tableau_chute_rendez_vous[]
   NotificationsSent                  Notification[]                      @relation("NotificationsSent")
@@ -467,19 +470,18 @@ model Correction {
   Tool              Tool[]
 }
 
-model Decaissement{
-  id                String              @id
-  demandeur         String
-  service           String?
-  departement       String
-  raison            String
-  montant           String
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  validationDepartement  Boolean        @default(false)
-  decaissementEffectues  Boolean?        @default(false)
-  montantDecaisse    String?
-
+model Decaissement {
+  id                    String   @id
+  demandeur             String
+  service               String?
+  departement           String
+  raison                String
+  montant               String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+  validationDepartement Boolean  @default(false)
+  decaissementEffectues Boolean? @default(false)
+  montantDecaisse       String?
 }
 
 model CourrieAvantage {
@@ -655,9 +657,8 @@ model Facture {
   Voiture                Voiture?           @relation(fields: [voitureId], references: [id])
   FactureLigne           FactureLigne[]
   Paiement               Paiement[]
-  validationRespoCom     ValidationRespoCom             @default(CREER)
+  validationRespoCom     ValidationRespoCom @default(CREER)
 }
-
 
 enum ValidationRespoCom {
   CREER
@@ -926,8 +927,6 @@ model RapportRendezVous {
   Tableau_chute             Tableau_chute[]
   Tableau_chute_rendez_vous Tableau_chute_rendez_vous[]
 }
-
-
 
 model RapportTeste {
   id        String   @id
@@ -3495,8 +3494,6 @@ model FinancePlanActionActeur {
   @@index([userId])
 }
 
-
-
 model FinanceProjetRapport {
   id         String        @id @default(uuid())
   projetId   String
@@ -3532,20 +3529,20 @@ enum StatutFinanceDepense {
 }
 
 model FinanceBudget {
-  id           String              @id @default(uuid())
+  id           String               @id @default(uuid())
   nom          String
   description  String?
   exercice     Int
   dateDebut    DateTime
   dateFin      DateTime?
-  montantPrevu Decimal             @db.Decimal(15, 2)
-  statut       StatutFinanceBudget @default(BROUILLON)
+  montantPrevu Decimal              @db.Decimal(15, 2)
+  statut       StatutFinanceBudget  @default(BROUILLON)
   projetId     String?
   createdById  String
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  projet       FinanceProjet?      @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  createdBy    User                @relation("FinanceBudgetCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  projet       FinanceProjet?       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  createdBy    User                 @relation("FinanceBudgetCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   lignes       FinanceBudgetLigne[]
   depenses     FinanceDepense[]
 
@@ -3600,4 +3597,33 @@ model FinanceDepense {
   @@index([validatedById])
   @@index([statut])
   @@index([dateDepense])
+}
+
+enum InvitationStatus {
+  PENDING
+  WAITING_VALIDATION
+  ACCEPTED
+  REJECTED
+  REVOKED
+}
+
+/// Invitation envoyée par un ADMIN : email + rôle futur, lien /onboarding?invite=<token>
+model Invitation {
+  id                String           @id @default(uuid())
+  email             String
+  role              UserRole
+  token             String           @unique
+  status            InvitationStatus @default(PENDING)
+  invitedById       String?
+  invitedBy         User?            @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedByClerkId String?
+  clerkInvitationId String?
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  validatedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
 }

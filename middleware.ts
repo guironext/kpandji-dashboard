@@ -35,6 +35,9 @@ function isCommercialDocumentationDownloadPath(pathname: string): boolean {
 	);
 }
 const isOnboardingRoute = createRouteMatcher(["/onboarding"]);
+// Page d attente pour les comptes invités non encore validés par un admin
+const isWaitingRoute = createRouteMatcher(["/en-attente"]);
+const isDisabledRoute = createRouteMatcher(["/compte-desactive"]);
 
 const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
 const isEmployeeRoute = createRouteMatcher(["/employee", "/employee/(.*)"]);
@@ -154,6 +157,23 @@ const CLERK_OPTIONS = {
 
 const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	const { userId, sessionClaims, redirectToSignIn } = await auth();
+
+	// Comptes invités en attente de validation admin : seule la page d attente est accessible
+	// Comptes désactivés par un admin : accès bloqué partout sauf la page d'information
+	if (userId && sessionClaims?.metadata?.disabled) {
+		if (isDisabledRoute(req)) return NextResponse.next();
+		if (req.nextUrl.pathname.startsWith("/api/")) {
+			return NextResponse.json({ error: "Compte désactivé" }, { status: 403 });
+		}
+		return NextResponse.redirect(new URL("/compte-desactive", req.url));
+	}
+
+	if (userId && sessionClaims?.metadata?.pendingValidation) {
+		if (!isWaitingRoute(req) && !req.nextUrl.pathname.startsWith("/api/")) {
+			return NextResponse.redirect(new URL("/en-attente", req.url));
+		}
+		return NextResponse.next();
+	}
 
 	// Handle root path redirects based on role and onboarding status
 	if (

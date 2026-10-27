@@ -26,7 +26,11 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { completeUserOnboarding } from "@/lib/actions/onboarding";
+import {
+  completeInvitedOnboarding,
+  completeUserOnboarding,
+} from "@/lib/actions/onboarding";
+import { ASSIGNABLE_ROLES } from "@/lib/role-labels";
 import { getRedirectForRole } from "@/lib/role-redirects";
 import { UserRole } from "@prisma/client";
 import {
@@ -76,18 +80,25 @@ const ROLE_LABELS: Record<UserRole, string> = {
   DESIGNER: "Designer",
 };
 
-const USER_ROLES = Object.values(UserRole) as UserRole[];
+// ADMIN n'est jamais proposé : personne ne peut se l'attribuer à l'inscription
+const USER_ROLES = ASSIGNABLE_ROLES;
 
 interface OnboardingFormProps {
   userEmail: string;
   firstName: string;
   lastName: string;
+  /** Invitation valide : rôle imposé, validation admin requise ensuite */
+  invitation?: { token: string; role: UserRole; email: string } | null;
+  /** Lien d'invitation présent mais inutilisable (expiré, mauvais email…) */
+  invitationError?: string | null;
 }
 
 const OnboardingForm = ({
   userEmail,
   firstName,
   lastName,
+  invitation = null,
+  invitationError = null,
 }: OnboardingFormProps) => {
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
@@ -116,6 +127,23 @@ const OnboardingForm = ({
     setError(null);
 
     try {
+      if (invitation) {
+        const invited = await completeInvitedOnboarding(
+          invitation.token,
+          data.department || undefined,
+          data.telephone || undefined,
+        );
+        if (!invited?.success) {
+          setError(invited?.error ?? "Impossible de compléter l'inscription.");
+          return;
+        }
+        toast.success("Inscription enregistrée. En attente de validation.");
+        await user.reload();
+        await getToken({ skipCache: true });
+        window.location.replace("/en-attente");
+        return;
+      }
+
       const response = await completeUserOnboarding(
         data.department || undefined,
         user.id,
@@ -161,6 +189,21 @@ const OnboardingForm = ({
     );
   }
 
+  if (invitationError) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-white/95 p-8 shadow-2xl">
+        <h2 className="mb-3 text-xl font-bold text-gray-800">
+          Invitation inutilisable
+        </h2>
+        <Alert variant="destructive" className="border-red-200 bg-red-50">
+          <AlertDescription className="text-red-800">
+            {invitationError}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="relative overflow-hidden rounded-3xl border border-orange-200/50 bg-white/95 shadow-2xl backdrop-blur-xl">
       <div className="absolute inset-0 bg-gradient-to-r from-orange-100/30 to-yellow-100/30" />
@@ -188,6 +231,19 @@ const OnboardingForm = ({
               <Label className="text-base font-semibold text-gray-700">
                 Type de compte
               </Label>
+              {invitation ? (
+                <div className="space-y-1">
+                  <Input
+                    value={ROLE_LABELS[invitation.role]}
+                    disabled
+                    className="border-gray-200 bg-gray-50 font-semibold text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Rôle défini par l&apos;invitation. Votre accès sera activé
+                    après validation par l&apos;administrateur.
+                  </p>
+                </div>
+              ) : (
               <Select
                 value={accountType}
                 onValueChange={(value) => setAccountType(value as UserRole)}
@@ -203,6 +259,7 @@ const OnboardingForm = ({
                   ))}
                 </SelectContent>
               </Select>
+              )}
             </div>
 
             <Separator className="bg-orange-200" />
