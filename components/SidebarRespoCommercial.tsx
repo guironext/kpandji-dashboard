@@ -15,7 +15,6 @@ import {
   Mail,
   BookOpen,
   FolderOpen,
-  ScrollText,
   FileSignature,
   MessageSquare,
   PenLine,

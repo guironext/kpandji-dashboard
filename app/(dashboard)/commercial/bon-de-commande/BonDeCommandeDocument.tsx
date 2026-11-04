@@ -250,7 +250,10 @@ function checksFrom(contenu: BonCommandeContenu | null, selected: BonCommandeDoc
 }
 
 function draftFields(contenu: BonCommandeContenu): Draft {
-  const { lieu: _lieu, qualite: _qualite, reglement: _reglement, financement: _financement, livraison: _livraison, horsEtablissement: _hors, ...fields } = contenu;
+  const fields = emptyDraft();
+  for (const key of Object.keys(fields) as Array<keyof Draft>) {
+    fields[key] = contenu[key];
+  }
   const siegeUneLigne =
     "Siège social : Cocody, Riviéra Palmerais, Abidjan, Côte d'Ivoire   ·   Tél. : +225 01 01 04 77 03   ·   E-mail : info@kpandji.com";
   if (fields.siege === siegeUneLigne) fields.siege = emptyDraft().siege;
@@ -472,7 +475,8 @@ export default function BonDeCommandeDocument({
   const validatedArchive =
     !embedded &&
     (basePath === "/responsablecommercial/bon-de-commande-deja-valide" ||
-      basePath === "/responsablecommercial/bon-pour-accord-deja-valide");
+      basePath === "/responsablecommercial/bon-pour-accord-deja-valide" ||
+      basePath === "/commercial/bon-de-commande-deja-valide");
   const showProspectSearch =
     !embedded &&
     validation &&
@@ -1116,6 +1120,7 @@ export default function BonDeCommandeDocument({
       <div id="printable-area" className="mx-auto flex w-full min-w-0 max-w-[210mm] flex-col gap-4 print:max-w-none print:gap-0">
         <article className={`paper shadow-lg print:shadow-none${validation ? " locked" : ""}`}>
           <header className="head">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo d'impression, taille fixée en mm */}
             <img src="/logo.png" alt="Kpandji Automobiles" className="logo" />
             <div className="head-text">
               <h1 className="brand">KPANDJI AUTOMOBILES</h1>

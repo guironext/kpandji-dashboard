@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import {
   Table,
   TableBody,
@@ -255,14 +254,6 @@ export default function ProformasRespoClient({
     ? "VALIDATED"
     : "VALIDATION_COURS";
   const router = useRouter();
-  // Utilisateur connecté (le responsable qui consulte la page) — à ne pas confondre avec
-  // facture.user, qui est le commercial ayant créé le proforma.
-  const { user: clerkUser } = useUser();
-  const [dbCurrentUser, setDbCurrentUser] = useState<{
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-  } | null>(null);
   const [commercialGroups, setCommercialGroups] = useState<CommercialGroup[]>(
     [],
   );
@@ -396,42 +387,6 @@ export default function ProformasRespoClient({
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedCommercialId]);
-
-  // Nom de l'utilisateur connecté depuis la base (getOrCreateUser via l'API, cache Clerk côté serveur).
-  // Clerk (useUser) sert de repli si l'API est lente ou en échec.
-  const clerkUserId = clerkUser?.id;
-  useEffect(() => {
-    if (!clerkUserId) return;
-    const controller = new AbortController();
-    fetch(`/api/user/${clerkUserId}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && (data.firstName || data.lastName)) {
-          setDbCurrentUser({
-            firstName: data.firstName ?? null,
-            lastName: data.lastName ?? null,
-            email: data.email ?? null,
-          });
-        }
-      })
-      .catch(() => {
-        // repli silencieux sur les données Clerk
-      });
-    return () => controller.abort();
-  }, [clerkUserId]);
-
-  const user = {
-    firstName: dbCurrentUser?.firstName || clerkUser?.firstName || "",
-    lastName: dbCurrentUser?.lastName || clerkUser?.lastName || "",
-  };
-  const currentUserFallback =
-    dbCurrentUser?.email ||
-    clerkUser?.primaryEmailAddress?.emailAddress ||
-    "—";
-  const hasCurrentUserName = Boolean(user.firstName || user.lastName);
 
   useEffect(() => {
     if (paginationScrollRef.current) {

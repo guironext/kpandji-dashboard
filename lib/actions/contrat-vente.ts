@@ -40,6 +40,7 @@ async function ownedFacture(factureId: string, userId: string) {
 
 function revalidateContrat() {
   revalidatePath("/commercial/contract-vente");
+  revalidatePath("/commercial/contract-vente-deja-valide");
   revalidatePath("/commercial/dossier-clientele");
   revalidatePath("/responsablecommercial/contrat-de-vente");
   revalidatePath("/responsablecommercial/contrat-de-vente-deja-valide");
@@ -125,15 +126,22 @@ export async function countContratsAValider() {
   });
 }
 
-async function loadContrats(etapes: readonly string[]): Promise<ContratAValider[]> {
-  const user = await currentUser();
-  if (!isResponsableCommercial(user?.role)) return [];
+async function loadContrats(etapes: readonly string[], ownerId?: string): Promise<ContratAValider[]> {
+  if (!ownerId) {
+    const user = await currentUser();
+    if (!isResponsableCommercial(user?.role)) return [];
+  }
 
   const contrats = await prisma.contratDeVente.findMany({
     where: {
-      OR: etapes.map((etape) => ({
-        contenu: { path: ["etapeValidation"], equals: etape },
-      })),
+      AND: [
+        {
+          OR: etapes.map((etape) => ({
+            contenu: { path: ["etapeValidation"], equals: etape },
+          })),
+        },
+        ...(ownerId ? [{ Facture: { userId: ownerId, status_facture: { not: "ANNULEE" as const } } }] : []),
+      ],
     },
     orderBy: { updatedAt: "desc" },
     include: {
@@ -172,26 +180,27 @@ export async function listContratsDejaValides(): Promise<ContratAValider[]> {
   return loadContrats(["VALIDE"]);
 }
 
-export async function getContratPourValidation(factureId: string): Promise<BonCommandeSource | null> {
+export async function listMesContratsDejaValides(): Promise<ContratAValider[]> {
   const user = await currentUser();
-  if (!isResponsableCommercial(user?.role)) return null;
+  if (!user) return [];
+  return loadContrats(["VALIDE"], user.id);
+}
 
-  const contrat = await prisma.contratDeVente.findUnique({
-    where: { factureId },
-    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
-  });
-  const etape = contrat ? parseContratVenteContenu(contrat.contenu)?.etapeValidation || "" : "";
-  if (!contrat || !ETAPES_VISIBLES.includes(etape as (typeof ETAPES_VISIBLES)[number])) return null;
-
+async function openContratSource(
+  contrat: { factureId: string; Facture: { clientId: string | null; clientEntrepriseId: string | null } },
+  userId?: string,
+): Promise<BonCommandeSource | null> {
   const prospectId = contrat.Facture.clientEntrepriseId ?? contrat.Facture.clientId;
   if (!prospectId) return null;
 
   const prospectType = contrat.Facture.clientEntrepriseId ? "ENTREPRISE" : "CLIENT";
   const dossier = await prisma.dossierClientele.findFirst({
-    where: { prospectId, prospectType },
+    where: { prospectId, prospectType, ...(userId ? { userId } : {}) },
     orderBy: { updatedAt: "desc" },
   });
-  if (dossier) return getBonCommandeSource(dossier.id, factureId, { unrestricted: true });
+  if (dossier) {
+    return getBonCommandeSource(dossier.id, contrat.factureId, userId ? undefined : { unrestricted: true });
+  }
 
   const profil = contrat.Facture.clientEntrepriseId
     ? await prisma.client_entreprise.findUnique({
@@ -206,15 +215,44 @@ export async function getContratPourValidation(factureId: string): Promise<BonCo
 
   return assembleBonCommandeSource(
     {
-      id: factureId,
+      id: contrat.factureId,
       numero: "Contrat",
       nomCourt: nom,
       prospectId,
       prospectType,
       prospectNom: nom,
     },
-    factureId,
+    contrat.factureId,
   );
+}
+
+export async function getContratPourValidation(factureId: string): Promise<BonCommandeSource | null> {
+  const user = await currentUser();
+  if (!isResponsableCommercial(user?.role)) return null;
+
+  const contrat = await prisma.contratDeVente.findUnique({
+    where: { factureId },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  const etape = contrat ? parseContratVenteContenu(contrat.contenu)?.etapeValidation || "" : "";
+  if (!contrat || !ETAPES_VISIBLES.includes(etape as (typeof ETAPES_VISIBLES)[number])) return null;
+  return openContratSource(contrat);
+}
+
+export async function getMonContratValide(factureId: string): Promise<BonCommandeSource | null> {
+  const user = await currentUser();
+  if (!user) return null;
+
+  const contrat = await prisma.contratDeVente.findFirst({
+    where: {
+      factureId,
+      contenu: { path: ["etapeValidation"], equals: "VALIDE" },
+      Facture: { userId: user.id, status_facture: { not: "ANNULEE" } },
+    },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (!contrat) return null;
+  return openContratSource(contrat, user.id);
 }
 
 async function setEtapeValidation(

@@ -408,10 +408,7 @@ const COMMERCIAUX = {
   User: { role: "COMMERCIAL" as const },
 };
 
-async function loadBons(where: Prisma.BonDeCommandeWhereInput): Promise<BonAValider[]> {
-  const role = await currentUserRole();
-  if (!isResponsableCommercial(role)) return [];
-
+async function queryBons(where: Prisma.BonDeCommandeWhereInput): Promise<BonAValider[]> {
   const bons = await executeWithRetry(() => prisma.bonDeCommande.findMany({
     where,
     orderBy: { updatedAt: "desc" },
@@ -450,6 +447,14 @@ async function loadBons(where: Prisma.BonDeCommandeWhereInput): Promise<BonAVali
     .sort((a, b) => (rank[a.statut] ?? 9) - (rank[b.statut] ?? 9));
 }
 
+async function loadBons(where: Prisma.BonDeCommandeWhereInput): Promise<BonAValider[]> {
+  const role = await currentUserRole();
+  if (!isResponsableCommercial(role)) return [];
+  return queryBons(where);
+}
+
+const STATUTS_VALIDES_RESPONSABLE = ["VALIDE", "VALIDE_APPORT_INITIAL"] as const;
+
 export async function listBonsAValider(): Promise<BonAValider[]> {
   return loadBons({
     status_bon_de_commande: { notIn: ["VALIDE", "VALIDE_APPORT_INITIAL", "ANNULE"] },
@@ -462,8 +467,17 @@ export async function listBonsAValider(): Promise<BonAValider[]> {
 
 export async function listBonsDejaValides(): Promise<BonAValider[]> {
   return loadBons({
-    status_bon_de_commande: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] },
+    status_bon_de_commande: { in: [...STATUTS_VALIDES_RESPONSABLE] },
     Facture: COMMERCIAUX,
+  });
+}
+
+export async function listMesBonsDejaValides(): Promise<BonAValider[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+  return queryBons({
+    status_bon_de_commande: { in: [...STATUTS_VALIDES_RESPONSABLE] },
+    Facture: { userId, status_facture: { not: "ANNULEE" } },
   });
 }
 
@@ -477,6 +491,71 @@ export async function listBonsPourAccordDejaValides(): Promise<BonAValider[]> {
       },
     },
   });
+}
+
+async function sourceDepuisBon(
+  bon: {
+    factureId: string;
+    numero: string;
+    Facture: { clientId: string | null; clientEntrepriseId: string | null };
+  },
+  options?: { userId?: string },
+): Promise<BonCommandeSource | null> {
+  const prospectId = bon.Facture.clientEntrepriseId ?? bon.Facture.clientId;
+  if (!prospectId) return null;
+
+  const prospectType = bon.Facture.clientEntrepriseId ? "ENTREPRISE" : "CLIENT";
+  const dossier = await prisma.dossierClientele.findFirst({
+    where: {
+      prospectId,
+      prospectType,
+      ...(options?.userId ? { userId: options.userId } : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (dossier) {
+    return getBonCommandeSource(dossier.id, bon.factureId, options?.userId ? undefined : { unrestricted: true });
+  }
+
+  const profil = bon.Facture.clientEntrepriseId
+    ? await prisma.client_entreprise.findUnique({
+        where: { id: prospectId },
+        select: { nom_entreprise: true },
+      })
+    : await prisma.client.findUnique({
+        where: { id: prospectId },
+        select: { nom: true },
+      });
+  const nom =
+    profil && "nom_entreprise" in profil ? profil.nom_entreprise : profil?.nom || "Client";
+
+  return assembleBonCommandeSource(
+    {
+      id: bon.factureId,
+      numero: bon.numero,
+      nomCourt: nom,
+      prospectId,
+      prospectType,
+      prospectNom: nom,
+    },
+    bon.factureId,
+  );
+}
+
+export async function getMonBonCommandeValide(factureId: string): Promise<BonCommandeSource | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const bon = await prisma.bonDeCommande.findFirst({
+    where: {
+      factureId,
+      status_bon_de_commande: { in: [...STATUTS_VALIDES_RESPONSABLE] },
+      Facture: { userId, status_facture: { not: "ANNULEE" } },
+    },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (!bon) return null;
+  return sourceDepuisBon(bon, { userId });
 }
 
 export async function getBonCommandePourValidation(factureId: string): Promise<BonCommandeSource | null> {
@@ -493,38 +572,5 @@ export async function getBonCommandePourValidation(factureId: string): Promise<B
     bon?.status_bon_de_commande === "VALIDE" ||
     bon?.status_bon_de_commande === "VALIDE_APPORT_INITIAL";
   if (!bon || !ouvert) return null;
-
-  const prospectId = bon.Facture.clientEntrepriseId ?? bon.Facture.clientId;
-  if (!prospectId) return null;
-
-  const prospectType = bon.Facture.clientEntrepriseId ? "ENTREPRISE" : "CLIENT";
-  const dossier = await prisma.dossierClientele.findFirst({
-    where: { prospectId, prospectType },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (dossier) return getBonCommandeSource(dossier.id, factureId, { unrestricted: true });
-
-  const profil = bon.Facture.clientEntrepriseId
-    ? await prisma.client_entreprise.findUnique({
-        where: { id: prospectId },
-        select: { nom_entreprise: true },
-      })
-    : await prisma.client.findUnique({
-        where: { id: prospectId },
-        select: { nom: true },
-      });
-  const nom =
-    profil && "nom_entreprise" in profil ? profil.nom_entreprise : profil?.nom || "Client";
-
-  return assembleBonCommandeSource(
-    {
-      id: factureId,
-      numero: bon.numero,
-      nomCourt: nom,
-      prospectId,
-      prospectType,
-      prospectNom: nom,
-    },
-    factureId,
-  );
+  return sourceDepuisBon(bon);
 }

@@ -877,7 +877,6 @@ async function appliquerEffetsValidation(factureId: string, contenu: BonCommande
     });
   }
 
-  const total = asNumber(facture.total_ttc);
   const dejaVendu = facture.status_facture === "FACTURE" || facture.status_facture === "PAYEE";
   if (!dejaVendu) {
     await prisma.facture.update({
@@ -932,6 +931,7 @@ async function setEtapeValidation(
   if (etape === "VALIDE") await assurerEffetsBonValide(factureId);
   revalidatePath("/responsablecommercial/bon-de-commande");
   revalidatePath("/responsablecommercial/bon-de-commande-deja-valide");
+  revalidatePath("/commercial/bon-de-commande-deja-valide");
   revalidatePath("/commercial/bon-de-commande");
   revalidatePath("/commercial/dossier-clientele");
   revalidatePath("/commercial");

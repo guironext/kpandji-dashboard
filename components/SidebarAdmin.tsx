@@ -6,14 +6,8 @@ import {
   LayoutDashboard,
   CalendarDays,
   Mail,
-  Send,
-  Contact,
-  UserSearch,
-  Briefcase,
   Warehouse,
   FileTextIcon,
-  MessageSquare,
-  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";

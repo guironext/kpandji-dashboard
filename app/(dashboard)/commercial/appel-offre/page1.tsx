@@ -46,6 +46,7 @@ import {
 	Presentation,
 	Wrench,
 	IdCard,
+	Scale,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -102,6 +103,7 @@ const CATEGORY_ICONS: Record<DocumentationCategoryId, LucideIcon> = {
 	presentation: Presentation,
 	"fiche-technique": Wrench,
 	cni: IdCard,
+	"conditions-generales-de-vente": Scale,
 };
 
 function formatDocumentDate(iso: string): string {

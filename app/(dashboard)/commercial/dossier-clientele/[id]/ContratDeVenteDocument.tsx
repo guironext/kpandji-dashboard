@@ -287,6 +287,7 @@ export default function ContratDeVenteDocument({
   const [clientQuery, setClientQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const validatedArchive = !embedded && basePath === "/commercial/contract-vente-deja-valide";
   const showProspectSearch =
     !embedded && validation && basePath === "/responsablecommercial/contrat-de-vente";
   const showClientSearch = !embedded && !validation;
@@ -729,9 +730,11 @@ export default function ContratDeVenteDocument({
             </span>
           )}
           <p className="text-xs text-slate-600">
-            {validation
-              ? "Consultez le contrat, puis commencez la validation."
-              : "Les zones pointillées sont enregistrées dans la base."}
+            {validatedArchive
+              ? "Contrats déjà validés par le responsable commercial."
+              : validation
+                ? "Consultez le contrat, puis commencez la validation."
+                : "Les zones pointillées sont enregistrées dans la base."}
           </p>
           {source && selected && source.proformas.length > 1 && !validation && (
             <select
@@ -757,7 +760,11 @@ export default function ContratDeVenteDocument({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {validation ? (
+          {validatedArchive ? (
+            <span className="inline-flex h-9 items-center rounded-md bg-[#111] px-3 text-sm font-semibold text-[#e7b84a]">
+              Déjà Validé
+            </span>
+          ) : validation ? (
             <>
               <span className="inline-flex h-9 items-center rounded-md bg-[#111] px-3 text-sm font-semibold text-[#e7b84a]">
                 {labelStatut(form.etapeValidation)}
@@ -851,8 +858,9 @@ export default function ContratDeVenteDocument({
       </div>
 
       <div id="contrat-printable" className="mx-auto flex w-full min-w-0 max-w-[210mm] flex-col gap-4 print:max-w-none print:gap-0">
-        <article className={`cv-paper shadow-lg print:shadow-none${validation ? " locked" : ""}`}>
+        <article className={`cv-paper shadow-lg print:shadow-none${validation || validatedArchive ? " locked" : ""}`}>
           <header className="cv-head">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo d'impression, taille fixée en mm */}
             <img src="/logo.png" alt="Kpandji Automobiles" className="cv-logo" />
             <div className="cv-head-text">
               <h1 className="cv-brand">KPANDJI AUTOMOBILES</h1>
@@ -910,7 +918,7 @@ export default function ContratDeVenteDocument({
           <Foot page={1} />
         </article>
 
-        <article className={`cv-paper shadow-lg print:shadow-none${validation ? " locked" : ""}`}>
+        <article className={`cv-paper shadow-lg print:shadow-none${validation || validatedArchive ? " locked" : ""}`}>
           <p className="cv-text">
             commande et déclenche immédiatement les opérations d&apos;assemblage et de construction du véhicule au sein des ateliers du Vendeur.
           </p>

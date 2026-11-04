@@ -27,10 +27,7 @@ import {
   requestFactureValidation,
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
-import {
-  getUserSignature,
-  getValidatedProformaSignature,
-} from "@/lib/actions/signature";
+import { getValidatedProformaSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -187,8 +184,6 @@ export default function Page() {
   const itemsPerPage = 1;
   const [factures, setFactures] = useState<Facture[]>([]);
   const [accessoires, setAccessoires] = useState<Array<{ id: string; nom: string; image?: string | null }>>([]);
-  const [signatureImage, setSignatureImage] = useState<string | null>(null);
-  const [showSignature, setShowSignature] = useState(false);
   // Signature automatique (Direction Commerciale) pour les proformas validés
   const [validatedSignature, setValidatedSignature] = useState<string | null>(
     null,
@@ -208,15 +203,10 @@ export default function Page() {
       cancelled = true;
     };
   }, []);
-  // Signature d'une facture : automatique si VALIDATED, sinon via le bouton SIGNER (inchangé)
   const getFactureSignature = (
     facture?: { validationRespoCom?: string | null } | null,
   ): string | null =>
-    facture?.validationRespoCom === "VALIDATED" && validatedSignature
-      ? validatedSignature
-      : showSignature
-        ? signatureImage
-        : null;
+    facture?.validationRespoCom === "VALIDATED" ? validatedSignature : null;
   const [exportingWord, setExportingWord] = useState(false);
   const [submittingValidation, setSubmittingValidation] = useState<string | null>(null);
   const paginationScrollRef = useRef<HTMLDivElement>(null);
@@ -298,23 +288,6 @@ export default function Page() {
       } else {
         toast.error("Erreur lors de la suppression");
       }
-    }
-  };
-
-  const handleSignature = async () => {
-    if (showSignature) {
-      setShowSignature(false);
-      return;
-    }
-
-    const result = await getUserSignature();
-    if (result.success && result.data) {
-      setSignatureImage(result.data.image);
-      setShowSignature(true);
-      toast.success("Signature ajoutée au proforma");
-    } else {
-      toast.error("Aucune signature trouvée. Veuillez d'abord créer votre signature.");
-      router.push("./signature");
     }
   };
 
@@ -1177,9 +1150,6 @@ export default function Page() {
                             unoptimized
                           />
                         </div>
-                      )}
-                      {showSignature && !signatureImage && (
-                        <div className="text-xs text-gray-500 italic">Signature en cours de chargement...</div>
                       )}
                     </div>
                   </div>

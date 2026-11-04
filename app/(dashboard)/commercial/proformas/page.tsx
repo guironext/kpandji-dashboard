@@ -49,10 +49,7 @@ import {
 } from "@/lib/actions/facture";
 import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { getAllModele } from "@/lib/actions/modele";
-import {
-	getUserSignature,
-	getValidatedProformaSignature,
-} from "@/lib/actions/signature";
+import { getValidatedProformaSignature } from "@/lib/actions/signature";
 import { toast } from "sonner";
 import { formatNumberWithSpaces } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
@@ -379,8 +376,6 @@ export default function Page() {
 			image?: string | null;
 		}>
 	>([]);
-	const [signatureImage, setSignatureImage] = useState<string | null>(null);
-	const [showSignature, setShowSignature] = useState(false);
 	// Signature automatique (Direction Commerciale) pour les proformas validés
 	const [validatedSignature, setValidatedSignature] = useState<string | null>(
 		null,
@@ -400,15 +395,10 @@ export default function Page() {
 			cancelled = true;
 		};
 	}, []);
-	// Signature d'une facture : automatique si VALIDATED, sinon via le bouton SIGNER (inchangé)
 	const getFactureSignature = (
 		facture?: { validationRespoCom?: string | null } | null,
 	): string | null =>
-		facture?.validationRespoCom === "VALIDATED" && validatedSignature
-			? validatedSignature
-			: showSignature
-				? signatureImage
-				: null;
+		facture?.validationRespoCom === "VALIDATED" ? validatedSignature : null;
 	const [conditionsTextHidden, setConditionsTextHidden] = useState(false);
 	const [editedAmountTexts, setEditedAmountTexts] = useState<
 		Record<string, string>
@@ -1548,25 +1538,6 @@ export default function Page() {
 		}
 	};
 
-	const handleSignature = async () => {
-		if (showSignature) {
-			setShowSignature(false);
-			return;
-		}
-
-		const result = await getUserSignature();
-		if (result.success && result.data) {
-			setSignatureImage(result.data.image);
-			setShowSignature(true);
-			toast.success("Signature ajoutée au proforma");
-		} else {
-			toast.error(
-				"Aucune signature trouvée. Veuillez d'abord créer votre signature.",
-			);
-			router.push("./signature");
-		}
-	};
-
 	const handleExportToWord = async () => {
 		const facture = currentData[0];
 		if (!facture) {
@@ -2631,11 +2602,6 @@ export default function Page() {
 														className="object-contain"
 														unoptimized
 													/>
-												</div>
-											)}
-											{showSignature && !signatureImage && (
-												<div className="text-xs text-gray-500 italic">
-													Signature en cours de chargement...
 												</div>
 											)}
 										</div>

@@ -9,9 +9,7 @@ import {
   Car,
   UserCheck,
   FileText,
-  Eye,
   FileSpreadsheet,
-  ClipboardList,
   Package,
   TrendingUp,
   FileCheck,
@@ -27,9 +25,6 @@ import {
   BookOpen,
   CalendarDays,
   FolderOpen,
-  CalendarRange,
-  CarFront,
-  FileSignature,
   Landmark,
 } from "lucide-react";
 import Link from "next/link";
