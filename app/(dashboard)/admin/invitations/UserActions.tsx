@@ -26,7 +26,12 @@ function Field({ label, value, mono }: { label: string; value: React.ReactNode; 
   );
 }
 
-const iconBtn = "inline-flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40";
+const SHEET = "top-auto bottom-0 translate-y-0 max-w-full gap-0 overflow-hidden rounded-b-none rounded-t-2xl p-0 max-h-[92dvh] flex flex-col sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:max-w-[calc(100%-2rem)] sm:rounded-2xl sm:max-h-[85vh]";
+const HEAD = "shrink-0 border-b px-5 pt-5 pb-4 pr-12 text-left";
+const BODY = "flex-1 overflow-y-auto overscroll-contain px-5 py-4";
+const FOOT = "shrink-0 border-t bg-white px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] [&_button]:h-11 sm:[&_button]:h-10";
+
+const iconBtn = "inline-flex h-10 w-10 md:h-9 md:w-9 items-center justify-center rounded-lg border bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40";
 
 export default function UserActions({ user, isSelf }: { user: UserListRow; isSelf: boolean }) {
   const router = useRouter();
@@ -34,6 +39,7 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
   const [details, setDetails] = useState<AdminUserDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [form, setForm] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -71,8 +77,8 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
     const res = await deleteUserByAdmin(user.id);
     setBusy(false);
     if (!res.success) {
+      if ("canDeactivate" in res && res.canDeactivate) { setBlocked(true); return; }
       toast.error(res.error);
-      if ("canDeactivate" in res && res.canDeactivate) setMode("deactivate");
       return;
     }
     if (res.warning) toast.warning(res.warning); else toast.success("Utilisateur supprimé");
@@ -85,7 +91,8 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
     const res = user.isActive ? await deactivateUserByAdmin(user.id) : await reactivateUserByAdmin(user.id);
     setBusy(false);
     if (!res.success) return toast.error(res.error);
-    if (res.warning) toast.warning(res.warning); else toast.success(user.isActive ? "Compte désactivé" : "Compte réactivé");
+    if (res.warning) toast.warning(res.warning); else toast.success(user.isActive ? `Compte de ${user.firstName} ${user.lastName} désactivé` : `Compte de ${user.firstName} ${user.lastName} réactivé`);
+    setBlocked(false);
     setMode(null);
     router.refresh();
   };
@@ -94,11 +101,11 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
 
   return (
     <>
-      <div className="flex items-center justify-end gap-1.5">
+      <div className="flex items-center justify-end gap-2 md:gap-1.5">
         <button type="button" className={iconBtn} title="Voir" aria-label="Voir" onClick={openView}><Eye className="h-4 w-4" /></button>
         <button type="button" className={iconBtn} title="Modifier" aria-label="Modifier" onClick={openEdit}><Pencil className="h-4 w-4" /></button>
         {user.isActive ? (
-          <button type="button" className={`${iconBtn} border-amber-200 text-amber-700 hover:bg-amber-50`} title={isSelf ? "Vous ne pouvez pas désactiver votre propre compte" : "Désactiver"} aria-label="Désactiver" disabled={isSelf} onClick={() => setMode("deactivate")}><UserX className="h-4 w-4" /></button>
+          <button type="button" className={`${iconBtn} border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100`} title={isSelf ? "Vous ne pouvez pas désactiver votre propre compte" : "Désactiver"} aria-label="Désactiver" disabled={isSelf} onClick={() => setMode("deactivate")}><UserX className="h-4 w-4" /></button>
         ) : (
           <button type="button" className={`${iconBtn} border-emerald-200 text-emerald-700 hover:bg-emerald-50`} title="Réactiver" aria-label="Réactiver" disabled={busy} onClick={toggleActive}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}</button>
         )}
@@ -108,22 +115,22 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
           title={isSelf ? "Vous ne pouvez pas supprimer votre propre compte" : "Supprimer"}
           aria-label="Supprimer"
           disabled={isSelf}
-          onClick={() => setMode("delete")}
+          onClick={() => { setBlocked(false); setMode("delete"); }}
         >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
 
       <Dialog open={mode === "view"} onOpenChange={(o) => !o && setMode(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className={`${SHEET} sm:max-w-2xl`}>
+          <DialogHeader className={HEAD}>
             <DialogTitle>Détails de l&apos;utilisateur</DialogTitle>
             <DialogDescription>{fullName}</DialogDescription>
           </DialogHeader>
           {loading || !details ? (
-            <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+            <div className={`${BODY} flex justify-center py-10`}><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : (
-            <div className="space-y-4">
+            <div className={`${BODY} space-y-4`}>
               <div className="flex items-center gap-3">
                 {details.clerk?.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -173,12 +180,12 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
       </Dialog>
 
       <Dialog open={mode === "edit"} onOpenChange={(o) => !o && !busy && setMode(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className={`${SHEET} sm:max-w-lg`}>
+          <DialogHeader className={HEAD}>
             <DialogTitle>Modifier l&apos;utilisateur</DialogTitle>
             <DialogDescription>{user.email}</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className={`${BODY} grid grid-cols-1 content-start gap-3 sm:grid-cols-2 [&_input]:h-11 sm:[&_input]:h-10`}>
             <div className="space-y-1"><Label>Prénom</Label><Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
             <div className="space-y-1"><Label>Nom</Label><Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
             <div className="space-y-1 sm:col-span-2"><Label>Email</Label><Input value={user.email} disabled /><p className="text-xs text-gray-400">L&apos;email est géré par le compte Clerk et n&apos;est pas modifiable ici.</p></div>
@@ -199,36 +206,63 @@ export default function UserActions({ user, isSelf }: { user: UserListRow; isSel
             <div className="space-y-1"><Label>Département</Label><Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></div>
             <div className="space-y-1"><Label>Téléphone</Label><Input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
           </div>
-          <DialogFooter>
+          <DialogFooter className={FOOT}>
             <Button variant="outline" onClick={() => setMode(null)} disabled={busy}>Annuler</Button>
             <Button onClick={save} disabled={busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={mode === "delete"} onOpenChange={(o) => !o && !busy && setMode(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Supprimer définitivement cet utilisateur ?</DialogTitle>
-            <DialogDescription>
-              <strong>{fullName}</strong> ({user.email}) sera supprimé de la base et son compte Clerk sera supprimé. Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMode(null)} disabled={busy}>Annuler</Button>
-            <Button variant="destructive" onClick={remove} disabled={busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Supprimer</Button>
-          </DialogFooter>
+      <Dialog open={mode === "delete"} onOpenChange={(o) => !o && !busy && (setMode(null), setBlocked(false))}>
+        <DialogContent className={`${SHEET} sm:max-w-md`}>
+          {blocked ? (
+            <>
+              <DialogHeader className={HEAD}>
+                <DialogTitle className="flex items-center gap-2 text-amber-700"><UserX className="h-5 w-5" />Suppression impossible</DialogTitle>
+                <DialogDescription>
+                  <strong>{fullName}</strong> est lié à des données (factures, clients, projets…) qui doivent être conservées.
+                </DialogDescription>
+              </DialogHeader>
+              <div className={BODY}><div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {user.isActive
+                  ? "Vous pouvez désactiver ce compte : l’utilisateur ne pourra plus se connecter, ses données restent intactes et le compte pourra être réactivé à tout moment."
+                  : "Ce compte est déjà désactivé. Ses données sont conservées."}
+              </div></div>
+              <DialogFooter className={FOOT}>
+                {user.isActive ? (
+                  <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={toggleActive} disabled={busy}>
+                    {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}Désactiver ce compte
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={() => { setMode(null); setBlocked(false); }}>Fermer</Button>
+                )}
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader className={HEAD}>
+                <DialogTitle className="text-red-600">Supprimer définitivement cet utilisateur ?</DialogTitle>
+                <DialogDescription>
+                  <strong>{fullName}</strong> ({user.email}) sera supprimé de la base et son compte Clerk sera supprimé. Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className={FOOT}>
+                <Button variant="outline" onClick={() => setMode(null)} disabled={busy}>Annuler</Button>
+                <Button variant="destructive" onClick={remove} disabled={busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Supprimer</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
       <Dialog open={mode === "deactivate"} onOpenChange={(o) => !o && !busy && setMode(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className={`${SHEET} sm:max-w-md`}>
+          <DialogHeader className={HEAD}>
             <DialogTitle className="text-amber-700">Désactiver ce compte ?</DialogTitle>
             <DialogDescription>
               <strong>{fullName}</strong> ({user.email}) ne pourra plus se connecter ni accéder à l&apos;application. Ses données (factures, clients, projets…) sont conservées et le compte peut être réactivé à tout moment.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className={FOOT}>
             <Button variant="outline" onClick={() => setMode(null)} disabled={busy}>Annuler</Button>
             <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={toggleActive} disabled={busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Désactiver</Button>
           </DialogFooter>

@@ -26,6 +26,7 @@ import {
   Activity,
   BookOpen,
   CalendarDays,
+  FolderOpen,
   CalendarRange,
   CarFront,
   FileSignature,
@@ -47,10 +48,10 @@ import {
 type NavCategory =
   | "main"
   | "objectifs"
-  | "logistique"
   | "operations"
-  | "reports"
   | "facturation"
+  | "logistique"
+  | "reports"
   | "demandeDeDecaissement"
   | "communication"
   | "documentation";
@@ -72,39 +73,57 @@ const navItems: NavItem[] = [
   { id: "obj-objectifs", icon: Target, label: "Mes Objectifs", href: "/commercial/objectifs", category: "objectifs" },
   { id: "obj-stats", icon: Activity, label: "Mes Performances", href: "/commercial/statistiques", category: "objectifs" },
 
-  // Logistique
-  { id: "log-modeles", icon: Car, label: "Modèles Voitures", href: "/commercial/ajouter-modele", category: "logistique" },
-  { id: "log-accessoires", icon: Package, label: "Accessoires", href: "/commercial/ajouter-accessoires", category: "logistique" },
-  { id: "log-stock", icon: Warehouse, label: "Stock disponible", href: "/commercial/stock-disponible", category: "logistique" },
-
   // Opérations
   { id: "op-prospects", icon: UserCheck, label: "Prospects", href: "/commercial/prospects", category: "operations" },
   { id: "op-clients", icon: Users, label: "Clients", href: "/commercial/clients", category: "operations" },
-  { id: "op-rdv", icon: CalendarDays, label: "Rendez-vous", href: "/commercial/rendez-vous", category: "operations" },
-  { id: "op-calendrier-sortie", icon: CalendarRange, label: "Calendrier sortie", href: "/commercial/calendrier-sortie", category: "operations" },
-  { id: "op-reservation", icon: CarFront, label: "Réservation véhicule", href: "/commercial/reservation-vehicule", category: "operations" },
-  { id: "op-rapport-rdv", icon: ClipboardList, label: "Rapport Rendez-vous", href: "/commercial/rapport-rendez-vous", category: "operations" },
-  { id: "op-suivi-rdv", icon: Eye, label: "Suivi Rendez-vous", href: "/commercial/suivi-rendez-vous", category: "operations" },
-  { id: "op-tableau-chute", icon: BarChart3, label: "Tableau de Chute", href: "/commercial/tableau-chute", category: "operations" },
+  { id: "op-rdv", icon: CalendarDays, label: "Visite en clientèle", href: "/commercial/visite-en-clientele", category: "operations" },
+  { id: "op-clientele", icon: FolderOpen, label: "Dossier clientèle", href: "/commercial/dossier-clientele", category: "operations" },
+  { id: "op-stock", icon: Warehouse, label: "Voitures Disponibles", href: "/commercial/stock-disponible", category: "operations" },
+
+ 
+
+    // Facturation
+    { id: "fac-proformas", icon: FileText, label: "Proformas", href: "/commercial/proformas", category: "facturation" },
+    { id: "fac-proformas-multi", icon: FileSpreadsheet, label: "Proformas-multi", href: "/commercial/profoma-multi", category: "facturation" },
+    { id: "fac-proformas-validees", icon: FileText, label: "Proformas validées", href: "/commercial/proformas-validees", category: "facturation" },
+
+    // Bon de Commande
+    { id: "fac-bon-commande", icon: Receipt, label: "Bon à valider", href: "/commercial/bon-de-commande", category: "facturation" },
+    { id: "fac-bon-commande-deja-valide", icon: Receipt, label: "Bon déjà validé", href: "/commercial/bon-de-commande-deja-valide", category: "facturation" },
+
+
+
+    { id: "fac-contract-vente", icon: Receipt, label: "Contrat à valider", href: "/commercial/contract-vente", category: "facturation" },
+    { id: "fac-contract-vente-deja-valide", icon: Receipt, label: "Contrat déjà validé", href: "/commercial/contract-vente-deja-valide", category: "facturation" },
+
+
+    { id: "fac-bon-accord", icon: FileCheck, label: "Accord à valider", href: "/commercial/bon-pour-accord", category: "facturation" },
+    { id: "fac-bon-accord-deja-valide", icon: FileCheck, label: "Accord déjà validé", href: "/commercial/bon-pour-accord-deja-valide", category: "facturation" },
+
+    { id: "fac-lettre-commande", icon: FileCheck, label: "Lettre à valider", href: "/commercial/lettre-commande", category: "facturation" },
+    { id: "fac-lettre-commande-deja-valide", icon: FileCheck, label: "Lettre déjà validée", href: "/commercial/lettre-commande-deja-valide", category: "facturation" },
+
+
+    { id: "fac-appel-offre", icon: FileCheck, label: "Appel d'offre à valider", href: "/commercial/appel-offre", category: "facturation" },
+    { id: "fac-appel-offre-deja-valide", icon: FileCheck, label: "Appel d'offre déjà validé", href: "/commercial/appel-offre-deja-valide", category: "facturation" },
+  
+
+  // Logistique
+  { id: "log-modeles", icon: Car, label: "Modèles Voitures", href: "/commercial/ajouter-modele", category: "logistique" },
+  { id: "log-accessoires", icon: Package, label: "Accessoires", href: "/commercial/ajouter-accessoires", category: "logistique" },
+  
+
 
   // Rapports
   { id: "rep-commandes", icon: TrendingUp, label: "Suivi commandes", href: "/commercial/suivi-commandes", category: "reports" },
   { id: "rep-versement", icon: Landmark, label: "Suivi versement", href: "/commercial/versement", category: "reports" },
 
-  // Facturation
-  { id: "fac-proformas", icon: FileText, label: "Proformas", href: "/commercial/proformas", category: "facturation" },
-  { id: "fac-proformas-validees", icon: FileText, label: "Proformas validées", href: "/commercial/proformas-validees", category: "facturation" },
-  { id: "fac-proformas-multi", icon: FileSpreadsheet, label: "Proformas-multi", href: "/commercial/profoma-multi", category: "facturation" },
-  { id: "fac-bon-commande", icon: Receipt, label: "Bon de Commande", href: "/commercial/bon-de-commande", category: "facturation" },
-  { id: "fac-bon-accord", icon: FileCheck, label: "Bon pour accord", href: "/commercial/bon-pour-accord", category: "facturation" },
-  { id: "fac-lettre-commande", icon: FileCheck, label: "Lettre Commande", href: "/commercial/lettre-commande", category: "facturation" },
-  { id: "fac-appel-offre", icon: FileCheck, label: "Appel d'offre", href: "/commercial/appel-offre", category: "facturation" },
 
   // Demande Décaissement
   { id: "fac-demande-de-decaissement", icon: FileCheck, label: "Demande Décaissement", href: "/commercial/demande-de-decaissement", category: "demandeDeDecaissement" },
  
   // Documentation
-  { id: "fac-signature", icon: FileSignature, label: "Signature", href: "/commercial/signature", category: "documentation" },
+ 
   { id: "fac-numero-courrier", icon: Mail, label: "Numéro courrier", href: "/commercial/numero-courrier", category: "documentation" },
   { id: "fac-messages", icon: MessageSquare, label: "Messages", href: "/commercial/messages", category: "documentation" },
   { id: "fac-documentation", icon: BookOpen, label: "Documentation", href: "/commercial/documentation", category: "documentation" },
@@ -121,16 +140,7 @@ const categoryConfig = {
     glow: "shadow-orange-500/35",
     focusRing: "focus-visible:ring-amber-400",
   },
-  objectifs: {
-    label: "Objectifs",
-    icon: Target,
-    color: "from-cyan-400 via-sky-500 to-blue-600",
-    bgColor: "bg-sky-500/15",
-    textColor: "text-sky-800",
-    chipGradient: "from-cyan-500 to-blue-600",
-    glow: "shadow-sky-500/35",
-    focusRing: "focus-visible:ring-sky-400",
-  },
+
   operations: {
     label: "Opérations",
     icon: ShoppingCart,
@@ -140,16 +150,6 @@ const categoryConfig = {
     chipGradient: "from-blue-500 to-indigo-600",
     glow: "shadow-indigo-500/35",
     focusRing: "focus-visible:ring-indigo-400",
-  },
-  reports: {
-    label: "Rapports",
-    icon: BarChart3,
-    color: "from-emerald-400 via-teal-500 to-cyan-600",
-    bgColor: "bg-emerald-500/15",
-    textColor: "text-emerald-800",
-    chipGradient: "from-emerald-500 to-teal-600",
-    glow: "shadow-emerald-500/35",
-    focusRing: "focus-visible:ring-emerald-400",
   },
   facturation: {
     label: "Facturation",
@@ -161,6 +161,28 @@ const categoryConfig = {
     glow: "shadow-fuchsia-500/35",
     focusRing: "focus-visible:ring-fuchsia-400",
   },
+  objectifs: {
+    label: "Objectifs",
+    icon: Target,
+    color: "from-cyan-400 via-sky-500 to-blue-600",
+    bgColor: "bg-sky-500/15",
+    textColor: "text-sky-800",
+    chipGradient: "from-cyan-500 to-blue-600",
+    glow: "shadow-sky-500/35",
+    focusRing: "focus-visible:ring-sky-400",
+  },
+
+  reports: {
+    label: "Rapports",
+    icon: BarChart3,
+    color: "from-emerald-400 via-teal-500 to-cyan-600",
+    bgColor: "bg-emerald-500/15",
+    textColor: "text-emerald-800",
+    chipGradient: "from-emerald-500 to-teal-600",
+    glow: "shadow-emerald-500/35",
+    focusRing: "focus-visible:ring-emerald-400",
+  },
+  
   demandeDeDecaissement: {
     label: "Demande Décaissement",
     icon: FileCheck,
@@ -220,10 +242,10 @@ const SidebarCommercial = ({ isOpen }: { isOpen: boolean }) => {
   const categoryOrder = [
     "main",
     "objectifs",
-    "logistique",
     "operations",
-    "reports",
     "facturation",
+    "logistique",
+    "reports",
     "demandeDeDecaissement",
     "communication",
     "documentation",

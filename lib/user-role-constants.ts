@@ -26,6 +26,7 @@ export const UserRole = {
   MARKETING: "MARKETING",
   DEVELOPPEUR: "DEVELOPPEUR",
   DESIGNER: "DESIGNER",
+  OPERATIONS_DEVE_COMMERCIAL: "OPERATIONS_DEVE_COMMERCIAL",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -57,4 +58,5 @@ export const SCHEMA_ROLES = [
   UserRole.MARKETING,
   UserRole.DEVELOPPEUR,
   UserRole.DESIGNER,
+  UserRole.OPERATIONS_DEVE_COMMERCIAL,
 ] as const satisfies readonly UserRole[];

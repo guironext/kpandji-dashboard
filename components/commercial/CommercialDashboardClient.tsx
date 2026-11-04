@@ -12,14 +12,15 @@ import {
   ClipboardList,
   Eye,
   FileText,
+  FolderOpen,
   MessageSquare,
   Receipt,
   Sparkles,
   Target,
-  TrendingDown,
   TrendingUp,
   UserCheck,
   Users,
+  Warehouse,
 } from "lucide-react";
 import {
   Bar,
@@ -63,12 +64,28 @@ const QUICK_LINKS = [
     glow: "group-hover:shadow-sky-200/60",
   },
   {
-    href: "/commercial/rendez-vous",
-    label: "Rendez-vous",
-    description: "Planifier vos RDV",
+    href: "/commercial/clients",
+    label: "Clients",
+    description: "Portefeuille clients",
+    icon: Users,
+    gradient: "from-emerald-500 to-teal-600",
+    glow: "group-hover:shadow-emerald-200/60",
+  },
+  {
+    href: "/commercial/visite-en-clientele",
+    label: "Visite en clientèle",
+    description: "Rapports de visite",
     icon: CalendarDays,
     gradient: "from-amber-500 to-orange-600",
     glow: "group-hover:shadow-amber-200/60",
+  },
+  {
+    href: "/commercial/dossier-clientele",
+    label: "Dossier clientèle",
+    description: "Contrats et pièces",
+    icon: FolderOpen,
+    gradient: "from-orange-500 to-rose-600",
+    glow: "group-hover:shadow-orange-200/60",
   },
   {
     href: "/commercial/proformas",
@@ -167,7 +184,7 @@ export default function CommercialDashboardClient({ data }: Props) {
     {
       label: "Prospects",
       value: stats.prospectsTotal,
-      sub: `${stats.favorableTotal} favorable(s)`,
+      sub: `${stats.favorableTotal} favorable(s) · sans paiement`,
       icon: UserCheck,
       accent: "from-sky-500 via-blue-500 to-indigo-500",
       iconBg: "bg-sky-50 text-sky-700",
@@ -176,16 +193,25 @@ export default function CommercialDashboardClient({ data }: Props) {
     {
       label: "Clients",
       value: stats.clientsTotal,
-      sub: "Base clients active",
+      sub: "Prospects dont le dossier contient un paiement",
       icon: Users,
-      accent: "from-emerald-500 via-green-500 to-teal-500",
+      accent: "from-emerald-500 via-teal-500 to-green-600",
       iconBg: "bg-emerald-50 text-emerald-700",
       href: "/commercial/clients",
     },
     {
+      label: "Dossiers clientèle",
+      value: stats.dossiersTotal,
+      sub: `${stats.clientsTotal} avec paiement`,
+      icon: FolderOpen,
+      accent: "from-emerald-500 via-green-500 to-teal-500",
+      iconBg: "bg-emerald-50 text-emerald-700",
+      href: "/commercial/dossier-clientele",
+    },
+    {
       label: "Rendez-vous",
       value: stats.rendezVousTotal,
-      sub: `${stats.rendezVousAvenir} à venir · ${stats.rendezVousMois} ce mois`,
+      sub: `${stats.rendezVousAvenir} à venir · ${stats.visitesMois} visite(s) ce mois`,
       icon: CalendarDays,
       accent: "from-amber-500 via-orange-500 to-rose-500",
       iconBg: "bg-amber-50 text-amber-700",
@@ -210,13 +236,13 @@ export default function CommercialDashboardClient({ data }: Props) {
       href: "/commercial/statistiques",
     },
     {
-      label: "Rapports & chutes",
-      value: stats.rapportsTotal,
-      sub: `${stats.chutesTotal} chute(s) enregistrée(s)`,
-      icon: TrendingDown,
+      label: "Stock disponible",
+      value: stats.stockUnites,
+      sub: "Véhicules en stock",
+      icon: Warehouse,
       accent: "from-slate-600 via-slate-500 to-zinc-500",
       iconBg: "bg-slate-50 text-slate-700",
-      href: "/commercial/tableau-chute",
+      href: "/commercial/stock-disponible",
     },
     {
       label: "Factures en attente",
@@ -322,8 +348,8 @@ export default function CommercialDashboardClient({ data }: Props) {
                 variant="outline"
                 className="w-full rounded-2xl border-white/15 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white sm:w-auto"
               >
-                <Link href="/commercial/rendez-vous">
-                  Planifier un RDV
+                <Link href="/commercial/visite-en-clientele">
+                  Visite en clientèle
                   <CalendarDays className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -620,7 +646,7 @@ export default function CommercialDashboardClient({ data }: Props) {
             </Card>
           )}
 
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
               <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
               <CardHeader>
@@ -663,6 +689,51 @@ export default function CommercialDashboardClient({ data }: Props) {
                   </ul>
                 ) : (
                   <EmptyChart message="Aucun rendez-vous à venir." />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden border-0 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-slate-900">Clients</CardTitle>
+                      <CardDescription>Prospects dont le dossier contient un paiement</CardDescription>
+                    </div>
+                  </div>
+                  <Button asChild variant="ghost" size="sm" className="rounded-xl">
+                    <Link href="/commercial/clients">Tout voir</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.recentClients.length > 0 ? (
+                  <ul className="space-y-3">
+                    {data.recentClients.map((client) => (
+                      <li
+                        key={`${client.type}-${client.id}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3 transition hover:border-emerald-200 hover:shadow-sm"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-900">{client.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {client.secteur} ·{" "}
+                            {format(new Date(client.createdAt), "d MMM yyyy", { locale: fr })}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 capitalize">
+                          {client.type}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyChart message="Aucun client enregistré." />
                 )}
               </CardContent>
             </Card>

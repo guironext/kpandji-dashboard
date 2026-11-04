@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserRole } from "./user-role-constants";
 
 /** Libellés français des rôles (partagés client / serveur). */
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -28,6 +28,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   MARKETING: "Marketing",
   DEVELOPPEUR: "Développeur",
   DESIGNER: "Designer",
+  OPERATIONS_DEVE_COMMERCIAL: "Opérations Dev. Commercial",
 };
 
 /** Rôles attribuables par invitation ou à l'inscription : tout sauf ADMIN. */

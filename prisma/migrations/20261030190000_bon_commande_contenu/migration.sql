@@ -1,0 +1,1 @@
+ALTER TABLE "BonDeCommande" ADD COLUMN IF NOT EXISTS "contenu" JSONB;

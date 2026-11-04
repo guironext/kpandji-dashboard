@@ -28,6 +28,7 @@ export const ROLE_REDIRECTS: Record<UserRole, string> = {
   MARKETING: "/marketing",
   DEVELOPPEUR: "/developpeur",
   DESIGNER: "/designer",
+  OPERATIONS_DEVE_COMMERCIAL: "/operationsDeveCom",
 };
 
 export function getRedirectForRole(role: string | undefined): string | null {

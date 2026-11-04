@@ -62,7 +62,7 @@ const navCategories = [
   },
 ];
 
-const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
+const SidebarAssistance = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
 
   // Responsive width calculation
@@ -169,4 +169,4 @@ const SidebarRespoCommercial = ({ isOpen }: { isOpen: boolean }) => {
   );
 };
 
-export default SidebarRespoCommercial;
+export default SidebarAssistance;

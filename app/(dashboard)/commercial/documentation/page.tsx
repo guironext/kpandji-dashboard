@@ -22,11 +22,9 @@ import {
   CloudUpload,
   Inbox,
   Loader2,
-  FolderOpen,
-  Sparkles,
-  Trash2,
   AlertTriangle,
   IdCard,
+  Scale,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -41,7 +39,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   getCommercialDocumentationRecords,
@@ -61,6 +58,7 @@ const CATEGORIES = [
   { id: "presentation", label: "Presentation" },
   { id: "fiche-technique", label: "Fiche Technique" },
   { id: "cni", label: "CNI" },
+  { id: "conditions-generales-de-vente", label: "Condition Générales de vente" },
 ] as const;
 
 type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -77,6 +75,7 @@ const TYPE_TO_CATEGORY: Record<string, CategoryId> = {
   PRESENTATION: "presentation",
   FICHE_TECHNIQUE: "fiche-technique",
   CNI: "cni",
+  CONDITION_GENERALES_DE_VENTE: "conditions-generales-de-vente",
 };
 
 function fileNameFromPath(fichier: string): string {
@@ -221,6 +220,14 @@ const CATEGORY_PRESENTATION: Record<CategoryId, CategoryPresentation> = {
     iconTint: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
     Icon: IdCard,
   },
+  "conditions-generales-de-vente": {
+    description:
+      "Conditions générales de vente applicables aux dossiers et contrats clients.",
+    gradient:
+      "from-orange-500/[0.12] via-amber-500/[0.06] to-yellow-500/[0.04]",
+    iconTint: "bg-orange-500/15 text-orange-800 dark:text-orange-400",
+    Icon: Scale,
+  },
 };
 
 type StoredDocument = {
@@ -273,7 +280,6 @@ export default function CommercialDocumentationPage() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>(
     CATEGORIES[0].id
   );
-  const tabsAnchorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -373,16 +379,6 @@ export default function CommercialDocumentationPage() {
   const canSubmit =
     Boolean(uploadCategoryId && file && docDisplayName.trim().length > 0);
 
-  const goToCategory = (id: CategoryId) => {
-    setActiveCategory(id);
-    requestAnimationFrame(() => {
-      tabsAnchorRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  };
-
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -427,202 +423,104 @@ export default function CommercialDocumentationPage() {
     if (f) setFile(f);
   };
 
+  const filledCategories = CATEGORIES.filter(
+    (category) => documentsByCategory[category.id].length > 0
+  ).length;
+
   return (
-    <div className="relative min-h-full w-full overflow-x-hidden pb-16">
-      {/* Ambient backdrop */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[min(480px,60vh)]"
-        aria-hidden
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-8%,hsl(var(--primary)/0.11),transparent_58%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_100%_0%,hsl(280_90%_60%/0.07),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_40%,hsl(var(--background))_100%)]" />
+    <div className="min-h-screen bg-[#f6f3ee]">
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-start gap-3 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300">
+            <Library className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+              Commercial
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+              Documentation
+            </h1>
+            <p className="mt-1 max-w-xl text-sm text-slate-500">
+              Choisissez un onglet pour voir les fichiers de cette catégorie.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="relative mx-auto max-w-6xl space-y-10 px-4 py-8 sm:px-6 sm:py-12">
-        {/* Page header */}
-        <header className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
-          <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
-              <Sparkles className="size-3.5 text-amber-500" aria-hidden />
-              <Library className="size-3.5 text-primary" aria-hidden />
-              <span>Centre documentaire commercial</span>
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-balance bg-gradient-to-br from-foreground via-foreground to-foreground/65 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl md:text-[2.75rem] md:leading-[1.1]">
-                Documentation
-              </h1>
-              <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
-                Centralisez les pièces administratives et commerciales par
-                type. Déposez, nommez et retrouvez chaque fichier en un clic —
-                prêt à partager avec vos équipes et partenaires.
-              </p>
-            </div>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-5 grid grid-cols-3 gap-2 sm:max-w-md">
+          <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-slate-200">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Documents
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-950">
+              {loadingList ? "—" : totalDocuments}
+            </p>
           </div>
-
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            <div className="flex min-w-[148px] flex-col rounded-2xl border border-border/70 bg-gradient-to-br from-card/95 to-muted/25 px-5 py-4 shadow-sm backdrop-blur-sm">
-              <span className="flex min-h-[2.25rem] items-center gap-2 text-2xl font-semibold tabular-nums tracking-tight">
-                {loadingList ? (
-                  <Loader2
-                    className="size-7 animate-spin text-muted-foreground"
-                    aria-hidden
-                  />
-                ) : (
-                  totalDocuments
-                )}
-              </span>
-              <span className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <FolderOpen className="size-3.5 opacity-70" aria-hidden />
-                Documents
-              </span>
-            </div>
-            <div className="flex min-w-[148px] flex-col rounded-2xl border border-border/70 bg-gradient-to-br from-card/95 to-muted/25 px-5 py-4 shadow-sm backdrop-blur-sm">
-              <span className="text-2xl font-semibold tabular-nums tracking-tight">
-                {CATEGORIES.length}
-              </span>
-              <span className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Types de pièces
-              </span>
-            </div>
+          <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-amber-200">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700">
+              Avec fichiers
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-950">
+              {loadingList ? "—" : filledCategories}
+            </p>
           </div>
-        </header>
-
-        {/* Category overview — quick navigation */}
-        <section
-          className="space-y-3"
-          aria-label="Aperçu des catégories"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                Parcourir par type
-              </h2>
-              <p className="text-xs text-muted-foreground sm:text-sm">
-                Sélectionnez une catégorie pour afficher les fichiers et importer.
-              </p>
-            </div>
+          <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-slate-200">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Onglets
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-950">
+              {CATEGORIES.length}
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-            {loadingList
-              ? CATEGORIES.map(({ id }) => (
-                  <div
-                    key={id}
-                    className="h-[88px] animate-pulse rounded-2xl border border-border/40 bg-muted/40"
-                  />
-                ))
-              : CATEGORIES.map(({ id, label }) => {
-                  const preset = CATEGORY_PRESENTATION[id];
-                  const { Icon, gradient, iconTint } = preset;
-                  const count = documentsByCategory[id].length;
-                  const isActive = activeCategory === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => goToCategory(id)}
-                      className={cn(
-                        "group relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border p-3.5 text-left transition-all duration-200",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                        isActive
-                          ? "border-primary/35 bg-primary/[0.06] shadow-md shadow-primary/5 ring-1 ring-primary/15"
-                          : "border-border/65 bg-card/70 backdrop-blur-sm hover:border-border hover:bg-muted/40 hover:shadow-sm"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100",
-                          "bg-gradient-to-br",
-                          gradient
-                        )}
-                        aria-hidden
-                      />
-                      <div className="relative flex items-start gap-3">
-                        <div
-                          className={cn(
-                            "flex size-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-black/[0.04] dark:ring-white/10",
-                            iconTint
-                          )}
-                        >
-                          <Icon className="size-[18px]" aria-hidden />
-                        </div>
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="truncate text-xs font-semibold leading-tight sm:text-[13px]">
-                            {label}
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium tabular-nums text-muted-foreground">
-                            {count} fichier{count !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-          </div>
-        </section>
-
-        <div ref={tabsAnchorRef} className="scroll-mt-24" />
+        </div>
 
         <Tabs
           value={activeCategory}
           onValueChange={(v) => setActiveCategory(v as CategoryId)}
-          className="w-full space-y-6"
+          className="w-full"
         >
-          {/* Sticky segmented control */}
-          <div className="sticky top-0 z-20 -mx-4 border-b border-border/50 bg-background/80 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65 sm:-mx-6 sm:px-6">
-            <p className="mb-2.5 hidden text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:block">
-              Onglets détaillés
-            </p>
-            <TabsList
-              className={cn(
-                "relative flex h-auto w-full gap-1 rounded-2xl border border-border/80 bg-muted/50 p-1.5 shadow-sm",
-                "flex-wrap md:flex-nowrap md:justify-start md:gap-1",
-                "[&::-webkit-scrollbar]:hidden md:overflow-x-auto",
-                loadingList && "pointer-events-none opacity-70"
-              )}
-            >
-              {CATEGORIES.map(({ id, label }) => {
-                const { Icon } = CATEGORY_PRESENTATION[id];
-                const count = documentsByCategory[id].length;
-                return (
-                  <TabsTrigger
-                    key={id}
-                    value={id}
-                    className={cn(
-                      "group relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
-                      "data-[state=active]:border data-[state=active]:border-border/90 data-[state=active]:bg-background data-[state=active]:shadow-md",
-                      "data-[state=inactive]:shadow-none md:justify-center md:gap-2"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-8 items-center justify-center rounded-lg bg-muted/80 transition-colors",
-                        "group-data-[state=active]:bg-primary/10"
-                      )}
-                    >
-                      <Icon className="size-4 shrink-0 opacity-90 group-data-[state=active]:opacity-100" />
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Onglets détaillés
+          </p>
+          <TabsList
+            className={cn(
+              "grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 text-left sm:grid-cols-3 xl:grid-cols-4",
+              loadingList && "pointer-events-none opacity-70"
+            )}
+          >
+            {CATEGORIES.map(({ id, label }) => {
+              const { Icon } = CATEGORY_PRESENTATION[id];
+              const count = documentsByCategory[id].length;
+              return (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className={cn(
+                    "group h-auto min-h-[4.5rem] w-full items-start justify-start gap-3 whitespace-normal rounded-2xl bg-white px-3 py-3 text-left shadow-sm ring-1 ring-slate-200",
+                    "data-[state=active]:bg-slate-950 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:ring-slate-950",
+                    "data-[state=inactive]:text-slate-800"
+                  )}
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-data-[state=active]:bg-white/10 group-data-[state=active]:text-amber-300">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold leading-snug">
+                      {label}
                     </span>
-                    <span className="whitespace-nowrap sm:inline">{label}</span>
-                    {count > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "ml-1 shrink-0 px-1.5 py-0 text-[10px] font-semibold tabular-nums",
-                          "group-data-[state=active]:border-primary/20 group-data-[state=active]:bg-primary/10"
-                        )}
-                      >
-                        {count}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
+                    <span className="mt-1 block text-[11px] font-medium text-slate-400 group-data-[state=active]:text-amber-200">
+                      {count} fichier{count !== 1 ? "s" : ""}
+                    </span>
+                  </span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
           {CATEGORIES.map(({ id, label }) => {
-            const preset = CATEGORY_PRESENTATION[id];
-            const { Icon, description, gradient, iconTint } = preset;
+            const { Icon, description } = CATEGORY_PRESENTATION[id];
             const docs = documentsByCategory[id];
             const count = docs.length;
 
@@ -630,260 +528,134 @@ export default function CommercialDocumentationPage() {
               <TabsContent
                 key={id}
                 value={id}
-                className="mt-0 animate-in fade-in-50 duration-200 focus-visible:outline-none"
+                className="mt-5 focus-visible:outline-none"
               >
-                <article className="overflow-hidden rounded-3xl border border-border/60 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(15,23,42,0.14)] dark:border-border/80 dark:shadow-[0_2px_20px_-4px_rgba(0,0,0,0.45)]">
-                  {/* Hero band */}
-                  <div
-                    className={cn(
-                      "relative border-b border-border/50 bg-gradient-to-br px-5 py-6 sm:px-8 sm:py-10",
-                      gradient,
-                      "from-background via-transparent to-muted/25"
-                    )}
+                <div className="mb-4 flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                          {label}
+                        </h2>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                          {count} fichier{count !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">{description}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => openUpload(id)}
+                    className="h-11 w-full bg-slate-950 text-amber-200 hover:bg-slate-800 sm:w-auto"
                   >
-                    <div
-                      className="pointer-events-none absolute inset-0 opacity-[0.4] dark:opacity-[0.25]"
-                      aria-hidden
-                      style={{
-                        backgroundImage:
-                          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='1.5' cy='1.5' r='0.75' fill='%23000000' fill-opacity='0.05'/%3E%3C/svg%3E\")",
-                        backgroundSize: "20px 20px",
-                      }}
-                    />
-                    <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex gap-5">
-                        <div
-                          className={cn(
-                            "flex size-14 shrink-0 items-center justify-center rounded-2xl shadow-inner ring-1 ring-black/5 dark:ring-white/10 sm:size-[4.25rem]",
-                            iconTint
-                          )}
+                    <Upload className="h-4 w-4" />
+                    Nouveau document
+                  </Button>
+                </div>
+
+                {loadingList ? (
+                  <div className="flex items-center justify-center gap-3 rounded-2xl bg-white py-16 text-slate-600 shadow-sm ring-1 ring-slate-200">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Chargement des documents...
+                  </div>
+                ) : count === 0 ? (
+                  <div className="rounded-2xl bg-white px-5 py-14 text-center shadow-sm ring-1 ring-slate-200">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-amber-300">
+                      <Inbox className="h-5 w-5" />
+                    </div>
+                    <p className="mt-4 font-medium text-slate-900">
+                      Aucun fichier dans « {label} »
+                    </p>
+                    <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                      Importez un PDF ou une image. Il apparaîtra ici avec le nom que vous choisissez.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => openUpload(id)}
+                      className="mt-5 bg-slate-950 text-amber-200 hover:bg-slate-800"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Nouveau document
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {docs.map((doc) => {
+                      const ext = extensionOf(doc.fileName);
+                      return (
+                        <article
+                          key={doc.id}
+                          className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200"
                         >
-                          <Icon className="size-7 sm:size-8" aria-hidden />
-                        </div>
-                        <div className="min-w-0 space-y-2 pt-0.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                              {label}
-                            </h2>
-                            <Badge
-                              variant="outline"
-                              className="border-border/80 font-medium"
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={cn(
+                                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-[10px] font-bold uppercase",
+                                extensionBadgeClass(ext)
+                              )}
                             >
-                              {count} fichier{count !== 1 ? "s" : ""}
-                            </Badge>
+                              {ext.slice(0, 4)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-slate-950">
+                                {doc.displayName}
+                              </p>
+                              <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                                <FileText className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{doc.fileName}</span>
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                Ajouté le {formatDocumentDate(doc.createdAt)}
+                              </p>
+                            </div>
                           </div>
-                          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                            {description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Button
-                        size="lg"
-                        className={cn(
-                          "h-11 shrink-0 gap-2 rounded-xl px-5 shadow-lg shadow-black/8",
-                          "bg-foreground text-background hover:bg-foreground/90 dark:shadow-black/50"
-                        )}
-                        type="button"
-                        onClick={() => openUpload(id)}
-                      >
-                        <Upload className="size-[18px]" />
-                        Nouveau document
-                      </Button>
-                    </div>
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 flex-1 border-slate-200 text-slate-800"
+                              disabled={downloadingId === doc.id}
+                              onClick={async () => {
+                                setDownloadingId(doc.id);
+                                try {
+                                  await downloadCommercialDocumentationFile(
+                                    doc.id,
+                                    doc.fileName
+                                  );
+                                } catch {
+                                  toast.error("Impossible de télécharger le fichier.");
+                                  if (
+                                    doc.fileUrl.startsWith("http://") ||
+                                    doc.fileUrl.startsWith("https://")
+                                  ) {
+                                    window.open(
+                                      doc.fileUrl,
+                                      "_blank",
+                                      "noopener,noreferrer"
+                                    );
+                                  }
+                                } finally {
+                                  setDownloadingId(null);
+                                }
+                              }}
+                            >
+                              {downloadingId === doc.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                              Télécharger
+                            </Button>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
-
-                  <div className="bg-card px-5 py-6 sm:px-8 sm:py-8">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="space-y-1">
-                        <h3 className="text-base font-semibold tracking-tight">
-                          Pièces enregistrées
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Nom affiché, fichier source, date d&apos;ajout et
-                          téléchargement.
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-fit gap-2 rounded-xl border-dashed"
-                        type="button"
-                        onClick={() => openUpload(id)}
-                      >
-                        <Upload className="size-4" />
-                        Importer
-                      </Button>
-                    </div>
-
-                    <Separator className="my-6 bg-border/50" />
-
-                    {count === 0 ? (
-                      <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-border/70 bg-gradient-to-b from-muted/20 via-muted/10 to-transparent px-6 py-16 text-center">
-                        <div
-                          className="pointer-events-none absolute inset-0 opacity-[0.35]"
-                          aria-hidden
-                          style={{
-                            background:
-                              "radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--primary) / 0.08), transparent 65%)",
-                          }}
-                        />
-                        <div className="relative mb-5 flex size-[4.5rem] items-center justify-center rounded-full bg-background/90 shadow-md ring-4 ring-muted/30">
-                          <Inbox
-                            className="size-8 text-muted-foreground"
-                            aria-hidden
-                          />
-                        </div>
-                        <p className="relative max-w-sm text-base font-semibold text-foreground">
-                          Aucune pièce pour « {label} »
-                        </p>
-                        <p className="relative mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                          Déposez un PDF, une image ou tout autre document.
-                          Celui-ci apparaîtra ici avec le nom que vous choisissez.
-                        </p>
-                        <Button
-                          variant="secondary"
-                          className="relative mt-7 gap-2 rounded-xl px-6 "
-                          type="button"
-                          onClick={() => openUpload(id)}
-                        >
-                          <Upload className="size-4" />
-                          Ajouter le premier fichier
-                        </Button>
-                      </div>
-                    ) : (
-                      <ul className="grid gap-3">
-                        {docs.map((doc) => {
-                          const ext = extensionOf(doc.fileName);
-                          return (
-                            <li key={doc.id}>
-                              <div
-                                className={cn(
-                                  "group relative flex flex-col gap-4 rounded-2xl border border-border/55 bg-muted/10 p-4",
-                                  "transition-all duration-200 hover:border-primary/20 hover:bg-muted/[0.18] hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5"
-                                )}
-                              >
-                                <div className="flex min-w-0 flex-1 gap-4">
-                                  <div
-                                    className={cn(
-                                      "flex size-12 shrink-0 items-center justify-center rounded-xl border shadow-sm",
-                                      extensionBadgeClass(ext)
-                                    )}
-                                  >
-                                    <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-tighter">
-                                      {ext}
-                                    </span>
-                                  </div>
-                                  <div className="min-w-0 flex-1 space-y-1.5">
-                                    <p className="truncate font-semibold leading-tight tracking-tight text-foreground">
-                                      {doc.displayName}
-                                    </p>
-                                    <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-x-3 sm:gap-y-0">
-                                      <span className="flex min-w-0 items-center gap-1.5">
-                                        <FileText
-                                          className="size-3 shrink-0 opacity-70"
-                                          aria-hidden
-                                        />
-                                        <span className="truncate">
-                                          {doc.fileName}
-                                        </span>
-                                      </span>
-                                      <span className="hidden h-1 w-1 rounded-full bg-border sm:inline" />
-                                      <time
-                                        className="shrink-0 tabular-nums text-[11px] sm:text-xs"
-                                        dateTime={doc.createdAt}
-                                      >
-                                        Ajouté le{" "}
-                                        {formatDocumentDate(doc.createdAt)}
-                                      </time>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(
-                                      "h-9 shrink-0 gap-2 rounded-xl border-border/70",
-                                      "hover:border-primary/35 hover:bg-primary/5 hover:text-primary"
-                                    )}
-                                    disabled={downloadingId === doc.id}
-                                    onClick={async () => {
-                                      setDownloadingId(doc.id);
-                                      try {
-                                        await downloadCommercialDocumentationFile(
-                                          doc.id,
-                                          doc.fileName
-                                        );
-                                      } catch {
-                                        toast.error(
-                                          "Impossible de télécharger le fichier."
-                                        );
-                                        if (
-                                          doc.fileUrl.startsWith("http://") ||
-                                          doc.fileUrl.startsWith("https://")
-                                        ) {
-                                          window.open(
-                                            doc.fileUrl,
-                                            "_blank",
-                                            "noopener,noreferrer"
-                                          );
-                                        }
-                                      } finally {
-                                        setDownloadingId(null);
-                                      }
-                                    }}
-                                  >
-                                    {downloadingId === doc.id ? (
-                                      <Loader2 className="size-4 animate-spin" />
-                                    ) : (
-                                      <Download className="size-4" />
-                                    )}
-                                    Télécharger
-                                  </Button>
-
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(
-                                      "h-9 shrink-0 gap-2 rounded-xl border-border/70 text-destructive",
-                                      "hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
-                                    )}
-                                    disabled={
-                                      deleting && deleteTarget?.id === doc.id
-                                    }
-                                    onClick={() => setDeleteTarget(doc)}
-                                  >
-                                    <Trash2 className="size-4" />
-                                    Supprimer
-                                  </Button>
-                                </div>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-
-                    <Separator className="my-8 bg-border/50" />
-
-                    <div className="flex justify-center pb-1">
-                      <Button
-                        type="button"
-                        size="lg"
-                        variant="secondary"
-                        className="gap-2 rounded-xl px-8 shadow-sm "
-                        onClick={() => openUpload(id)}
-                      >
-                        <Upload className="size-[18px]" />
-                        Ajouter un document
-                      </Button>
-                    </div>
-                  </div>
-                </article>
+                )}
               </TabsContent>
             );
           })}
@@ -922,7 +694,7 @@ export default function CommercialDocumentationPage() {
                   </div>
                   <div className="min-w-0 space-y-1.5 pt-1">
                     <DialogTitle className="text-xl font-semibold tracking-tight">
-                      Ajouter un document
+                      Nouveau document
                     </DialogTitle>
                     <DialogDescription className="text-sm leading-relaxed">
                       Déposez un fichier dans la zone ou parcourez vos dossiers,
@@ -1115,10 +887,7 @@ export default function CommercialDocumentationPage() {
                   Suppression…
                 </>
               ) : (
-                <>
-                  <Trash2 className="size-4" />
-                  Supprimer
-                </>
+                "Supprimer"
               )}
             </Button>
           </DialogFooter>

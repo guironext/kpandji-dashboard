@@ -11,6 +11,7 @@ export const DOCUMENTATION_CATEGORIES = [
   { id: "presentation", label: "Presentation" },
   { id: "fiche-technique", label: "Fiche Technique" },
   { id: "cni", label: "CNI" },
+  { id: "conditions-generales-de-vente", label: "Condition Générales de vente" },
 ] as const;
 
 export type DocumentationCategoryId =
@@ -30,6 +31,7 @@ export const UI_CATEGORY_TO_TYPE: Record<
   presentation: "PRESENTATION",
   "fiche-technique": "FICHE_TECHNIQUE",
   cni: "CNI",
+  "conditions-generales-de-vente": "CONDITION_GENERALES_DE_VENTE",
 };
 
 export const TYPE_TO_UI_CATEGORY: Record<
@@ -46,6 +48,7 @@ export const TYPE_TO_UI_CATEGORY: Record<
   PRESENTATION: "presentation",
   FICHE_TECHNIQUE: "fiche-technique",
   CNI: "cni",
+  CONDITION_GENERALES_DE_VENTE: "conditions-generales-de-vente",
 };
 
 export const DOCUMENTATION_TYPE_LABELS: Record<TypeDocumentation, string> = {
@@ -59,6 +62,7 @@ export const DOCUMENTATION_TYPE_LABELS: Record<TypeDocumentation, string> = {
   PRESENTATION: "Presentation",
   FICHE_TECHNIQUE: "Fiche Technique",
   CNI: "CNI",
+  CONDITION_GENERALES_DE_VENTE: "Condition Générales de vente",
 };
 
 export const DOCUMENTATION_CATEGORY_STYLES: Record<
@@ -129,6 +133,12 @@ export const DOCUMENTATION_CATEGORY_STYLES: Record<
     gradient: "from-cyan-500/10 via-sky-500/5 to-blue-500/5",
     iconTint: "bg-cyan-500/15 text-cyan-700",
     ring: "ring-cyan-200/80",
+  },
+  "conditions-generales-de-vente": {
+    description: "Conditions générales applicables aux ventes.",
+    gradient: "from-orange-500/10 via-amber-500/5 to-yellow-500/5",
+    iconTint: "bg-orange-500/15 text-orange-800",
+    ring: "ring-orange-200/80",
   },
 };
 

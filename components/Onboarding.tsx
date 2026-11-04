@@ -32,7 +32,7 @@ import {
 } from "@/lib/actions/onboarding";
 import { ASSIGNABLE_ROLES } from "@/lib/role-labels";
 import { getRedirectForRole } from "@/lib/role-redirects";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/user-role-constants";
 import {
   Select,
   SelectContent,
@@ -78,6 +78,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   MARKETING: "Marketing",
   DEVELOPPEUR: "Développeur",
   DESIGNER: "Designer",
+  OPERATIONS_DEVE_COMMERCIAL: "Opérations Dev. Commercial",
 };
 
 // ADMIN n'est jamais proposé : personne ne peut se l'attribuer à l'inscription

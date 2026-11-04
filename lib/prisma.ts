@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 /** Bump when schema fields/models change so the global singleton reloads after `prisma generate`. */
-const PRISMA_SCHEMA_REVISION = 23;
+const PRISMA_SCHEMA_REVISION = 29;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -80,6 +80,9 @@ const REQUIRED_PRISMA_DELEGATES = [
   "projetPonctuelActivite",
   "interventionDiagnosticOffert",
   "decaissement",
+  "rapportVisiteClientele",
+  "dossierClientele",
+  "contratDeVente",
 ] as const;
 
 function prismaHasRequiredDelegates(client: PrismaClient): boolean {

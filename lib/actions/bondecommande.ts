@@ -1,7 +1,30 @@
 "use server";
 
-import type { StatusBonDeCommande } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { Prisma, type StatusBonDeCommande } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { parseBonCommandeContenu, type BonCommandeContenu } from "@/lib/bon-commande-document";
+import {
+  asNumber,
+  countBonsAValider as countBonsAValiderQuery,
+  currentUserId,
+  currentUserRole,
+  etapeOf,
+  isResponsableCommercial,
+} from "@/lib/bon-commande-lecture";
+
+export type {
+  BonAValider,
+  BonCommandeDocumentData,
+  BonCommandeOptionLine,
+  BonCommandeProformaRef,
+  BonCommandeSource,
+  DossierBonOption,
+} from "@/lib/bon-commande-lecture";
+
+export async function countBonsAValider() {
+  return countBonsAValiderQuery();
+}
 
 export async function generateNextNumero(factureId: string) {
   try {
@@ -54,6 +77,9 @@ export async function generateNextNumero(factureId: string) {
       }
     });
 
+    revalidatePath("/commercial/bon-de-commande");
+    revalidatePath("/commercial/dossier-clientele");
+
     return {
       success: true,
       data: { numero: bonDeCommande.numero }
@@ -65,6 +91,114 @@ export async function generateNextNumero(factureId: string) {
       error: "Failed to generate numero"
     };
   }
+}
+
+export async function saveBonCommandeDocument(factureId: string, contenu: BonCommandeContenu) {
+  try {
+    const userId = await currentUserId();
+    if (!userId) return { success: false as const, error: "Non autorisé" };
+
+    const facture = await prisma.facture.findUnique({
+      where: { id: factureId },
+      select: { id: true, clientId: true, clientEntrepriseId: true, status_facture: true },
+    });
+    if (!facture || facture.status_facture === "ANNULEE") {
+      return { success: false as const, error: "Cette proforma ne peut pas recevoir de bon de commande" };
+    }
+
+    const prospectId = facture.clientEntrepriseId ?? facture.clientId;
+    const dossier = prospectId
+      ? await prisma.dossierClientele.findFirst({
+          where: {
+            userId,
+            prospectId,
+            prospectType: facture.clientEntrepriseId ? "ENTREPRISE" : "CLIENT",
+          },
+          select: { id: true },
+        })
+      : null;
+    if (!dossier) return { success: false as const, error: "Dossier introuvable" };
+
+    const existing = await prisma.bonDeCommande.findUnique({ where: { factureId } });
+    let numero = contenu.numero.trim();
+
+    if (!existing && !numero) {
+      const created = await generateNextNumero(factureId);
+      if (!created.success || !created.data) {
+        return { success: false as const, error: "Le bon de commande n'a pas pu être créé" };
+      }
+      numero = created.data.numero;
+    } else if (!existing) {
+      await prisma.bonDeCommande.create({
+        data: {
+          id: crypto.randomUUID(),
+          numero,
+          prefix_numero: "BC",
+          factureId,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    const previous = parseBonCommandeContenu(existing?.contenu);
+    const stored: BonCommandeContenu = {
+      ...contenu,
+      numero: numero || existing?.numero || "",
+      etapeValidation: contenu.etapeValidation || previous?.etapeValidation || "",
+    };
+    await prisma.bonDeCommande.update({
+      where: { factureId },
+      data: {
+        numero: stored.numero,
+        prefix_numero: "BC",
+        contenu: stored as unknown as Prisma.InputJsonValue,
+        updatedAt: new Date(),
+      },
+    });
+
+    revalidatePath("/commercial/bon-de-commande");
+    revalidatePath("/commercial/dossier-clientele");
+    return { success: true as const, numero: stored.numero };
+  } catch (error) {
+    console.error("Error saving bon de commande:", error);
+    return { success: false as const, error: "L'enregistrement a échoué" };
+  }
+}
+
+export async function soumettreBonDeCommandeValidation(factureId: string, contenu: BonCommandeContenu) {
+  const saved = await saveBonCommandeDocument(factureId, contenu);
+  if (!saved.success) return saved;
+
+  const existing = await prisma.bonDeCommande.findUnique({ where: { factureId } });
+  if (!existing) return { success: false as const, error: "Le bon de commande n'a pas pu être envoyé" };
+
+  const etape = etapeOf(existing.contenu);
+  const column = existing.status_bon_de_commande;
+  const closed =
+    etape === "EN_VALIDATION" ||
+    etape === "SOUS_RESERVE" ||
+    etape === "VALIDE" ||
+    column === "SOUS_RESERVE" ||
+    column === "VALIDE" ||
+    column === "VALIDE_APPORT_INITIAL" ||
+    column === "ANNULE";
+  if (closed) {
+    return { success: false as const, error: "Ce bon ne peut plus être envoyé en validation" };
+  }
+  if (etape !== "A_VALIDER") {
+    const contenu = parseBonCommandeContenu(existing.contenu);
+    if (!contenu) return { success: false as const, error: "Le bon de commande n'a pas pu être envoyé" };
+    contenu.etapeValidation = "A_VALIDER";
+    await prisma.bonDeCommande.update({
+      where: { factureId },
+      data: { contenu: contenu as unknown as Prisma.InputJsonValue, updatedAt: new Date() },
+    });
+  }
+
+  revalidatePath("/commercial/bon-de-commande");
+  revalidatePath("/commercial/dossier-clientele");
+  revalidatePath("/responsablecommercial/bon-de-commande");
+  return { success: true as const, numero: saved.numero };
 }
 
 export async function getBonDeCommandeByFactureId(factureId: string) {
@@ -511,4 +645,363 @@ export async function getAllBonDeCommandeWithProformasByUser() {
       error: "Failed to fetch BonDeCommande with Proformas"
     };
   }
+}
+
+
+function parseMoney(value: string | undefined) {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^\d,.-]/g, "").replace(",", ".");
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function modePaiement(reglement: string): "CB" | "CHEQUE" | "VIREMENT" | "CASH" {
+  if (reglement === "cheque") return "CHEQUE";
+  if (reglement === "especes" || reglement === "mobile") return "CASH";
+  if (reglement === "cb") return "CB";
+  return "VIREMENT";
+}
+
+async function prochainNumeroRecu() {
+  const latestReceipt = await prisma.numeroEntreeCaisse.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { numero: true },
+  });
+  const lastNumber = latestReceipt ? parseInt(latestReceipt.numero, 10) : 0;
+  let nextNumber = Number.isFinite(lastNumber) ? lastNumber + 1 : 1;
+  let numero = String(nextNumber).padStart(7, "0");
+  while (await prisma.numeroEntreeCaisse.findUnique({ where: { numero }, select: { id: true } })) {
+    nextNumber += 1;
+    numero = String(nextNumber).padStart(7, "0");
+  }
+  return numero;
+}
+
+async function ecrireEcheancierVersements(factureId: string, contenu: BonCommandeContenu) {
+  const facture = await prisma.facture.findUnique({
+    where: { id: factureId },
+    include: { Paiement: { include: { NumeroEntreeCaisse: true } } },
+  });
+  if (!facture) return;
+
+  for (const item of facture.Paiement) {
+    const prefix = item.NumeroEntreeCaisse?.prefix_numero;
+    if ((prefix === "AC2" || prefix === "SLD") && item.status_paiement !== "PAYE") {
+      if (item.NumeroEntreeCaisse) {
+        await prisma.numeroEntreeCaisse.delete({ where: { id: item.NumeroEntreeCaisse.id } });
+      }
+      await prisma.paiement.delete({ where: { id: item.id } });
+    }
+  }
+
+  const total = asNumber(facture.total_ttc);
+  const acompte1 = parseMoney(contenu.acompte1) || Math.round(total * 0.3);
+  const echeances = [{ prefix: "AC1", montant: acompte1, statut: "PAYE" as const }].filter((item) => item.montant > 0);
+
+  let cumul = 0;
+  for (const echeance of echeances) {
+    cumul += echeance.montant;
+    const reste = Math.max(0, total - cumul);
+    const existing = facture.Paiement.find((item) => item.NumeroEntreeCaisse?.prefix_numero === echeance.prefix);
+    if (existing) {
+      if (echeance.prefix === "AC1" && existing.status_paiement !== "PAYE") {
+        await prisma.paiement.update({
+          where: { id: existing.id },
+          data: { status_paiement: "PAYE", updatedAt: new Date() },
+        });
+      }
+      continue;
+    }
+    const paiement = await prisma.paiement.create({
+      data: {
+        id: crypto.randomUUID(),
+        factureId,
+        clientId: facture.clientId,
+        clientEntrepriseId: facture.clientEntrepriseId,
+        userId: facture.userId,
+        avance_payee: echeance.montant,
+        reste_payer: reste,
+        date_paiement: new Date(),
+        mode_paiement: modePaiement(contenu.reglement),
+        status_paiement: echeance.statut,
+        updatedAt: new Date(),
+      },
+    });
+    await prisma.numeroEntreeCaisse.create({
+      data: {
+        id: crypto.randomUUID(),
+        numero: await prochainNumeroRecu(),
+        prefix_numero: echeance.prefix,
+        paiementId: paiement.id,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  const paiements = await prisma.paiement.findMany({
+    where: { factureId, status_paiement: "PAYE" },
+    select: { avance_payee: true },
+  });
+  const verse = paiements.reduce((sum, item) => sum + asNumber(item.avance_payee), 0);
+  await prisma.facture.update({
+    where: { id: factureId },
+    data: {
+      avance_payee: verse,
+      reste_payer: Math.max(0, total - verse),
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function validerAutreVersement(paiementId: string) {
+  const role = await currentUserRole();
+  if (!isResponsableCommercial(role)) {
+    return { success: false as const, error: "Seul le responsable commercial peut valider ce versement" };
+  }
+  const paiement = await prisma.paiement.findUnique({
+    where: { id: paiementId },
+    include: { NumeroEntreeCaisse: true, Facture: { select: { id: true, total_ttc: true } } },
+  });
+  if (!paiement) return { success: false as const, error: "Versement introuvable" };
+  if (paiement.NumeroEntreeCaisse?.prefix_numero === "AC1") {
+    return { success: false as const, error: "Le premier versement est déjà validé" };
+  }
+  if (paiement.status_paiement !== "PAYE") {
+    await prisma.paiement.update({
+      where: { id: paiementId },
+      data: { status_paiement: "PAYE", updatedAt: new Date() },
+    });
+  }
+  const payes = await prisma.paiement.findMany({
+    where: { factureId: paiement.factureId, status_paiement: "PAYE" },
+    select: { avance_payee: true },
+  });
+  const verse = payes.reduce((sum, item) => sum + asNumber(item.avance_payee), 0);
+  const total = asNumber(paiement.Facture.total_ttc);
+  await prisma.facture.update({
+    where: { id: paiement.factureId },
+    data: {
+      avance_payee: verse,
+      reste_payer: Math.max(0, total - verse),
+      updatedAt: new Date(),
+    },
+  });
+  revalidatePath("/commercial/dossier-clientele", "layout");
+  return { success: true as const };
+}
+
+export async function peutValiderAutresVersements() {
+  return isResponsableCommercial(await currentUserRole());
+}
+
+export async function soumettreNouveauVersement(input: { dossierId: string; date: string; montant: string }) {
+  const userId = await currentUserId();
+  const role = await currentUserRole();
+  if (!userId) return { success: false as const, error: "Non autorisé" };
+  const responsable = isResponsableCommercial(role);
+  const dossier = await prisma.dossierClientele.findFirst({
+    where: responsable ? { id: input.dossierId } : { id: input.dossierId, userId },
+  });
+  if (!dossier) return { success: false as const, error: "Dossier introuvable" };
+
+  const montant = parseMoney(input.montant);
+  if (montant <= 0) return { success: false as const, error: "Indiquez le montant versé" };
+  const date = new Date(`${input.date}T12:00:00`);
+  if (!input.date || Number.isNaN(date.getTime())) {
+    return { success: false as const, error: "Indiquez la date du versement" };
+  }
+
+  const owner =
+    dossier.prospectType === "ENTREPRISE"
+      ? { clientEntrepriseId: dossier.prospectId }
+      : { clientId: dossier.prospectId };
+  const facture = await prisma.facture.findFirst({
+    where: { ...owner, BonDeCommande: { status_bon_de_commande: "VALIDE" } },
+    orderBy: { updatedAt: "desc" },
+    include: { Paiement: { where: { status_paiement: "PAYE" }, select: { avance_payee: true } } },
+  });
+  if (!facture) return { success: false as const, error: "Aucun bon de commande validé pour ce dossier" };
+
+  const total = asNumber(facture.total_ttc);
+  const verse = facture.Paiement.reduce((sum, item) => sum + asNumber(item.avance_payee), 0);
+  const paiement = await prisma.paiement.create({
+    data: {
+      id: crypto.randomUUID(),
+      factureId: facture.id,
+      clientId: facture.clientId,
+      clientEntrepriseId: facture.clientEntrepriseId,
+      userId: facture.userId,
+      avance_payee: montant,
+      reste_payer: Math.max(0, total - verse - montant),
+      date_paiement: date,
+      mode_paiement: "VIREMENT",
+      status_paiement: "EN_ATTENTE",
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.numeroEntreeCaisse.create({
+    data: {
+      id: crypto.randomUUID(),
+      numero: await prochainNumeroRecu(),
+      prefix_numero: "VS",
+      paiementId: paiement.id,
+      updatedAt: new Date(),
+    },
+  });
+  revalidatePath("/commercial/dossier-clientele", "layout");
+  return { success: true as const };
+}
+
+async function appliquerEffetsValidation(factureId: string, contenu: BonCommandeContenu) {
+  try {
+  const facture = await prisma.facture.findUnique({
+    where: { id: factureId },
+    include: {
+      Paiement: { select: { id: true } },
+      Client: { select: { status_client: true } },
+      Client_entreprise: { select: { status_client: true } },
+    },
+  });
+  if (!facture) return;
+
+  if (facture.clientId && facture.Client?.status_client !== "CLIENT") {
+    await prisma.client.update({
+      where: { id: facture.clientId },
+      data: { status_client: "CLIENT" },
+    });
+  }
+  if (facture.clientEntrepriseId && facture.Client_entreprise?.status_client !== "CLIENT") {
+    await prisma.client_entreprise.update({
+      where: { id: facture.clientEntrepriseId },
+      data: { status_client: "CLIENT" },
+    });
+  }
+
+  const total = asNumber(facture.total_ttc);
+  const dejaVendu = facture.status_facture === "FACTURE" || facture.status_facture === "PAYEE";
+  if (!dejaVendu) {
+    await prisma.facture.update({
+      where: { id: factureId },
+      data: { status_facture: "FACTURE", updatedAt: new Date() },
+    });
+  }
+
+  await ecrireEcheancierVersements(factureId, contenu);
+  } catch (error) {
+    console.error("Effets de validation du bon de commande:", error);
+  }
+}
+
+export async function assurerEffetsBonValide(factureId: string) {
+  try {
+    const bon = await prisma.bonDeCommande.findUnique({ where: { factureId } });
+    const contenu = bon ? parseBonCommandeContenu(bon.contenu) : null;
+    if (!bon || bon.status_bon_de_commande !== "VALIDE" || !contenu) return;
+    await appliquerEffetsValidation(factureId, contenu);
+  } catch (error) {
+    console.error("Effets de validation du bon de commande:", error);
+  }
+}
+
+async function setEtapeValidation(
+  factureId: string,
+  etape: "EN_VALIDATION" | "SOUS_RESERVE" | "VALIDE",
+  from: Array<"A_VALIDER" | "EN_VALIDATION">,
+  column?: StatusBonDeCommande,
+) {
+  const role = await currentUserRole();
+  if (!isResponsableCommercial(role)) return { success: false as const, error: "Non autorisé" };
+
+  const existing = await prisma.bonDeCommande.findUnique({ where: { factureId } });
+  const contenu = existing ? parseBonCommandeContenu(existing.contenu) : null;
+  const current = contenu?.etapeValidation || "";
+  if (!existing || !contenu || !from.includes(current as "A_VALIDER" | "EN_VALIDATION")) {
+    return { success: false as const, error: "Ce bon n'est pas en attente de validation" };
+  }
+
+  contenu.etapeValidation = etape;
+  await prisma.bonDeCommande.update({
+    where: { factureId },
+    data: {
+      contenu: contenu as unknown as Prisma.InputJsonValue,
+      ...(column ? { status_bon_de_commande: column } : {}),
+      updatedAt: new Date(),
+    },
+  });
+
+  if (etape === "VALIDE") await assurerEffetsBonValide(factureId);
+  revalidatePath("/responsablecommercial/bon-de-commande");
+  revalidatePath("/responsablecommercial/bon-de-commande-deja-valide");
+  revalidatePath("/commercial/bon-de-commande");
+  revalidatePath("/commercial/dossier-clientele");
+  revalidatePath("/commercial");
+  revalidatePath("/commercial/clients");
+  revalidatePath("/commercial/prospects");
+  revalidatePath("/commercial/objectifs");
+  revalidatePath("/commercial/statistiques");
+  return { success: true as const };
+}
+
+export async function commencerValidationBonDeCommande(factureId: string) {
+  return setEtapeValidation(factureId, "EN_VALIDATION", ["A_VALIDER"]);
+}
+
+export async function validerBonDeCommande(factureId: string) {
+  return setEtapeValidation(factureId, "VALIDE", ["EN_VALIDATION"], "VALIDE");
+}
+
+async function promouvoirProspectEnClient(factureId: string) {
+  const facture = await prisma.facture.findUnique({
+    where: { id: factureId },
+    select: {
+      Client: { select: { id: true, status_client: true } },
+      Client_entreprise: { select: { id: true, status_client: true } },
+    },
+  });
+  if (!facture) return;
+
+  const now = new Date();
+  if (facture.Client && facture.Client.status_client !== "CLIENT") {
+    await prisma.client.update({
+      where: { id: facture.Client.id },
+      data: { status_client: "CLIENT" },
+    });
+  }
+  if (facture.Client_entreprise && facture.Client_entreprise.status_client !== "CLIENT") {
+    await prisma.client_entreprise.update({
+      where: { id: facture.Client_entreprise.id },
+      data: { status_client: "CLIENT", updatedAt: now },
+    });
+  }
+
+  await prisma.bonPourAccord.updateMany({
+    where: { factureId },
+    data: { status_bon_pour_accord: "VALIDE", updatedAt: now },
+  });
+}
+
+export async function validerBonPourAccord(factureId: string) {
+  const result = await validerBonDeCommande(factureId);
+  if (!result.success) return result;
+
+  try {
+    await promouvoirProspectEnClient(factureId);
+  } catch (error) {
+    console.error("Promotion du prospect après bon pour accord:", error);
+    return { success: false as const, error: "Le bon est validé, mais le prospect n'a pas pu devenir client" };
+  }
+
+  revalidatePath("/responsablecommercial/bon-pour-accord");
+  revalidatePath("/responsablecommercial/bon-pour-accord-deja-valide");
+  revalidatePath("/responsablecommercial/clients");
+  revalidatePath("/responsablecommercial/prospects");
+  revalidatePath("/responsablecommercial/performences");
+  revalidatePath("/commercial/clients");
+  revalidatePath("/commercial/prospects");
+  revalidatePath("/commercial");
+  return result;
+}
+
+export async function marquerBonSousReserve(factureId: string) {
+  return setEtapeValidation(factureId, "SOUS_RESERVE", ["A_VALIDER", "EN_VALIDATION"], "SOUS_RESERVE");
 }

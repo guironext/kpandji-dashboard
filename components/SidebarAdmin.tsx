@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import {
   LayoutDashboard,
   CalendarDays,
@@ -20,7 +22,8 @@ import { usePathname } from "next/navigation";
 // Category-first navigation structure with logical grouping
 const iconClass = "w-5 h-5";
 
-const navCategories = [
+type NavItem = { id: number; icon: React.ReactNode; label: string; href: string; soon?: boolean };
+const navCategories: { id: string; label: string; color: string; bg: string; items: NavItem[] }[] = [
   {
     id: "main",
     label: "Principal",
@@ -29,10 +32,10 @@ const navCategories = [
     items: [
       { id: 1, icon: <LayoutDashboard className={iconClass} />, label: "Dashboard", href: "/admin" },
       { id: 100, icon: <Mail className={iconClass} />, label: "Invitations", href: "/admin/invitations" },
-      { id: 13, icon: <LayoutDashboard className={iconClass} />, label: "Pointage", href: "/admin/pointage" },
-      { id: 2, icon: <CalendarDays className={iconClass} />, label: "Agenda", href: "/admin/agenda" },
+      { id: 13, icon: <LayoutDashboard className={iconClass} />, label: "Pointage", href: "/admin/pointage", soon: true },
+      { id: 2, icon: <CalendarDays className={iconClass} />, label: "Agenda", href: "/admin/agenda", soon: true },
   
-      { id: 5, icon: <FileTextIcon className={iconClass} />, label: "Rapports", href: "/admin/rapports-activites" },
+      { id: 5, icon: <FileTextIcon className={iconClass} />, label: "Rapports", href: "/admin/rapports-activites", soon: true },
     ],
   },
   
@@ -90,6 +93,26 @@ const SidebarAdmin = ({ isOpen }: { isOpen: boolean }) => {
               
               {category.items.map((item, index) => {
                 const isActive = pathname === item.href;
+                if (item.soon)
+                  return (
+                    <div
+                      key={item.href}
+                      title={`${item.label} — bientôt disponible`}
+                      aria-disabled="true"
+                      className={clsx(
+                        "flex items-center px-3 py-2.5 rounded-xl text-gray-400 cursor-not-allowed select-none",
+                        isOpen ? "justify-start gap-3" : "justify-center"
+                      )}
+                    >
+                      <div>{item.icon}</div>
+                      {isOpen && (
+                        <span className="flex items-center gap-2 text-sm font-medium whitespace-nowrap">
+                          {item.label}
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Bientôt</span>
+                        </span>
+                      )}
+                    </div>
+                  );
 
                 return (
                   <Link

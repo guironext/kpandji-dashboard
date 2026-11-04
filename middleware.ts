@@ -118,6 +118,11 @@ const isMarketingRoute = createRouteMatcher([
 	"/marketing/(.*)",
 ]);
 
+const isOperationsDeveComRoute = createRouteMatcher([
+	"/operationsDeveCom",
+	"/operationsDeveCom/(.*)",
+]);
+
 
 type RouteMatcher = (req: NextRequest) => boolean;
 const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
@@ -147,7 +152,7 @@ const ROLE_ROUTES: Array<{ match: RouteMatcher; role: string }> = [
 	{ match: isDeveloppeurRoute, role: "DEVELOPPEUR" },
 	{ match: isDesignerRoute, role: "DESIGNER" },
 	{ match: isMarketingRoute, role: "MARKETING" },
-
+	{ match: isOperationsDeveComRoute, role: "OPERATIONS_DEVE_COMMERCIAL" },	
 ];
 
 /** Windows clocks often lag NTP by >5s (Clerk default), which rejects JWTs as iat-in-the-future. */
@@ -268,6 +273,13 @@ const clerkHandler = clerkMiddleware(async (auth, req: NextRequest) => {
 	for (const { match, role } of ROLE_ROUTES) {
 		if (match(req)) {
 			if (effectiveRole === role) {
+				return NextResponse.next();
+			}
+			if (
+				role === "COMMERCIAL" &&
+				effectiveRole === "RESPONSABLE_COMMERCIAL" &&
+				req.nextUrl.pathname.startsWith("/commercial/dossier-clientele")
+			) {
 				return NextResponse.next();
 			}
 			// Generic employees land on the manager dashboard

@@ -512,6 +512,27 @@ export async function getFacturesByUser(clerkId: string) {
   }
 }
 
+export async function countProformasAValider() {
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return 0;
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+      select: { role: true },
+    });
+    if (!user || (user.role !== "RESPONSABLE_COMMERCIAL" && user.role !== "ADMIN")) return 0;
+    return prisma.facture.count({
+      where: {
+        status_facture: "PROFORMA",
+        validationRespoCom: "VALIDATION_COURS",
+      },
+    });
+  } catch (error) {
+    console.error("Error counting proformas to validate:", error);
+    return 0;
+  }
+}
+
 export async function getProformas() {
   try {
     const proformas = await prisma.facture.findMany({

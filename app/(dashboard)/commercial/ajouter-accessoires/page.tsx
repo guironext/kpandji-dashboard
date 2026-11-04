@@ -1,81 +1,52 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createAccessoire, getAllAccessoires, deleteAccessoire } from "@/lib/actions/accessoire";
+import { getAllAccessoires } from "@/lib/actions/accessoire";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
-import { PlusCircle, Trash2, Image as ImageIcon, Package, X } from "lucide-react";
+import { Eye, Package } from "lucide-react";
+import { formatNumberWithSpaces } from "@/lib/utils";
+
+type AccessoireItem = {
+  id: string;
+  nom: string;
+  description?: string | null;
+  prix?: number | null;
+  quantity?: number | null;
+  image?: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+};
+
+function formatDate(value: string | Date) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1 border-b border-orange-100 py-3 last:border-0 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-start sm:gap-4">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-orange-700 sm:text-sm sm:normal-case sm:tracking-normal">{label}</dt>
+      <dd className="min-w-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-orange-950">{children}</dd>
+    </div>
+  );
+}
 
 export default function AjouterAccessoiresPage() {
-  const [accessoires, setAccessoires] = useState<Array<{
-    id: string;
-    nom: string;
-    image?: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    nom: "",
-  });
-
+  const [accessoires, setAccessoires] = useState<AccessoireItem[]>([]);
+  const [selected, setSelected] = useState<AccessoireItem | null>(null);
   useEffect(() => {
     loadAccessoires();
   }, []);
-
-  useEffect(() => {
-    if (imageFile) {
-      const objectUrl = URL.createObjectURL(imageFile);
-      setPreview(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
-    } else {
-      setPreview(null);
-    }
-  }, [imageFile]);
 
   const loadAccessoires = async () => {
     const result = await getAllAccessoires();
     if (result.success && result.data) {
       setAccessoires(result.data);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const result = await createAccessoire(
-      { nom: formData.nom, prix: undefined, quantity: undefined },
-      imageFile || undefined
-    );
-
-    if (result.success) {
-      toast.success(result.message);
-      setFormData({ nom: "" });
-      setImageFile(null);
-      setPreview(null);
-      loadAccessoires();
-    } else {
-      toast.error(result.message);
-    }
-    setLoading(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet accessoire ?")) return;
-    const result = await deleteAccessoire(id);
-    if (result.success) {
-      toast.success(result.message);
-      loadAccessoires();
-    } else {
-      toast.error(result.message);
     }
   };
 
@@ -122,113 +93,7 @@ export default function AjouterAccessoiresPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Form Card */}
-          <div className="lg:col-span-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-3xl blur-xl opacity-20"></div>
-              <Card className="relative shadow-2xl border-2 border-orange-200/50 bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500"></div>
-                <CardHeader className="space-y-3 pb-6 pt-8 bg-gradient-to-br from-orange-50 to-amber-50">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl blur-md opacity-50"></div>
-                      <div className="relative p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-lg">
-                        <PlusCircle className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                    <div>
-                      <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                        Nouvel Accessoire
-                      </CardTitle>
-                      <CardDescription className="text-sm mt-1 text-orange-700/70 font-medium">
-                        Ajoutez un accessoire au catalogue
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Accessory Name */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold text-orange-900 flex items-center gap-2">
-                        <Package className="w-4 h-4 text-orange-500" />
-                        Nom de l&apos;accessoire *
-                      </Label>
-                      <Input
-                        placeholder="Ex: Tapis de sol premium"
-                        value={formData.nom}
-                        onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                        required
-                        className="h-12 border-2 border-orange-200 focus:border-orange-500 focus:ring-orange-500 bg-white rounded-xl"
-                      />
-                    </div>
-
-                    {/* Image Upload */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold text-orange-900 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-orange-500" />
-                        Image de l&apos;accessoire
-                      </Label>
-                      <Input
-                        type="file"
-                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                        accept="image/*"
-                        className="h-12 cursor-pointer border-2 border-orange-200 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-gradient-to-r file:from-orange-500 file:to-amber-500 file:text-white hover:file:from-orange-600 hover:file:to-amber-600"
-                      />
-                    </div>
-
-                    {/* Image Preview */}
-                    {preview && (
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-2xl blur-lg opacity-30"></div>
-                        <div className="relative w-full h-48 rounded-2xl overflow-hidden border-4 border-orange-200 shadow-2xl">
-                          <Image src={preview} alt="Preview" fill className="object-cover" />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              setImageFile(null);
-                              setPreview(null);
-                            }}
-                            className="absolute top-3 right-3 h-10 w-10 p-0 rounded-full shadow-lg bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600"
-                          >
-                            <X className="w-5 h-5" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <div className="relative pt-2">
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl blur-lg opacity-50"></div>
-                      <Button 
-                        type="submit" 
-                        disabled={loading} 
-                        className="relative w-full h-14 text-lg font-bold shadow-2xl hover:shadow-3xl transition-all bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 hover:from-orange-600 hover:via-amber-600 hover:to-orange-600 text-white border-0 rounded-2xl"
-                      >
-                        {loading ? (
-                          <>
-                            <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin mr-3" />
-                            Création en cours...
-                          </>
-                        ) : (
-                          <>
-                            <PlusCircle className="w-6 h-6 mr-3" />
-                            Créer l&apos;Accessoire
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Accessories List */}
-          <div className="lg:col-span-8">
+        <div>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-3xl blur-xl opacity-20"></div>
               <Card className="relative shadow-2xl border-2 border-orange-200/50 bg-white/95 backdrop-blur-xl rounded-3xl overflow-hidden">
@@ -256,7 +121,7 @@ export default function AjouterAccessoiresPage() {
                       </div>
                       <h3 className="text-2xl font-bold text-orange-900 mb-3">Aucun accessoire</h3>
                       <p className="text-orange-700/70 max-w-sm text-lg">
-                        Commencez par ajouter votre premier accessoire
+                        Aucun accessoire n&apos;est enregistré dans le catalogue.
                       </p>
                     </div>
                   ) : (
@@ -293,15 +158,16 @@ export default function AjouterAccessoiresPage() {
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="flex flex-col gap-3">
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDelete(accessoire.id)}
-                                className="h-12 w-12 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 shadow-md hover:shadow-lg transition-all"
+                                onClick={() => setSelected(accessoire)}
+                                className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 hover:from-orange-200 hover:to-amber-200 text-orange-700 shadow-md hover:shadow-lg transition-all"
+                                title="Voir les informations"
                               >
-                                <Trash2 className="w-5 h-5" />
+                                <Eye className="w-5 h-5" />
                               </Button>
                             </div>
                           </div>
@@ -312,9 +178,46 @@ export default function AjouterAccessoiresPage() {
                 </CardContent>
               </Card>
             </div>
-          </div>
         </div>
       </div>
+
+      <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+        <DialogContent className="flex max-h-[min(26rem,68dvh)] w-[calc(100%-1rem)] max-w-[calc(100%-1rem)] flex-col gap-0 overflow-y-auto overscroll-contain p-0 sm:max-w-3xl">
+          {selected && (
+            <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50">
+              <DialogHeader className="sticky top-0 z-10 border-b border-orange-100 bg-amber-50/95 px-4 py-3 pr-12 backdrop-blur-sm sm:px-6">
+                <DialogTitle className="text-lg font-bold break-words text-orange-900 sm:text-xl">{selected.nom}</DialogTitle>
+                <DialogDescription className="text-orange-800/80">
+                  Informations de l&apos;accessoire
+                </DialogDescription>
+              </DialogHeader>
+              <div className="px-4 py-4 sm:px-6">
+                <div className="grid items-start gap-4 md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+                  {selected.image ? (
+                    <div className="relative h-28 w-full overflow-hidden rounded-2xl border-2 border-orange-200 bg-white">
+                      <Image src={selected.image} alt={selected.nom} fill sizes="(max-width: 768px) 100vw, 12rem" className="object-contain" />
+                    </div>
+                  ) : (
+                    <div className="flex h-28 items-center justify-center rounded-2xl bg-orange-100">
+                      <Package className="h-10 w-10 text-orange-600" />
+                    </div>
+                  )}
+                  <dl className="min-w-0">
+                    <Detail label="Nom">{selected.nom}</Detail>
+                    <Detail label="Description">{selected.description || "—"}</Detail>
+                    <Detail label="Prix">
+                      {selected.prix != null ? `${formatNumberWithSpaces(selected.prix)} FCFA` : "—"}
+                    </Detail>
+                    <Detail label="Quantité">{selected.quantity != null ? selected.quantity : "—"}</Detail>
+                    <Detail label="Créé le">{formatDate(selected.createdAt)}</Detail>
+                    <Detail label="Mis à jour le">{formatDate(selected.updatedAt)}</Detail>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

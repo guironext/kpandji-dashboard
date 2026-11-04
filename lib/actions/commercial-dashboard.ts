@@ -50,6 +50,9 @@ export type CommercialDashboardStats = {
   rendezVousMois: number;
   rapportsTotal: number;
   chutesTotal: number;
+  dossiersTotal: number;
+  visitesMois: number;
+  stockUnites: number;
   proformasEnAttente: number;
   proformasValidees: number;
   facturesEnAttente: number;
@@ -68,6 +71,7 @@ export type CommercialDashboardData = {
   objectifProgress: ObjectifProgress[];
   upcomingRendezVous: UpcomingRendezVous[];
   recentProspects: RecentProspect[];
+  recentClients: RecentProspect[];
 };
 
 const CHART_COLORS = [
@@ -159,8 +163,6 @@ export async function getCommercialDashboardData(): Promise<{
     const [
       prospectsParticuliers,
       prospectsEntreprises,
-      clientsParticuliers,
-      clientsEntreprises,
       favorableParticuliers,
       favorableEntreprises,
       rendezVousTotal,
@@ -168,6 +170,9 @@ export async function getCommercialDashboardData(): Promise<{
       rendezVousMois,
       rapportsTotal,
       chutesTotal,
+      dossiersRaw,
+      visitesMois,
+      stockAgg,
       proformasEnAttente,
       proformasValidees,
       facturesEnAttente,
@@ -181,13 +186,15 @@ export async function getCommercialDashboardData(): Promise<{
       objectifsVehicules,
       currentPeriod,
       upcomingRendezVousRaw,
-      recentClientsRaw,
-      recentEntreprisesRaw,
     ] = await Promise.all([
-      prisma.client.count({ where: { userId, status_client: "PROSPECT" } }),
-      prisma.client_entreprise.count({ where: { userId, status_client: "PROSPECT" } }),
-      prisma.client.count({ where: { userId, status_client: "CLIENT" } }),
-      prisma.client_entreprise.count({ where: { userId, status_client: "CLIENT" } }),
+      prisma.client.findMany({
+        where: { userId, status_client: "PROSPECT" },
+        select: { id: true, nom: true, secteur_activite: true, createdAt: true },
+      }),
+      prisma.client_entreprise.findMany({
+        where: { userId, status_client: "PROSPECT" },
+        select: { id: true, nom_entreprise: true, secteur_activite: true, createdAt: true },
+      }),
       prisma.client.count({ where: { userId, status_client: "FAVORABLE" } }),
       prisma.client_entreprise.count({ where: { userId, status_client: "FAVORABLE" } }),
       prisma.rendezVous.count({ where: clientOrFilter }),
@@ -206,6 +213,14 @@ export async function getCommercialDashboardData(): Promise<{
       }),
       prisma.rapportRendezVous.count({ where: rapportOrFilter }),
       prisma.tableau_chute.count({ where: { userId } }),
+      prisma.dossierClientele.findMany({
+        where: { userId },
+        select: { prospectId: true, prospectType: true, prospectNom: true, createdAt: true },
+      }),
+      prisma.rapportVisiteClientele.count({
+        where: { userId, date: { gte: startOfMonth, lte: endOfMonth } },
+      }),
+      prisma.stockDisponible.aggregate({ _sum: { quantity: true } }),
       prisma.facture.count({ where: { userId, status_facture: { in: ["EN_ATTENTE", "PROFORMA"] } } }),
       prisma.facture.count({ where: { userId, status_facture: "FACTURE" } }),
       prisma.facture.count({ where: { userId, status_facture: "EN_ATTENTE" } }),
@@ -271,29 +286,81 @@ export async function getCommercialDashboardData(): Promise<{
           Client_entreprise: { select: { nom_entreprise: true } },
         },
       }),
-      prisma.client.findMany({
-        where: { userId, status_client: "PROSPECT" },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          nom: true,
-          secteur_activite: true,
-          createdAt: true,
-        },
-      }),
-      prisma.client_entreprise.findMany({
-        where: { userId, status_client: "PROSPECT" },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          nom_entreprise: true,
-          secteur_activite: true,
-          createdAt: true,
-        },
-      }),
     ]);
+
+    const particulierIds = dossiersRaw
+      .filter((dossier) => dossier.prospectType !== "ENTREPRISE")
+      .map((dossier) => dossier.prospectId);
+    const entrepriseIds = dossiersRaw
+      .filter((dossier) => dossier.prospectType === "ENTREPRISE")
+      .map((dossier) => dossier.prospectId);
+
+    const [paiementsParticuliers, paiementsEntreprises, profilsParticuliers, profilsEntreprises] =
+      await Promise.all([
+        particulierIds.length
+          ? prisma.paiement.findMany({
+              where: { clientId: { in: particulierIds } },
+              select: { clientId: true, date_paiement: true },
+            })
+          : [],
+        entrepriseIds.length
+          ? prisma.paiement.findMany({
+              where: { clientEntrepriseId: { in: entrepriseIds } },
+              select: { clientEntrepriseId: true, date_paiement: true },
+            })
+          : [],
+        particulierIds.length
+          ? prisma.client.findMany({
+              where: { id: { in: particulierIds } },
+              select: { id: true, secteur_activite: true },
+            })
+          : [],
+        entrepriseIds.length
+          ? prisma.client_entreprise.findMany({
+              where: { id: { in: entrepriseIds } },
+              select: { id: true, secteur_activite: true },
+            })
+          : [],
+      ]);
+
+    const paidParticulierIds = new Set(
+      paiementsParticuliers.map((paiement) => paiement.clientId).filter((id): id is string => Boolean(id))
+    );
+    const paidEntrepriseIds = new Set(
+      paiementsEntreprises
+        .map((paiement) => paiement.clientEntrepriseId)
+        .filter((id): id is string => Boolean(id))
+    );
+    const latestPaiement = new Map<string, Date>();
+    for (const paiement of paiementsParticuliers) {
+      if (!paiement.clientId) continue;
+      const current = latestPaiement.get(`CLIENT:${paiement.clientId}`);
+      if (!current || paiement.date_paiement > current) {
+        latestPaiement.set(`CLIENT:${paiement.clientId}`, paiement.date_paiement);
+      }
+    }
+    for (const paiement of paiementsEntreprises) {
+      if (!paiement.clientEntrepriseId) continue;
+      const current = latestPaiement.get(`ENTREPRISE:${paiement.clientEntrepriseId}`);
+      if (!current || paiement.date_paiement > current) {
+        latestPaiement.set(`ENTREPRISE:${paiement.clientEntrepriseId}`, paiement.date_paiement);
+      }
+    }
+
+    const secteurByProspect = new Map<string, string | null>([
+      ...profilsParticuliers.map((profil) => [`CLIENT:${profil.id}`, profil.secteur_activite] as const),
+      ...profilsEntreprises.map((profil) => [`ENTREPRISE:${profil.id}`, profil.secteur_activite] as const),
+    ]);
+
+    const payingDossiers = dossiersRaw.filter((dossier) =>
+      dossier.prospectType === "ENTREPRISE"
+        ? paidEntrepriseIds.has(dossier.prospectId)
+        : paidParticulierIds.has(dossier.prospectId)
+    );
+    const clientsTotal = payingDossiers.length;
+    const unpaidParticuliers = prospectsParticuliers.filter((prospect) => !paidParticulierIds.has(prospect.id));
+    const unpaidEntreprises = prospectsEntreprises.filter((prospect) => !paidEntrepriseIds.has(prospect.id));
+    const prospectsTotal = unpaidParticuliers.length + unpaidEntreprises.length;
 
     const monthlyTrends: MonthlyClientTrend[] = monthlyKeys.map(
       ({ monthKey, monthLabel, monthShort, start, end }) => ({
@@ -391,14 +458,14 @@ export async function getCommercialDashboardData(): Promise<{
     }));
 
     const recentProspects: RecentProspect[] = [
-      ...recentClientsRaw.map((c) => ({
+      ...unpaidParticuliers.map((c) => ({
         id: c.id,
         name: c.nom,
         type: "particulier" as const,
         secteur: c.secteur_activite?.trim() || "Non renseigné",
         createdAt: c.createdAt.toISOString(),
       })),
-      ...recentEntreprisesRaw.map((c) => ({
+      ...unpaidEntreprises.map((c) => ({
         id: c.id,
         name: c.nom_entreprise,
         type: "entreprise" as const,
@@ -409,19 +476,37 @@ export async function getCommercialDashboardData(): Promise<{
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5);
 
+    const recentClients: RecentProspect[] = payingDossiers
+      .map((dossier) => {
+        const key = `${dossier.prospectType === "ENTREPRISE" ? "ENTREPRISE" : "CLIENT"}:${dossier.prospectId}`;
+        const paidAt = latestPaiement.get(key) ?? dossier.createdAt;
+        return {
+          id: dossier.prospectId,
+          name: dossier.prospectNom,
+          type: dossier.prospectType === "ENTREPRISE" ? ("entreprise" as const) : ("particulier" as const),
+          secteur: secteurByProspect.get(key)?.trim() || "Non renseigné",
+          createdAt: paidAt.toISOString(),
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
     return {
       success: true,
       data: {
         userLabel,
         stats: {
-          prospectsTotal: prospectsParticuliers + prospectsEntreprises,
-          clientsTotal: clientsParticuliers + clientsEntreprises,
+          prospectsTotal,
+          clientsTotal,
           favorableTotal: favorableParticuliers + favorableEntreprises,
           rendezVousTotal,
           rendezVousAvenir,
           rendezVousMois,
           rapportsTotal,
           chutesTotal,
+          dossiersTotal: dossiersRaw.length,
+          visitesMois,
+          stockUnites: stockAgg._sum.quantity ?? 0,
           proformasEnAttente,
           proformasValidees,
           facturesEnAttente,
@@ -436,6 +521,7 @@ export async function getCommercialDashboardData(): Promise<{
         objectifProgress,
         upcomingRendezVous,
         recentProspects,
+        recentClients,
       },
     };
   } catch (error) {

@@ -33,6 +33,7 @@ const ROLE_LABELS: Record<string, string> = {
   MARKETING: "Marketing",
   DEVELOPPEUR: "Développeur",
   DESIGNER: "Designer",
+  OPERATIONS_DEVE_COMMERCIAL: "Opérations Dev. Commercial",
 };
 
 function roleToLibelle(role: string, poste?: string | null): string {

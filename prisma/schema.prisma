@@ -9,6 +9,9 @@ datasource db {
 }
 
 model User {
+  ObjectifsMoisOpsDev                ObjectifMoisOpsDev[]
+  RapportsVisiteClientele            RapportVisiteClientele[]
+  DossiersClientele                  DossierClientele[]
   id                                 String                              @id @default(uuid())
   clerkId                            String                              @unique
   email                              String                              @unique
@@ -229,6 +232,16 @@ model BonDeCommande {
   prefix_numero          String
   Facture                Facture             @relation(fields: [factureId], references: [id])
   status_bon_de_commande StatusBonDeCommande @default(EN_ATTENTE)
+  contenu                Json?
+}
+
+model ContratDeVente {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  factureId String   @unique
+  contenu   Json
+  Facture   Facture  @relation(fields: [factureId], references: [id], onDelete: Cascade)
 }
 
 //set status_bon_de_commande=VALIDE_APPORT_INITIAL when facture.prix_unitaire*facture.nbr_voiture_commande*0.60 is greater than facture.total_ttc
@@ -647,6 +660,7 @@ model Facture {
   notes_proforma         String?
   Accessoire             Accessoire[]
   BonDeCommande          BonDeCommande?
+  ContratDeVente         ContratDeVente?
   BonPourAccord          BonPourAccord?
   LettreCommande         LettreCommande?
   AppelOffre             AppelOffre?
@@ -3092,6 +3106,7 @@ enum TypeDocumentation {
   PRESENTATION
   FICHE_TECHNIQUE
   CNI
+  CONDITION_GENERALES_DE_VENTE
 }
 
 enum AgendaType {
@@ -3160,6 +3175,7 @@ enum UserRole {
   MARKETING
   DEVELOPPEUR
   DESIGNER
+  OPERATIONS_DEVE_COMMERCIAL
 }
 
 enum ChassisFlag {
@@ -3626,4 +3642,59 @@ model Invitation {
 
   @@index([email])
   @@index([status])
+}
+
+model ObjectifMoisOpsDev {
+  id          String   @id @default(uuid())
+  objectif    String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RapportVisiteClientele {
+  id               String   @id @default(uuid())
+  date             DateTime
+  prospectId       String
+  prospectType     String // "CLIENT" | "ENTREPRISE"
+  prospectNom      String
+  activites        Json     @default("[]")
+  typesVehicules   Json     @default("[]")
+  modelesPresentes Json     @default("[]")
+  modelesRetenus   Json     @default("[]")
+  lieuRencontre    String?
+  modeleVoiture    String?
+  testDrivePropose Boolean?
+  modesAcquisition Json     @default("[]")
+  barrieresDecision Json    @default("[]")
+  conclusion        Json    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  userId           String
+  User             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([prospectId])
+}
+
+model DossierClientele {
+  id           String   @id @default(uuid())
+  numero       String   @unique
+  nomCourt     String
+  prospectId   String
+  prospectType String // "CLIENT" | "ENTREPRISE"
+  prospectNom  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([prospectId, prospectType])
+  @@index([userId])
 }

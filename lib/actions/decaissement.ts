@@ -32,6 +32,7 @@ const ROLE_LABELS: Record<string, string> = {
   MARKETING: "Marketing",
   DEVELOPPEUR: "Développeur",
   DESIGNER: "Designer",
+  OPERATIONS_DEVE_COMMERCIAL: "Opérations Dev. Commercial",
 };
 
 function roleLabel(role: string | null | undefined): string {
@@ -270,6 +271,7 @@ export async function createDecaissement(data: {
         departement,
         raison,
         montant,
+        validationDepartement: false,
         updatedAt: new Date(),
       },
     });

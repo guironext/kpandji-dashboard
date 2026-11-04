@@ -6,9 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { HandCoins, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, CalendarDays, HandCoins, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -27,20 +28,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   createDecaissement,
   deleteDecaissement,
@@ -67,6 +54,40 @@ const emptyValues: DecaissementFormData = {
   raison: "",
   montant: "",
 };
+
+function StatusPill({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "wait" | "ok" | "muted";
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <span
+        className={cn(
+          "mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+          tone === "ok" && "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+          tone === "wait" && "bg-amber-50 text-amber-800 ring-1 ring-amber-200",
+          tone === "muted" && "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+        )}
+      >
+        <span
+          className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            tone === "ok" && "bg-emerald-500",
+            tone === "wait" && "bg-amber-500",
+            tone === "muted" && "bg-slate-400",
+          )}
+        />
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export default function DemandeDeDecaissementPage() {
   const [open, setOpen] = useState(false);
@@ -209,194 +230,146 @@ export default function DemandeDeDecaissementPage() {
     }
   };
 
+  const enAttente = demandes.filter((item) => !item.validationDepartement).length;
+  const validees = demandes.length - enAttente;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-orange-50/20">
-      <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500">
-        <div className="absolute inset-0 bg-black/5" />
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-10">
-          <div className="flex items-start gap-4">
-            <div className="shrink-0 rounded-2xl border border-white/30 bg-white/20 p-3 shadow-xl backdrop-blur-md">
-              <HandCoins className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-[#f6f3ee]">
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300">
+              <HandCoins className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white sm:text-4xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Commercial</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                 Demandes de décaissement
               </h1>
-              <p className="mt-1.5 text-base text-amber-50/95">
-                Créez une demande et suivez la validation du département
+              <p className="mt-1 max-w-xl text-sm text-slate-500">
+                Chaque demande part avec une validation responsable en attente.
               </p>
             </div>
           </div>
           <Button
             size="lg"
             onClick={openCreate}
-            className="w-full border-0 bg-white font-semibold text-amber-900 shadow-lg hover:bg-amber-50 sm:w-auto"
+            className="h-11 w-full bg-slate-950 text-amber-200 hover:bg-slate-800 sm:w-auto"
           >
-            <Plus className="h-5 w-5" />
-            Demande de Décaissement
+            <Plus className="h-4 w-4" />
+            Nouvelle demande
           </Button>
         </div>
       </div>
 
-      <div className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Demandes créées
-              </h2>
-              <p className="text-sm text-slate-500">
-                Validation, décaissement et actions sur chaque demande
-              </p>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {!loading && demandes.length > 0 && (
+          <div className="mb-5 grid grid-cols-3 gap-2 sm:max-w-md">
+            <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-slate-200">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Total</p>
+              <p className="mt-1 text-xl font-semibold text-slate-950">{demandes.length}</p>
             </div>
-            {!loading && (
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">
-                {demandes.length}
-              </span>
-            )}
+            <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-amber-200">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700">En attente</p>
+              <p className="mt-1 text-xl font-semibold text-slate-950">{enAttente}</p>
+            </div>
+            <div className="rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-emerald-200">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-emerald-700">Validées</p>
+              <p className="mt-1 text-xl font-semibold text-slate-950">{validees}</p>
+            </div>
           </div>
+        )}
 
-          {loading ? (
-            <div className="flex items-center justify-center gap-3 py-16 text-amber-800">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Chargement des demandes...
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 rounded-2xl bg-white py-20 text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Chargement des demandes...
+          </div>
+        ) : demandes.length === 0 ? (
+          <div className="rounded-2xl bg-white px-5 py-16 text-center shadow-sm ring-1 ring-slate-200">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-amber-300">
+              <HandCoins className="h-5 w-5" />
             </div>
-          ) : demandes.length === 0 ? (
-            <div className="px-5 py-16 text-center">
-              <p className="font-medium text-slate-800">Aucune demande pour le moment</p>
-              <p className="mt-1 text-sm text-slate-500">
-                Utilisez le bouton Demande de Décaissement pour en créer une.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-200 bg-slate-50 hover:bg-slate-50">
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Date
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Demandeur
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Service
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Département
-                  </TableHead>
-                  <TableHead className="h-12 min-w-48 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Raison
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Montant demandé
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Validation
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Décaissement effectués
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Montant décaissé
-                  </TableHead>
-                  <TableHead className="sticky right-0 z-10 h-12 bg-slate-50 px-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.15)]">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {demandes.map((demande) => (
-                  <TableRow
-                    key={demande.id}
-                    className="group border-slate-100 hover:bg-amber-50/40"
-                  >
-                    <TableCell className="whitespace-nowrap px-4 py-3.5 text-slate-600">
-                      {format(new Date(demande.createdAt), "d MMM yyyy", {
-                        locale: fr,
-                      })}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 font-medium text-slate-900">
-                      {demande.demandeur}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 text-slate-600">
-                      {demande.service || "—"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 text-slate-700">
-                      {demande.departement}
-                    </TableCell>
-                    <TableCell className="max-w-xs px-4 py-3.5 whitespace-normal text-slate-700">
-                      <span className="line-clamp-2" title={demande.raison}>
-                        {demande.raison}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 text-right font-semibold tabular-nums text-slate-900">
+            <p className="mt-4 font-medium text-slate-900">Aucune demande pour le moment</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Créez la première demande de décaissement.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {demandes.map((demande) => (
+              <article
+                key={demande.id}
+                className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+              >
+                <div className={cn("h-1", demande.validationDepartement ? "bg-emerald-500" : "bg-amber-400")} />
+                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {format(new Date(demande.createdAt), "d MMM yyyy", { locale: fr })}
+                      </p>
+                      <h2 className="mt-1 truncate text-base font-semibold text-slate-950">{demande.demandeur}</h2>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500">
+                        <Building2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">
+                          {demande.departement}
+                          {demande.service ? ` · ${demande.service}` : ""}
+                        </span>
+                      </p>
+                    </div>
+                    <p className="shrink-0 rounded-xl bg-slate-950 px-3 py-2 text-right text-sm font-semibold text-amber-200">
                       {demande.montant}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5">
-                      {demande.validationDepartement ? (
-                        <Badge className="border-transparent bg-emerald-100 text-emerald-800">
-                          Validé
-                        </Badge>
-                      ) : (
-                        <Badge className="border-transparent bg-amber-100 text-amber-800">
-                          En attente
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5">
-                      {demande.decaissementEffectues ? (
-                        <Badge className="border-transparent bg-emerald-100 text-emerald-800">
-                          Oui
-                        </Badge>
-                      ) : (
-                        <Badge className="border-transparent bg-slate-100 text-slate-600">
-                          Non
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 text-right font-medium tabular-nums text-slate-800">
-                      {demande.montantDecaisse || "—"}
-                    </TableCell>
-                    <TableCell className="sticky right-0 z-10 bg-white px-4 py-3.5 shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.12)] group-hover:bg-amber-50">
-                      <div className="flex items-center justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Modifier la demande"
-                              onClick={() => openEdit(demande)}
-                              className="text-slate-600 hover:bg-white hover:text-amber-700"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Modifier</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Supprimer la demande"
-                              onClick={() => setPendingDelete(demande)}
-                              className="text-slate-600 hover:bg-white hover:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Supprimer</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
+                    </p>
+                  </div>
+
+                  <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-700">{demande.raison}</p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <StatusPill
+                      label="Validation responsable"
+                      value={demande.validationDepartement ? "Validé" : "En attente"}
+                      tone={demande.validationDepartement ? "ok" : "wait"}
+                    />
+                    <StatusPill
+                      label="Décaissement"
+                      value={demande.decaissementEffectues ? "Effectué" : "Non effectué"}
+                      tone={demande.decaissementEffectues ? "ok" : "muted"}
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-xl bg-slate-50 px-3 py-2.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Montant décaissé</p>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-900">{demande.montantDecaisse || "—"}</p>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => openEdit(demande)}
+                      className="h-10 flex-1 border-slate-200 text-slate-800"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Modifier
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Supprimer la demande"
+                      onClick={() => setPendingDelete(demande)}
+                      className="h-10 w-10 shrink-0 border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
 
       <Dialog
@@ -405,7 +378,7 @@ export default function DemandeDeDecaissementPage() {
           if (!next) closeForm();
         }}
       >
-        <DialogContent className="z-[80] sm:max-w-lg">
+        <DialogContent className="z-[80] max-h-[min(90dvh,90vh)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingId ? "Modifier la demande" : "Demande de Décaissement"}
@@ -413,7 +386,7 @@ export default function DemandeDeDecaissementPage() {
             <DialogDescription>
               {editingId
                 ? "Mettez à jour le service, la raison et le montant."
-                : "Renseignez la demande. Elle sera enregistrée en attente de validation du département."}
+                : "Renseignez la demande. La validation responsable sera enregistrée en attente."}
             </DialogDescription>
           </DialogHeader>
 
@@ -526,7 +499,7 @@ export default function DemandeDeDecaissementPage() {
           if (!next && !deleting) setPendingDelete(null);
         }}
       >
-        <DialogContent className="z-[80] sm:max-w-md">
+        <DialogContent className="z-[80] w-[calc(100%-1rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Supprimer cette demande ?</DialogTitle>
             <DialogDescription>

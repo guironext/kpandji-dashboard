@@ -19,6 +19,7 @@ const categoryField = z.enum([
   "presentation",
   "fiche-technique",
   "cni",
+  "conditions-generales-de-vente",
 ]);
 
 const UI_CATEGORY_TO_TYPE: Record<
@@ -35,6 +36,7 @@ const UI_CATEGORY_TO_TYPE: Record<
   presentation: "PRESENTATION",
   "fiche-technique": "FICHE_TECHNIQUE",
   cni: "CNI",
+  "conditions-generales-de-vente": "CONDITION_GENERALES_DE_VENTE",
 };
 
 const fileUploadSchema = z.object({

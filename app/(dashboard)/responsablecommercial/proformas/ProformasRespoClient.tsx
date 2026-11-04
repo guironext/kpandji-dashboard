@@ -781,6 +781,7 @@ export default function ProformasRespoClient({
         })),
       );
       toast.success("Proforma validé");
+      window.dispatchEvent(new Event("proformas-a-valider-changed"));
     } else {
       toast.error(result.error || "Erreur lors de la validation du proforma");
     }

@@ -55,6 +55,14 @@ export type AdminUserDetails = {
   } | null;
 };
 
+function isClerkNotFound(e: unknown): boolean {
+  const err = e as { status?: number; errors?: { code?: string }[]; message?: string } | null;
+  if (!err) return false;
+  if (err.status === 404) return true;
+  if (err.errors?.some((x) => x?.code === "resource_not_found")) return true;
+  return /not.?found/i.test(err.message ?? "");
+}
+
 export async function getUserDetails(userId: string) {
   try {
     const me = await requireAdmin();
@@ -145,8 +153,8 @@ export async function updateUserByAdmin(userId: string, input: z.input<typeof up
         CLERK_TIMEOUT_MS,
         "Clerk updateUser",
       );
-    } catch {
-      clerkWarning = "Enregistré en base, mais la synchronisation Clerk a échoué";
+    } catch (e) {
+      if (!isClerkNotFound(e)) clerkWarning = "Enregistré en base, mais la synchronisation Clerk a échoué";
     }
     revalidatePath("/admin/invitations");
     return { success: true as const, warning: clerkWarning };
@@ -183,8 +191,8 @@ export async function deleteUserByAdmin(userId: string) {
     let clerkWarning: string | null = null;
     try {
       await withTimeout((await clerkClient()).users.deleteUser(u.clerkId), CLERK_TIMEOUT_MS, "Clerk deleteUser");
-    } catch {
-      clerkWarning = "Supprimé en base, mais la suppression du compte Clerk a échoué";
+    } catch (e) {
+      if (!isClerkNotFound(e)) clerkWarning = "Supprimé en base, mais la suppression du compte Clerk a échoué";
     }
     revalidatePath("/admin/invitations");
     return { success: true as const, warning: clerkWarning };
@@ -211,8 +219,8 @@ export async function deactivateUserByAdmin(userId: string) {
       await withTimeout(client.users.updateUserMetadata(u.clerkId, { publicMetadata: { disabled: true } }), CLERK_TIMEOUT_MS, "Clerk updateUserMetadata");
       // Le bannissement révoque toutes les sessions et empêche toute nouvelle connexion.
       await withTimeout(client.users.banUser(u.clerkId), CLERK_TIMEOUT_MS, "Clerk banUser");
-    } catch {
-      clerkWarning = "Désactivé en base, mais le blocage du compte Clerk a échoué";
+    } catch (e) {
+      if (!isClerkNotFound(e)) clerkWarning = "Désactivé en base, mais le blocage du compte Clerk a échoué";
     }
     revalidatePath("/admin/invitations");
     return { success: true as const, warning: clerkWarning };
@@ -233,8 +241,8 @@ export async function reactivateUserByAdmin(userId: string) {
       const client = await clerkClient();
       await withTimeout(client.users.unbanUser(u.clerkId), CLERK_TIMEOUT_MS, "Clerk unbanUser");
       await withTimeout(client.users.updateUserMetadata(u.clerkId, { publicMetadata: { disabled: null } }), CLERK_TIMEOUT_MS, "Clerk updateUserMetadata");
-    } catch {
-      clerkWarning = "Réactivé en base, mais le déblocage du compte Clerk a échoué";
+    } catch (e) {
+      if (!isClerkNotFound(e)) clerkWarning = "Réactivé en base, mais le déblocage du compte Clerk a échoué";
     }
     revalidatePath("/admin/invitations");
     return { success: true as const, warning: clerkWarning };
