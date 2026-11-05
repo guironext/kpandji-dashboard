@@ -1,78 +1,86 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import clsx from "clsx";
+import { Inter } from "next/font/google";
 import Header from "@/components/Header";
 import SidebarRespoCommercial from "@/components/SidebarRespoCommercial";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [isPinned, setIsPinned] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [isPhone, setIsPhone] = useState(false);
 
-  const clearCloseTimer = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => {
+      const phone = mq.matches;
+      setIsPhone(phone);
+      if (phone) setHovered(false);
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  const expanded = isPhone ? pinned : pinned || hovered;
+  const pushesContent = pinned && !isPhone;
+
+  const closeOnPhone = () => {
+    if (window.matchMedia("(max-width: 1023px)").matches) setPinned(false);
   };
-
-  useEffect(() => () => clearCloseTimer(), []);
-
-  const handlePointerEnter = () => {
-    clearCloseTimer();
-    setIsHovered(true);
-  };
-
-  const handlePointerLeave = () => {
-    clearCloseTimer();
-    closeTimer.current = setTimeout(() => setIsHovered(false), 160);
-  };
-
-  const isExpanded = isPinned || isHovered;
 
   return (
-    <div className="h-screen overflow-hidden relative">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-16">
-        <Header toggleSidebar={() => setIsPinned((prev) => !prev)} />
+    <div
+      className={`${inter.variable} h-screen overflow-hidden relative`}
+      style={{ fontFamily: "var(--font-inter), sans-serif" }}
+    >
+      <div className="fixed top-0 left-0 right-0 z-[60] h-16">
+        <Header toggleSidebar={() => setPinned((prev) => !prev)} />
       </div>
 
-      {/* Sidebar: rail by default, expands over the page while the pointer is on it */}
       <div
-        onMouseEnter={handlePointerEnter}
-        onMouseLeave={handlePointerLeave}
-        onFocus={handlePointerEnter}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-            handlePointerLeave();
-          }
+        onMouseEnter={() => {
+          if (window.matchMedia("(min-width: 1024px)").matches) setHovered(true);
         }}
+        onMouseLeave={() => setHovered(false)}
         className={clsx(
-          "fixed top-24 left-0 h-[calc(100vh-4rem)] z-40 transition-[width] duration-300 ease-in-out",
-          isExpanded ? "w-[17rem]" : "w-20"
+          "fixed top-16 bottom-0 left-0 transition-all duration-300 ease-in-out",
+          expanded ? "z-50" : "z-40",
+          "max-lg:overflow-hidden max-lg:rounded-r-3xl max-lg:shadow-[12px_0_40px_rgba(17,17,17,0.18)]",
+          expanded && !pushesContent && "lg:shadow-[12px_0_32px_rgba(17,17,17,0.14)]",
+          expanded ? "lg:w-72" : "lg:w-20",
+          "w-[min(19.5rem,calc(100vw-2.75rem))]",
+          "lg:translate-x-0",
+          expanded ? "max-lg:translate-x-0" : "max-lg:-translate-x-full max-lg:pointer-events-none"
         )}
       >
-        <SidebarRespoCommercial isOpen={isExpanded} />
+        <SidebarRespoCommercial isOpen={expanded} onNavigate={closeOnPhone} />
       </div>
 
-      {/* Mobile overlay */}
-      <div
+      <button
+        type="button"
+        aria-label="Fermer le menu"
         className={clsx(
-          "lg:hidden fixed inset-0 z-30 bg-white/65 backdrop-blur-sm transition-opacity",
-          isPinned ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          "lg:hidden fixed inset-0 z-40 bg-[#111]/40 backdrop-blur-[2px] transition-opacity",
+          pinned ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
-        onClick={() => setIsPinned(false)}
+        onClick={() => setPinned(false)}
       />
 
-      {/* Main content stays on the collapsed rail so a hover does not shift the page */}
       <main
         className={clsx(
-          "pt-16 h-screen overflow-y-auto transition-all duration-300 ease-in-out",
-          isPinned ? "ml-[17rem]" : "ml-20"
+          "pt-16 h-screen overflow-y-auto overflow-x-hidden transition-[margin] duration-300 ease-in-out",
+          pushesContent ? "lg:ml-72" : "lg:ml-20",
         )}
       >
-        <div className={clsx("h-full", isPinned ? "ml-13" : "ml-1")}>{children}</div>
+        <div className="w-full min-w-0 max-lg:px-1">{children}</div>
       </main>
     </div>
   );
