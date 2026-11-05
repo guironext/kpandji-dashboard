@@ -146,6 +146,8 @@ export async function saveBonCommandeDocument(factureId: string, contenu: BonCom
       numero: numero || existing?.numero || "",
       etapeValidation: contenu.etapeValidation || previous?.etapeValidation || "",
     };
+    const documentKind = contenu.documentKind || previous?.documentKind;
+    if (documentKind) stored.documentKind = documentKind;
     await prisma.bonDeCommande.update({
       where: { factureId },
       data: {
@@ -932,6 +934,7 @@ async function setEtapeValidation(
   revalidatePath("/responsablecommercial/bon-de-commande");
   revalidatePath("/responsablecommercial/bon-de-commande-deja-valide");
   revalidatePath("/commercial/bon-de-commande-deja-valide");
+  revalidatePath("/commercial/appel-offre-deja-valide");
   revalidatePath("/commercial/bon-de-commande");
   revalidatePath("/commercial/dossier-clientele");
   revalidatePath("/commercial");
@@ -993,6 +996,7 @@ export async function validerBonPourAccord(factureId: string) {
 
   revalidatePath("/responsablecommercial/bon-pour-accord");
   revalidatePath("/responsablecommercial/bon-pour-accord-deja-valide");
+  revalidatePath("/commercial/bon-pour-accord-deja-valide");
   revalidatePath("/responsablecommercial/clients");
   revalidatePath("/responsablecommercial/prospects");
   revalidatePath("/responsablecommercial/performences");

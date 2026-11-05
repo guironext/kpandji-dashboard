@@ -481,16 +481,59 @@ export async function listMesBonsDejaValides(): Promise<BonAValider[]> {
   });
 }
 
+const ACCORD_VALIDE = {
+  is: { status_bon_pour_accord: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] as ("VALIDE" | "VALIDE_APPORT_INITIAL")[] } },
+};
+
 export async function listBonsPourAccordDejaValides(): Promise<BonAValider[]> {
   return loadBons({
     status_bon_de_commande: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] },
     Facture: {
       ...COMMERCIAUX,
-      BonPourAccord: {
-        is: { status_bon_pour_accord: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] } },
-      },
+      BonPourAccord: ACCORD_VALIDE,
     },
   });
+}
+
+export async function listMesBonsPourAccordDejaValides(): Promise<BonAValider[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+
+  const accords = await executeWithRetry(() =>
+    prisma.bonPourAccord.findMany({
+      where: {
+        status_bon_pour_accord: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] },
+        Facture: { userId, status_facture: { not: "ANNULEE" } },
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        Facture: {
+          select: {
+            total_ttc: true,
+            Client: { select: { nom: true } },
+            Client_entreprise: { select: { nom_entreprise: true } },
+            User: { select: { firstName: true, lastName: true } },
+            FactureLigne: { take: 1, include: { VoitureModel: { select: { model: true } } } },
+            Voiture: { include: { VoitureModel: { select: { model: true } } } },
+          },
+        },
+      },
+    }),
+  );
+
+  const rank: Record<string, number> = { VALIDE: 0, VALIDE_APPORT_INITIAL: 1 };
+  return accords
+    .map((accord) => ({
+      factureId: accord.factureId,
+      numero: accord.numero_bon_pour_accord,
+      client: accord.Facture.Client_entreprise?.nom_entreprise || accord.Facture.Client?.nom || "Client",
+      commercial: `${accord.Facture.User.firstName} ${accord.Facture.User.lastName}`.trim(),
+      modele:
+        accord.Facture.FactureLigne[0]?.VoitureModel.model || accord.Facture.Voiture?.VoitureModel?.model || "",
+      totalTtc: asNumber(accord.Facture.total_ttc),
+      statut: accord.status_bon_pour_accord,
+    }))
+    .sort((a, b) => (rank[a.statut] ?? 9) - (rank[b.statut] ?? 9));
 }
 
 async function sourceDepuisBon(
@@ -556,6 +599,208 @@ export async function getMonBonCommandeValide(factureId: string): Promise<BonCom
   });
   if (!bon) return null;
   return sourceDepuisBon(bon, { userId });
+}
+
+export async function listMesLettresDejaValides(): Promise<BonAValider[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+
+  const lettres = await executeWithRetry(() =>
+    prisma.lettreCommande.findMany({
+      where: {
+        validite_lettre_commande: true,
+        Facture: { userId, status_facture: { not: "ANNULEE" } },
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        Facture: {
+          select: {
+            total_ttc: true,
+            Client: { select: { nom: true } },
+            Client_entreprise: { select: { nom_entreprise: true } },
+            User: { select: { firstName: true, lastName: true } },
+            FactureLigne: { take: 1, include: { VoitureModel: { select: { model: true } } } },
+            Voiture: { include: { VoitureModel: { select: { model: true } } } },
+          },
+        },
+      },
+    }),
+  );
+
+  return lettres.map((lettre) => ({
+    factureId: lettre.factureId,
+    numero: lettre.numero_lettre_commande,
+    client: lettre.Facture.Client_entreprise?.nom_entreprise || lettre.Facture.Client?.nom || "Client",
+    commercial: `${lettre.Facture.User.firstName} ${lettre.Facture.User.lastName}`.trim(),
+    modele: lettre.Facture.FactureLigne[0]?.VoitureModel.model || lettre.Facture.Voiture?.VoitureModel?.model || "",
+    totalTtc: asNumber(lettre.Facture.total_ttc),
+    statut: "VALIDE",
+  }));
+}
+
+export async function getMaLettreValide(factureId: string): Promise<BonCommandeSource | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const lettre = await prisma.lettreCommande.findFirst({
+    where: {
+      factureId,
+      validite_lettre_commande: true,
+      Facture: { userId, status_facture: { not: "ANNULEE" } },
+    },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (!lettre) return null;
+
+  const source = await sourceDepuisBon(
+    {
+      factureId: lettre.factureId,
+      numero: lettre.numero_lettre_commande,
+      Facture: lettre.Facture,
+    },
+    { userId },
+  );
+  if (!source?.selected) return null;
+
+  return {
+    ...source,
+    selected: {
+      ...source.selected,
+      bon: {
+        numero: lettre.numero_lettre_commande,
+        statut: "VALIDE",
+        date: lettre.createdAt.toISOString(),
+      },
+    },
+  };
+}
+
+const FACTURE_APPEL_SELECT = {
+  total_ttc: true,
+  Client: { select: { nom: true } },
+  Client_entreprise: { select: { nom_entreprise: true } },
+  User: { select: { firstName: true, lastName: true } },
+  FactureLigne: { take: 1, include: { VoitureModel: { select: { model: true } } } },
+  Voiture: { include: { VoitureModel: { select: { model: true } } } },
+} as const;
+
+export async function listMesAppelsDejaValides(): Promise<BonAValider[]> {
+  const userId = await currentUserId();
+  if (!userId) return [];
+
+  const owner = { userId, status_facture: { not: "ANNULEE" as const } };
+  const [appels, bons] = await Promise.all([
+    executeWithRetry(() =>
+      prisma.appelOffre.findMany({
+        where: { validite_appel_offre: true, Facture: owner },
+        orderBy: { updatedAt: "desc" },
+        include: { Facture: { select: FACTURE_APPEL_SELECT } },
+      }),
+    ),
+    queryBons({
+      status_bon_de_commande: { in: [...STATUTS_VALIDES_RESPONSABLE] },
+      Facture: owner,
+      contenu: { path: ["documentKind"], equals: "APPEL_OFFRE" },
+    }),
+  ]);
+
+  const byFacture = new Map<string, BonAValider>();
+  for (const bon of bons) byFacture.set(bon.factureId, bon);
+  for (const appel of appels) {
+    if (byFacture.has(appel.factureId)) continue;
+    byFacture.set(appel.factureId, {
+      factureId: appel.factureId,
+      numero: appel.numero_appel_offre,
+      client: appel.Facture.Client_entreprise?.nom_entreprise || appel.Facture.Client?.nom || "Client",
+      commercial: `${appel.Facture.User.firstName} ${appel.Facture.User.lastName}`.trim(),
+      modele: appel.Facture.FactureLigne[0]?.VoitureModel.model || appel.Facture.Voiture?.VoitureModel?.model || "",
+      totalTtc: asNumber(appel.Facture.total_ttc),
+      statut: "VALIDE",
+    });
+  }
+  return [...byFacture.values()];
+}
+
+export async function getMonAppelValide(factureId: string): Promise<BonCommandeSource | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const owner = { userId, status_facture: { not: "ANNULEE" as const } };
+  const bon = await prisma.bonDeCommande.findFirst({
+    where: {
+      factureId,
+      status_bon_de_commande: { in: [...STATUTS_VALIDES_RESPONSABLE] },
+      contenu: { path: ["documentKind"], equals: "APPEL_OFFRE" },
+      Facture: owner,
+    },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (bon) return sourceDepuisBon(bon, { userId });
+
+  const appel = await prisma.appelOffre.findFirst({
+    where: { factureId, validite_appel_offre: true, Facture: owner },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (!appel) return null;
+
+  const source = await sourceDepuisBon(
+    {
+      factureId: appel.factureId,
+      numero: appel.numero_appel_offre,
+      Facture: appel.Facture,
+    },
+    { userId },
+  );
+  if (!source?.selected) return null;
+
+  return {
+    ...source,
+    selected: {
+      ...source.selected,
+      bon: {
+        numero: appel.numero_appel_offre,
+        statut: "VALIDE",
+        date: appel.createdAt.toISOString(),
+      },
+    },
+  };
+}
+
+export async function getMonBonPourAccordValide(factureId: string): Promise<BonCommandeSource | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+
+  const accord = await prisma.bonPourAccord.findFirst({
+    where: {
+      factureId,
+      status_bon_pour_accord: { in: ["VALIDE", "VALIDE_APPORT_INITIAL"] },
+      Facture: { userId, status_facture: { not: "ANNULEE" } },
+    },
+    include: { Facture: { select: { clientId: true, clientEntrepriseId: true } } },
+  });
+  if (!accord) return null;
+
+  const source = await sourceDepuisBon(
+    {
+      factureId: accord.factureId,
+      numero: accord.numero_bon_pour_accord,
+      Facture: accord.Facture,
+    },
+    { userId },
+  );
+  if (!source?.selected) return null;
+
+  return {
+    ...source,
+    selected: {
+      ...source.selected,
+      bon: {
+        numero: accord.numero_bon_pour_accord,
+        statut: accord.status_bon_pour_accord,
+        date: accord.createdAt.toISOString(),
+      },
+    },
+  };
 }
 
 export async function getBonCommandePourValidation(factureId: string): Promise<BonCommandeSource | null> {

@@ -488,6 +488,7 @@ export async function saveAppelOffreDocuments(
     ]);
 
     revalidatePath("/commercial/appel-offre");
+    revalidatePath("/commercial/appel-offre-deja-valide");
 
     return { success: true };
   } catch (error) {
@@ -534,6 +535,8 @@ export async function validateAppelOffre(factureId: string) {
       }),
     ]);
 
+    revalidatePath("/commercial/appel-offre");
+    revalidatePath("/commercial/appel-offre-deja-valide");
     return { success: true };
   } catch (error) {
     console.error("Error validating appel offre:", error);

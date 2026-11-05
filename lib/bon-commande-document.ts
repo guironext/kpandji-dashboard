@@ -71,6 +71,7 @@ export type BonCommandeContenu = {
   livraison: string;
   horsEtablissement: boolean;
   etapeValidation?: "" | "A_VALIDER" | "EN_VALIDATION" | "SOUS_RESERVE" | "VALIDE";
+  documentKind?: "APPEL_OFFRE";
 };
 
 const TEXT_KEYS: Array<keyof BonCommandeContenu> = [
@@ -102,5 +103,6 @@ export function parseBonCommandeContenu(value: unknown): BonCommandeContenu | nu
     etape === "A_VALIDER" || etape === "EN_VALIDATION" || etape === "SOUS_RESERVE" || etape === "VALIDE"
       ? etape
       : "";
+  if (record.documentKind === "APPEL_OFFRE") contenu.documentKind = "APPEL_OFFRE";
   return contenu;
 }

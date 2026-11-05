@@ -476,7 +476,10 @@ export default function BonDeCommandeDocument({
     !embedded &&
     (basePath === "/responsablecommercial/bon-de-commande-deja-valide" ||
       basePath === "/responsablecommercial/bon-pour-accord-deja-valide" ||
-      basePath === "/commercial/bon-de-commande-deja-valide");
+      basePath === "/commercial/bon-de-commande-deja-valide" ||
+      basePath === "/commercial/bon-pour-accord-deja-valide" ||
+      basePath === "/commercial/lettre-commande-deja-valide" ||
+      basePath === "/commercial/appel-offre-deja-valide");
   const showProspectSearch =
     !embedded &&
     validation &&
@@ -528,6 +531,7 @@ export default function BonDeCommandeDocument({
     financement,
     livraison,
     horsEtablissement,
+    ...(documentTitle === "APPEL D'OFFRE" ? { documentKind: "APPEL_OFFRE" as const } : {}),
   });
 
   const openDossier = (id: string) => {
@@ -666,7 +670,14 @@ export default function BonDeCommandeDocument({
     }
   };
 
-  if (emptyText && (!source || !selected)) {
+  const blankCommercialArchive =
+    validatedArchive &&
+    basePath.startsWith("/commercial/") &&
+    (documentTitle === "BON POUR ACCORD" ||
+      documentTitle === "LETTRE DE COMMANDE" ||
+      documentTitle === "APPEL D'OFFRE");
+
+  if (emptyText && (!source || !selected) && !blankCommercialArchive) {
     return (
       <div className="w-full min-w-0 px-3 py-4">
         <p className="rounded-2xl border border-dashed border-[#d7a441] bg-white px-4 py-8 text-sm text-[#6d5428]">
@@ -878,7 +889,13 @@ export default function BonDeCommandeDocument({
       {validatedArchive && dossiers.length > 0 && (
         <section className="print-hide mx-auto mb-3 max-w-[210mm]">
           <label htmlFor="bon-valide" className="mb-2 block text-base font-semibold text-[#111]">
-            {documentTitle === "BON POUR ACCORD" ? "Choisir un bon pour accord" : "Choisir un bon validé"}
+            {documentTitle === "BON POUR ACCORD"
+              ? "Choisir un bon pour accord"
+              : documentTitle === "LETTRE DE COMMANDE"
+                ? "Choisir une lettre de commande"
+                : documentTitle === "APPEL D'OFFRE"
+                  ? "Choisir un appel d'offre"
+                  : "Choisir un bon validé"}
           </label>
           <select
             id="bon-valide"
@@ -987,7 +1004,7 @@ export default function BonDeCommandeDocument({
               ))}
             </select>
           )}
-          {validation ? (
+          {validation && !blankCommercialArchive ? (
             dossiers.length === 0 ? (
               <Link href={basePath} className="text-sm font-semibold text-[#111] hover:underline">
                 Retour à la liste
@@ -998,20 +1015,34 @@ export default function BonDeCommandeDocument({
               Dossier {source.dossier.numero}
             </Link>
           ) : null}
-          {!validatedArchive && (
+          {blankCommercialArchive ? (
+            <p className="text-xs text-slate-600">
+              {documentTitle === "LETTRE DE COMMANDE"
+                ? "Lettres de commande déjà validées par le responsable commercial."
+                : documentTitle === "APPEL D'OFFRE"
+                  ? "Appels d'offre déjà validés par le responsable commercial."
+                  : "Bons pour accord déjà validés par le responsable commercial."}
+            </p>
+          ) : !validatedArchive ? (
             <p className="text-xs text-slate-600">
               {validation
                 ? "Consultez le bon, puis commencez la validation."
                 : "Remplissez le document, puis imprimez-le tel qu'il est présenté."}
             </p>
-          )}
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {validation ? (
             <>
-              <span className="inline-flex h-9 items-center rounded-md bg-[#111] px-3 text-sm font-semibold text-[#e7b84a]">
-                {labelStatutBon(bonStatut)}
-              </span>
+              {bonStatut || !blankCommercialArchive ? (
+                <span className="inline-flex h-9 items-center rounded-md bg-[#111] px-3 text-sm font-semibold text-[#e7b84a]">
+                  {labelStatutBon(bonStatut)}
+                </span>
+              ) : (
+                <span className="inline-flex h-9 items-center rounded-md bg-[#111] px-3 text-sm font-semibold text-[#e7b84a]">
+                  Déjà Validé
+                </span>
+              )}
               {bonStatut === "A_VALIDER" && (
                 <button
                   type="button"
