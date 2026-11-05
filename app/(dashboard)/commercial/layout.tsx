@@ -13,15 +13,28 @@ const inter = Inter({
 });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [isPhone, setIsPhone] = useState(false);
 
   useLayoutEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const sync = () => setIsSidebarOpen(mq.matches);
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => {
+      const phone = mq.matches;
+      setIsPhone(phone);
+      if (phone) setHovered(false);
+    };
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  const expanded = isPhone ? pinned : pinned || hovered;
+  const pushesContent = pinned && !isPhone;
+
+  const closeOnPhone = () => {
+    if (window.matchMedia("(max-width: 1023px)").matches) setPinned(false);
+  };
 
   return (
     <div
@@ -30,21 +43,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     >
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-[60] h-16">
-        <Header toggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
+        <Header toggleSidebar={() => setPinned((prev) => !prev)} />
       </div>
 
-      {/* Sidebar — drawer below lg breakpoint, fixed rail on lg+ */}
+      {/* Sidebar — icon rail on desktop, opens on hover; drawer on phone */}
       <div
+        onMouseEnter={() => {
+          if (window.matchMedia("(min-width: 1024px)").matches) setHovered(true);
+        }}
+        onMouseLeave={() => setHovered(false)}
         className={clsx(
-          "fixed top-16 left-0 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out",
-          "z-50 lg:z-40",
-          isSidebarOpen ? "lg:w-64" : "lg:w-20",
-          "w-[min(16rem,calc(100vw-1rem))] sm:w-64",
+          "fixed top-16 bottom-0 left-0 transition-all duration-300 ease-in-out",
+          expanded ? "z-50" : "z-40",
+          "max-lg:overflow-hidden max-lg:rounded-r-3xl max-lg:shadow-[12px_0_40px_rgba(17,17,17,0.18)]",
+          expanded && !pushesContent && "lg:shadow-[12px_0_32px_rgba(17,17,17,0.14)]",
+          expanded ? "lg:w-72" : "lg:w-20",
+          "w-[min(19.5rem,calc(100vw-2.75rem))]",
           "lg:translate-x-0",
-          isSidebarOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full max-lg:pointer-events-none"
+          expanded ? "max-lg:translate-x-0" : "max-lg:-translate-x-full max-lg:pointer-events-none"
         )}
       >
-        <SidebarCommercial isOpen={isSidebarOpen} />
+        <SidebarCommercial isOpen={expanded} onNavigate={closeOnPhone} />
       </div>
 
       {/* Mobile overlay — behind sidebar so drawer stays interactive */}
@@ -52,17 +71,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         type="button"
         aria-label="Fermer le menu"
         className={clsx(
-          "lg:hidden fixed inset-0 z-40 bg-white/65 backdrop-blur-sm transition-opacity",
-          isSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          "lg:hidden fixed inset-0 z-40 bg-[#111]/40 backdrop-blur-[2px] transition-opacity",
+          pinned ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
-        onClick={() => setIsSidebarOpen(false)}
+        onClick={() => setPinned(false)}
       />
 
-      {/* Main content — full width on mobile, offset only on lg+ */}
+      {/* Main content — full width on mobile; on desktop the hover panel overlays the page */}
       <main
         className={clsx(
           "pt-16 h-screen overflow-y-auto overflow-x-hidden transition-[margin] duration-300 ease-in-out",
-          isSidebarOpen ? "lg:ml-64" : "lg:ml-20",
+          pushesContent ? "lg:ml-72" : "lg:ml-20",
         )}
       >
         <div className="w-full min-w-0 max-lg:px-1">{children}</div>
