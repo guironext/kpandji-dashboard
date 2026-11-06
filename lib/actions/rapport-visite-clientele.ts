@@ -110,7 +110,12 @@ export type RapportVisiteRow = {
 };
 
 export async function getRapportsVisite(): Promise<RapportVisiteRow[]> {
+  const { userId } = await auth();
+  if (!userId) return [];
+  const user = await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } });
+  if (!user) return [];
   return prisma.rapportVisiteClientele.findMany({
+    where: { userId: user.id },
     orderBy: { date: "desc" },
     include: { User: { select: { firstName: true, lastName: true } } },
   });
@@ -119,11 +124,10 @@ export async function getRapportsVisite(): Promise<RapportVisiteRow[]> {
 export async function deleteRapportVisite(id: string) {
   const { userId } = await auth();
   if (!userId) return { success: false as const, error: "Non authentifié" };
-  try {
-    await prisma.rapportVisiteClientele.delete({ where: { id } });
-  } catch {
-    return { success: false as const, error: "Rapport introuvable" };
-  }
+  const user = await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } });
+  if (!user) return { success: false as const, error: "Utilisateur introuvable" };
+  const deleted = await prisma.rapportVisiteClientele.deleteMany({ where: { id, userId: user.id } });
+  if (deleted.count === 0) return { success: false as const, error: "Rapport introuvable" };
   revalidatePath(PATH);
   return { success: true as const };
 }
